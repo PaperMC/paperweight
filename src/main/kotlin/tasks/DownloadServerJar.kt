@@ -23,25 +23,29 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.property
 import java.math.BigInteger
 import java.net.URL
 import java.security.MessageDigest
 
 open class DownloadServerJar : DefaultTask() {
 
-    @get:Input lateinit var downloadUrl: String
-    @get:Input lateinit var hash: String
+    @Input
+    val downloadUrl = project.objects.property<String>()
+    @Input
+    val hash = project.objects.property<String>()
 
-    @get:OutputFile lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     @TaskAction
     fun doStuff() {
-        val file = project.file(outputJar)
+        val file = outputJar.asFile.get()
         ensureParentExists(file)
         ensureDeleted(file)
 
         file.outputStream().buffered().use { out ->
-            URL(downloadUrl).openStream().copyTo(out)
+            URL(downloadUrl.get()).openStream().copyTo(out)
         }
 
         val digest = MessageDigest.getInstance("MD5")
@@ -50,8 +54,8 @@ open class DownloadServerJar : DefaultTask() {
         val hashResult = digest.digest(data)
         val hashText = String.format("%032x", BigInteger(1, hashResult))
 
-        if (hash != hashText) {
-            throw PaperweightException("Checksum failed, expected $hash, actually got $hashText")
+        if (hash.get() != hashText) {
+            throw PaperweightException("Checksum failed, expected ${hash.get()}, actually got $hashText")
         }
     }
 }

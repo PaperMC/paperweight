@@ -25,35 +25,42 @@ import java.util.regex.Pattern
 
 open class PatchMcpCsv : DefaultTask() {
 
-    @get:InputFile lateinit var fieldsCsv: Any
-    @get:InputFile lateinit var methodsCsv: Any
-    @get:InputFile lateinit var paramsCsv: Any
-    @get:InputFile lateinit var changesFile: Any
+    @InputFile
+    val fieldsCsv = project.objects.fileProperty()
+    @InputFile
+    val methodsCsv = project.objects.fileProperty()
+    @InputFile
+    val paramsCsv = project.objects.fileProperty()
+    @InputFile
+    val changesFile = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var paperFieldCsv: Any
-    @get:OutputFile lateinit var paperMethodCsv: Any
-    @get:OutputFile lateinit var paperParamCsv: Any
+    @OutputFile
+    val paperFieldCsv = project.objects.fileProperty()
+    @OutputFile
+    val paperMethodCsv = project.objects.fileProperty()
+    @OutputFile
+    val paperParamCsv = project.objects.fileProperty()
 
     @TaskAction
     fun doStuff() {
-        val changes = project.file(changesFile).readLines()
+        val changes = changesFile.asFile.get().readLines()
         val changeMap = changes.asSequence()
             .filterNot { l -> l.trim().run { startsWith('#') || isEmpty() }  }
             .map { l -> commentPattern.matcher(l).replaceAll("") }
             .map { l -> l.split(',').run { get(0) to get(1) } }
             .toMap()
 
-        val fields = project.file(fieldsCsv).readLines().toMutableList()
-        val methods = project.file(methodsCsv).readLines().toMutableList()
-        val params = project.file(paramsCsv).readLines().toMutableList()
+        val fields = fieldsCsv.asFile.get().readLines().toMutableList()
+        val methods = methodsCsv.asFile.get().readLines().toMutableList()
+        val params = paramsCsv.asFile.get().readLines().toMutableList()
 
         replaceChanges(changeMap, fields, fieldPattern)
         replaceChanges(changeMap, methods, methodPattern)
         replaceChanges(changeMap, params, paramPattern)
 
-        project.file(paperFieldCsv).printWriter().use { writeFile(fields, it) }
-        project.file(paperMethodCsv).printWriter().use { writeFile(methods, it) }
-        project.file(paperParamCsv).printWriter().use { writeFile(params, it) }
+        paperFieldCsv.asFile.get().printWriter().use { writeFile(fields, it) }
+        paperMethodCsv.asFile.get().printWriter().use { writeFile(methods, it) }
+        paperParamCsv.asFile.get().printWriter().use { writeFile(params, it) }
     }
 
     private fun replaceChanges(changes: Map<String, String>, lines: MutableList<String>, pattern: Pattern) {

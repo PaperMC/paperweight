@@ -18,44 +18,41 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.unzip
 import io.papermc.paperweight.util.zip
 import org.gradle.api.DefaultTask
-import org.gradle.api.Task
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import java.io.File
-import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ThreadLocalRandom
 
 // ZippedTask attempts to encapsulate all of the major inputs and outputs of a particular task into single zip files
 abstract class ZippedTask : DefaultTask() {
 
-    @get:InputFile @get:Optional var inputZip: Any? = null
+    @InputFile
+    @Optional
+    val inputZip = project.objects.fileProperty()
 
-    @get:OutputFile val outputZip by Constants.taskOutput()
+    @OutputFile
+    val outputZip = project.objects.fileProperty()
 
-    @get:OutputFile @get:Optional var customOutputZip: Any? = null
+    init {
+        outputZip.convention {
+            project.file(Constants.taskOutput(project, "$name.zip"))
+        }
+    }
 
     abstract fun action(rootDir: File)
 
     @TaskAction
-    fun doStuff() {
-        val inputZipFile = inputZip?.let { project.file(it) }
-        val outputZipFile  = customOutputZip?.let { customOutputZip ->
-            project.file(customOutputZip)
-        } ?:  project.file(outputZip)
+    fun run() {
+        val inputZipFile = inputZip.orNull
+        val outputZipFile = outputZip.asFile.get()
 
-        val dir = outputZipFile.resolveSibling("${outputZipFile.name}-" + ThreadLocalRandom.current().nextInt())
+        var dir: File
+        do {
+            dir = outputZipFile.resolveSibling("${outputZipFile.name}-" + ThreadLocalRandom.current().nextInt())
+        } while (dir.exists())
+
         try {
             if (inputZipFile != null) {
                 unzip(inputZipFile, dir)

@@ -45,10 +45,7 @@ internal val gson = Gson()
 internal inline val Project.ext
     get() = extensions.getByName(Constants.EXTENSION) as PaperweightExtension
 internal inline val Project.cache
-    get() = gradle.gradleUserHomeDir.resolve(Constants.CACHE_PATH)
-
-internal inline fun <reified T : Task> TaskContainer.register(name: String, noinline action: T.() -> Unit): TaskProvider<T> =
-    register(name, T::class.java) { action() }
+    get() = file(".gradle").resolve(Constants.CACHE_PATH)
 
 internal fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, File>) {
     for ((set, file) in mappings) {

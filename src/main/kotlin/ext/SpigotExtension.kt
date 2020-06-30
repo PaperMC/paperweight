@@ -16,10 +16,13 @@
 
 package io.papermc.paperweight.ext
 
-open class SpigotExtension {
-    var spigotDir: Any = "work/Spigot"
-    var spigotApiDir: Any = "work/Spigot/Spigot-API"
-    var spigotServerDir: Any = "work/Spigot/Spigot-Server"
-    var bukkitPatchDir: Any = "work/Spigot/Bukkit-Patches"
-    var craftBukkitPatchDir: Any = "work/Spigot/CraftBukkit-Patches"
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+
+open class SpigotExtension(project: Project) {
+    var spigotDir: DirectoryProperty = project.dirWithDefault("work/Spigot")
+    var spigotApiDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Spigot-API")
+    var spigotServerDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Spigot-Server")
+    var bukkitPatchDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Bukkit-Patches")
+    var craftBukkitPatchDir: DirectoryProperty = project.dirWithDefault("work/Spigot/CraftBukkit-Patches")
 }

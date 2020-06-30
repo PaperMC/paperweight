@@ -26,17 +26,16 @@ package io.papermc.paperweight.util
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
+import io.papermc.paperweight.tasks.ValidateConfig
 import io.papermc.paperweight.tasks.ZippedTask
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.FileVisitDetails
 import org.gradle.api.file.FileVisitor
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
+import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.property
 import org.jetbrains.java.decompiler.code.CodeConstants
 import org.jetbrains.java.decompiler.main.DecompilerContext
 import org.jetbrains.java.decompiler.main.decompiler.BaseDecompiler
@@ -69,8 +68,8 @@ import java.util.zip.ZipOutputStream
 
 
 private const val USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11"
-private const val MCP_MAPPINGS_JSON = "McpMappings.json"
-private const val MC_MANIFEST = "McManifest.json"
+const val MCP_MAPPINGS_JSON = "McpMappings.json"
+const val MC_MANIFEST = "McManifest.json"
 
 internal const val CONFIG_MAPPINGS = "forgeGradleMcpMappings"
 internal const val CONFIG_MCP_DATA = "forgeGradleMcpData"
@@ -78,15 +77,12 @@ internal const val CONFIG_MCP_DATA = "forgeGradleMcpData"
 private const val URL_FORGE_MAVEN = "https://files.minecraftforge.net/maven"
 private const val URL_LIBRARY = "https://libraries.minecraft.net/"
 
-internal const val TASK_EXTRACT_MCP = "extractMcpData"
-internal const val TASK_EXTRACT_MAPPINGS = "extractMcpMappings"
-
-private val URLS_MCP_JSON = listOf(
+val URLS_MCP_JSON = listOf(
     "https://files.minecraftforge.net/maven/de/oceanlabs/mcp/versions.json",
     "http://export.mcpbot.bspk.rs/versions.json"
 )
 
-private val URLS_MC_MANIFEST = listOf("https://launchermeta.mojang.com/mc/game/version_manifest.json")
+val URLS_MC_MANIFEST = listOf("https://launchermeta.mojang.com/mc/game/version_manifest.json")
 
 internal fun createBasics(project: Project) {
     project.configurations.register(CONFIG_MAPPINGS)
@@ -102,42 +98,6 @@ internal fun createBasics(project: Project) {
             url = project.uri(URL_LIBRARY)
         }
     }
-}
-
-internal fun validateConfig(project: Project) {
-    val extension = project.ext
-    if (extension.minecraftVersion == Constants.DEFAULT_STRING) {
-        throw PaperweightException("Missing value for minecraftVersion")
-    }
-    if (extension.mcpVersion == Constants.DEFAULT_STRING) {
-        throw PaperweightException("Missing value for mcpVersion")
-    }
-
-    parseAndCheckMcpVersion(extension, project)
-}
-
-private fun parseAndCheckMcpVersion(extension: PaperweightExtension, project: Project) {
-    val mappings = extension.mcpVersion
-
-    val index = mappings.indexOf('_')
-    if (index == -1) {
-        throw PaperweightException("Mappings version format is invalid")
-    }
-
-    extension.mcpChannel = mappings.substring(0, index)
-    if (extension.mcpChannel == "custom") {
-        throw PaperweightException("'custom' mappings version is not supported")
-    }
-
-    try {
-        extension.mappingsVersion = mappings.substring(index + 1).toInt()
-    } catch (e: NumberFormatException) {
-        throw PaperweightException("Mappings version must be an integer")
-    }
-
-    extension.mcpMinecraftVersion = extension.minecraftVersion
-
-    checkMappings(extension, project)
 }
 
 private fun checkMappings(extension: PaperweightExtension, project: Project) {
@@ -175,7 +135,7 @@ private fun checkMappings(extension: PaperweightExtension, project: Project) {
     throw PaperweightException("The specified mapping '${extension.mappingsVersion}' does not exist!")
 }
 
-private fun rawMappingsChannel(channel: String): String {
+fun rawMappingsChannel(channel: String): String {
     val index = channel.indexOf('_')
     return if (index == -1) {
         channel
@@ -184,53 +144,33 @@ private fun rawMappingsChannel(channel: String): String {
     }
 }
 
-internal fun setupConfigurations(project: Project) {
-    val extension = project.ext
+fun setupConfigurations(project: Project, validConfig: TaskProvider<ValidateConfig>) {
+    project.dependencies.add(CONFIG_MAPPINGS, validConfig.map {
+        mapOf(
+            "group" to "de.oceanlabs.mcp",
+            "name" to "mcp_${it.mcpChannel}",
+            "version" to "${it.mappingsVersion}-${it.mcpMinecraftVersion}",
+            "ext" to "zip"
+        )
+    })
 
-    project.dependencies.add(CONFIG_MAPPINGS, mapOf(
-        "group" to "de.oceanlabs.mcp",
-        "name" to "mcp_${extension.mcpChannel}",
-        "version" to "${extension.mappingsVersion}-${extension.mcpMinecraftVersion}",
-        "ext" to "zip"
-    ))
-
-    project.dependencies.add(CONFIG_MCP_DATA, mapOf(
-        "group" to "de.oceanlabs.mcp",
-        "name" to "mcp_config",
-        "version" to extension.mcpMinecraftVersion,
-        "ext" to "zip"
-    ))
+    project.dependencies.add(CONFIG_MCP_DATA, validConfig.map {
+        mapOf(
+            "group" to "de.oceanlabs.mcp",
+            "name" to "mcp_config",
+            "version" to it.mcpMinecraftVersion,
+            "ext" to "zip"
+        )
+    })
 }
 
-internal fun getRemoteJsons(project: Project) {
-    val cache = project.cache
-    val extension = project.ext
-
-    // McpMappings.json
-    val jsonCache = cache.resolve(MCP_MAPPINGS_JSON)
-    val etagFile = cache.resolve("$MCP_MAPPINGS_JSON.etag")
-    val mcpJson = getWithEtag(URLS_MCP_JSON, jsonCache, etagFile)
-    extension.mcpJson = gson.fromJson(mcpJson)
-
-    // McManifest.json
-    val mcManifestJson = cache.resolve(MC_MANIFEST)
-    val mcManifestEtag = cache.resolve("$MC_MANIFEST.etag")
-    val mcManifest = getWithEtag(URLS_MC_MANIFEST, mcManifestJson, mcManifestEtag)
-    extension.mcManifest = gson.fromJson(mcManifest)
-
-    val mcVersionJson = cache.resolve(Constants.paperVersionJson(extension))
-    val mcVersionEtag = mcVersionJson.resolveSibling("${mcVersionJson.name}.etag")
-    val mcVersion = getWithEtag(listOf(extension.mcManifest.versions.first { it.id == extension.minecraftVersion }.url), mcVersionJson, mcVersionEtag)
-    extension.versionJson = gson.fromJson(mcVersion)
-}
-
-private fun searchArray(array: IntArray, key: Int): Boolean {
+fun searchArray(array: IntArray, key: Int): Boolean {
     Arrays.sort(array)
     val index = Arrays.binarySearch(array, key)
     return index >= 0 && array[index] == key
 }
 
-private fun getWithEtag(urls: List<String>, cache: File, etagFile: File): String {
+fun getWithEtag(urls: List<String>, cache: File, etagFile: File): String {
     if (cache.exists() && cache.lastModified() + TimeUnit.MINUTES.toMillis(1) >= System.currentTimeMillis()) {
         return cache.readText()
     }
@@ -310,15 +250,19 @@ private fun getWithEtag(urls: List<String>, cache: File, etagFile: File): String
 
 internal open class ExtractConfigTask : DefaultTask() {
 
-    @get:Input internal lateinit var config: String
-    @get:Input internal var clean = false
-    @get:OutputDirectory internal lateinit var destinationDir: Any
+    @Input
+    val config = project.objects.property<String>()
+    @Input
+    val clean = project.objects.property<Boolean>().convention(false)
+
+    @OutputDirectory
+    val destinationDir = project.objects.directoryProperty()
 
     @TaskAction
-    fun doStuff() {
-        val dest = project.file(destinationDir)
+    fun run() {
+        val dest = destinationDir.asFile.get()
 
-        if (clean) {
+        if (clean.get()) {
             if (!dest.deleteRecursively()) {
                 throw IOException("Failed to clear directory ${dest.absolutePath}")
             }
@@ -328,11 +272,29 @@ internal open class ExtractConfigTask : DefaultTask() {
             throw IOException("Failed to create directory ${dest.absolutePath}")
         }
 
-        for (file in project.configurations[config]) {
+        for (file in project.configurations[config.get()]) {
             logger.debug("Extracting: $file")
             project.zipTree(file).visit(ExtractionFileVisitor(dest))
         }
     }
+}
+
+internal open class ExtractMcpDataTask : ExtractConfigTask() {
+
+    @OutputFile
+    val joinedSrg = project.objects.fileProperty().convention(destinationDir.map { it.file("config/joined.tsrg") })
+    @OutputDirectory
+    val patchesDir = project.objects.directoryProperty().convention(destinationDir.map { it.dir("patches/server") })
+}
+
+internal open class ExtractMcpMappingsTask : ExtractConfigTask() {
+
+    @OutputFile
+    val fieldsCsv = project.objects.fileProperty().convention(destinationDir.map { it.file("fields.csv") })
+    @OutputFile
+    val methodsCsv = project.objects.fileProperty().convention(destinationDir.map { it.file("methods.csv") })
+    @OutputFile
+    val paramsCsv = project.objects.fileProperty().convention(destinationDir.map { it.file("params.csv") })
 }
 
 internal class ExtractionFileVisitor(private val dest: File) : FileVisitor {
@@ -355,9 +317,12 @@ internal class ExtractionFileVisitor(private val dest: File) : FileVisitor {
 
 internal open class RemapSrgSources : ZippedTask() {
 
-    @get:InputFile lateinit var methodsCsv: Any
-    @get:InputFile lateinit var fieldsCsv: Any
-    @get:InputFile lateinit var paramsCsv: Any
+    @InputFile
+    val methodsCsv = project.objects.fileProperty()
+    @InputFile
+    val fieldsCsv = project.objects.fileProperty()
+    @InputFile
+    val paramsCsv = project.objects.fileProperty()
 
     private val methods = hashMapOf<String, String>()
     private val methodDocs = hashMapOf<String, String>()
@@ -417,10 +382,10 @@ internal open class RemapSrgSources : ZippedTask() {
     }
 
     private fun readCsv() {
-        readCsvFile(project.file(methodsCsv), methods, methodDocs)
-        readCsvFile(project.file(fieldsCsv), fields, fieldDocs)
+        readCsvFile(methodsCsv.asFile.get(), methods, methodDocs)
+        readCsvFile(fieldsCsv.asFile.get(), fields, fieldDocs)
 
-        getReader(project.file(paramsCsv)).use { reader ->
+        getReader(paramsCsv.asFile.get()).use { reader ->
             for (line in reader.readAll()) {
                 params[line[0]] = line[1]
             }
@@ -445,15 +410,16 @@ internal open class RemapSrgSources : ZippedTask() {
 
 internal open class RunForgeFlower : DefaultTask() {
 
-    @get:InputFile lateinit var inputJar: Any
+    @InputFile
+    val inputJar = project.objects.fileProperty()
 
-    @get:OutputFile
-    lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     private val ignored = Regex("\\s*(Loading Class|Adding (File|Archive)).*")
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
         val map = mapOf(
             IFernflowerPreferences.DECOMPILE_INNER to "1",
             IFernflowerPreferences.ASCII_STRING_CHARACTERS to "1",

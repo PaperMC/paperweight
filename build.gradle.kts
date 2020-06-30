@@ -4,12 +4,10 @@ plugins {
     idea
     eclipse
     maven
-    kotlin("jvm") version "1.2.61"
+    kotlin("jvm") version "1.3.70"
     `kotlin-dsl`
     id("net.minecrell.licenser") version "0.4.1"
 }
-
-val jar by tasks.existing(Jar::class)
 
 group = "io.papermc"
 version = "1.0.0-SNAPSHOT"
@@ -23,18 +21,18 @@ repositories {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(gradleKotlinDsl())
-    compile(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib-jdk8"))
 
-    compile("net.sf.opencsv:opencsv:2.3")
+    implementation("net.sf.opencsv:opencsv:2.3")
 
-    compile("org.cadixdev:lorenz:0.5.0-SNAPSHOT")
-    compile("org.cadixdev:mercury:0.1.0-SNAPSHOT")
-    compile("org.cadixdev:survey:0.2.0-SNAPSHOT")
+    implementation("org.cadixdev:lorenz:0.5.0-SNAPSHOT")
+    implementation("org.cadixdev:mercury:0.1.0-SNAPSHOT")
+    implementation("org.cadixdev:survey:0.2.0-SNAPSHOT")
 
-    compile("com.github.salomonbrys.kotson:kotson:2.5.0")
+    implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
 
-    compile("net.minecraftforge:forgeflower:1.5.380.24")
-    compile("de.oceanlabs.mcp:mcinjector:3.7.4")
+    implementation("net.minecraftforge:forgeflower:1.5.380.24")
+    implementation("de.oceanlabs.mcp:mcinjector:3.7.4")
 }
 
 tasks.withType<KotlinCompile> {

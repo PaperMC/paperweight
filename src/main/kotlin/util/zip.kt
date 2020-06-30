@@ -27,15 +27,15 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ThreadLocalRandom
 
-internal fun Task.unzip(zip: Any, target: File? = null): File {
+internal fun Task.unzip(zip: Any, target: Any? = null): File {
     val input = project.file(zip)
 
-    val outputDir = target ?: input.resolveSibling("${input.name}-" + ThreadLocalRandom.current().nextInt())
-
+    val outputDir = target?.let { project.file(it) }
+        ?: input.resolveSibling("${input.name}-" + ThreadLocalRandom.current().nextInt())
     val dirPath = outputDir.toPath()
 
     val uri = URI.create("jar:${input.toURI()}")
-    FileSystems.newFileSystem(uri, mapOf()).use { fs ->
+    FileSystems.newFileSystem(uri, mapOf<String, Any>()).use { fs ->
         for (root in fs.rootDirectories) {
             Files.walkFileTree(root, object : SimpleFileVisitor<Path>() {
                 override fun preVisitDirectory(visitDir: Path, attrs: BasicFileAttributes): FileVisitResult {
@@ -56,7 +56,9 @@ internal fun Task.unzip(zip: Any, target: File? = null): File {
 
 internal fun Task.zip(inputDir: Any, zip: Any) {
     val outputZipFile = project.file(zip)
-    outputZipFile.delete()
+    if (outputZipFile.exists()) {
+        outputZipFile.delete()
+    }
     val dirPath = project.file(inputDir).toPath()
 
     val outUri = URI.create("jar:${outputZipFile.toURI()}")

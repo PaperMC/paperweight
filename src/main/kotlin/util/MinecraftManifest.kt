@@ -16,12 +16,12 @@
 
 package util
 
-internal data class MinecraftManifest(
+data class MinecraftManifest(
     internal val latest: Map<String, *>,
     internal val versions: List<ManifestVersion>
 )
 
-internal data class ManifestVersion(
+data class ManifestVersion(
     internal val id: String,
     internal val type: String,
     internal val time: String,

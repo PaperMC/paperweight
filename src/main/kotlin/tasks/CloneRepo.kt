@@ -19,17 +19,23 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Git
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
+import org.gradle.kotlin.dsl.property
 import java.io.File
 
 open class CloneRepo : ZippedTask() {
 
-    @get:InputDirectory lateinit var repo: Any
-    @get:Input lateinit var branch: String
-    @get:Input lateinit var sourceName: String
-    @get:Input lateinit var targetName: String
+    @InputDirectory
+    val repo = project.objects.directoryProperty()
+    @Input
+    val branch = project.objects.property<String>()
+    @Input
+    val sourceName = project.objects.property<String>()
+    @Input
+    val targetName = project.objects.property<String>()
 
     override fun action(rootDir: File) {
-        val repoFile = project.file(repo)
+        val repoFile = repo.asFile.get()
 
         val git = Git(repoFile)
 
@@ -40,7 +46,7 @@ open class CloneRepo : ZippedTask() {
             git("add", "src").executeSilently()
             git("commit", "-m", "Initial", "--author=Auto <auto@mated.null>").executeSilently()
         }
-        git("branch", "-f", "upstream", branch).executeSilently()
+        git("branch", "-f", "upstream", branch.get()).executeSilently()
 
         rootDir.deleteRecursively()
 
@@ -53,7 +59,7 @@ open class CloneRepo : ZippedTask() {
             git("init").executeSilently()
         }
 
-        println("Resetting $targetName to $sourceName")
+        println("Resetting ${targetName.get()} to ${sourceName.get()}")
         git("remote", "rm", "upstream").runSilently()
         git("remote", "add", "upstream", repoFile.canonicalPath).executeSilently()
 

@@ -17,30 +17,24 @@
 package io.papermc.paperweight.ext
 
 import com.google.gson.JsonObject
-import io.papermc.paperweight.util.Constants.DEFAULT_STRING
 import org.gradle.api.Action
+import org.gradle.api.Project
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.kotlin.dsl.mapProperty
+import org.gradle.kotlin.dsl.property
 import util.BuildDataInfo
 import util.MinecraftManifest
 
-open class PaperweightExtension {
+open class PaperweightExtension(project: Project) {
 
-    var minecraftVersion: String = DEFAULT_STRING
-    var mcpVersion: String = DEFAULT_STRING
-        set(value) {
-            field = value.toLowerCase()
-        }
+    val minecraftVersion: Property<String> = project.objects.property()
+    val mcpVersion: Property<String> = project.objects.property()
 
-    internal lateinit var mcpMinecraftVersion: String
-    internal lateinit var mcpChannel: String
-    internal var mappingsVersion: Int = 0
-    internal lateinit var mcpJson: Map<String, Map<String, IntArray>>
-    internal lateinit var mcManifest: MinecraftManifest
-    internal lateinit var buildDataInfo: BuildDataInfo
-    internal lateinit var versionJson: JsonObject
-
-    var craftBukkit: CraftBukkitExtension = CraftBukkitExtension()
-    var spigot: SpigotExtension = SpigotExtension()
-    var paper: PaperExtension = PaperExtension()
+    val craftBukkit: CraftBukkitExtension = CraftBukkitExtension(project)
+    val spigot: SpigotExtension = SpigotExtension(project)
+    val paper: PaperExtension = PaperExtension(project)
 
     fun craftBukkit(action: Action<in CraftBukkitExtension>) {
         action.execute(craftBukkit)
@@ -53,4 +47,7 @@ open class PaperweightExtension {
     fun paper(action: Action<in PaperExtension>) {
         action.execute(paper)
     }
+
+    val mcpVersionProvider: Provider<String>
+        get() = mcpVersion.map { it.toLowerCase() }
 }

@@ -17,7 +17,10 @@
 package io.papermc.paperweight.tasks
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.property
 import org.w3c.dom.Element
 import java.net.URI
 import java.nio.file.FileSystems
@@ -27,30 +30,37 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 open class SetupSpigotDependencyConfig : DefaultTask() {
 
-    // Not defined as inputs, can't cache this
-    lateinit var spigotApiZip: Any
-    lateinit var spigotServerZip: Any
+    @InputFile
+    val spigotApiZip = project.objects.fileProperty()
+    @InputFile
+    val spigotServerZip = project.objects.fileProperty()
 
-    lateinit var configurationName: String
+    @Input
+    val configurationName = project.objects.property<String>()
+
+    init {
+        // we set dependencies here, can't cache this
+        outputs.upToDateWhen { false }
+    }
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
         val spigotApiFile = project.file(spigotApiZip)
         val spigotServerFile = project.file(spigotServerZip)
 
-        val apiDeps = FileSystems.newFileSystem(URI.create("jar:${spigotApiFile.toURI()}"), mapOf()).use { fs ->
+        val apiDeps = FileSystems.newFileSystem(URI.create("jar:${spigotApiFile.toURI()}"), mapOf<String, Any>()).use { fs ->
             parsePom(fs.getPath("pom.xml"))
         }
 
-        val serverDeps = FileSystems.newFileSystem(URI.create("jar:${spigotServerFile.toURI()}"), mapOf()).use { fs ->
+        val serverDeps = FileSystems.newFileSystem(URI.create("jar:${spigotServerFile.toURI()}"), mapOf<String, Any>()).use { fs ->
             parsePom(fs.getPath("pom.xml"))
         }
 
         for (dep in apiDeps) {
-            project.dependencies.add(configurationName, dep)
+            project.dependencies.add(configurationName.get(), dep)
         }
         for (dep in serverDeps) {
-            project.dependencies.add(configurationName, dep)
+            project.dependencies.add(configurationName.get(), dep)
         }
     }
 

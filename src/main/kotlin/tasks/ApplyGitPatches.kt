@@ -18,19 +18,23 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.kotlin.dsl.property
 import java.io.File
 import java.util.Arrays
 
 open class ApplyGitPatches : ZippedTask() {
 
-    @get:Input lateinit var targetName: String
-    @get:InputDirectory lateinit var patchDir: Any
+    @Input
+    val targetName = project.objects.property<String>()
+    @InputDirectory
+    val patchDir = project.objects.directoryProperty()
 
     override fun action(rootDir: File) {
-        val patchDirFile = project.file(patchDir)
+        val patchDirFile = patchDir.asFile.get()
 
         val git = Git(rootDir)
 

@@ -16,14 +16,18 @@
 
 package io.papermc.paperweight.ext
 
-open class CraftBukkitExtension {
-    var bukkitDir: Any = "work/Bukkit"
-    var craftBukkitDir: Any = "work/CraftBukkit"
-    var patchDir: Any = "work/CraftBukkit/nms-patches"
-    var sourceDir: Any = "work/CraftBukkit/src/main/java"
-    var mappingsDir: Any = "work/BuildData/mappings"
-    var buildDataInfo: Any = "work/BuildData/info.json"
-    var fernFlowerJar: Any = "work/BuildData/bin/fernflower.jar"
-    var specialSourceJar: Any = "work/BuildData/bin/SpecialSource.jar"
-    var specialSource2Jar: Any = "work/BuildData/bin/SpecialSource-2.jar"
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+
+open class CraftBukkitExtension(project: Project) {
+    val bukkitDir: DirectoryProperty = project.dirWithDefault("work/Bukkit")
+    var craftBukkitDir: DirectoryProperty = project.dirWithDefault("work/CraftBukkit")
+    var patchDir: DirectoryProperty = project.dirWithDefault("work/CraftBukkit/nms-patches")
+    var sourceDir: DirectoryProperty = project.dirWithDefault("work/CraftBukkit/src/main/java")
+    var mappingsDir: DirectoryProperty = project.dirWithDefault("work/BuildData/mappings")
+    var buildDataInfo: RegularFileProperty = project.fileWithDefault("work/BuildData/info.json")
+    var fernFlowerJar: RegularFileProperty = project.fileWithDefault("work/BuildData/bin/fernflower.jar")
+    var specialSourceJar: RegularFileProperty = project.fileWithDefault("work/BuildData/bin/SpecialSource.jar")
+    var specialSource2Jar: RegularFileProperty = project.fileWithDefault("work/BuildData/bin/SpecialSource-2.jar")
 }

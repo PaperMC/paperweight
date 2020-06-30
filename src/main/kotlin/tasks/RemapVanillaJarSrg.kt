@@ -29,20 +29,26 @@ import org.gradle.api.tasks.TaskAction
 
 open class RemapVanillaJarSrg : DefaultTask() {
 
-    @get:InputFile lateinit var inputJar: Any
+    @InputFile
+    val inputJar = project.objects.fileProperty()
 
-    @get:InputFile lateinit var mappings: Any
-    @get:InputFile lateinit var access: Any
-    @get:InputFile lateinit var constructors: Any
-    @get:InputFile lateinit var exceptions: Any
+    @InputFile
+    val mappings = project.objects.fileProperty()
+    @InputFile
+    val access = project.objects.fileProperty()
+    @InputFile
+    val constructors = project.objects.fileProperty()
+    @InputFile
+    val exceptions = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     @TaskAction
-    fun doStuff() {
-        val inputJarFile = project.file(inputJar)
-        val outputJarFile = project.file(outputJar)
-        val mappingsFile = project.file(mappings)
+    fun run() {
+        val inputJarFile = inputJar.asFile.get()
+        val outputJarFile = outputJar.asFile.get()
+        val mappingsFile = mappings.asFile.get()
 
         ensureParentExists(inputJarFile, outputJarFile)
 
@@ -63,9 +69,9 @@ open class RemapVanillaJarSrg : DefaultTask() {
             }
 
             MCInjector(surveyOut.toPath(), outputJarFile.toPath()).apply {
-                access(project.file(access).toPath())
-                constructors(project.file(constructors).toPath())
-                exceptions(project.file(exceptions).toPath())
+                access(access.asFile.get().toPath())
+                constructors(constructors.asFile.get().toPath())
+                exceptions(exceptions.asFile.get().toPath())
                 lvt(LVTNaming.LVT)
                 log(mcInjectorLog.toPath())
                 process()

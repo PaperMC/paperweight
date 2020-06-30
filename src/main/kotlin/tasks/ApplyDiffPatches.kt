@@ -25,6 +25,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.property
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -32,26 +33,32 @@ import java.util.Date
 
 open class ApplyDiffPatches : DefaultTask() {
 
-    @get:InputFile lateinit var sourceJar: Any
-    @get:Input lateinit var sourceBasePath: String
-    @get:InputDirectory lateinit var patchDir: Any
-    @get:InputDirectory lateinit var basePatchDir: Any
-    @get:Input lateinit var branch: String
+    @InputFile
+    val sourceJar = project.objects.fileProperty()
+    @Input
+    val sourceBasePath = project.objects.property<String>()
+    @InputDirectory
+    val patchDir = project.objects.directoryProperty()
+    @InputDirectory
+    val basePatchDir = project.objects.directoryProperty()
+    @Input
+    val branch = project.objects.property<String>()
 
-    @get:OutputDirectory lateinit var baseDir: Any
+    @OutputDirectory
+    val baseDir = project.objects.directoryProperty()
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
         val baseDirFile = project.file(baseDir)
         val git = Git(baseDirFile)
-        git("checkout", "-B", branch, "HEAD").executeSilently()
+        git("checkout", "-B", branch.get(), "HEAD").executeSilently()
 
         val sourceJarFile = project.file(sourceJar)
         val uri = URI.create("jar:${sourceJarFile.toURI()}")
 
-        val patchDirFile = project.file(patchDir)
-        val basePatchDirFile = project.file(basePatchDir)
-        val outputDirFile = basePatchDirFile.resolve(sourceBasePath)
+        val patchDirFile = patchDir.asFile.get()
+        val basePatchDirFile = basePatchDir.asFile.get()
+        val outputDirFile = basePatchDirFile.resolve(sourceBasePath.get())
 
         val patchList = patchDirFile.listFiles() ?: throw PaperweightException("Patch directory does not exist $patchDirFile")
         if (patchList.isEmpty()) {
@@ -59,11 +66,11 @@ open class ApplyDiffPatches : DefaultTask() {
         }
 
         // Copy in patch targets
-        FileSystems.newFileSystem(uri, mapOf()).use { fs ->
+        FileSystems.newFileSystem(uri, mapOf<String, Any>()).use { fs ->
             for (file in patchList) {
                 val javaName = file.name.replaceAfterLast('.', "java")
                 val out = outputDirFile.resolve(javaName)
-                val sourcePath = fs.getPath(sourceBasePath, javaName)
+                val sourcePath = fs.getPath(sourceBasePath.get(), javaName)
 
                 Files.newInputStream(sourcePath).use { input ->
                     ensureParentExists(out)

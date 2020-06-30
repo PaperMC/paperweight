@@ -27,13 +27,16 @@ import org.gradle.api.tasks.TaskAction
 
 open class ApplyMcpPatches : DefaultTask() {
 
-    @get:InputFile lateinit var inputJar: Any
-    @get:InputDirectory lateinit var serverPatchDir: Any
+    @InputFile
+    val inputJar = project.objects.fileProperty()
+    @InputDirectory
+    val serverPatchDir = project.objects.directoryProperty()
 
-    @get:OutputFile lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
         val dir = unzip(inputJar)
         try {
             val serverPatchDirFile = project.file(serverPatchDir)

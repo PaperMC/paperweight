@@ -25,22 +25,30 @@ import org.gradle.api.tasks.TaskAction
 
 open class RemapVanillaJarSpigot : DefaultTask() {
 
-    @get:InputFile lateinit var inputJar: Any
+    @InputFile
+    val inputJar = project.objects.fileProperty()
 
-    @get:InputFile lateinit var classMappings: Any
-    @get:InputFile lateinit var memberMappings: Any
-    @get:InputFile lateinit var packageMappings: Any
-    @get:InputFile lateinit var accessTransformers: Any
-    @get:InputFile lateinit var specialSourceJar: Any
-    @get:InputFile lateinit var specialSource2Jar: Any
+    @InputFile
+    val classMappings = project.objects.fileProperty()
+    @InputFile
+    val memberMappings = project.objects.fileProperty()
+    @InputFile
+    val packageMappings = project.objects.fileProperty()
+    @InputFile
+    val accessTransformers = project.objects.fileProperty()
+    @InputFile
+    val specialSourceJar = project.objects.fileProperty()
+    @InputFile
+    val specialSource2Jar = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     @TaskAction
-    fun doStuff() {
-        val inputJarPath = project.file(inputJar).canonicalPath
+    fun run() {
+        val inputJarPath = inputJar.asFile.get().canonicalPath
 
-        val outputJarFile = project.file(outputJar)
+        val outputJarFile = outputJar.asFile.get()
         val outputJarPath  = outputJarFile.canonicalPath
 
         val classJarFile = outputJarFile.resolveSibling(outputJarFile.name + ".classes")
@@ -48,10 +56,10 @@ open class RemapVanillaJarSpigot : DefaultTask() {
         val classJarPath = classJarFile.canonicalPath
         val membersJarPath = membersJarFile.canonicalPath
 
-        val classMappingPath = project.file(classMappings).canonicalPath
-        val memberMappingsPath = project.file(memberMappings).canonicalPath
-        val packageMappingsPath = project.file(packageMappings).canonicalPath
-        val accessTransformersPath = project.file(accessTransformers).canonicalPath
+        val classMappingPath = classMappings.asFile.get().canonicalPath
+        val memberMappingsPath = memberMappings.asFile.get().canonicalPath
+        val packageMappingsPath = packageMappings.asFile.get().canonicalPath
+        val accessTransformersPath = accessTransformers.asFile.get().canonicalPath
 
         println("Applying class mappings...")
         wrapException("Failed to apply class mappings") {

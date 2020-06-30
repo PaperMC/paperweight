@@ -26,41 +26,52 @@ import java.io.BufferedReader
 
 open class GenerateSpigotSrgs : DefaultTask() {
 
-    @get:InputFile lateinit var notchToSrg: Any
-    @get:InputFile lateinit var srgToMcp: Any
-    @get:InputFile lateinit var classMappings: Any
-    @get:InputFile lateinit var memberMappings: Any
-    @get:InputFile lateinit var packageMappings: Any
+    @InputFile
+    val notchToSrg = project.objects.fileProperty()
+    @InputFile
+    val srgToMcp = project.objects.fileProperty()
+    @InputFile
+    val classMappings = project.objects.fileProperty()
+    @InputFile
+    val memberMappings = project.objects.fileProperty()
+    @InputFile
+    val packageMappings = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var spigotToSrg: Any
-    @get:OutputFile lateinit var spigotToMcp: Any
-    @get:OutputFile lateinit var spigotToNotch: Any
-    @get:OutputFile lateinit var srgToSpigot: Any
-    @get:OutputFile lateinit var mcpToSpigot: Any
-    @get:OutputFile lateinit var notchToSpigot: Any
+    @OutputFile
+    val spigotToSrg = project.objects.fileProperty()
+    @OutputFile
+    val spigotToMcp = project.objects.fileProperty()
+    @OutputFile
+    val spigotToNotch = project.objects.fileProperty()
+    @OutputFile
+    val srgToSpigot = project.objects.fileProperty()
+    @OutputFile
+    val mcpToSpigot = project.objects.fileProperty()
+    @OutputFile
+    val notchToSpigot = project.objects.fileProperty()
 
     @TaskAction
     fun doStuff() {
         // Dirty hack to fix a dirty problem..
-        val classMappingSet = project.file(classMappings).reader().use { reader ->
+        val classMappingSet = classMappings.asFile.get().reader().use { reader ->
             val filtered = object : BufferedReader(reader) {
                 override fun lines() = super.lines()
                     .filter { line -> !line.split(" ").take(2).any { it.contains('#') } }
             }
             MappingFormats.CSRG.createReader(filtered).read()
         }
-        val memberMappingSet = project.file(memberMappings).reader().use { MappingFormats.CSRG.createReader(it).read() }
+        val memberMappingSet = memberMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
 
         val notchToSpigotSet = classMappingSet.merge(memberMappingSet)
 
         // Apply the package mappings (Lorenz doesn't currently support this)
-        val newPackage = project.file(packageMappings).readLines()[0].split(Regex("\\s+"))[1]
+        val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
         for (topLevelClassMapping in notchToSpigotSet.topLevelClassMappings) {
             topLevelClassMapping.deobfuscatedName = newPackage + topLevelClassMapping.deobfuscatedName
         }
 
-        val notchToSrgSet = project.file(notchToSrg).reader().use { MappingFormats.TSRG.createReader(it).read() }
-        val srgToMcpSet = project.file(srgToMcp).reader().use { MappingFormats.TSRG.createReader(it).read() }
+        val notchToSrgSet = notchToSrg.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
+        val srgToMcpSet = srgToMcp.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
 
         val srgToSpigotSet = notchToSrgSet.reverse().merge(notchToSpigotSet)
 
@@ -73,12 +84,12 @@ open class GenerateSpigotSrgs : DefaultTask() {
 
         writeMappings(
             MappingFormats.TSRG,
-            spigotToSrgSet to project.file(spigotToSrg),
-            spigotToMcpSet to project.file(spigotToMcp),
-            spigotToNotchSet to project.file(spigotToNotch),
-            srgToSpigotSet to project.file(srgToSpigot),
-            mcpToSpigotSet to project.file(mcpToSpigot),
-            notchToSpigotSet to project.file(notchToSpigot)
+            spigotToSrgSet to spigotToSrg.asFile.get(),
+            spigotToMcpSet to spigotToMcp.asFile.get(),
+            spigotToNotchSet to spigotToNotch.asFile.get(),
+            srgToSpigotSet to srgToSpigot.asFile.get(),
+            mcpToSpigotSet to mcpToSpigot.asFile.get(),
+            notchToSpigotSet to notchToSpigot.asFile.get()
         )
     }
 }

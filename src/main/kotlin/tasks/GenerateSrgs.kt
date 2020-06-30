@@ -30,15 +30,25 @@ import java.io.File
 
 open class GenerateSrgs : DefaultTask() {
 
-    @get:InputFile lateinit var inSrg: File // Notch -> SRG
-    @get:InputFile lateinit var methodsCsv: Any
-    @get:InputFile lateinit var fieldsCsv: Any
-    @get:OutputFile lateinit var notchToSrg: Any
-    @get:OutputFile lateinit var notchToMcp: Any
-    @get:OutputFile lateinit var mcpToNotch: Any
-    @get:OutputFile lateinit var mcpToSrg: Any
-    @get:OutputFile lateinit var srgToNotch: Any
-    @get:OutputFile lateinit var srgToMcp: Any
+    @InputFile
+    val inSrg = project.objects.fileProperty() // Notch -> SRG
+    @InputFile
+    val methodsCsv = project.objects.fileProperty()
+    @InputFile
+    val fieldsCsv = project.objects.fileProperty()
+
+    @OutputFile
+    val notchToSrg = project.objects.fileProperty()
+    @OutputFile
+    val notchToMcp = project.objects.fileProperty()
+    @OutputFile
+    val mcpToNotch = project.objects.fileProperty()
+    @OutputFile
+    val mcpToSrg = project.objects.fileProperty()
+    @OutputFile
+    val srgToNotch = project.objects.fileProperty()
+    @OutputFile
+    val srgToMcp = project.objects.fileProperty()
 
     @TaskAction
     fun doStuff() {
@@ -46,7 +56,7 @@ open class GenerateSrgs : DefaultTask() {
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = inSrg.reader().use {
+        val inSet = inSrg.asFile.get().reader().use {
             MappingFormats.TSRG.createReader(it).read()
         }
 
@@ -55,13 +65,13 @@ open class GenerateSrgs : DefaultTask() {
     }
 
     private fun readCsvs(methods: MutableMap<String, String>, fields: MutableMap<String, String>) {
-        getReader(project.file(methodsCsv)).use { reader ->
+        getReader(methodsCsv.asFile.get()).use { reader ->
             for (line in reader.readAll()) {
                 methods[line[0]] = line[1]
             }
         }
 
-        getReader(project.file(fieldsCsv)).use { reader ->
+        getReader(fieldsCsv.asFile.get()).use { reader ->
             for (line in reader.readAll()) {
                 fields[line[0]] = line[1]
             }
@@ -97,12 +107,12 @@ open class GenerateSrgs : DefaultTask() {
 
         writeMappings(
             MappingFormats.TSRG,
-            notchToSrgSet to project.file(notchToSrg),
-            notchToMcpSet to project.file(notchToMcp),
-            mcpToNotchSet to project.file(mcpToNotch),
-            mcpToSrgSet to project.file(mcpToSrg),
-            srgToNotchSet to project.file(srgToNotch),
-            srgToMcpSet to project.file(srgToMcp)
+            notchToSrgSet to notchToSrg.asFile.get(),
+            notchToMcpSet to notchToMcp.asFile.get(),
+            mcpToNotchSet to mcpToNotch.asFile.get(),
+            mcpToSrgSet to mcpToSrg.asFile.get(),
+            srgToNotchSet to srgToNotch.asFile.get(),
+            srgToMcpSet to srgToMcp.asFile.get()
         )
     }
 

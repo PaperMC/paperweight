@@ -16,14 +16,19 @@
 
 package io.papermc.paperweight.ext
 
-open class PaperExtension {
-    var spigotApiPatchDir: Any = "Spigot-API-Patches"
-    var spigotServerPatchDir: Any = "Spigot-Server-Patches"
-    var paperApiDir: Any = "Paper-API"
-    var paperServerDir: Any = "Paper-Server"
+import org.gradle.api.Project
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.kotlin.dsl.property
 
-    var mcpRewritesFile: Any = "mcp/mcp-rewrites.txt"
-    var preMapSrgFile: Any = "mcp/paper.srg"
-    var removeListFile: Any = "mcp/remove-list.txt"
-    var memberMoveListFile: Any = "mcp/member-moves.txt"
+open class PaperExtension(project: Project) {
+    val spigotApiPatchDir: Property<String> = project.objects.property<String>().convention("Spigot-API-Patches")
+    val spigotServerPatchDir: Property<String> = project.objects.property<String>().convention("Spigot-Server-Patches")
+    val paperApiDir: Property<String> = project.objects.property<String>().convention("Paper-API")
+    val paperServerDir: Property<String> = project.objects.property<String>().convention("Paper-Server")
+
+    val mcpRewritesFile: RegularFileProperty = project.fileWithDefault("mcp/mcp-rewrites.txt")
+    val preMapSrgFile: RegularFileProperty = project.fileWithDefault("mcp/paper.srg")
+    val removeListFile: RegularFileProperty = project.fileWithDefault("mcp/remove-list.txt")
+    val memberMoveListFile: RegularFileProperty = project.fileWithDefault("mcp/member-moves.txt")
 }

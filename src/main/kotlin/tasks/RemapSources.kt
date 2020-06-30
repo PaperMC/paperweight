@@ -32,7 +32,6 @@ import org.cadixdev.mercury.remapper.MercuryRemapper
 import org.cadixdev.mercury.util.BombeBindings
 import org.eclipse.jdt.core.dom.ASTNode
 import org.eclipse.jdt.core.dom.ASTVisitor
-import org.eclipse.jdt.core.dom.IBinding
 import org.eclipse.jdt.core.dom.IMethodBinding
 import org.eclipse.jdt.core.dom.IVariableBinding
 import org.eclipse.jdt.core.dom.MethodDeclaration
@@ -42,24 +41,32 @@ import org.eclipse.jdt.core.dom.SingleVariableDeclaration
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.impldep.org.mozilla.javascript.ast.AstNode
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.property
 import java.io.File
 
 open class RemapSources : ZippedTask() {
 
-    @get:InputFile lateinit var vanillaJar: Any
-    @get:InputFile lateinit var vanillaRemappedSpigotJar: Any // Required for pre-remap pass
-    @get:InputFile lateinit var vanillaRemappedSrgJar: Any // Required for post-remap pass
-    @get:InputFile lateinit var spigotToSrg: Any
-    @get:InputFile lateinit var spigotApiZip: Any
-    @get:Input lateinit var config: String
-    @get:InputFile lateinit var constructors: Any
+    @InputFile
+    val vanillaJar = project.objects.fileProperty()
+    @InputFile
+    val vanillaRemappedSpigotJar = project.objects.fileProperty() // Required for pre-remap pass
+    @InputFile
+    val vanillaRemappedSrgJar = project.objects.fileProperty() // Required for post-remap pass
+    @InputFile
+    val spigotToSrg = project.objects.fileProperty()
+    @InputFile
+    val spigotApiZip = project.objects.fileProperty()
+    @Input
+    val config = project.objects.property<String>()
+    @InputFile
+    val constructors = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var generatedAt: Any
+    @OutputFile
+    val generatedAt = project.objects.fileProperty()
 
     override fun action(rootDir: File) {
-        val spigotToSrgFile = project.file(spigotToSrg)
+        val spigotToSrgFile = spigotToSrg.asFile.get()
 
         val mappings = spigotToSrgFile.bufferedReader().use { reader ->
             MappingFormats.TSRG.createReader(reader).read()
@@ -69,7 +76,7 @@ open class RemapSources : ZippedTask() {
         val pass1Dir = rootDir.resolve("pass1")
         val outDir = rootDir.resolve("out")
 
-        val configuration = project.configurations[config]
+        val configuration = project.configurations[config.get()]
 
         val ats = AccessTransformSet.create()
 
@@ -78,8 +85,8 @@ open class RemapSources : ZippedTask() {
             val merc = Mercury()
 
             merc.classPath.addAll(listOf(
-                project.file(vanillaJar).toPath(),
-                project.file(vanillaRemappedSpigotJar).toPath(),
+                vanillaJar.asFile.get().toPath(),
+                vanillaRemappedSpigotJar.asFile.get().toPath(),
                 spigotApiDir.resolve("src/main/java").toPath()
             ))
 
@@ -104,8 +111,8 @@ open class RemapSources : ZippedTask() {
             // Remap SRG parameters
             merc.classPath.clear()
             merc.classPath.addAll(listOf(
-                project.file(vanillaJar).toPath(),
-                project.file(vanillaRemappedSrgJar).toPath(),
+                vanillaJar.asFile.get().toPath(),
+                vanillaRemappedSrgJar.asFile.get().toPath(),
                 spigotApiDir.resolve("src/main/java").toPath()
             ))
 
@@ -133,8 +140,7 @@ open class RemapSources : ZippedTask() {
         outDir.delete()
 
         // And write generated AT file
-        val gennedAtFile = project.file(generatedAt)
-        AccessTransformFormats.FML.write(gennedAtFile.toPath(), ats)
+        AccessTransformFormats.FML.write(generatedAt.asFile.get().toPath(), ats)
     }
 }
 
@@ -176,7 +182,10 @@ data class ConstructorNode(
     val signature: String
 )
 
-class SrgParameterVisitor(private val context: RewriteContext, private val constructors: Map<String, List<ConstructorNode>>) : ASTVisitor() {
+class SrgParameterVisitor(
+    private val context: RewriteContext,
+    private val constructors: Map<String, List<ConstructorNode>>
+) : ASTVisitor() {
 
     companion object {
         private val MATCHER = Regex("func_(\\d+)_.*")

@@ -27,10 +27,13 @@ import java.util.concurrent.ThreadLocalRandom
 
 open class DecompileVanillaJar : DefaultTask() {
 
-    @get:InputFile lateinit var inputJar: Any
-    @get:InputFile lateinit var fernFlowerJar: Any
+    @InputFile
+    val inputJar = project.objects.fileProperty()
+    @InputFile
+    val fernFlowerJar = project.objects.fileProperty()
 
-    @get:OutputFile lateinit var outputJar: Any
+    @OutputFile
+    val outputJar = project.objects.fileProperty()
 
     @TaskAction
     fun doStuff() {
