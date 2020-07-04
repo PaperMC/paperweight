@@ -47,7 +47,7 @@ paperweight {
 }
 ```
 
-Now create a file called `settings.gradle.kts` in teh root project directory and copy in this text:
+Now create a file called `settings.gradle.kts` in the root project directory and copy in this text:
 ```kotlin
 pluginManagement {
     repositories {
