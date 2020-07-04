@@ -1,17 +1,24 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
@@ -19,47 +26,40 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.io.BufferedReader
 
 open class GenerateSpigotSrgs : DefaultTask() {
 
     @InputFile
-    val notchToSrg = project.objects.fileProperty()
+    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val srgToMcp = project.objects.fileProperty()
+    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val classMappings = project.objects.fileProperty()
+    val classMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val memberMappings = project.objects.fileProperty()
+    val memberMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val packageMappings = project.objects.fileProperty()
+    val packageMappings: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
-    val spigotToSrg = project.objects.fileProperty()
+    val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val spigotToMcp = project.objects.fileProperty()
+    val spigotToMcp: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val spigotToNotch = project.objects.fileProperty()
+    val spigotToNotch: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val srgToSpigot = project.objects.fileProperty()
+    val srgToSpigot: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val mcpToSpigot = project.objects.fileProperty()
+    val mcpToSpigot: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val notchToSpigot = project.objects.fileProperty()
+    val notchToSpigot: RegularFileProperty = project.objects.fileProperty()
 
     @TaskAction
-    fun doStuff() {
-        // Dirty hack to fix a dirty problem..
-        val classMappingSet = classMappings.asFile.get().reader().use { reader ->
-            val filtered = object : BufferedReader(reader) {
-                override fun lines() = super.lines()
-                    .filter { line -> !line.split(" ").take(2).any { it.contains('#') } }
-            }
-            MappingFormats.CSRG.createReader(filtered).read()
-        }
+    fun run() {
+        val classMappingSet = classMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
         val memberMappingSet = memberMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
 
         val notchToSpigotSet = classMappingSet.merge(memberMappingSet)

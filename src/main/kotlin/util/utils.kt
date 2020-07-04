@@ -1,53 +1,56 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.util
 
 import au.com.bytecode.opencsv.CSVParser
 import au.com.bytecode.opencsv.CSVReader
+import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.logging.Logger
-import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Provider
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
-import java.util.concurrent.ThreadLocalRandom
 
-internal val gson = Gson()
+val gson: Gson = Gson()
 
-internal inline val Project.ext
+inline val Project.ext: PaperweightExtension
     get() = extensions.getByName(Constants.EXTENSION) as PaperweightExtension
-internal inline val Project.cache
+inline val Project.cache: File
     get() = file(".gradle").resolve(Constants.CACHE_PATH)
 
-internal fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, File>) {
+fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, File>) {
     for ((set, file) in mappings) {
         file.bufferedWriter().use { stream ->
             format.createWriter(stream).write(set)
@@ -55,13 +58,7 @@ internal fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<Mapp
     }
 }
 
-internal operator fun <T : Task> TaskProvider<T>.invoke(func: (T) -> Unit) {
-    this.configure {
-        func(this)
-    }
-}
-
-internal fun redirect(input: InputStream, out: OutputStream) {
+fun redirect(input: InputStream, out: OutputStream) {
     Thread {
         try {
             input.copyTo(out)
@@ -74,12 +71,12 @@ internal fun redirect(input: InputStream, out: OutputStream) {
     }
 }
 
-internal object UselessOutputStream : OutputStream() {
+object UselessOutputStream : OutputStream() {
     override fun write(b: Int) {
     }
 }
 
-internal inline fun wrapException(msg: String, func: () -> Unit) {
+inline fun wrapException(msg: String, func: () -> Unit) {
     try {
         func()
     } catch (e: Exception) {
@@ -87,7 +84,7 @@ internal inline fun wrapException(msg: String, func: () -> Unit) {
     }
 }
 
-internal fun getReader(file: File) = CSVReader(
+fun getCsvReader(file: File) = CSVReader(
     file.reader(),
     CSVParser.DEFAULT_SEPARATOR,
     CSVParser.DEFAULT_QUOTE_CHARACTER,
@@ -96,11 +93,7 @@ internal fun getReader(file: File) = CSVReader(
     false
 )
 
-internal operator fun Appendable.plusAssign(text: String) {
-    append(text)
-}
-
-internal fun Task.ensureParentExists(vararg files: Any) {
+fun Task.ensureParentExists(vararg files: Any) {
     for (file in files) {
         val parent = project.file(file).parentFile
         if (!parent.exists() && !parent.mkdirs()) {
@@ -109,11 +102,39 @@ internal fun Task.ensureParentExists(vararg files: Any) {
     }
 }
 
-internal fun Task.ensureDeleted(vararg files: Any) {
+fun Task.ensureDeleted(vararg files: Any) {
     for (file in files) {
         val f = project.file(file)
         if (f.exists() && !f.deleteRecursively()) {
             throw PaperweightException("Failed to delete file $f")
         }
     }
+}
+
+fun Project.toProvider(file: File): Provider<RegularFile> {
+    return layout.file(provider { file })
+}
+
+val RegularFileProperty.file
+    get() = get().asFile
+val RegularFileProperty.fileOrNull
+    get() = orNull?.asFile
+val DirectoryProperty.file
+    get() = get().asFile
+val DirectoryProperty.fileOrNull
+    get() = orNull?.asFile
+
+
+private var parsedConfig: McpConfig? = null
+fun mcpConfig(file: Provider<RegularFile>): McpConfig {
+    if (parsedConfig != null) {
+        return parsedConfig as McpConfig
+    }
+    parsedConfig = file.get().asFile.bufferedReader().use { reader ->
+        gson.fromJson(reader)
+    }
+    return parsedConfig as McpConfig
+}
+fun mcpFile(configFile: RegularFileProperty, path: String): File {
+    return configFile.file.resolveSibling(path)
 }

@@ -1,69 +1,70 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import org.apache.tools.ant.ExitException
-import org.apache.tools.ant.util.optional.NoExitSecurityManager
 import org.gradle.api.Task
-import java.net.URLClassLoader
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.jar.Manifest
+import org.gradle.internal.jvm.Jvm
+import java.io.OutputStream
 
-internal fun Task.runJar(jar: Any, vararg args: String) {
+fun Task.runJar(
+    jar: Any,
+    workingDir: Any,
+    logFile: Any?,
+    jvmArgs: List<String> = listOf(),
+    vararg args: String
+) {
     val jarFile = project.file(jar)
-    val url = jarFile.toURI().toURL()
+    val dir = project.file(workingDir)
 
-    val mainClassName = project.zipTree(jarFile).matching {
-        include("META-INF/MANIFEST.MF")
-    }.singleFile.inputStream().use { input ->
-        val man = Manifest(input)
-        return@use man.mainAttributes?.getValue("Main-Class")
-    } ?: throw PaperweightException("Failed to find Main-Class attribute in $jarFile")
+    val process = ProcessBuilder(
+        Jvm.current().javaExecutable.canonicalPath, *jvmArgs.toTypedArray(),
+        "-jar", jarFile.canonicalPath,
+        *args
+    ).directory(dir).start()
 
-    val classLoader = URLClassLoader(arrayOf(url))
-    val clazz = Class.forName(mainClassName, true, classLoader)
-
-    val mainMethod = clazz.getMethod("main", Array<String>::class.java)
-        ?: throw PaperweightException("Main class not found in class $mainClassName in jar $jarFile")
-
-    val exitCode = AtomicInteger(0)
-
-    val thread = Thread {
-        Thread.currentThread().contextClassLoader = classLoader
-
-        val sm = System.getSecurityManager()
-        try {
-            System.setSecurityManager(NoExitSecurityManager())
-            mainMethod(null, args)
-        } catch (e: ExitException) {
-            exitCode.set(e.status)
-        } finally {
-            System.setSecurityManager(sm)
+    val output = when {
+        logFile is OutputStream -> logFile
+        logFile != null -> {
+            val log = project.file(logFile)
+            log.outputStream().buffered()
         }
+        else -> null
     }
 
-    thread.start()
-    try {
-        thread.join()
-    } catch (ignored: InterruptedException) {}
+    output.use {
+        output?.let {
+            redirect(process.inputStream, it)
+            redirect(process.errorStream, it)
+        } ?: run {
+            redirect(process.inputStream, UselessOutputStream)
+            redirect(process.errorStream, UselessOutputStream)
+        }
 
-    val e = exitCode.get()
-    if (e != 0) {
-        throw PaperweightException("Execution of $jarFile failed with exit code $e")
+        val e = process.waitFor()
+        if (e != 0) {
+            throw PaperweightException("Execution of $jarFile failed with exit code $e")
+        }
     }
 }

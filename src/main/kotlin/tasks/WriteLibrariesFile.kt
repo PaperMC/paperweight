@@ -25,60 +25,37 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.toProvider
-import io.papermc.paperweight.util.unzip
-import io.papermc.paperweight.util.zip
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.listProperty
 import java.io.File
-import java.util.concurrent.ThreadLocalRandom
 
-abstract class ZippedTask : DefaultTask() {
+open class WriteLibrariesFile : DefaultTask() {
 
-    @InputFile
-    @Optional
-    val inputZip: RegularFileProperty = project.objects.fileProperty()
+    @Classpath
+    val inputFiles: ListProperty<File> = project.objects.listProperty()
 
     @OutputFile
-    val outputZip: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("zip"))))
+    val outputFile: RegularFileProperty = project.objects.run {
+        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("txt"))))
     }
-
-    abstract fun run(rootDir: File)
 
     @TaskAction
-    fun exec() {
-        val outputZipFile = outputZip.file
-        val outputDir = findOutputDir(outputZipFile)
+    fun run() {
+        val files = inputFiles.get()
+        files.sort()
 
-        try {
-            val input = inputZip.fileOrNull
-            if (input != null) {
-                unzip(input, outputDir)
+        outputFile.file.delete()
+        outputFile.file.bufferedWriter().use { writer ->
+            for (file in files) {
+                writer.appendln("-e=${file.absolutePath}")
             }
-
-            run(outputDir)
-
-            ensureDeleted(outputZipFile)
-
-            zip(outputDir, outputZipFile)
-        } finally {
-            outputDir.deleteRecursively()
         }
-    }
-
-    private fun findOutputDir(baseFile: File): File {
-        var dir: File
-        do {
-            dir = baseFile.resolveSibling("${baseFile.name}-" + ThreadLocalRandom.current().nextInt())
-        } while (dir.exists())
-        return dir
     }
 }

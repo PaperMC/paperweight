@@ -1,75 +1,78 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.ext.PaperweightExtension
-import org.gradle.api.Project
 import org.gradle.api.Task
 
-internal object Constants {
-    internal const val EXTENSION = "paperweight"
+object Constants {
+    const val EXTENSION = "paperweight"
 
-    internal const val SPIGOT_DEP_CONFIG = "spigotDeps"
+    const val MCP_MAPPINGS_CONFIG = "mcpConfig"
 
-    // Paths
-    internal const val CACHE_PATH = "caches/minecraft"
-    private const val MCP_PATH = "de/oceanlabs/mcp"
+    const val MCP_DATA_CONFIG = "mcpData"
+    const val SPIGOT_DEP_CONFIG = "spigotDeps"
+    const val MINECRAFT_DEP_CONFIG = "minecraft"
+    const val FORGE_FLOWER_CONFIG = "forgeFlower"
+    const val MCINJECT_CONFIG = "mcinject"
 
-    private const val PAPER_PATH = "io/papermc/paperweight"
-    private const val PAPER_VERSION_PATH = "$PAPER_PATH/versions"
+    const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven"
+    const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
+    const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
 
-    // Computed values
-    internal fun mcpDataDir(extension: PaperweightExtension) = "$MCP_PATH/mcp/${extension.minecraftVersion}"
-    internal fun mcpMappingDir(extension: PaperweightExtension) = "$MCP_PATH/mcp_${extension.mcpChannel}/${extension.mappingsVersion}"
+    const val CACHE_PATH = "caches"
+    private const val PAPER_PATH = "paperweight"
 
-    internal fun mcpFieldsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/fields.csv"
-    internal fun mcpMethodsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/methods.csv"
-    internal fun mcpParamsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/params.csv"
+    const val MCP_DATA_DIR = "mcp/data"
+    const val MCP_MAPPINGS_DIR = "mcp/mappings"
+    const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
 
-    internal fun paperMcpFieldsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/paper_fields.csv"
-    internal fun paperMcpMethodsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/paper_methods.csv"
-    internal fun paperMcpParamsCsv(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/paper_params.csv"
+    const val PAPER_FIELDS_CSV = "$MCP_MAPPINGS_DIR/paper_fields.csv"
+    const val PAPER_METHODS_CSV = "$MCP_MAPPINGS_DIR/paper_methods.csv"
+    const val PAPER_PARAMS_CSV = "$MCP_MAPPINGS_DIR/paper_params.csv"
 
-    internal fun notchToSrg(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-notch-srg.tsrg"
-    internal fun notchToMcp(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-notch-mcp.tsrg"
-    internal fun notchToSpigot(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-notch-spigot.tsrg"
+    const val NOTCH_TO_SRG = "$SRG_DIR/notch-srg.tsrg"
+    const val NOTCH_TO_MCP = "$SRG_DIR/notch-mcp.tsrg"
+    const val NOTCH_TO_SPIGOT = "$SRG_DIR/notch-spigot.tsrg"
 
-    internal fun mcpToNotch(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-mcp-notch.tsrg"
-    internal fun mcpToSrg(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-mcp-srg.tsrg"
-    internal fun mcpToSpigot(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-mcp-spigot.tsrg"
+    const val MCP_TO_NOTCH = "$SRG_DIR/mcp-notch.tsrg"
+    const val MCP_TO_SRG = "$SRG_DIR/mcp-srg.tsrg"
+    const val MCP_TO_SPIGOT = "$SRG_DIR/mcp-spigot.tsrg"
 
-    internal fun srgToNotch(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-srg-notch.tsrg"
-    internal fun srgToMcp(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-srg-mcp.tsrg"
-    internal fun srgToSpigot(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-srg-spigot.tsrg"
+    const val SRG_TO_NOTCH = "$SRG_DIR/srg-notch.tsrg"
+    const val SRG_TO_MCP = "$SRG_DIR/srg-mcp.tsrg"
+    const val SRG_TO_SPIGOT = "$SRG_DIR/srg-spigot.tsrg"
 
-    internal fun spigotToNotch(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-spigot-notch.tsrg"
-    internal fun spigotToSrg(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-spigot-srg.tsrg"
-    internal fun spigotToMcp(extension: PaperweightExtension) = "${mcpMappingDir(extension)}/${extension.minecraftVersion}/srgs/paper-spigot-mcp.tsrg"
+    const val SPIGOT_TO_NOTCH = "$SRG_DIR/spigot-notch.tsrg"
+    const val SPIGOT_TO_SRG = "$SRG_DIR/spigot-srg.tsrg"
+    const val SPIGOT_TO_MCP = "$SRG_DIR/spigot-mcp.tsrg"
 
-    internal fun spigotClassMappings(extension: PaperweightExtension) = "${extension.craftBukkit.mappingsDir}/${extension.buildDataInfo.classMappings}"
-    internal fun spigotMemberMappings(extension: PaperweightExtension) = "${extension.craftBukkit.mappingsDir}/${extension.buildDataInfo.memberMappings}"
-    internal fun spigotPackageMappings(extension: PaperweightExtension) = "${extension.craftBukkit.mappingsDir}/${extension.buildDataInfo.packageMappings}"
+    const val MC_MANIFEST = "jsons/McManifest.json"
+    const val VERSION_JSON = "jsons/McVersion.json"
 
-    internal fun paperVersionJson(extension: PaperweightExtension) = "$PAPER_VERSION_PATH/${extension.minecraftVersion}/McVersion.json"
+    const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
-    internal fun paperCache(extension: PaperweightExtension) = "$PAPER_VERSION_PATH/${extension.minecraftVersion}"
-    internal fun paperJarFile(extension: PaperweightExtension, name: String) = "${paperCache(extension)}/$name.jar"
-
-    internal fun mcpPatchesDir(extension: PaperweightExtension) = "$MCP_PATH/mcp/${extension.minecraftVersion}/patches/server"
-
-    internal fun taskOutput(project: Project, name: String) = "${project.projectDir}/.gradle/taskOutputs/$name"
+    fun Task.paperTaskOutput() = paperTaskOutput("jar")
+    fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
+    fun Task.paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
 }

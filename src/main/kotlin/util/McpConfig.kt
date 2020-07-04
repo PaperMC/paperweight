@@ -21,24 +21,35 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.util
 
-import com.github.salomonbrys.kotson.fromJson
-import io.papermc.paperweight.util.gson
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.OutputFile
-import util.BuildDataInfo
+data class McpConfig(
+    val spec: Int,
+    val version: String,
+    val data: McpConfigData,
+    val steps: Map<String, List<Map<String, String>>>,
+    val functions: Map<String, McpJvmCommand>
+)
 
-open class GatherBuildData : DefaultTask() {
+data class McpConfigData(
+    val access: String,
+    val constructors: String,
+    val exceptions: String,
+    val mappings: String,
+    val inject: String,
+    val statics: String,
+    val patches: McpConfigDataPatches
+)
 
-    @OutputFile
-    val buildDataInfoFile: RegularFileProperty = project.objects.fileProperty()
+data class McpConfigDataPatches(
+    val client: String,
+    val joined: String,
+    val server: String
+)
 
-    val buildDataInfo: Provider<BuildDataInfo> = buildDataInfoFile.map {
-        it.asFile.bufferedReader().use { reader ->
-            gson.fromJson(reader)
-        }
-    }
-}
+data class McpJvmCommand(
+    val version: String,
+    val args: List<String>,
+    val repo: String,
+    val jvmargs: List<String>?
+)

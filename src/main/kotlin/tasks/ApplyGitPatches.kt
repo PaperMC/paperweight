@@ -1,73 +1,113 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
+import io.papermc.paperweight.util.file
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.property
-import java.io.File
-import java.util.Arrays
 
-open class ApplyGitPatches : ZippedTask() {
+open class ApplyGitPatches : DefaultTask() {
 
     @Input
-    val targetName = project.objects.property<String>()
+    val branch: Property<String> = project.objects.property()
+    @Input
+    val upstreamBranch: Property<String> = project.objects.property()
     @InputDirectory
-    val patchDir = project.objects.directoryProperty()
+    val upstream: DirectoryProperty = project.objects.directoryProperty()
+    @InputDirectory
+    val patchDir: DirectoryProperty = project.objects.directoryProperty()
 
-    override fun action(rootDir: File) {
-        val patchDirFile = patchDir.asFile.get()
+    @OutputDirectory
+    val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
-        val git = Git(rootDir)
-
-        println("   Applying patches to $targetName...")
-
-        val statusFile = rootDir.resolve(".git/patch-apply-failed")
-        statusFile.delete()
-        git("am", "--abort").runSilently()
-
-        val patches = patchDirFile.listFiles { _, name -> name.endsWith(".patch") } ?: run {
-            println("No patches found")
-            return
+    @TaskAction
+    fun run() {
+        Git(upstream.file).let { git ->
+            git("fetch").run()
+            git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
         }
 
-        Arrays.sort(patches)
-        if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePath }.toTypedArray()).runOut() != 0) {
-            Thread.sleep(100) // Wait for git
-            statusFile.writeText("1")
-            logger.error("***   Something did not apply cleanly to $targetName.")
-            logger.error("***   Please review above details and finish the apply then")
-            logger.error("***   save the changes with ./gradlew rebuildPatches")
+        if (!outputDir.file.exists() || !outputDir.file.resolve(".git").exists()) {
+            outputDir.file.deleteRecursively()
+            Git(outputDir.file.parentFile)("clone", upstream.file.absolutePath, outputDir.file.name).runOut()
+        }
 
-            if (OperatingSystem.current().isWindows) {
-                logger.error("")
-                logger.error("***   Because you're on Windows you'll need to finish the AM,")
-                logger.error("***   rebuild all patches, and then re-run the patch apply again.")
-                logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
+        val target = outputDir.file.name
+
+        println("   Resetting $target to ${upstream.file.name}...")
+        Git(outputDir.file).let { git ->
+            git("remote", "rm", "upstream").runSilently(silenceErr = true)
+            git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
+            if (git("checkout", "master").runSilently(silenceOut = false, silenceErr = true) != 0) {
+                git("checkout", "-b", "master").runOut()
+            }
+            git("fetch", "upstream").runSilently(silenceErr = true)
+            git("reset", "--hard", "upstream/${upstreamBranch.get()}").runOut()
+
+            println("   Applying patches to $target...")
+
+            val statusFile = outputDir.file.resolve(".git/patch-apply-failed")
+            if (statusFile.exists()) {
+                statusFile.delete()
+            }
+            git("am", "--abort").runSilently(silenceErr = true)
+
+            val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: run {
+                println("No patches found")
+                return
             }
 
-            throw PaperweightException("Failed to apply patches")
-        } else {
-            statusFile.delete()
-            println("   Patches applied cleanly to $targetName")
+            patches.sort()
+
+            if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePath }.toTypedArray()).runOut() != 0) {
+                Thread.sleep(100) // Wait for git
+                statusFile.writeText("1")
+                logger.error("***   Something did not apply cleanly to $target.")
+                logger.error("***   Please review above details and finish the apply then")
+                logger.error("***   save the changes with ./gradlew `rebuildPatches`")
+
+                if (OperatingSystem.current().isWindows) {
+                    logger.error("")
+                    logger.error("***   Because you're on Windows you'll need to finish the AM,")
+                    logger.error("***   rebuild all patches, and then re-run the patch apply again.")
+                    logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
+                }
+
+                throw PaperweightException("Failed to apply patches")
+            } else {
+                statusFile.delete()
+                println("   Patches applied cleanly to $target")
+            }
         }
     }
 }

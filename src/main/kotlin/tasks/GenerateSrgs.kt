@@ -1,62 +1,74 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.getReader
+import io.papermc.paperweight.util.getCsvReader
+import io.papermc.paperweight.util.mcpConfig
+import io.papermc.paperweight.util.mcpFile
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 
 open class GenerateSrgs : DefaultTask() {
 
     @InputFile
-    val inSrg = project.objects.fileProperty() // Notch -> SRG
+    val configFile: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val methodsCsv = project.objects.fileProperty()
+    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val fieldsCsv = project.objects.fileProperty()
+    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
-    val notchToSrg = project.objects.fileProperty()
+    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val notchToMcp = project.objects.fileProperty()
+    val notchToMcp: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val mcpToNotch = project.objects.fileProperty()
+    val mcpToNotch: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val mcpToSrg = project.objects.fileProperty()
+    val mcpToSrg: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val srgToNotch = project.objects.fileProperty()
+    val srgToNotch: RegularFileProperty = project.objects.fileProperty()
     @OutputFile
-    val srgToMcp = project.objects.fileProperty()
+    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
+        val config = mcpConfig(configFile)
+        val inSrg = mcpFile(configFile, config.data.mappings)
+
         val methods = HashMap<String, String>()
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = inSrg.asFile.get().reader().use {
+        val inSet = inSrg.reader().use {
             MappingFormats.TSRG.createReader(it).read()
         }
 
@@ -65,13 +77,13 @@ open class GenerateSrgs : DefaultTask() {
     }
 
     private fun readCsvs(methods: MutableMap<String, String>, fields: MutableMap<String, String>) {
-        getReader(methodsCsv.asFile.get()).use { reader ->
+        getCsvReader(methodsCsv.asFile.get()).use { reader ->
             for (line in reader.readAll()) {
                 methods[line[0]] = line[1]
             }
         }
 
-        getReader(fieldsCsv.asFile.get()).use { reader ->
+        getCsvReader(fieldsCsv.asFile.get()).use { reader ->
             for (line in reader.readAll()) {
                 fields[line[0]] = line[1]
             }

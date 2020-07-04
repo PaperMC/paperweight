@@ -1,23 +1,32 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.unzip
+import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.mcpConfig
+import io.papermc.paperweight.util.mcpFile
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
@@ -38,7 +47,11 @@ import org.eclipse.jdt.core.dom.MethodDeclaration
 import org.eclipse.jdt.core.dom.Modifier
 import org.eclipse.jdt.core.dom.SimpleName
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.kotlin.dsl.get
@@ -48,80 +61,80 @@ import java.io.File
 open class RemapSources : ZippedTask() {
 
     @InputFile
-    val vanillaJar = project.objects.fileProperty()
+    val vanillaJar: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val vanillaRemappedSpigotJar = project.objects.fileProperty() // Required for pre-remap pass
+    val vanillaRemappedSpigotJar: RegularFileProperty = project.objects.fileProperty() // Required for pre-remap pass
     @InputFile
-    val vanillaRemappedSrgJar = project.objects.fileProperty() // Required for post-remap pass
+    val vanillaRemappedSrgJar: RegularFileProperty = project.objects.fileProperty() // Required for post-remap pass
     @InputFile
-    val spigotToSrg = project.objects.fileProperty()
-    @InputFile
-    val spigotApiZip = project.objects.fileProperty()
+    val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
     @Input
-    val config = project.objects.property<String>()
+    val configuration: Property<String> = project.objects.property()
     @InputFile
-    val constructors = project.objects.fileProperty()
+    val configFile: RegularFileProperty = project.objects.fileProperty()
+    @InputDirectory
+    val spigotServerDir: DirectoryProperty = project.objects.directoryProperty()
+    @InputDirectory
+    val spigotApiDir: DirectoryProperty = project.objects.directoryProperty()
 
     @OutputFile
-    val generatedAt = project.objects.fileProperty()
+    val generatedAt: RegularFileProperty = project.objects.fileProperty()
 
-    override fun action(rootDir: File) {
-        val spigotToSrgFile = spigotToSrg.asFile.get()
+    override fun run(rootDir: File) {
+        val config = mcpConfig(configFile)
+        val constructors = mcpFile(configFile, config.data.constructors)
+
+        val spigotToSrgFile = spigotToSrg.file
 
         val mappings = spigotToSrgFile.bufferedReader().use { reader ->
             MappingFormats.TSRG.createReader(reader).read()
         }
 
-        val srcDir = rootDir.resolve("src/main/java")
+        val srcDir = spigotServerDir.file.resolve("src/main/java")
         val pass1Dir = rootDir.resolve("pass1")
         val outDir = rootDir.resolve("out")
 
-        val configuration = project.configurations[config.get()]
+        val configuration = project.configurations[configuration.get()]
 
         val ats = AccessTransformSet.create()
 
-        val spigotApiDir = unzip(spigotApiZip)
-        try {
-            val merc = Mercury()
-
-            merc.classPath.addAll(listOf(
+        Mercury().apply {
+            classPath.addAll(listOf(
                 vanillaJar.asFile.get().toPath(),
                 vanillaRemappedSpigotJar.asFile.get().toPath(),
-                spigotApiDir.resolve("src/main/java").toPath()
+                spigotApiDir.file.resolve("src/main/java").toPath()
             ))
 
             for (file in configuration.resolvedConfiguration.files) {
-                merc.classPath.add(file.toPath())
+                classPath.add(file.toPath())
             }
 
             // Generate AT
-            merc.processors.add(AccessAnalyzerProcessor.create(ats, mappings))
-            merc.process(srcDir.toPath())
+            processors.add(AccessAnalyzerProcessor.create(ats, mappings))
+            process(srcDir.toPath())
 
             // Remap
-            merc.processors.clear()
-            merc.processors.addAll(listOf(
+            processors.clear()
+            processors.addAll(listOf(
                 MercuryRemapper.create(mappings),
                 BridgeMethodRewriter.create(),
                 AccessTransformerRewriter.create(ats)
             ))
 
-            merc.rewrite(srcDir.toPath(), pass1Dir.toPath())
+            rewrite(srcDir.toPath(), pass1Dir.toPath())
+        }
 
+        Mercury().apply {
             // Remap SRG parameters
-            merc.classPath.clear()
-            merc.classPath.addAll(listOf(
+            classPath.addAll(listOf(
                 vanillaJar.asFile.get().toPath(),
                 vanillaRemappedSrgJar.asFile.get().toPath(),
-                spigotApiDir.resolve("src/main/java").toPath()
+                spigotApiDir.file.resolve("src/main/java").toPath()
             ))
 
-            merc.processors.clear()
-            merc.processors.add(SrgParameterRemapper(project.file(constructors)))
+            processors.add(SrgParameterRemapper(constructors))
 
-            merc.rewrite(pass1Dir.toPath(), outDir.toPath())
-        } finally {
-            spigotApiDir.deleteRecursively()
+            rewrite(pass1Dir.toPath(), outDir.toPath())
         }
 
         // Only leave remapped source

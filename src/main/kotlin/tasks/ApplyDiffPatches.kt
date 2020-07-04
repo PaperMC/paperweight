@@ -1,17 +1,24 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
@@ -19,7 +26,11 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.file
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -34,35 +45,31 @@ import java.util.Date
 open class ApplyDiffPatches : DefaultTask() {
 
     @InputFile
-    val sourceJar = project.objects.fileProperty()
+    val sourceJar: RegularFileProperty = project.objects.fileProperty()
     @Input
-    val sourceBasePath = project.objects.property<String>()
+    val sourceBasePath: Property<String> = project.objects.property()
     @InputDirectory
-    val patchDir = project.objects.directoryProperty()
-    @InputDirectory
-    val basePatchDir = project.objects.directoryProperty()
+    val patchDir: DirectoryProperty = project.objects.directoryProperty()
     @Input
-    val branch = project.objects.property<String>()
+    val branch: Property<String> = project.objects.property()
 
     @OutputDirectory
-    val baseDir = project.objects.directoryProperty()
+    val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
     @TaskAction
     fun run() {
-        val baseDirFile = project.file(baseDir)
-        val git = Git(baseDirFile)
-        git("checkout", "-B", branch.get(), "HEAD").executeSilently()
+        val git = Git(outputDir.file)
+        git("checkout", "-B", branch.get(), "HEAD").executeSilently(silenceErr = true)
 
-        val sourceJarFile = project.file(sourceJar)
-        val uri = URI.create("jar:${sourceJarFile.toURI()}")
+        val uri = URI.create("jar:${sourceJar.file.toURI()}")
 
-        val patchDirFile = patchDir.asFile.get()
-        val basePatchDirFile = basePatchDir.asFile.get()
+        val basePatchDirFile = outputDir.file.resolve("src/main/java")
         val outputDirFile = basePatchDirFile.resolve(sourceBasePath.get())
+        outputDirFile.deleteRecursively()
 
-        val patchList = patchDirFile.listFiles() ?: throw PaperweightException("Patch directory does not exist $patchDirFile")
+        val patchList = patchDir.file.listFiles() ?: throw PaperweightException("Patch directory does not exist ${patchDir.file}")
         if (patchList.isEmpty()) {
-            throw PaperweightException("No patch files found in $patchDirFile")
+            throw PaperweightException("No patch files found in ${patchDir.file}")
         }
 
         // Copy in patch targets
@@ -82,17 +89,18 @@ open class ApplyDiffPatches : DefaultTask() {
         }
 
         git("add", "src").executeOut()
-        git("commit", "-m", "Minecraft $ ${Date()}", "--author=Auto <auto@mated.null>").executeOut()
+        git("commit", "-m", "Vanilla $ ${Date()}", "--author=Vanilla <auto@mated.null>").executeOut()
 
         // Apply patches
         for (file in patchList) {
             val javaName = file.name.replaceAfterLast('.', "java")
-            println("Patching $javaName < ${file.name}")
-            git("apply", "--directory=${basePatchDirFile.relativeTo(baseDirFile).path}", file.absolutePath).executeOut()
+
+            println("Patching ${javaName.removeSuffix(".java")}")
+            git("apply", "--directory=${basePatchDirFile.relativeTo(outputDir.file).path}", file.absolutePath).executeOut()
         }
 
         git("add", "src").executeOut()
-        git("commit", "-m", "Patched $ ${Date()}", "--author=Auto <auto@mated.null>").executeOut()
+        git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").executeOut()
         git("checkout", "-f", "HEAD~2").executeSilently()
     }
 }

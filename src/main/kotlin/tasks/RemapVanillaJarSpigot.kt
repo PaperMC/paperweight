@@ -1,55 +1,82 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.Constants.paperTaskOutput
+import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.runJar
+import io.papermc.paperweight.util.toProvider
 import io.papermc.paperweight.util.wrapException
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.property
 
 open class RemapVanillaJarSpigot : DefaultTask() {
 
     @InputFile
-    val inputJar = project.objects.fileProperty()
+    val inputJar: RegularFileProperty = project.objects.fileProperty()
 
     @InputFile
-    val classMappings = project.objects.fileProperty()
+    val classMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val memberMappings = project.objects.fileProperty()
+    val memberMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val packageMappings = project.objects.fileProperty()
+    val packageMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val accessTransformers = project.objects.fileProperty()
+    val accessTransformers: RegularFileProperty = project.objects.fileProperty()
+
+    @Input
+    val workDirName: Property<String> = project.objects.property()
+
     @InputFile
-    val specialSourceJar = project.objects.fileProperty()
+    val specialSourceJar: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val specialSource2Jar = project.objects.fileProperty()
+    val specialSource2Jar: RegularFileProperty = project.objects.fileProperty()
+
+    @Input
+    val classMapCommand: Property<String> = project.objects.property()
+    @Input
+    val memberMapCommand: Property<String> = project.objects.property()
+    @Input
+    val finalMapCommand: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputJar = project.objects.fileProperty()
+    val outputJar: RegularFileProperty = project.objects.run {
+        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput())))
+    }
 
     @TaskAction
     fun run() {
         val inputJarPath = inputJar.asFile.get().canonicalPath
 
         val outputJarFile = outputJar.asFile.get()
-        val outputJarPath  = outputJarFile.canonicalPath
+        val outputJarPath = outputJarFile.canonicalPath
 
         val classJarFile = outputJarFile.resolveSibling(outputJarFile.name + ".classes")
         val membersJarFile = outputJarFile.resolveSibling(outputJarFile.name + ".members")
@@ -61,20 +88,55 @@ open class RemapVanillaJarSpigot : DefaultTask() {
         val packageMappingsPath = packageMappings.asFile.get().canonicalPath
         val accessTransformersPath = accessTransformers.asFile.get().canonicalPath
 
-        println("Applying class mappings...")
-        wrapException("Failed to apply class mappings") {
-            runJar(specialSource2Jar, "map", "-i", inputJarPath, "-m", classMappingPath, "-o", classJarPath)
+        try {
+            println("Applying class mappings...")
+            wrapException("Failed to apply class mappings") {
+                val logFile = project.cache.resolve(paperTaskOutput("class.log"))
+                logFile.delete()
+                runJar(
+                    specialSource2Jar,
+                    workingDir = workDirName.get(),
+                    logFile = logFile,
+                    args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath)
+                )
+            }
+            println("Applying member mappings...")
+            wrapException("Failed to apply member mappings") {
+                val logFile = project.cache.resolve(paperTaskOutput("member.log"))
+                logFile.delete()
+                runJar(
+                    specialSource2Jar,
+                    workingDir = workDirName.get(),
+                    logFile = logFile,
+                    args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
+                )
+            }
+            println("Creating remapped jar...")
+            wrapException("Failed to create remapped jar") {
+                val logFile = project.cache.resolve(paperTaskOutput("final.log"))
+                logFile.delete()
+                runJar(
+                    specialSourceJar,
+                    workingDir = workDirName.get(),
+                    logFile = logFile,
+                    args = *doReplacements(finalMapCommand.get(), membersJarPath, accessTransformersPath, packageMappingsPath, outputJarPath)
+                )
+            }
+        } finally {
+            classJarFile.delete()
+            membersJarFile.delete()
         }
-        println("Applying member mappings...")
-        wrapException("Failed to apply member mappings") {
-            runJar(specialSource2Jar, "map", "-i", classJarPath, "-m", memberMappingsPath, "-o", membersJarPath)
-        }
-        println("Creating remapped jar...")
-        wrapException("Failed to create remapped jar") {
-            runJar(specialSourceJar, "--kill-lvt", "-i", membersJarPath, "--access-transformer", accessTransformersPath, "-m", packageMappingsPath, "-o", outputJarPath)
-        }
+    }
 
-        classJarFile.delete()
-        membersJarFile.delete()
+    private val indexReg = Regex("\\{(\\d)}")
+    private fun doReplacements(command: String, vararg values: String): Array<String> {
+        return command.split(" ").let { it.subList(3, it.size) }.map {
+            val index = indexReg.matchEntire(it)?.groupValues?.get(1)?.toInt()
+            return@map if (index != null) {
+                values[index]
+            } else {
+                it
+            }
+        }.toTypedArray()
     }
 }

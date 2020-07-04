@@ -7,9 +7,10 @@ plugins {
     kotlin("jvm") version "1.3.70"
     `kotlin-dsl`
     id("net.minecrell.licenser") version "0.4.1"
+    id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
-group = "io.papermc"
+group = "io.papermc.paperweight"
 version = "1.0.0-SNAPSHOT"
 
 repositories {
@@ -18,25 +19,40 @@ repositories {
     maven("https://files.minecraftforge.net/maven/")
 }
 
+val mcInjector: Configuration by configurations.creating
+
 dependencies {
+    implementation(kotlin("stdlib-jdk8"))
     compileOnly(gradleApi())
     compileOnly(gradleKotlinDsl())
-    implementation(kotlin("stdlib-jdk8"))
 
     implementation("net.sf.opencsv:opencsv:2.3")
-
-    implementation("org.cadixdev:lorenz:0.5.0-SNAPSHOT")
-    implementation("org.cadixdev:mercury:0.1.0-SNAPSHOT")
-    implementation("org.cadixdev:survey:0.2.0-SNAPSHOT")
-
     implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
 
-    implementation("net.minecraftforge:forgeflower:1.5.380.24")
-    implementation("de.oceanlabs.mcp:mcinjector:3.7.4")
+    // Cadix
+    implementation("org.cadixdev:lorenz:0.5.3")
+    implementation("org.cadixdev:lorenz-asm:0.5.3")
+    implementation("org.cadixdev:mercury:0.1.0-SNAPSHOT")
+    implementation("org.cadixdev:atlas:0.2.0")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+}
+
+val mcinjectorJar by tasks.registering(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class) {
+    configurations = listOf(mcInjector)
+    archiveBaseName.set("mcinjector-shadowed")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+    manifest {
+        attributes(mapOf("Main-Class" to "de.oceanlabs.mcp.mcinjector.MCInjector"))
+    }
+}
+
+tasks.jar {
+    from(mcinjectorJar)
+    archiveBaseName.set("io.papermc.paperweight.gradle.plugin")
 }
 
 idea {
@@ -54,8 +70,7 @@ eclipse {
 }
 
 license {
-    header = file("licenses/copyright.txt")
+    header = file("license/copyright.txt")
 
     include("**/*.kt")
-    exclude("util/ForgeGradleUtils.kt")
 }

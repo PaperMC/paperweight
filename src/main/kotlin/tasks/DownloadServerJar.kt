@@ -1,25 +1,37 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.util.Constants.paperTaskOutput
+import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -31,15 +43,17 @@ import java.security.MessageDigest
 open class DownloadServerJar : DefaultTask() {
 
     @Input
-    val downloadUrl = project.objects.property<String>()
+    val downloadUrl: Property<String> = project.objects.property()
     @Input
-    val hash = project.objects.property<String>()
+    val hash: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputJar = project.objects.fileProperty()
+    val outputJar: RegularFileProperty = project.objects.run {
+        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput())))
+    }
 
     @TaskAction
-    fun doStuff() {
+    fun run() {
         val file = outputJar.asFile.get()
         ensureParentExists(file)
         ensureDeleted(file)

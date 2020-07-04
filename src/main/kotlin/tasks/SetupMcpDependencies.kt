@@ -23,40 +23,33 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
+import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import java.io.File
+import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.property
 
-open class ApplyMcpPatches : ZippedTask() {
+open class SetupMcpDependencies : DefaultTask() {
 
     @InputFile
     val configFile: RegularFileProperty = project.objects.fileProperty()
+    @Input
+    val forgeFlowerConfig: Property<String> = project.objects.property()
+    @Input
+    val mcInjectorConfig: Property<String> = project.objects.property()
 
     init {
-        inputs.dir(configFile.map { mcpConfig(configFile) }.map { mcpFile(configFile, it.data.patches.server) })
+        outputs.upToDateWhen { false }
     }
 
-    override fun run(rootDir: File) {
+    @TaskAction
+    fun run() {
         val config = mcpConfig(configFile)
-        val serverPatchDir = mcpFile(configFile, config.data.patches.server)
 
-        val git = Git(rootDir)
-
-        val extension = ".java.patch"
-        project.fileTree(serverPatchDir).matching {
-            include("*$extension")
-        }.forEach { patch ->
-            val patchName = patch.name
-            print("Patching ${patchName.substring(0, extension.length)}")
-            val exit = git("apply", "--ignore-whitespace", patch.absolutePath).setup(System.out, null).run()
-            if (exit != 0) {
-                println("...Failed")
-            } else {
-                println()
-            }
-        }
+        project.dependencies.add(forgeFlowerConfig.get(), config.functions.getValue("decompile").version)
+        project.dependencies.add(mcInjectorConfig.get(), config.functions.getValue("mcinject").version)
     }
 }

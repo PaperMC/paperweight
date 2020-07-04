@@ -1,167 +1,219 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
+
+@file:Suppress("DuplicatedCode")
 
 package io.papermc.paperweight
 
-import com.github.salomonbrys.kotson.array
-import com.github.salomonbrys.kotson.get
-import com.github.salomonbrys.kotson.string
 import io.papermc.paperweight.ext.PaperweightExtension
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.CONFIG_MAPPINGS
-import io.papermc.paperweight.util.CONFIG_MCP_DATA
+import io.papermc.paperweight.tasks.ApplyDiffPatches
+import io.papermc.paperweight.tasks.ApplyGitPatches
+import io.papermc.paperweight.tasks.DecompileVanillaJar
+import io.papermc.paperweight.tasks.DownloadServerJar
+import io.papermc.paperweight.tasks.ExtractMcpData
+import io.papermc.paperweight.tasks.ExtractMcpMappings
+import io.papermc.paperweight.tasks.GatherBuildData
+import io.papermc.paperweight.tasks.GenerateSpigotSrgs
+import io.papermc.paperweight.tasks.GenerateSrgs
+import io.papermc.paperweight.tasks.GetRemoteJsons
+import io.papermc.paperweight.tasks.PatchMcpCsv
+import io.papermc.paperweight.tasks.RemapSources
+import io.papermc.paperweight.tasks.RemapVanillaJarSpigot
+import io.papermc.paperweight.tasks.RemapVanillaJarSrg
+import io.papermc.paperweight.tasks.RunForgeFlower
+import io.papermc.paperweight.tasks.RunMcInjector
+import io.papermc.paperweight.tasks.SetupMcpDependencies
+import io.papermc.paperweight.tasks.SetupSpigotDependencies
+import io.papermc.paperweight.tasks.WriteLibrariesFile
 import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.ExtractConfigTask
-import io.papermc.paperweight.util.ExtractMcpMappingsTask
+import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.RemapSrgSources
-import io.papermc.paperweight.util.RunForgeFlower
+import io.papermc.paperweight.tasks.RemapSrgSources
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.createBasics
 import io.papermc.paperweight.util.ext
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
+import util.BuildDataInfo
 import java.io.File
 
 class Paperweight : Plugin<Project> {
     override fun apply(target: Project) {
-        target.extensions.create(Constants.EXTENSION, PaperweightExtension::class.java)
+        target.extensions.create(Constants.EXTENSION, PaperweightExtension::class.java, target)
 
-        Git(target.projectDir)("submodule", "update", "--init").execute()
+        createConfigurations(target)
+        setupMcpDeps(target)
 
-        val extension = target.ext
+        createTasks(target)
 
-        val getRemoteJsons = target.tasks.register<GetRemoteJsons>("getRemoteJsons")
-        val validateConfig = target.tasks.register<ValidateConfig>("validateConfig") {
-            minecraftVersion.set(extension.minecraftVersion)
-            mcpVersion.set(extension.mcpVersionProvider)
-            mcpJson.set(getRemoteJsons.flatMap { it.mcpJson })
+        target.tasks.register("cleanCache").configure {
+            destroyables.register(target.cache)
+            doLast {
+                target.delete(target.cache)
+            }
         }
-        val gatherBuildData = target.tasks.register<GatherBuildData>("gatherBuildData") {
+    }
+
+    private fun createConfigurations(project: Project) {
+        project.repositories.apply {
+            maven("https://oss.sonatype.org/content/repositories/snapshots/")
+            maven("https://hub.spigotmc.org/nexus/content/groups/public/")
+            maven {
+                name = "forge"
+                url = project.uri(Constants.FORGE_MAVEN_URL)
+                metadataSources {
+                    artifact()
+                }
+            }
+            mavenCentral()
+            maven {
+                name = "minecraft"
+                url = project.uri(Constants.MC_LIBRARY_URL)
+            }
+        }
+
+        project.configurations.register(Constants.MCP_MAPPINGS_CONFIG)
+        project.configurations.register(Constants.MCP_DATA_CONFIG)
+        project.configurations.register(Constants.SPIGOT_DEP_CONFIG)
+        project.configurations.create(Constants.MINECRAFT_DEP_CONFIG)
+        project.configurations.register(Constants.FORGE_FLOWER_CONFIG)
+        project.configurations.create(Constants.MCINJECT_CONFIG)
+    }
+
+    private fun setupMcpDeps(project: Project) {
+        project.dependencies.add(Constants.MCP_DATA_CONFIG, project.provider {
+            mapOf(
+                "group" to "de.oceanlabs.mcp",
+                "name" to "mcp_config",
+                "version" to "${project.ext.mcpMinecraftVersion.get()}-${project.ext.mcpVersion.get()}",
+                "ext" to "zip"
+            )
+        })
+
+        project.dependencies.add(Constants.MCP_MAPPINGS_CONFIG, project.provider {
+            mapOf(
+                "group" to "de.oceanlabs.mcp",
+                "name" to "mcp_${project.ext.mcpMappingsChannel.get()}",
+                "version" to project.ext.mcpMappingsVersion.get(),
+                "ext" to "zip"
+            )
+        })
+    }
+
+    // Types are specified in this method to hopefully improve editor performance a little, though I don't think it helps
+    private fun createTasks(project: Project) {
+        val cache: File = project.cache
+        val extension: PaperweightExtension = project.ext
+        val configs: ConfigurationContainer = project.configurations
+
+        val initGitSubmodules: TaskProvider<Task> = project.tasks.register("initGitSubmodules") {
+            outputs.upToDateWhen { false }
+            doLast {
+                Git(project.projectDir)("submodule", "update", "--init").execute()
+            }
+        }
+        val gatherBuildData: TaskProvider<GatherBuildData> = project.tasks.register<GatherBuildData>("gatherBuildData") {
+            dependsOn(initGitSubmodules)
             buildDataInfoFile.set(extension.craftBukkit.buildDataInfo)
         }
+        val buildDataInfo: Provider<BuildDataInfo> = gatherBuildData.flatMap { it.buildDataInfo }
 
-        createConfigurations(target, getRemoteJsons)
-        createBasics(target)
-        setupConfigurations(target, validateConfig)
-
-        createTasks(target, gatherBuildData)
-    }
-
-    private fun createConfigurations(project: Project, getRemoteJsons: TaskProvider<GetRemoteJsons>) {
-        // For remapSources, we need to pull down a sonatype & spigot dep
-        project.configurations.create(Constants.SPIGOT_DEP_CONFIG)
-        project.repositories.maven("https://oss.sonatype.org/content/repositories/snapshots/")
-        project.repositories.maven("https://hub.spigotmc.org/nexus/content/groups/public/")
-
-        val config = project.configurations.create("minecraft")
-
-        // These dependencies will be resolved using the `minecraft` repo
-        config.resolutionStrategy.eachDependency {
-            val group = requested.group
-            val artifact = requested.name
-
-            val obj = getRemoteJsons.flatMap { it.versionJson }.get().get()["libraries"].array.firstOrNull {
-                it["name"].string.startsWith("$group:$artifact")
-            } ?: return@eachDependency
-
-            val name = obj["name"].string
-            val index = name.lastIndexOf(':')
-            if (index == -1) {
-                // Shouldn't be possible, but just a guard
-                return@eachDependency
-            }
-
-            useVersion(name.substring(index + 1))
-            because("Match MC vanilla version")
-        }
-    }
-
-    private fun createTasks(project: Project, gatherBuildData: TaskProvider<GatherBuildData>) {
-        val cache = project.cache
-        val extension = project.ext
-        val buildDataInfo = gatherBuildData.flatMap { it.buildDataInfo }
-
-        val extractMcpData = project.tasks.register<ExtractMcpDataTask>("extractMcpData") {
-            config.set(CONFIG_MCP_DATA)
-
-            destinationDir.set(cache.resolve(Constants.mcpDataDir(extension)))
+        val extractMcpData: TaskProvider<ExtractMcpData> = project.tasks.register<ExtractMcpData>("extractMcpData") {
+            config.set(Constants.MCP_DATA_CONFIG)
+            outputDir.set(cache.resolve(Constants.MCP_DATA_DIR))
         }
 
-        val extractMcpMappings = project.tasks.register<ExtractMcpMappingsTask>("extractMcpMappings") {
-            config.set(CONFIG_MAPPINGS)
-
-            destinationDir.set(cache.resolve(Constants.mcpMappingDir(extension)))
+        val setupMcpDependencies: TaskProvider<SetupMcpDependencies> = project.tasks.register<SetupMcpDependencies>("setupMcpDependencies") {
+            configFile.set(extractMcpData.flatMap { it.configJson })
+            forgeFlowerConfig.set(Constants.FORGE_FLOWER_CONFIG)
+            mcInjectorConfig.set(Constants.MCINJECT_CONFIG)
         }
 
-        val mcpRewrites = project.tasks.register<PatchMcpCsv>("mcpRewrites") {
+        val extractMcpMappings: TaskProvider<ExtractMcpMappings> = project.tasks.register<ExtractMcpMappings>("extractMcpMappings") {
+            config.set(Constants.MCP_MAPPINGS_CONFIG)
+            outputDir.set(cache.resolve(Constants.MCP_MAPPINGS_DIR))
+        }
+
+        val getRemoteJsons: TaskProvider<GetRemoteJsons> = project.tasks.register<GetRemoteJsons>("getRemoteJsons") {
+            config.set(Constants.MINECRAFT_DEP_CONFIG)
+        }
+
+        val mcpRewrites: TaskProvider<PatchMcpCsv> = project.tasks.register<PatchMcpCsv>("mcpRewrites") {
             fieldsCsv.set(extractMcpMappings.flatMap { it.fieldsCsv })
             methodsCsv.set(extractMcpMappings.flatMap { it.methodsCsv })
             paramsCsv.set(extractMcpMappings.flatMap { it.paramsCsv })
             changesFile.set(extension.paper.mcpRewritesFile)
 
-            paperFieldCsv.set(cache.resolve(Constants.paperMcpFieldsCsv(extension)))
-            paperMethodCsv.set(cache.resolve(Constants.paperMcpMethodsCsv(extension)))
-            paperParamCsv.set(cache.resolve(Constants.paperMcpParamsCsv(extension)))
+            paperFieldCsv.set(cache.resolve(Constants.PAPER_FIELDS_CSV))
+            paperMethodCsv.set(cache.resolve(Constants.PAPER_METHODS_CSV))
+            paperParamCsv.set(cache.resolve(Constants.PAPER_PARAMS_CSV))
         }
 
-        val generateSrgs = project.tasks.register<GenerateSrgs>("generateSrgs") {
+        val generateSrgs: TaskProvider<GenerateSrgs> = project.tasks.register<GenerateSrgs>("generateSrgs") {
             methodsCsv.set(mcpRewrites.flatMap { it.paperMethodCsv })
             fieldsCsv.set(mcpRewrites.flatMap { it.paperFieldCsv })
-            inSrg.set(extractMcpData.flatMap { it.joinedSrg })
+            configFile.set(extractMcpData.flatMap { it.configJson })
 
-            notchToSrg.set(cache.resolve(Constants.notchToSrg(extension)))
-            notchToMcp.set(cache.resolve(Constants.notchToMcp(extension)))
-            srgToNotch.set(cache.resolve(Constants.srgToNotch(extension)))
-            srgToMcp.set(cache.resolve(Constants.srgToMcp(extension)))
-            mcpToNotch.set(cache.resolve(Constants.mcpToNotch(extension)))
-            mcpToSrg.set(cache.resolve(Constants.mcpToSrg(extension)))
+            notchToSrg.set(cache.resolve(Constants.NOTCH_TO_SRG))
+            notchToMcp.set(cache.resolve(Constants.NOTCH_TO_MCP))
+            srgToNotch.set(cache.resolve(Constants.SRG_TO_NOTCH))
+            srgToMcp.set(cache.resolve(Constants.SRG_TO_MCP))
+            mcpToNotch.set(cache.resolve(Constants.MCP_TO_NOTCH))
+            mcpToSrg.set(cache.resolve(Constants.MCP_TO_SRG))
         }
 
-        val generateSpigotSrgs = project.tasks.register<GenerateSpigotSrgs>("generateSpigotSrgs") {
+        val generateSpigotSrgs: TaskProvider<GenerateSpigotSrgs> = project.tasks.register<GenerateSpigotSrgs>("generateSpigotSrgs") {
             notchToSrg.set(generateSrgs.flatMap { it.notchToSrg })
             srgToMcp.set(generateSrgs.flatMap { it.srgToMcp })
             classMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
             memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
 
-            spigotToSrg.set(cache.resolve(Constants.spigotToSrg(extension)))
-            spigotToMcp.set(cache.resolve(Constants.spigotToMcp(extension)))
-            spigotToNotch.set(cache.resolve(Constants.spigotToNotch(extension)))
-            srgToSpigot.set(cache.resolve(Constants.srgToSpigot(extension)))
-            mcpToSpigot.set(cache.resolve(Constants.mcpToSpigot(extension)))
-            notchToSpigot.set(cache.resolve(Constants.notchToSpigot(extension)))
+            spigotToSrg.set(cache.resolve(Constants.SPIGOT_TO_SRG))
+            spigotToMcp.set(cache.resolve(Constants.SPIGOT_TO_MCP))
+            spigotToNotch.set(cache.resolve(Constants.SPIGOT_TO_NOTCH))
+            srgToSpigot.set(cache.resolve(Constants.SRG_TO_SPIGOT))
+            mcpToSpigot.set(cache.resolve(Constants.MCP_TO_SPIGOT))
+            notchToSpigot.set(cache.resolve(Constants.NOTCH_TO_SPIGOT))
         }
 
-        val downloadServerJar = project.tasks.register<DownloadServerJar>("downloadServerJar") {
+        val downloadServerJar: TaskProvider<DownloadServerJar> = project.tasks.register<DownloadServerJar>("downloadServerJar") {
+            dependsOn(gatherBuildData)
             downloadUrl.set(buildDataInfo.map { it.serverUrl })
             hash.set(buildDataInfo.map { it.minecraftHash })
-
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "vanilla")))
         }
 
-        val filterVanillaJar = project.tasks.register<Zip>("filterVanillaJar") {
-            archiveFileName.set("filtered.jar")
-            destinationDirectory.set(cache.resolve(Constants.paperCache(extension)))
+        val filterVanillaJar: TaskProvider<Zip> = project.tasks.register<Zip>("filterVanillaJar") {
+            dependsOn(downloadServerJar) // the from() block below doesn't set up this dependency
+            archiveFileName.set("filterVanillaJar.jar")
+            destinationDirectory.set(cache.resolve(Constants.TASK_CACHE))
 
             from(project.zipTree(downloadServerJar.flatMap { it.outputJar })) {
                 include("/*.class")
@@ -169,124 +221,122 @@ class Paperweight : Plugin<Project> {
             }
         }
 
-        val remapVanillaJar = project.tasks.register<RemapVanillaJarSpigot>("remapVanillaJar") {
+        val remapVanillaJar: TaskProvider<RemapVanillaJarSpigot> = project.tasks.register<RemapVanillaJarSpigot>("remapVanillaJar") {
             inputJar.set(project.layout.file(filterVanillaJar.map { it.outputs.files.singleFile }))
-            specialSourceJar.set(extension.craftBukkit.specialSourceJar)
-            specialSource2Jar.set(extension.craftBukkit.specialSource2Jar)
+
             classMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
             memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
             accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "spigot")))
+            workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })
+
+            specialSourceJar.set(extension.craftBukkit.specialSourceJar)
+            specialSource2Jar.set(extension.craftBukkit.specialSource2Jar)
+
+            classMapCommand.set(buildDataInfo.map { it.classMapCommand })
+            memberMapCommand.set(buildDataInfo.map { it.memberMapCommand })
+            finalMapCommand.set(buildDataInfo.map { it.finalMapCommand })
         }
 
-        val decompileVanillaJarSpigot = project.tasks.register<DecompileVanillaJar>("decompileVanillaJarSpigot") {
+        val decompileVanillaJarSpigot: TaskProvider<DecompileVanillaJar> = project.tasks.register<DecompileVanillaJar>("decompileVanillaJarSpigot") {
             inputJar.set(remapVanillaJar.flatMap { it.outputJar })
             fernFlowerJar.set(extension.craftBukkit.fernFlowerJar)
-
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "spigot-decomp")))
+            decompileCommand.set(buildDataInfo.map { it.decompileCommand })
         }
 
-        // TODO move this to a zip task
-        val patchCraftBukkit = project.tasks.register<ApplyDiffPatches>("patchCraftBukkit") {
+        val patchCraftBukkit: TaskProvider<ApplyDiffPatches> = project.tasks.register<ApplyDiffPatches>("patchCraftBukkit") {
             sourceJar.set(decompileVanillaJarSpigot.flatMap { it.outputJar })
+            sourceBasePath.set("net/minecraft/server")
             branch.set("patched")
             patchDir.set(extension.craftBukkit.patchDir)
-            basePatchDir.set(extension.craftBukkit.sourceDir)
-            sourceBasePath.set("net/minecraft/server")
 
-            baseDir.set(extension.craftBukkit.craftBukkitDir)
+            outputDir.set(extension.craftBukkit.craftBukkitDir)
         }
 
-        val cloneSpigotApi = project.tasks.register<CloneRepo>("cloneSpigotApi") {
-            repo.set(extension.craftBukkit.bukkitDir)
+        val patchSpigotApi: TaskProvider<ApplyGitPatches> = project.tasks.register<ApplyGitPatches>("patchSpigotApi") {
             branch.set("HEAD")
-            sourceName.set("Bukkit")
-            targetName.set("Spigot-API")
-        }
-
-        val patchSpigotApi = project.tasks.register<ApplyGitPatches>("patchSpigotApi") {
-            inputZip.set(cloneSpigotApi.flatMap { it.outputZip })
-            targetName.set(cloneSpigotApi.flatMap { it.targetName })
+            upstreamBranch.set("upstream")
+            upstream.set(extension.craftBukkit.bukkitDir)
             patchDir.set(extension.spigot.bukkitPatchDir)
+
+            outputDir.set(extension.spigot.spigotApiDir)
         }
 
-        val cloneSpigotServer = project.tasks.register<CloneRepo>("cloneSpigotServer") {
-            repo.set(patchCraftBukkit.flatMap { it.baseDir })
+        val patchSpigotServer: TaskProvider<ApplyGitPatches> = project.tasks.register<ApplyGitPatches>("patchSpigotServer") {
             branch.set(patchCraftBukkit.flatMap { it.branch })
-            sourceName.set("CraftBukkit")
-            targetName.set("Spigot-Server")
-        }
-
-        val patchSpigotServer = project.tasks.register<ApplyGitPatches>("patchSpigotServer") {
-            inputZip.set(cloneSpigotServer.flatMap { it.outputZip })
-            targetName.set(cloneSpigotServer.flatMap { it.targetName })
+            upstreamBranch.set("upstream")
+            upstream.set(patchCraftBukkit.flatMap { it.outputDir })
             patchDir.set(extension.spigot.craftBukkitPatchDir)
+
+            outputDir.set(extension.spigot.spigotServerDir)
         }
 
-        val patchSpigot = project.tasks.register("patchSpigot") {
+        val patchSpigot: TaskProvider<Task> = project.tasks.register("patchSpigot") {
             dependsOn(patchSpigotApi, patchSpigotServer)
         }
 
-        val setupSpigotDependencyConfig =
-            project.tasks.register<SetupSpigotDependencyConfig>("setupSpigotDependencyConfig") {
-                dependsOn(patchSpigot)
-                spigotApiZip.set(patchSpigotApi.flatMap { it.outputZip })
-                spigotServerZip.set(patchSpigotServer.flatMap { it.outputZip})
-                configurationName.set(Constants.SPIGOT_DEP_CONFIG)
-            }
-
-        val remapVanillaJarSrg = project.tasks.register<RemapVanillaJarSrg>("remapVanillaJarSrg") {
-            inputJar.set(project.layout.file(filterVanillaJar.map { it.outputs.files.singleFile }))
-            access.set(extractMcpData.flatMap { it.destinationDir.file("config/access.txt") })
-            constructors.set(extractMcpData.flatMap { it.destinationDir.file("config/constructors.txt") })
-            exceptions.set(extractMcpData.flatMap { it.destinationDir.file("config/exceptions.txt") })
-            mappings.set(generateSrgs.flatMap { it.notchToSrg })
-
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "srg")))
+        val setupSpigotDependencies: TaskProvider<SetupSpigotDependencies> = project.tasks.register<SetupSpigotDependencies>("setupSpigotDependencies") {
+            dependsOn(patchSpigot)
+            spigotApi.set(patchSpigotApi.flatMap { it.outputDir })
+            spigotServer.set(patchSpigotServer.flatMap { it.outputDir })
+            configurationName.set(Constants.SPIGOT_DEP_CONFIG)
         }
 
-        val remapSpigotSources = project.tasks.register<RemapSources>("remapSpigotSources") {
-            inputZip.set(patchSpigotServer.flatMap { it.outputZip })
-            constructors.set(extractMcpData.flatMap { it.destinationDir.file("config/constructors.txt") })
+        val remapVanillaJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapVanillaJarSrg") {
+            inputJar.set(project.layout.file(filterVanillaJar.map { it.outputs.files.singleFile }))
+            mappings.set(generateSrgs.flatMap { it.notchToSrg })
+        }
+
+        val remapSpigotSources: TaskProvider<RemapSources> = project.tasks.register<RemapSources>("remapSpigotSources") {
+            spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
+            spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
             spigotToSrg.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
             vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
             vanillaRemappedSpigotJar.set(remapVanillaJar.flatMap { it.outputJar })
             vanillaRemappedSrgJar.set(remapVanillaJarSrg.flatMap { it.outputJar })
-            spigotApiZip.set(patchSpigotApi.flatMap { it.outputZip })
-            config.set(setupSpigotDependencyConfig.flatMap { it.configurationName })
+            configuration.set(setupSpigotDependencies.flatMap { it.configurationName })
+            configFile.set(extractMcpData.flatMap { it.configJson })
 
-            generatedAt.set(project.file(Constants.taskOutput(project, "spigot_at.cfg")))
+            generatedAt.set(cache.resolve(paperTaskOutput("at")))
         }
 
-        val remapSrgSourcesSpigot = project.tasks.register<RemapSrgSources>("remapSrgSourcesSpigot") {
+        val remapSrgSourcesSpigot: TaskProvider<RemapSrgSources> = project.tasks.register<RemapSrgSources>("remapSrgSourcesSpigot") {
             inputZip.set(remapSpigotSources.flatMap { it.outputZip })
             methodsCsv.set(mcpRewrites.flatMap { it.methodsCsv })
             fieldsCsv.set(mcpRewrites.flatMap { it.fieldsCsv })
             paramsCsv.set(mcpRewrites.flatMap { it.paramsCsv })
         }
 
-        val decompileVanillaJarForge = project.tasks.register<RunForgeFlower>("decompileVanillaJarForge") {
+        val injectVanillaJarForge: TaskProvider<RunMcInjector> = project.tasks.register<RunMcInjector>("injectVanillaJarForge") {
+            dependsOn(setupMcpDependencies)
+            configuration.set(setupMcpDependencies.flatMap { it.mcInjectorConfig })
             inputJar.set(remapVanillaJarSrg.flatMap { it.outputJar })
-
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "srg-decomp")))
+            configFile.set(extractMcpData.flatMap { it.configJson })
         }
 
-        val applyMcpPatches = project.tasks.register<ApplyMcpPatches>("applyMcpPatches") {
-            inputJar.set(decompileVanillaJarForge.flatMap { it.outputJar })
-            serverPatchDir.set(extractMcpData.flatMap { it.patchesDir })
-
-            outputJar.set(cache.resolve(Constants.paperJarFile(extension, "srg-decomp-patched")))
+        val writeLibrariesFile: TaskProvider<WriteLibrariesFile> = project.tasks.register<WriteLibrariesFile>("writeLibrariesFile") {
+            inputFiles.set(getRemoteJsons.flatMap { it.config.map { conf -> configs[conf].resolve() } })
         }
 
-        val remapSrgSourcesSpigotVanilla = project.tasks.register<RemapSrgSources>("remapSrgSourcesSpigotVanilla") {
-            inputZip.set(applyMcpPatches.flatMap { it.outputJar })
-            methodsCsv.set(mcpRewrites.flatMap { it.methodsCsv })
-            fieldsCsv.set(mcpRewrites.flatMap { it.fieldsCsv })
-            paramsCsv.set(mcpRewrites.flatMap { it.paramsCsv })
-
-            outputZip.set(cache.resolve(Constants.paperJarFile(extension, "mcp-decomp")))
+        val decompileVanillaJarForge: TaskProvider<RunForgeFlower> = project.tasks.register<RunForgeFlower>("decompileVanillaJarForge") {
+            dependsOn(setupMcpDependencies)
+            configuration.set(setupMcpDependencies.flatMap { it.forgeFlowerConfig })
+            inputJar.set(injectVanillaJarForge.flatMap { it.outputJar })
+            libraries.set(writeLibrariesFile.flatMap { it.outputFile })
+            configFile.set(extractMcpData.flatMap { it.configJson })
         }
+
+//        val applyMcpPatches: TaskProvider<ApplyMcpPatches> = project.tasks.register<ApplyMcpPatches>("applyMcpPatches") {
+//            inputZips.add(ZipTarget.base(decompileVanillaJarForge.flatMap { it.outputJar }))
+//            serverPatchDir.set(extractMcpData.flatMap { it.patches })
+//        }
+//
+//        val remapSrgSourcesSpigotVanilla: TaskProvider<RemapSrgSources> = project.tasks.register<RemapSrgSources>("remapSrgSourcesSpigotVanilla") {
+//            inputZips.add(ZipTarget.base(applyMcpPatches.flatMap { outputZip }))
+//            methodsCsv.set(mcpRewrites.flatMap { methodsCsv })
+//            fieldsCsv.set(mcpRewrites.flatMap { fieldsCsv })
+//            paramsCsv.set(mcpRewrites.flatMap { paramsCsv })
+//        }
     }
 }

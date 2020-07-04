@@ -23,10 +23,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.mcpConfig
 import io.papermc.paperweight.util.runJar
 import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
@@ -36,17 +36,21 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.property
-import java.util.concurrent.ThreadLocalRandom
 
-open class DecompileVanillaJar : DefaultTask() {
+open class RunForgeFlower : DefaultTask() {
+
+    @Input
+    val configuration: Property<String> = project.objects.property()
 
     @InputFile
     val inputJar: RegularFileProperty = project.objects.fileProperty()
     @InputFile
-    val fernFlowerJar: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val decompileCommand: Property<String> = project.objects.property()
+    val libraries: RegularFileProperty = project.objects.fileProperty()
+
+    @InputFile
+    val configFile: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
     val outputJar: RegularFileProperty = project.objects.run {
@@ -55,30 +59,24 @@ open class DecompileVanillaJar : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val inputJarFile = inputJar.asFile.get()
-        val inputJarPath = inputJarFile.canonicalPath
+        val config = mcpConfig(configFile)
 
-        val outputJarFile = outputJar.asFile.get()
-        val decomp = outputJarFile.resolveSibling("decomp" + ThreadLocalRandom.current().nextInt())
+        val forgeFlowerArgs = config.functions.getValue("decompile").args
+        val jvmArgs = config.functions.getValue("decompile").jvmargs ?: listOf()
 
-        try {
-            if (!decomp.exists() && !decomp.mkdirs()) {
-                throw PaperweightException("Failed to create output directory: $decomp")
+        val argList = forgeFlowerArgs.map {
+            when (it) {
+                "{libraries}" -> libraries.file.absolutePath
+                "{input}" -> inputJar.file.absolutePath
+                "{output}" -> outputJar.file.absolutePath
+                else -> it
             }
-
-            val cmd = decompileCommand.get().split(" ").let { it.subList(3, it.size - 2) }.toMutableList()
-            cmd += inputJarPath
-            cmd += decomp.canonicalPath
-
-            val logFile = project.cache.resolve(paperTaskOutput("log"))
-            logFile.delete()
-
-            runJar(fernFlowerJar, workingDir = project.cache, logFile = logFile, args = *cmd.toTypedArray())
-
-            ensureDeleted(outputJarFile)
-            decomp.resolve(inputJarFile.name).renameTo(outputJarFile)
-        } finally {
-            decomp.deleteRecursively()
         }
+
+        val logFile = project.cache.resolve(paperTaskOutput("log"))
+        logFile.delete()
+
+        val forgeFlowerJar = project.configurations[configuration.get()].resolve().single()
+        runJar(forgeFlowerJar, project.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
     }
 }

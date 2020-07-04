@@ -1,42 +1,49 @@
 /*
- * Copyright 2018 Kyle Wood
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (C) 2020 Kyle Wood
+ * Copyright (C) 2018 Forge Development LLC
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.file
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.property
 import org.w3c.dom.Element
-import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.Path
+import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
-open class SetupSpigotDependencyConfig : DefaultTask() {
+open class SetupSpigotDependencies : DefaultTask() {
 
-    @InputFile
-    val spigotApiZip = project.objects.fileProperty()
-    @InputFile
-    val spigotServerZip = project.objects.fileProperty()
+    @InputDirectory
+    val spigotApi: DirectoryProperty = project.objects.directoryProperty()
+    @InputDirectory
+    val spigotServer: DirectoryProperty = project.objects.directoryProperty()
 
     @Input
-    val configurationName = project.objects.property<String>()
+    val configurationName: Property<String> = project.objects.property()
 
     init {
         // we set dependencies here, can't cache this
@@ -45,16 +52,8 @@ open class SetupSpigotDependencyConfig : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val spigotApiFile = project.file(spigotApiZip)
-        val spigotServerFile = project.file(spigotServerZip)
-
-        val apiDeps = FileSystems.newFileSystem(URI.create("jar:${spigotApiFile.toURI()}"), mapOf<String, Any>()).use { fs ->
-            parsePom(fs.getPath("pom.xml"))
-        }
-
-        val serverDeps = FileSystems.newFileSystem(URI.create("jar:${spigotServerFile.toURI()}"), mapOf<String, Any>()).use { fs ->
-            parsePom(fs.getPath("pom.xml"))
-        }
+        val apiDeps = parsePom(spigotApi.file.resolve("pom.xml"))
+        val serverDeps = parsePom(spigotServer.file.resolve("pom.xml"))
 
         for (dep in apiDeps) {
             project.dependencies.add(configurationName.get(), dep)
@@ -64,11 +63,11 @@ open class SetupSpigotDependencyConfig : DefaultTask() {
         }
     }
 
-    private fun parsePom(pomPath: Path): List<String> {
+    private fun parsePom(pomFile: File): List<String> {
         val depList = arrayListOf<String>()
 
         val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-        val doc = Files.newInputStream(pomPath).use { stream ->
+        val doc = pomFile.inputStream().buffered().use { stream ->
             stream.buffered().use { buffered ->
                 builder.parse(buffered)
             }
