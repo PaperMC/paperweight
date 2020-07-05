@@ -24,7 +24,10 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.writeMappings
+import org.cadixdev.bombe.type.signature.MethodSignature
+import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
+import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -35,25 +38,34 @@ open class GenerateSpigotSrgs : DefaultTask() {
 
     @InputFile
     val notchToSrg: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val srgToMcp: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val classMappings: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val memberMappings: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val packageMappings: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
     val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
+
     @OutputFile
     val spigotToMcp: RegularFileProperty = project.objects.fileProperty()
+
     @OutputFile
     val spigotToNotch: RegularFileProperty = project.objects.fileProperty()
+
     @OutputFile
     val srgToSpigot: RegularFileProperty = project.objects.fileProperty()
+
     @OutputFile
     val mcpToSpigot: RegularFileProperty = project.objects.fileProperty()
+
     @OutputFile
     val notchToSpigot: RegularFileProperty = project.objects.fileProperty()
 
@@ -62,13 +74,38 @@ open class GenerateSpigotSrgs : DefaultTask() {
         val classMappingSet = classMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
         val memberMappingSet = memberMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
 
-        val notchToSpigotSet = classMappingSet.merge(memberMappingSet)
+        val mergedMappingSet = MappingSet.create()
 
-        // Apply the package mappings (Lorenz doesn't currently support this)
-        val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
-        for (topLevelClassMapping in notchToSpigotSet.topLevelClassMappings) {
-            topLevelClassMapping.deobfuscatedName = newPackage + topLevelClassMapping.deobfuscatedName
+        val reverseLookup = classMappingSet.reverse()
+        for (topLevelClassMapping in memberMappingSet.topLevelClassMappings) {
+            val classMappingSetSource = classMappingSet.topLevelClassMappings.firstOrNull { it.deobfuscatedName == topLevelClassMapping.obfuscatedName }
+            val target = classMappingSetSource?.let { source ->
+                mergedMappingSet.createTopLevelClassMapping(source.obfuscatedName, source.deobfuscatedName)
+            } ?: mergedMappingSet.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
+            addMemberMappings(reverseLookup, classMappingSetSource, topLevelClassMapping, target)
         }
+
+        for (topLevelClassMapping in classMappingSet.topLevelClassMappings) {
+            val otherMapping = mergedMappingSet.getOrCreateTopLevelClassMapping(topLevelClassMapping.obfuscatedName)
+            otherMapping.deobfuscatedName = topLevelClassMapping.deobfuscatedName
+            addMissingClasses(topLevelClassMapping, otherMapping)
+        }
+
+        val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
+        val packageMappingSet = MappingSet.create()
+        for (topLevelClassMapping in mergedMappingSet.topLevelClassMappings) {
+            val newMapping = if (!topLevelClassMapping.deobfuscatedName.startsWith(newPackage)) {
+                newPackage + topLevelClassMapping.deobfuscatedName
+            } else {
+                topLevelClassMapping.deobfuscatedName
+            }
+            packageMappingSet.createTopLevelClassMapping(
+                topLevelClassMapping.deobfuscatedName,
+                newMapping
+            )
+        }
+
+        val notchToSpigotSet = mergedMappingSet.merge(packageMappingSet)
 
         val notchToSrgSet = notchToSrg.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
         val srgToMcpSet = srgToMcp.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
@@ -91,5 +128,41 @@ open class GenerateSpigotSrgs : DefaultTask() {
             mcpToSpigotSet to mcpToSpigot.asFile.get(),
             notchToSpigotSet to notchToSpigot.asFile.get()
         )
+    }
+
+    private fun addMemberMappings(
+        classMappings: MappingSet,
+        classSource: ClassMapping<*, *>?,
+        memberSource: ClassMapping<*, *>,
+        target: ClassMapping<*, *>
+    ) {
+        if (classSource != null) {
+            for (innerClassMapping in memberSource.innerClassMappings) {
+                val classSourceInnerClass = classSource.innerClassMappings.first { it.deobfuscatedName == innerClassMapping.obfuscatedName }
+                val newMapping = target.getOrCreateInnerClassMapping(classSourceInnerClass.obfuscatedName)
+                newMapping.deobfuscatedName = classSourceInnerClass.deobfuscatedName
+                addMemberMappings(classMappings, classSourceInnerClass, innerClassMapping, newMapping)
+            }
+        }
+
+        for (fieldMapping in memberSource.fieldMappings) {
+            val newMapping = target.createFieldMapping(fieldMapping.obfuscatedName)
+            newMapping.deobfuscatedName = fieldMapping.deobfuscatedName
+        }
+
+        for (methodMapping in memberSource.methodMappings) {
+            target.createMethodMapping(MethodSignature(methodMapping.obfuscatedName, classMappings.deobfuscate(methodMapping.signature.descriptor)), methodMapping.deobfuscatedName)
+        }
+    }
+
+    private fun addMissingClasses(
+        source: ClassMapping<*, *>,
+        target: ClassMapping<*, *>
+    ) {
+        for (innerClassMapping in source.innerClassMappings) {
+            val otherMapping = target.getOrCreateInnerClassMapping(innerClassMapping.obfuscatedName)
+            otherMapping.deobfuscatedName = innerClassMapping.deobfuscatedName
+            addMissingClasses(innerClassMapping, otherMapping)
+        }
     }
 }

@@ -26,6 +26,7 @@
 package io.papermc.paperweight
 
 import io.papermc.paperweight.ext.PaperweightExtension
+import io.papermc.paperweight.tasks.AddMissingSpigotClassMappings
 import io.papermc.paperweight.tasks.ApplyDiffPatches
 import io.papermc.paperweight.tasks.ApplyGitPatches
 import io.papermc.paperweight.tasks.DecompileVanillaJar
@@ -58,7 +59,6 @@ import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
-import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
 import util.BuildDataInfo
@@ -131,7 +131,6 @@ class Paperweight : Plugin<Project> {
     private fun createTasks(project: Project) {
         val cache: File = project.cache
         val extension: PaperweightExtension = project.ext
-        val configs: ConfigurationContainer = project.configurations
 
         val initGitSubmodules: TaskProvider<Task> = project.tasks.register("initGitSubmodules") {
             outputs.upToDateWhen { false }
@@ -189,10 +188,15 @@ class Paperweight : Plugin<Project> {
             mcpToSrg.set(cache.resolve(Constants.MCP_TO_SRG))
         }
 
+        val addMissingSpigotClassMappings: TaskProvider<AddMissingSpigotClassMappings> = project.tasks.register<AddMissingSpigotClassMappings>("addMissingSpigotClassMappings") {
+            inputSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
+            missingEntriesSrg.set(extension.paper.missingEntriesSrgFile)
+        }
+
         val generateSpigotSrgs: TaskProvider<GenerateSpigotSrgs> = project.tasks.register<GenerateSpigotSrgs>("generateSpigotSrgs") {
             notchToSrg.set(generateSrgs.flatMap { it.notchToSrg })
             srgToMcp.set(generateSrgs.flatMap { it.srgToMcp })
-            classMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
+            classMappings.set(addMissingSpigotClassMappings.flatMap { it.outputSrg })
             memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
 
@@ -283,8 +287,19 @@ class Paperweight : Plugin<Project> {
             configurationName.set(Constants.SPIGOT_DEP_CONFIG)
         }
 
+        // This lets us inherit the AT modifications Spigot does before decompile
+        val remapSpigotJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapSpigotJarSrg") {
+            inputJar.set(remapVanillaJar.flatMap { it.outputJar })
+            mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
+        }
+
+        // This is needed after the previous task because Spigot doesn't map every class
+        /*
+            TODO: Spigot remaps all classes not in a package to /net/minecraft/server, so this step isn't actually doing anything yet
+                  We need to modify the notchToSpigot mappings to be "spigot notch" first
+         */
         val remapVanillaJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapVanillaJarSrg") {
-            inputJar.set(project.layout.file(filterVanillaJar.map { it.outputs.files.singleFile }))
+            inputJar.set(remapSpigotJarSrg.flatMap { it.outputJar })
             mappings.set(generateSrgs.flatMap { it.notchToSrg })
         }
 
@@ -317,7 +332,8 @@ class Paperweight : Plugin<Project> {
         }
 
         val writeLibrariesFile: TaskProvider<WriteLibrariesFile> = project.tasks.register<WriteLibrariesFile>("writeLibrariesFile") {
-            inputFiles.set(getRemoteJsons.flatMap { it.config.map { conf -> configs[conf].resolve() } })
+            dependsOn(getRemoteJsons)
+            config.set(getRemoteJsons.flatMap { it.config })
         }
 
         val decompileVanillaJarForge: TaskProvider<RunForgeFlower> = project.tasks.register<RunForgeFlower>("decompileVanillaJarForge") {

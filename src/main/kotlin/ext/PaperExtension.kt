@@ -35,6 +35,7 @@ open class PaperExtension(project: Project) {
     val paperServerDir: Property<String> = project.objects.property<String>().convention("Paper-Server")
 
     val mcpRewritesFile: RegularFileProperty = project.fileWithDefault("mcp/mcp-rewrites.txt")
+    val missingEntriesSrgFile: RegularFileProperty = project.fileWithDefault("mcp/missing-spigot-class-mappings.csrg")
     val preMapSrgFile: RegularFileProperty = project.fileWithDefault("mcp/paper.srg")
     val removeListFile: RegularFileProperty = project.fileWithDefault("mcp/remove-list.txt")
     val memberMoveListFile: RegularFileProperty = project.fileWithDefault("mcp/member-moves.txt")
