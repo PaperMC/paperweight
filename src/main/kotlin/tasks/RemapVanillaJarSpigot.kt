@@ -25,8 +25,8 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.runJar
-import io.papermc.paperweight.util.toProvider
 import io.papermc.paperweight.util.wrapException
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
@@ -44,10 +44,13 @@ open class RemapVanillaJarSpigot : DefaultTask() {
 
     @InputFile
     val classMappings: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val memberMappings: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val packageMappings: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val accessTransformers: RegularFileProperty = project.objects.fileProperty()
 
@@ -56,20 +59,21 @@ open class RemapVanillaJarSpigot : DefaultTask() {
 
     @InputFile
     val specialSourceJar: RegularFileProperty = project.objects.fileProperty()
+
     @InputFile
     val specialSource2Jar: RegularFileProperty = project.objects.fileProperty()
 
     @Input
     val classMapCommand: Property<String> = project.objects.property()
+
     @Input
     val memberMapCommand: Property<String> = project.objects.property()
+
     @Input
     val finalMapCommand: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputJar: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput())))
-    }
+    val outputJar: RegularFileProperty = defaultOutput()
 
     @TaskAction
     fun run() {
@@ -97,7 +101,10 @@ open class RemapVanillaJarSpigot : DefaultTask() {
                     specialSource2Jar,
                     workingDir = workDirName.get(),
                     logFile = logFile,
-                    args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath)
+                    args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
+                        // ignore excludes, we actually want to map every class
+                        it != "-e"
+                    }
                 )
             }
             println("Applying member mappings...")
@@ -129,14 +136,27 @@ open class RemapVanillaJarSpigot : DefaultTask() {
     }
 
     private val indexReg = Regex("\\{(\\d)}")
-    private fun doReplacements(command: String, vararg values: String): Array<String> {
-        return command.split(" ").let { it.subList(3, it.size) }.map {
-            val index = indexReg.matchEntire(it)?.groupValues?.get(1)?.toInt()
-            return@map if (index != null) {
-                values[index]
-            } else {
-                it
+    private fun doReplacements(command: String, vararg values: String, filter: ((String) -> Boolean)? = null): Array<String> {
+        var skipNext = false
+        return command.split(" ").let { it.subList(3, it.size) }
+            .filter {
+                if (skipNext) {
+                    skipNext = false
+                    return@filter false
+                } else if (filter != null && !filter(it)) {
+                    skipNext = true
+                    return@filter false
+                } else {
+                    return@filter true
+                }
             }
-        }.toTypedArray()
+            .map {
+                val index = indexReg.matchEntire(it)?.groupValues?.get(1)?.toInt()
+                return@map if (index != null) {
+                    values[index]
+                } else {
+                    it
+                }
+            }.toTypedArray()
     }
 }

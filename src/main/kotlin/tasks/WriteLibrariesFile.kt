@@ -23,33 +23,32 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.Classpath
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.listProperty
-import java.io.File
+import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.property
 
 open class WriteLibrariesFile : DefaultTask() {
 
-    @Classpath
-    val inputFiles: ListProperty<File> = project.objects.listProperty()
+    @Input
+    val config: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputFile: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("txt"))))
+    val outputFile: RegularFileProperty = defaultOutput("txt")
+
+    init {
+        outputs.upToDateWhen { false }
     }
 
     @TaskAction
     fun run() {
-        val files = inputFiles.get()
-        files.sort()
+        val files = project.configurations[config.get()].resolve().sorted()
 
         outputFile.file.delete()
         outputFile.file.bufferedWriter().use { writer ->

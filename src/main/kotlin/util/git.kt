@@ -50,7 +50,7 @@ class Git(private var repo: File) {
             arrayOf("git", *args)
         }
         return try {
-            Command(Runtime.getRuntime().exec(cmd, null, repo), cmd.joinToString(separator = " "))
+            Command(ProcessBuilder(*cmd).directory(repo).start(), cmd.joinToString(separator = " "))
         } catch (e: IOException) {
             throw PaperweightException("Failed to execute command: ${cmd.joinToString(separator = " ")}", e)
         }

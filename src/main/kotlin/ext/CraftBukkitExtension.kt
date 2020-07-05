@@ -32,6 +32,7 @@ open class CraftBukkitExtension(project: Project) {
     var craftBukkitDir: DirectoryProperty = project.dirWithDefault("work/CraftBukkit")
     var patchDir: DirectoryProperty = project.dirWithDefault("work/CraftBukkit/nms-patches")
     var mappingsDir: DirectoryProperty = project.dirWithDefault("work/BuildData/mappings")
+    val excludesFile: RegularFileProperty = project.fileWithDefault("work/BuildData/mappings/bukkit-1.16.1.exclude")
     var buildDataInfo: RegularFileProperty = project.fileWithDefault("work/BuildData/info.json")
     var fernFlowerJar: RegularFileProperty = project.fileWithDefault("work/BuildData/bin/fernflower.jar")
     var specialSourceJar: RegularFileProperty = project.fileWithDefault("work/BuildData/bin/SpecialSource.jar")
