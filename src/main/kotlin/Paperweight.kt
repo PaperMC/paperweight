@@ -289,6 +289,7 @@ class Paperweight : Plugin<Project> {
         }
 
         val remapSpigotSources: TaskProvider<RemapSources> = project.tasks.register<RemapSources>("remapSpigotSources") {
+            dependsOn(setupSpigotDependencies)
             spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
             spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
             spigotToSrg.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
