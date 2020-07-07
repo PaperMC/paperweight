@@ -46,7 +46,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding
 import org.eclipse.jdt.core.dom.MethodDeclaration
 import org.eclipse.jdt.core.dom.Modifier
 import org.eclipse.jdt.core.dom.SimpleName
-import org.eclipse.jdt.core.dom.SingleVariableDeclaration
+import org.eclipse.jdt.core.dom.VariableDeclaration
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -67,7 +67,7 @@ open class RemapSources : ZippedTask() {
     @InputFile
     val vanillaRemappedSrgJar: RegularFileProperty = project.objects.fileProperty() // Required for post-remap pass
     @InputFile
-    val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
+    val mappings: RegularFileProperty = project.objects.fileProperty()
     @Input
     val configuration: Property<String> = project.objects.property()
     @InputFile
@@ -84,9 +84,7 @@ open class RemapSources : ZippedTask() {
         val config = mcpConfig(configFile)
         val constructors = mcpFile(configFile, config.data.constructors)
 
-        val spigotToSrgFile = spigotToSrg.file
-
-        val mappings = spigotToSrgFile.bufferedReader().use { reader ->
+        val mappings = mappings.file.bufferedReader().use { reader ->
             MappingFormats.TSRG.createReader(reader).read()
         }
 
@@ -98,6 +96,7 @@ open class RemapSources : ZippedTask() {
 
         val ats = AccessTransformSet.create()
 
+        // Remap any references Spigot maps to SRG
         Mercury().apply {
             classPath.addAll(listOf(
                 vanillaJar.asFile.get().toPath(),
@@ -133,7 +132,6 @@ open class RemapSources : ZippedTask() {
             ))
 
             processors.add(SrgParameterRemapper(constructors))
-
             rewrite(pass1Dir.toPath(), outDir.toPath())
         }
 
@@ -178,7 +176,9 @@ class SrgParameterRemapper(constructors: File) : SourceRewriter {
         }
 
         for (list in constructorMap.values) {
-            // Put bigger numbers first...just trust me
+            // Put bigger numbers first
+            // Old constructor entries are still present, just with smaller numbers. So we don't want to grab an older
+            // entry
             list.reverse()
         }
     }
@@ -210,32 +210,38 @@ class SrgParameterVisitor(
             return false
         }
 
-        val methodDecl = findMethodDeclaration(node) ?: return false
-        val method = binding.declaringMethod ?: return false
+        val variableDecl = context.compilationUnit.findDeclaringNode(binding.variableDeclaration) as VariableDeclaration
 
-        handleMethod(node, methodDecl, method)
+        val method = binding.declaringMethod
+        val methodDecl = context.compilationUnit.findDeclaringNode(method) as? MethodDeclaration ?: return false
+
+        handleMethod(node, methodDecl, method, variableDecl)
+
         return false
     }
 
-    private fun handleMethod(node: SimpleName, methodDecl: MethodDeclaration, method: IMethodBinding) {
+    private fun handleMethod(node: SimpleName, methodDecl: MethodDeclaration, method: IMethodBinding, variableDecl: VariableDeclaration) {
         if (method.isConstructor) {
-            handleConstructor(node, methodDecl, method)
+            handleConstructor(node, methodDecl, method, variableDecl)
             return
         }
 
         val match = MATCHER.matchEntire(method.name) ?: return
         val isStatic = method.modifiers and Modifier.STATIC != 0
 
-        val index = getParameterIndex(methodDecl, node)
+        var index = getParameterIndex(methodDecl, variableDecl)
         if (index == -1) {
             return
         }
+        if (!isStatic) {
+            index++
+        }
 
-        val paramName = "p_${match.groupValues[1]}_${index + if (isStatic) 0 else 1}_"
+        val paramName = "p_${match.groupValues[1]}_${index}_"
         context.createASTRewrite().set(node, SimpleName.IDENTIFIER_PROPERTY, paramName, null)
     }
 
-    private fun handleConstructor(node: SimpleName, methodDecl: MethodDeclaration, method: IMethodBinding) {
+    private fun handleConstructor(node: SimpleName, methodDecl: MethodDeclaration, method: IMethodBinding, variableDecl: VariableDeclaration) {
         val constructorNodes = constructors[method.declaringClass.binaryName] ?: return
 
         val constructorNode = constructorNodes.firstOrNull { constructorNode ->
@@ -244,10 +250,12 @@ class SrgParameterVisitor(
 
         val id = constructorNode.id
 
-        val index = getParameterIndex(methodDecl, node)
+        var index = getParameterIndex(methodDecl, variableDecl)
         if (index == -1) {
             return
         }
+        // Constructors are never static
+        index++
 
         val paramName = "p_i${id}_${index + 1}_"
         context.createASTRewrite().set(node, SimpleName.IDENTIFIER_PROPERTY, paramName, null)
@@ -261,10 +269,9 @@ class SrgParameterVisitor(
         return currentNode as? MethodDeclaration
     }
 
-    private fun getParameterIndex(methodDecl: MethodDeclaration, name: SimpleName): Int {
-        // Can't find a better way to get the index..
+    private fun getParameterIndex(methodDecl: MethodDeclaration, decl: VariableDeclaration): Int {
         @Suppress("UNCHECKED_CAST")
-        val params = methodDecl.parameters() as List<SingleVariableDeclaration>
-        return params.indexOfFirst { it.name.identifier == name.identifier }
+        val params = methodDecl.parameters() as List<VariableDeclaration>
+        return params.indexOfFirst { it === decl }
     }
 }

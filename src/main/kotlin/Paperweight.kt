@@ -55,7 +55,6 @@ import io.papermc.paperweight.util.ext
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
@@ -288,26 +287,16 @@ class Paperweight : Plugin<Project> {
         }
 
         // This lets us inherit the AT modifications Spigot does before decompile
-        val remapSpigotJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapSpigotJarSrg") {
+        val remapVanillaJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapSpigotJarSrg") {
             inputJar.set(remapVanillaJar.flatMap { it.outputJar })
             mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
-        }
-
-        // This is needed after the previous task because Spigot doesn't map every class
-        /*
-            TODO: Spigot remaps all classes not in a package to /net/minecraft/server, so this step isn't actually doing anything yet
-                  We need to modify the notchToSpigot mappings to be "spigot notch" first
-         */
-        val remapVanillaJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapVanillaJarSrg") {
-            inputJar.set(remapSpigotJarSrg.flatMap { it.outputJar })
-            mappings.set(generateSrgs.flatMap { it.notchToSrg })
         }
 
         val remapSpigotSources: TaskProvider<RemapSources> = project.tasks.register<RemapSources>("remapSpigotSources") {
             dependsOn(setupSpigotDependencies)
             spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
             spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
-            spigotToSrg.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
+            mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
             vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
             vanillaRemappedSpigotJar.set(remapVanillaJar.flatMap { it.outputJar })
             vanillaRemappedSrgJar.set(remapVanillaJarSrg.flatMap { it.outputJar })

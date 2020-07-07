@@ -23,7 +23,14 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.writeMappings
+import org.cadixdev.bombe.type.ArrayType
+import org.cadixdev.bombe.type.BaseType
+import org.cadixdev.bombe.type.FieldType
+import org.cadixdev.bombe.type.MethodDescriptor
+import org.cadixdev.bombe.type.ObjectType
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
@@ -71,44 +78,46 @@ open class GenerateSpigotSrgs : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val classMappingSet = classMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
-        val memberMappingSet = memberMappings.asFile.get().reader().use { MappingFormats.CSRG.createReader(it).read() }
+        val classMappingSet = classMappings.file.reader().use { MappingFormats.CSRG.createReader(it).read() }
+        val memberMappingSet = memberMappings.file.reader().use { MappingFormats.CSRG.createReader(it).read() }
 
         val mergedMappingSet = MappingSet.create()
 
+        // Merge the member mappings into the class mappings
         val reverseLookup = classMappingSet.reverse()
-        for (topLevelClassMapping in memberMappingSet.topLevelClassMappings) {
-            val classMappingSetSource = classMappingSet.topLevelClassMappings.firstOrNull { it.deobfuscatedName == topLevelClassMapping.obfuscatedName }
+        for (mapping in memberMappingSet.topLevelClassMappings) {
+            val classMappingSetSource = classMappingSet.topLevelClassMappings.firstOrNull { it.deobfuscatedName == mapping.obfuscatedName }
             val target = classMappingSetSource?.let { source ->
                 mergedMappingSet.createTopLevelClassMapping(source.obfuscatedName, source.deobfuscatedName)
-            } ?: mergedMappingSet.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
-            addMemberMappings(reverseLookup, classMappingSetSource, topLevelClassMapping, target)
+            } ?: mergedMappingSet.createTopLevelClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
+            addMemberMappings(reverseLookup, classMappingSetSource, mapping, target)
         }
 
-        for (topLevelClassMapping in classMappingSet.topLevelClassMappings) {
-            val otherMapping = mergedMappingSet.getOrCreateTopLevelClassMapping(topLevelClassMapping.obfuscatedName)
-            otherMapping.deobfuscatedName = topLevelClassMapping.deobfuscatedName
-            addMissingClasses(topLevelClassMapping, otherMapping)
+        // Add back any class mappings which contain no member mappings
+        for (mapping in classMappingSet.topLevelClassMappings) {
+            val otherMapping = mergedMappingSet.getOrCreateTopLevelClassMapping(mapping.obfuscatedName)
+            otherMapping.deobfuscatedName = mapping.deobfuscatedName
+            addMissingClasses(mapping, otherMapping)
         }
 
+        // Merge the package name mapping
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
         val packageMappingSet = MappingSet.create()
-        for (topLevelClassMapping in mergedMappingSet.topLevelClassMappings) {
-            val newMapping = if (!topLevelClassMapping.deobfuscatedName.startsWith(newPackage)) {
-                newPackage + topLevelClassMapping.deobfuscatedName
-            } else {
-                topLevelClassMapping.deobfuscatedName
+        for (mapping in mergedMappingSet.topLevelClassMappings) {
+            val deobfName = mapping.deobfuscatedName.let { deobf ->
+                if (deobf.contains('/')) {
+                    deobf
+                } else {
+                    newPackage + deobf
+                }
             }
-            packageMappingSet.createTopLevelClassMapping(
-                topLevelClassMapping.deobfuscatedName,
-                newMapping
-            )
+            packageMappingSet.createTopLevelClassMapping(mapping.deobfuscatedName, deobfName)
         }
 
         val notchToSpigotSet = mergedMappingSet.merge(packageMappingSet)
 
-        val notchToSrgSet = notchToSrg.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
-        val srgToMcpSet = srgToMcp.asFile.get().reader().use { MappingFormats.TSRG.createReader(it).read() }
+        val notchToSrgSet = notchToSrg.file.reader().use { MappingFormats.TSRG.createReader(it).read() }
+        val srgToMcpSet = srgToMcp.file.reader().use { MappingFormats.TSRG.createReader(it).read() }
 
         val srgToSpigotSet = notchToSrgSet.reverse().merge(notchToSpigotSet)
 
@@ -119,14 +128,26 @@ open class GenerateSpigotSrgs : DefaultTask() {
         val spigotToMcpSet = mcpToSpigotSet.reverse()
         val spigotToNotchSet = notchToSpigotSet.reverse()
 
+        val spigotNotchToSrgSet = MappingSet.create()
+        val prepend = "net/minecraft/server/"
+        for (topLevelClassMapping in notchToSrgSet.topLevelClassMappings) {
+            val obf = if (topLevelClassMapping.obfuscatedName.contains('/')) {
+                topLevelClassMapping.obfuscatedName
+            } else {
+                prepend + topLevelClassMapping.obfuscatedName
+            }
+            val newMapping = spigotNotchToSrgSet.createTopLevelClassMapping(obf, topLevelClassMapping.deobfuscatedName)
+            prependToObf(topLevelClassMapping, newMapping, prepend)
+        }
+
         writeMappings(
             MappingFormats.TSRG,
-            spigotToSrgSet to spigotToSrg.asFile.get(),
-            spigotToMcpSet to spigotToMcp.asFile.get(),
-            spigotToNotchSet to spigotToNotch.asFile.get(),
-            srgToSpigotSet to srgToSpigot.asFile.get(),
-            mcpToSpigotSet to mcpToSpigot.asFile.get(),
-            notchToSpigotSet to notchToSpigot.asFile.get()
+            spigotToSrgSet to spigotToSrg.file,
+            spigotToMcpSet to spigotToMcp.file,
+            spigotToNotchSet to spigotToNotch.file,
+            srgToSpigotSet to srgToSpigot.file,
+            mcpToSpigotSet to mcpToSpigot.file,
+            notchToSpigotSet to notchToSpigot.file
         )
     }
 
@@ -155,14 +176,51 @@ open class GenerateSpigotSrgs : DefaultTask() {
         }
     }
 
-    private fun addMissingClasses(
-        source: ClassMapping<*, *>,
-        target: ClassMapping<*, *>
-    ) {
+    private fun addMissingClasses(source: ClassMapping<*, *>, target: ClassMapping<*, *>) {
         for (innerClassMapping in source.innerClassMappings) {
             val otherMapping = target.getOrCreateInnerClassMapping(innerClassMapping.obfuscatedName)
             otherMapping.deobfuscatedName = innerClassMapping.deobfuscatedName
             addMissingClasses(innerClassMapping, otherMapping)
+        }
+    }
+
+    private fun prependToObf(source: ClassMapping<*, *>, target: ClassMapping<*, *>, text: String) {
+        for (innerClassMapping in source.innerClassMappings) {
+            val newMapping = target.createInnerClassMapping(innerClassMapping.obfuscatedName, innerClassMapping.deobfuscatedName)
+            prependToObf(innerClassMapping, newMapping, text)
+        }
+
+        for (fieldMapping in source.fieldMappings) {
+            val newMapping = target.createFieldMapping(fieldMapping.obfuscatedName)
+            newMapping.deobfuscatedName = fieldMapping.deobfuscatedName
+        }
+
+        for (methodMapping in source.methodMappings) {
+            val sourceDescriptor = methodMapping.signature.descriptor
+
+            val mappedParams = sourceDescriptor.paramTypes.map { prependToObfField(it, text) }
+            val mappedReturn = when (val returnType = sourceDescriptor.returnType) {
+                is FieldType -> prependToObfField(returnType, text)
+                else -> returnType
+            }
+
+            val mappedDescriptor = MethodDescriptor(mappedParams, mappedReturn)
+            target.createMethodMapping(MethodSignature(methodMapping.obfuscatedName, mappedDescriptor), methodMapping.deobfuscatedName)
+        }
+    }
+
+    private fun prependToObfField(field: FieldType, text: String): FieldType {
+        return when (field) {
+            is ArrayType -> ArrayType(field.dimCount, prependToObfField(field.component, text))
+            is BaseType -> field
+            is ObjectType -> {
+                if (field.className.contains('/')) {
+                    field
+                } else {
+                    ObjectType(text + field.className)
+                }
+            }
+            else -> throw PaperweightException("Unexpected FieldType: $field")
         }
     }
 }
