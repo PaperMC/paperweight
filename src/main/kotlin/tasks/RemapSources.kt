@@ -261,14 +261,6 @@ class SrgParameterVisitor(
         context.createASTRewrite().set(node, SimpleName.IDENTIFIER_PROPERTY, paramName, null)
     }
 
-    private fun findMethodDeclaration(node: ASTNode): MethodDeclaration? {
-        var currentNode: ASTNode? = node
-        while (currentNode != null && currentNode !is MethodDeclaration) {
-            currentNode = currentNode.parent
-        }
-        return currentNode as? MethodDeclaration
-    }
-
     private fun getParameterIndex(methodDecl: MethodDeclaration, decl: VariableDeclaration): Int {
         @Suppress("UNCHECKED_CAST")
         val params = methodDecl.parameters() as List<VariableDeclaration>
