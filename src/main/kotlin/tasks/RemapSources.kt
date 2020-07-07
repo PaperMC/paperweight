@@ -257,7 +257,7 @@ class SrgParameterVisitor(
         // Constructors are never static
         index++
 
-        val paramName = "p_i${id}_${index + 1}_"
+        val paramName = "p_i${id}_${index}_"
         context.createASTRewrite().set(node, SimpleName.IDENTIFIER_PROPERTY, paramName, null)
     }
 
