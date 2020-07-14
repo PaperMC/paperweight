@@ -23,122 +23,84 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.writeMappings
-import org.cadixdev.bombe.type.ArrayType
-import org.cadixdev.bombe.type.BaseType
-import org.cadixdev.bombe.type.FieldType
-import org.cadixdev.bombe.type.MethodDescriptor
-import org.cadixdev.bombe.type.ObjectType
-import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
+import org.cadixdev.lorenz.merge.DuplicateMergeAction
+import org.cadixdev.lorenz.merge.DuplicateMergeResult
+import org.cadixdev.lorenz.merge.MappingSetMerger
+import org.cadixdev.lorenz.merge.MappingSetMergerHandler
+import org.cadixdev.lorenz.merge.MergeContext
 import org.cadixdev.lorenz.model.ClassMapping
+import org.cadixdev.lorenz.model.FieldMapping
+import org.cadixdev.lorenz.model.InnerClassMapping
+import org.cadixdev.lorenz.model.MethodMapping
+import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import java.lang.IllegalStateException
 
 open class GenerateSpigotSrgs : DefaultTask() {
 
     @InputFile
     val notchToSrg: RegularFileProperty = project.objects.fileProperty()
-
     @InputFile
     val srgToMcp: RegularFileProperty = project.objects.fileProperty()
-
     @InputFile
     val classMappings: RegularFileProperty = project.objects.fileProperty()
-
     @InputFile
     val memberMappings: RegularFileProperty = project.objects.fileProperty()
-
     @InputFile
     val packageMappings: RegularFileProperty = project.objects.fileProperty()
+    @InputFile
+    val extraSpigotSrgMappings: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
     val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val spigotToMcp: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val spigotToNotch: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val srgToSpigot: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val mcpToSpigot: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val notchToSpigot: RegularFileProperty = project.objects.fileProperty()
 
     @TaskAction
     fun run() {
-        val classMappingSet = classMappings.file.reader().use { MappingFormats.CSRG.createReader(it).read() }
-        val memberMappingSet = memberMappings.file.reader().use { MappingFormats.CSRG.createReader(it).read() }
+        val classMappingSet = MappingFormats.CSRG.createReader(classMappings.file.toPath()).use { it.read() }
+        val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.file.toPath()).use { it.read() }
+        val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
 
-        val mergedMappingSet = MappingSet.create()
-
-        // Merge the member mappings into the class mappings
-        val reverseLookup = classMappingSet.reverse()
-        for (mapping in memberMappingSet.topLevelClassMappings) {
-            val classMappingSetSource = classMappingSet.topLevelClassMappings.firstOrNull { it.deobfuscatedName == mapping.obfuscatedName }
-            val target = classMappingSetSource?.let { source ->
-                mergedMappingSet.createTopLevelClassMapping(source.obfuscatedName, source.deobfuscatedName)
-            } ?: mergedMappingSet.createTopLevelClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-            addMemberMappings(reverseLookup, classMappingSetSource, mapping, target)
-        }
-
-        // Add back any class mappings which contain no member mappings
-        for (mapping in classMappingSet.topLevelClassMappings) {
-            val otherMapping = mergedMappingSet.getOrCreateTopLevelClassMapping(mapping.obfuscatedName)
-            otherMapping.deobfuscatedName = mapping.deobfuscatedName
-            addMissingClasses(mapping, otherMapping)
-        }
-
-        // Merge the package name mapping
+        // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
-        val packageMappingSet = MappingSet.create()
-        for (mapping in mergedMappingSet.topLevelClassMappings) {
-            val deobfName = mapping.deobfuscatedName.let { deobf ->
-                if (deobf.contains('/')) {
-                    deobf
-                } else {
-                    newPackage + deobf
-                }
-            }
-            packageMappingSet.createTopLevelClassMapping(mapping.deobfuscatedName, deobfName)
-        }
 
-        val notchToSpigotSet = mergedMappingSet.merge(packageMappingSet)
+        // We'll use notch->srg to pick up any classes spigot doesn't map for the package mapping
+        val notchToSrgSet = MappingFormats.TSRG.createReader(notchToSrg.file.toPath()).use { it.read() }
 
-        val notchToSrgSet = notchToSrg.file.reader().use { MappingFormats.TSRG.createReader(it).read() }
-        val srgToMcpSet = srgToMcp.file.reader().use { MappingFormats.TSRG.createReader(it).read() }
+        val notchToSpigotSet = MappingSetMerger.create(
+            mergedMappingSet,
+            notchToSrgSet,
+            SpigotPackageMergerHandler(newPackage)
+        ).merge()
 
-        val srgToSpigotSet = notchToSrgSet.reverse().merge(notchToSpigotSet)
+        val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 
-        val mcpToNotchSet = notchToSrgSet.merge(srgToMcpSet).reverse()
-        val mcpToSpigotSet = mcpToNotchSet.merge(notchToSpigotSet)
+        val spigotToSrgSet = MappingSetMerger.create(notchToSpigotSet.reverse(), notchToSrgSet).merge()
+        MappingFormats.TSRG.createReader(extraSpigotSrgMappings.file.toPath()).use { it.read(spigotToSrgSet) }
 
-        val spigotToSrgSet = srgToSpigotSet.reverse()
+        val mcpToNotchSet = MappingSetMerger.create(notchToSrgSet, srgToMcpSet).merge().reverse()
+        val mcpToSpigotSet = MappingSetMerger.create(mcpToNotchSet, notchToSpigotSet).merge()
+
+        val srgToSpigotSet = spigotToSrgSet.reverse()
         val spigotToMcpSet = mcpToSpigotSet.reverse()
         val spigotToNotchSet = notchToSpigotSet.reverse()
-
-        val spigotNotchToSrgSet = MappingSet.create()
-        val prepend = "net/minecraft/server/"
-        for (topLevelClassMapping in notchToSrgSet.topLevelClassMappings) {
-            val obf = if (topLevelClassMapping.obfuscatedName.contains('/')) {
-                topLevelClassMapping.obfuscatedName
-            } else {
-                prepend + topLevelClassMapping.obfuscatedName
-            }
-            val newMapping = spigotNotchToSrgSet.createTopLevelClassMapping(obf, topLevelClassMapping.deobfuscatedName)
-            prependToObf(topLevelClassMapping, newMapping, prepend)
-        }
 
         writeMappings(
             MappingFormats.TSRG,
@@ -150,77 +112,142 @@ open class GenerateSpigotSrgs : DefaultTask() {
             notchToSpigotSet to notchToSpigot.file
         )
     }
+}
 
-    private fun addMemberMappings(
-        classMappings: MappingSet,
-        classSource: ClassMapping<*, *>?,
-        memberSource: ClassMapping<*, *>,
-        target: ClassMapping<*, *>
-    ) {
-        if (classSource != null) {
-            for (innerClassMapping in memberSource.innerClassMappings) {
-                val classSourceInnerClass = classSource.innerClassMappings.first { it.deobfuscatedName == innerClassMapping.obfuscatedName }
-                val newMapping = target.getOrCreateInnerClassMapping(classSourceInnerClass.obfuscatedName)
-                newMapping.deobfuscatedName = classSourceInnerClass.deobfuscatedName
-                addMemberMappings(classMappings, classSourceInnerClass, innerClassMapping, newMapping)
-            }
-        }
+class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMergerHandler {
 
-        for (fieldMapping in memberSource.fieldMappings) {
-            val newMapping = target.createFieldMapping(fieldMapping.obfuscatedName)
-            newMapping.deobfuscatedName = fieldMapping.deobfuscatedName
-        }
-
-        for (methodMapping in memberSource.methodMappings) {
-            target.createMethodMapping(MethodSignature(methodMapping.obfuscatedName, classMappings.deobfuscate(methodMapping.signature.descriptor)), methodMapping.deobfuscatedName)
+    override fun mergeTopLevelClassMappings(
+        left: TopLevelClassMapping,
+        right: TopLevelClassMapping,
+        target: MappingSet,
+        context: MergeContext
+    ): TopLevelClassMapping? {
+        throw IllegalStateException("Unexpectedly merged class: $left")
+    }
+    override fun mergeDuplicateTopLevelClassMappings(
+        left: TopLevelClassMapping,
+        right: TopLevelClassMapping,
+        rightContinuation: TopLevelClassMapping?,
+        target: MappingSet,
+        context: MergeContext
+    ): DuplicateMergeResult<TopLevelClassMapping?> {
+        // If both are provided, keep spigot
+        // But don't map members
+        return DuplicateMergeResult(
+            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
+            DuplicateMergeAction.MAP_DUPLICATED_MEMBERS
+        )
+    }
+    override fun addLeftTopLevelClassMapping(
+        left: TopLevelClassMapping,
+        target: MappingSet,
+        context: MergeContext
+    ): TopLevelClassMapping? {
+        return target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName))
+    }
+    override fun addRightTopLevelClassMapping(
+        right: TopLevelClassMapping,
+        target: MappingSet,
+        context: MergeContext
+    ): TopLevelClassMapping? {
+        // We know we don't need client mappings
+        return if (right.deobfuscatedName.contains("/client/")) {
+            null
+        } else {
+            target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName))
         }
     }
 
-    private fun addMissingClasses(source: ClassMapping<*, *>, target: ClassMapping<*, *>) {
-        for (innerClassMapping in source.innerClassMappings) {
-            val otherMapping = target.getOrCreateInnerClassMapping(innerClassMapping.obfuscatedName)
-            otherMapping.deobfuscatedName = innerClassMapping.deobfuscatedName
-            addMissingClasses(innerClassMapping, otherMapping)
-        }
+    override fun mergeInnerClassMappings(
+        left: InnerClassMapping,
+        right: InnerClassMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): InnerClassMapping? {
+        return target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName)
+    }
+    override fun mergeDuplicateInnerClassMappings(
+        left: InnerClassMapping,
+        right: InnerClassMapping,
+        rightContinuation: InnerClassMapping?,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): DuplicateMergeResult<InnerClassMapping?> {
+        return DuplicateMergeResult(
+            target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName),
+            DuplicateMergeAction.MAP_DUPLICATED_MEMBERS
+        )
+    }
+    override fun addRightInnerClassMapping(
+        right: InnerClassMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): InnerClassMapping? {
+        // We want to get all of the inner classes from SRG, but not the SRG names
+        return target.createInnerClassMapping(right.obfuscatedName, right.obfuscatedName)
     }
 
-    private fun prependToObf(source: ClassMapping<*, *>, target: ClassMapping<*, *>, text: String) {
-        for (innerClassMapping in source.innerClassMappings) {
-            val newMapping = target.createInnerClassMapping(innerClassMapping.obfuscatedName, innerClassMapping.deobfuscatedName)
-            prependToObf(innerClassMapping, newMapping, text)
-        }
-
-        for (fieldMapping in source.fieldMappings) {
-            val newMapping = target.createFieldMapping(fieldMapping.obfuscatedName)
-            newMapping.deobfuscatedName = fieldMapping.deobfuscatedName
-        }
-
-        for (methodMapping in source.methodMappings) {
-            val sourceDescriptor = methodMapping.signature.descriptor
-
-            val mappedParams = sourceDescriptor.paramTypes.map { prependToObfField(it, text) }
-            val mappedReturn = when (val returnType = sourceDescriptor.returnType) {
-                is FieldType -> prependToObfField(returnType, text)
-                else -> returnType
-            }
-
-            val mappedDescriptor = MethodDescriptor(mappedParams, mappedReturn)
-            target.createMethodMapping(MethodSignature(methodMapping.obfuscatedName, mappedDescriptor), methodMapping.deobfuscatedName)
-        }
+    override fun mergeFieldMappings(
+        left: FieldMapping,
+        right: FieldMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): FieldMapping? {
+        throw IllegalStateException("Unexpectedly merged field: $left")
+    }
+    override fun mergeDuplicateFieldMappings(
+        left: FieldMapping,
+        right: FieldMapping,
+        rightContinuation: FieldMapping?,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): FieldMapping? {
+        return target.createFieldMapping(left.obfuscatedName, left.deobfuscatedName)
     }
 
-    private fun prependToObfField(field: FieldType, text: String): FieldType {
-        return when (field) {
-            is ArrayType -> ArrayType(field.dimCount, prependToObfField(field.component, text))
-            is BaseType -> field
-            is ObjectType -> {
-                if (field.className.contains('/')) {
-                    field
-                } else {
-                    ObjectType(text + field.className)
-                }
-            }
-            else -> throw PaperweightException("Unexpected FieldType: $field")
+    override fun mergeMethodMappings(
+        left: MethodMapping,
+        right: MethodMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): MethodMapping? {
+        throw IllegalStateException("Unexpectedly merged method: $left")
+    }
+    override fun mergeDuplicateMethodMappings(
+        left: MethodMapping,
+        right: MethodMapping,
+        rightContinuation: MethodMapping?,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): DuplicateMergeResult<MethodMapping?> {
+        return DuplicateMergeResult(
+            target.createMethodMapping(left.signature, left.deobfuscatedName),
+            // We don't have method parameter mappings to merge anyways
+            DuplicateMergeAction.MAP_NEITHER
+        )
+    }
+
+    // Disable srg member mappings
+    override fun addRightFieldMapping(
+        right: FieldMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): FieldMapping? {
+        return null
+    }
+    override fun addRightMethodMapping(
+        right: MethodMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): MethodMapping? {
+        return null
+    }
+
+    private fun prependPackage(name: String): String {
+        return if (name.contains('/')) {
+            name
+        } else {
+            newPackage + name
         }
     }
 }

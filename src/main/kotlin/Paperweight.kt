@@ -27,19 +27,20 @@ package io.papermc.paperweight
 
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.AddMissingSpigotClassMappings
+import io.papermc.paperweight.tasks.ApplyAccessTransform
 import io.papermc.paperweight.tasks.ApplyDiffPatches
 import io.papermc.paperweight.tasks.ApplyGitPatches
 import io.papermc.paperweight.tasks.DecompileVanillaJar
 import io.papermc.paperweight.tasks.DownloadServerJar
 import io.papermc.paperweight.tasks.ExtractMcpData
 import io.papermc.paperweight.tasks.ExtractMcpMappings
+import io.papermc.paperweight.tasks.FilterExcludes
 import io.papermc.paperweight.tasks.GatherBuildData
 import io.papermc.paperweight.tasks.GenerateSpigotSrgs
 import io.papermc.paperweight.tasks.GenerateSrgs
 import io.papermc.paperweight.tasks.GetRemoteJsons
 import io.papermc.paperweight.tasks.PatchMcpCsv
 import io.papermc.paperweight.tasks.RemapSources
-import io.papermc.paperweight.tasks.RemapVanillaJarSpigot
 import io.papermc.paperweight.tasks.RemapVanillaJarSrg
 import io.papermc.paperweight.tasks.RunForgeFlower
 import io.papermc.paperweight.tasks.RunMcInjector
@@ -47,9 +48,9 @@ import io.papermc.paperweight.tasks.SetupMcpDependencies
 import io.papermc.paperweight.tasks.SetupSpigotDependencies
 import io.papermc.paperweight.tasks.WriteLibrariesFile
 import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.tasks.RemapSrgSources
+import io.papermc.paperweight.tasks.RemapVanillaJarSpigot
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.ext
 import org.gradle.api.Plugin
@@ -175,9 +176,10 @@ class Paperweight : Plugin<Project> {
         }
 
         val generateSrgs: TaskProvider<GenerateSrgs> = project.tasks.register<GenerateSrgs>("generateSrgs") {
+            configFile.set(extractMcpData.flatMap { it.configJson })
             methodsCsv.set(mcpRewrites.flatMap { it.paperMethodCsv })
             fieldsCsv.set(mcpRewrites.flatMap { it.paperFieldCsv })
-            configFile.set(extractMcpData.flatMap { it.configJson })
+            extraNotchSrgMappings.set(extension.paper.extraNotchSrgMappings)
 
             notchToSrg.set(cache.resolve(Constants.NOTCH_TO_SRG))
             notchToMcp.set(cache.resolve(Constants.NOTCH_TO_MCP))
@@ -188,16 +190,19 @@ class Paperweight : Plugin<Project> {
         }
 
         val addMissingSpigotClassMappings: TaskProvider<AddMissingSpigotClassMappings> = project.tasks.register<AddMissingSpigotClassMappings>("addMissingSpigotClassMappings") {
-            inputSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
-            missingEntriesSrg.set(extension.paper.missingEntriesSrgFile)
+            classSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
+            memberSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
+            missingClassEntriesSrg.set(extension.paper.missingClassEntriesSrgFile)
+            missingMemberEntriesSrg.set(extension.paper.missingMemberEntriesSrgFile)
         }
 
         val generateSpigotSrgs: TaskProvider<GenerateSpigotSrgs> = project.tasks.register<GenerateSpigotSrgs>("generateSpigotSrgs") {
             notchToSrg.set(generateSrgs.flatMap { it.notchToSrg })
             srgToMcp.set(generateSrgs.flatMap { it.srgToMcp })
-            classMappings.set(addMissingSpigotClassMappings.flatMap { it.outputSrg })
-            memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
+            classMappings.set(addMissingSpigotClassMappings.flatMap { it.outputClassSrg })
+            memberMappings.set(addMissingSpigotClassMappings.flatMap { it.outputMemberSrg })
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
+            extraSpigotSrgMappings.set(extension.paper.extraSpigotSrgMappings)
 
             spigotToSrg.set(cache.resolve(Constants.SPIGOT_TO_SRG))
             spigotToMcp.set(cache.resolve(Constants.SPIGOT_TO_MCP))
@@ -226,7 +231,6 @@ class Paperweight : Plugin<Project> {
 
         val remapVanillaJar: TaskProvider<RemapVanillaJarSpigot> = project.tasks.register<RemapVanillaJarSpigot>("remapVanillaJar") {
             inputJar.set(project.layout.file(filterVanillaJar.map { it.outputs.files.singleFile }))
-
             classMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
             memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
@@ -242,8 +246,13 @@ class Paperweight : Plugin<Project> {
             finalMapCommand.set(buildDataInfo.map { it.finalMapCommand })
         }
 
+        val removeSpigotExcludes: TaskProvider<FilterExcludes> = project.tasks.register<FilterExcludes>("removeSpigotExcludes") {
+            inputZip.set(remapVanillaJar.flatMap { it.outputJar })
+            excludesFile.set(extension.craftBukkit.excludesFile)
+        }
+
         val decompileVanillaJarSpigot: TaskProvider<DecompileVanillaJar> = project.tasks.register<DecompileVanillaJar>("decompileVanillaJarSpigot") {
-            inputJar.set(remapVanillaJar.flatMap { it.outputJar })
+            inputJar.set(removeSpigotExcludes.flatMap { it.outputZip })
             fernFlowerJar.set(extension.craftBukkit.fernFlowerJar)
             decompileCommand.set(buildDataInfo.map { it.decompileCommand })
         }
@@ -286,8 +295,8 @@ class Paperweight : Plugin<Project> {
             configurationName.set(Constants.SPIGOT_DEP_CONFIG)
         }
 
-        // This lets us inherit the AT modifications Spigot does before decompile
-        val remapVanillaJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapSpigotJarSrg") {
+        val remapSpigotJarSrg: TaskProvider<RemapVanillaJarSrg> = project.tasks.register<RemapVanillaJarSrg>("remapSpigotJarSrg") {
+            // Basing off of the Spigot jar lets us inherit the AT modifications Spigot does before decompile
             inputJar.set(remapVanillaJar.flatMap { it.outputJar })
             mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
         }
@@ -298,12 +307,16 @@ class Paperweight : Plugin<Project> {
             spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
             mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
             vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
-            vanillaRemappedSpigotJar.set(remapVanillaJar.flatMap { it.outputJar })
-            vanillaRemappedSrgJar.set(remapVanillaJarSrg.flatMap { it.outputJar })
+            vanillaRemappedSpigotJar.set(removeSpigotExcludes.flatMap { it.outputZip })
+            vanillaRemappedSrgJar.set(remapSpigotJarSrg.flatMap { it.outputJar })
             configuration.set(setupSpigotDependencies.flatMap { it.configurationName })
             configFile.set(extractMcpData.flatMap { it.configJson })
+        }
 
-            generatedAt.set(cache.resolve(paperTaskOutput("at")))
+        val fixVanillaJarAccess: TaskProvider<ApplyAccessTransform> = project.tasks.register<ApplyAccessTransform>("fixVanillaJarAccess") {
+            inputJar.set(remapSpigotJarSrg.flatMap { it.outputJar })
+            atFile.set(remapSpigotSources.flatMap { it.generatedAt })
+            mapping.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
         }
 
         val remapSrgSourcesSpigot: TaskProvider<RemapSrgSources> = project.tasks.register<RemapSrgSources>("remapSrgSourcesSpigot") {
@@ -316,7 +329,7 @@ class Paperweight : Plugin<Project> {
         val injectVanillaJarForge: TaskProvider<RunMcInjector> = project.tasks.register<RunMcInjector>("injectVanillaJarForge") {
             dependsOn(setupMcpDependencies)
             configuration.set(setupMcpDependencies.flatMap { it.mcInjectorConfig })
-            inputJar.set(remapVanillaJarSrg.flatMap { it.outputJar })
+            inputJar.set(remapSpigotJarSrg.flatMap { it.outputJar })
             configFile.set(extractMcpData.flatMap { it.configJson })
         }
 

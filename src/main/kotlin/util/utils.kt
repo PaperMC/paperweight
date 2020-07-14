@@ -29,6 +29,7 @@ import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
+import io.papermc.paperweight.util.Constants.paperTaskOutput
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat
 import org.gradle.api.NamedDomainObjectProvider
@@ -42,6 +43,7 @@ import org.gradle.api.provider.Provider
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.Optional
 
 val gson: Gson = Gson()
 
@@ -52,9 +54,7 @@ inline val Project.cache: File
 
 fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, File>) {
     for ((set, file) in mappings) {
-        file.bufferedWriter().use { stream ->
-            format.createWriter(stream).write(set)
-        }
+        format.createWriter(file.toPath()).use { it.write(set) }
     }
 }
 
@@ -111,9 +111,24 @@ fun Task.ensureDeleted(vararg files: Any) {
     }
 }
 
-fun Project.toProvider(file: File): Provider<RegularFile> {
-    return layout.file(provider { file })
+inline fun Project.toProvider(crossinline func: () -> File): Provider<RegularFile> {
+    return layout.file(provider { func() })
 }
+
+fun Task.defaultOutput(name: String, ext: String): RegularFileProperty {
+    return project.objects.fileProperty().convention(project.toProvider {
+        project.cache.resolve(paperTaskOutput(name, ext))
+    })
+}
+fun Task.defaultOutput(ext: String): RegularFileProperty {
+    return defaultOutput(name, ext)
+}
+fun Task.defaultOutput(): RegularFileProperty {
+    return defaultOutput("jar")
+}
+
+val <T> Optional<T>.orNull: T?
+    get() = orElse(null)
 
 val RegularFileProperty.file
     get() = get().asFile

@@ -24,6 +24,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.mcpConfig
 import io.papermc.paperweight.util.mcpFile
@@ -39,7 +40,6 @@ import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
 import org.cadixdev.mercury.extra.BridgeMethodRewriter
 import org.cadixdev.mercury.remapper.MercuryRemapper
 import org.cadixdev.mercury.util.BombeBindings
-import org.eclipse.jdt.core.dom.ASTNode
 import org.eclipse.jdt.core.dom.ASTVisitor
 import org.eclipse.jdt.core.dom.IMethodBinding
 import org.eclipse.jdt.core.dom.IVariableBinding
@@ -78,15 +78,13 @@ open class RemapSources : ZippedTask() {
     val spigotApiDir: DirectoryProperty = project.objects.directoryProperty()
 
     @OutputFile
-    val generatedAt: RegularFileProperty = project.objects.fileProperty()
+    val generatedAt: RegularFileProperty = defaultOutput("at")
 
     override fun run(rootDir: File) {
         val config = mcpConfig(configFile)
         val constructors = mcpFile(configFile, config.data.constructors)
 
-        val mappings = mappings.file.bufferedReader().use { reader ->
-            MappingFormats.TSRG.createReader(reader).read()
-        }
+        val mappings = MappingFormats.TSRG.createReader(mappings.file.toPath()).use { it.read() }
 
         val srcDir = spigotServerDir.file.resolve("src/main/java")
         val pass1Dir = rootDir.resolve("pass1")

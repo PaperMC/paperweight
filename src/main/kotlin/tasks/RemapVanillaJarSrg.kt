@@ -23,12 +23,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.toProvider
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.asm.LorenzRemapper
@@ -48,21 +46,20 @@ open class RemapVanillaJarSrg : DefaultTask() {
     val mappings: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
-    val outputJar: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput())))
-    }
+    val outputJar: RegularFileProperty = defaultOutput()
 
     @TaskAction
     fun run() {
         ensureParentExists(outputJar.file)
         ensureDeleted(outputJar.file)
 
-        val mappings = MappingFormats.TSRG.createReader(mappings.file.toPath()).read()
+        val mappings = MappingFormats.TSRG.createReader(mappings.file.toPath()).use { it.read() }
         Atlas().apply {
             install { ctx ->
                 JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider()))
             }
             run(inputJar.file.toPath(), outputJar.file.toPath())
         }
+
     }
 }

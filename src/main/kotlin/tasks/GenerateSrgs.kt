@@ -24,13 +24,16 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.getCsvReader
 import io.papermc.paperweight.util.mcpConfig
 import io.papermc.paperweight.util.mcpFile
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
+import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.model.ClassMapping
+import org.cadixdev.lorenz.model.InnerClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -45,6 +48,8 @@ open class GenerateSrgs : DefaultTask() {
     val methodsCsv: RegularFileProperty = project.objects.fileProperty()
     @InputFile
     val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
+    @InputFile
+    val extraNotchSrgMappings: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
     val notchToSrg: RegularFileProperty = project.objects.fileProperty()
@@ -68,9 +73,8 @@ open class GenerateSrgs : DefaultTask() {
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = inSrg.reader().use {
-            MappingFormats.TSRG.createReader(it).read()
-        }
+        val inSet = MappingFormats.TSRG.createReader(inSrg.toPath()).use { it.read() }
+        MappingFormats.TSRG.createReader(extraNotchSrgMappings.file.toPath()).use { it.read(inSet) }
 
         ensureParentExists(notchToSrg, notchToMcp, mcpToNotch, mcpToSrg, srgToNotch, srgToMcp)
         createMappings(inSet, methods, fields)
@@ -90,7 +94,13 @@ open class GenerateSrgs : DefaultTask() {
         }
     }
 
-    private fun createMappings(notchToSrgSet: MappingSet, methods: Map<String, String>, fields: Map<String, String>) {
+    private fun createMappings(inSet: MappingSet, methods: Map<String, String>, fields: Map<String, String>) {
+        val notchToSrgSet = MappingSet.create()
+        for (mapping in inSet.topLevelClassMappings) {
+            val newMapping = notchToSrgSet.createTopLevelClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
+            remapMembers(mapping, newMapping)
+        }
+
         // We have Notch -> SRG
         val srgToNotchSet = notchToSrgSet.reverse()
 
@@ -101,7 +111,7 @@ open class GenerateSrgs : DefaultTask() {
         val srgToMcpSet = MappingSet.create()
 
         // Create SRG -> MCP from Notch -> SRG and the CSVs
-        for (topLevelClassMapping in notchToSrgSet.topLevelClassMappings) {
+        for (topLevelClassMapping in inSet.topLevelClassMappings) {
             // MCP and SRG have the same class names
             val srgToMcpClass = srgToMcpSet.createTopLevelClassMapping(
                 topLevelClassMapping.deobfuscatedName,
@@ -113,7 +123,7 @@ open class GenerateSrgs : DefaultTask() {
 
         // We have Notch->SRG and SRG->MCP mapping sets now
         // All other sets can be generated from these two
-        notchToMcpSet = notchToSrgSet.merge(srgToMcpSet)
+        notchToMcpSet = MappingSetMerger.create(notchToSrgSet, srgToMcpSet).merge()
         mcpToNotchSet = notchToMcpSet.reverse()
         mcpToSrgSet = srgToMcpSet.reverse()
 
@@ -141,6 +151,29 @@ open class GenerateSrgs : DefaultTask() {
         for (innerClassMapping in inClass.innerClassMappings) {
             val innerOutClass = outClass.createInnerClassMapping(innerClassMapping.deobfuscatedName)
             mapClass(innerClassMapping, innerOutClass, methods, fields)
+        }
+    }
+
+    private fun remapAnonymousClasses(mapping: InnerClassMapping, target: ClassMapping<*, *>) {
+        val newMapping = if (mapping.obfuscatedName.toIntOrNull() != null) {
+            // This is an anonymous class, keep the index
+            target.createInnerClassMapping(mapping.deobfuscatedName, mapping.deobfuscatedName)
+        } else {
+            target.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
+        }
+
+        remapMembers(mapping, newMapping)
+    }
+
+    private fun <T : ClassMapping<*, *>> remapMembers(mapping: T, newMapping: T) {
+        for (fieldMapping in mapping.fieldMappings) {
+            newMapping.createFieldMapping(fieldMapping.obfuscatedName, fieldMapping.deobfuscatedName)
+        }
+        for (methodMapping in mapping.methodMappings) {
+            newMapping.createMethodMapping(methodMapping.signature, methodMapping.deobfuscatedName)
+        }
+        for (innerClassMapping in mapping.innerClassMappings) {
+            remapAnonymousClasses(innerClassMapping, newMapping)
         }
     }
 }

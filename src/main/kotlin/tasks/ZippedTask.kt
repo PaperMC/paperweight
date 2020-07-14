@@ -23,12 +23,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
-import io.papermc.paperweight.util.toProvider
 import io.papermc.paperweight.util.unzip
 import io.papermc.paperweight.util.zip
 import org.gradle.api.DefaultTask
@@ -47,9 +45,7 @@ abstract class ZippedTask : DefaultTask() {
     val inputZip: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
-    val outputZip: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("zip"))))
-    }
+    val outputZip: RegularFileProperty = defaultOutput("zip")
 
     abstract fun run(rootDir: File)
 

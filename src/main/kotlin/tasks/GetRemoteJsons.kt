@@ -26,7 +26,6 @@ package io.papermc.paperweight.tasks
 import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.fromJson
 import com.github.salomonbrys.kotson.get
-import com.github.salomonbrys.kotson.obj
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.util.Constants
@@ -54,7 +53,9 @@ open class GetRemoteJsons : DefaultTask() {
 
     @OutputFile
     val artifactOutputFile: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("mc-libraries", "txt"))))
+        fileProperty().convention(project.toProvider {
+            project.cache.resolve(paperTaskOutput("mc-libraries", "txt"))
+        })
     }
 
     init {

@@ -23,23 +23,16 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.listProperty
 import org.gradle.kotlin.dsl.property
-import java.io.File
 
 open class WriteLibrariesFile : DefaultTask() {
 
@@ -47,9 +40,7 @@ open class WriteLibrariesFile : DefaultTask() {
     val config: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputFile: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput("txt"))))
-    }
+    val outputFile: RegularFileProperty = defaultOutput("txt")
 
     init {
         outputs.upToDateWhen { false }

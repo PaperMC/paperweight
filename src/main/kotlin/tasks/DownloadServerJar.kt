@@ -24,11 +24,9 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -48,9 +46,7 @@ open class DownloadServerJar : DefaultTask() {
     val hash: Property<String> = project.objects.property()
 
     @OutputFile
-    val outputJar: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider(project.cache.resolve(paperTaskOutput())))
-    }
+    val outputJar: RegularFileProperty = defaultOutput()
 
     @TaskAction
     fun run() {
