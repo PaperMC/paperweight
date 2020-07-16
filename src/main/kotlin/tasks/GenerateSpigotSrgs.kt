@@ -27,11 +27,11 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
-import org.cadixdev.lorenz.merge.DuplicateMergeAction
-import org.cadixdev.lorenz.merge.DuplicateMergeResult
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
+import org.cadixdev.lorenz.merge.MergeConfig
 import org.cadixdev.lorenz.merge.MergeContext
+import org.cadixdev.lorenz.merge.MergeResult
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.FieldMapping
 import org.cadixdev.lorenz.model.InnerClassMapping
@@ -87,7 +87,9 @@ open class GenerateSpigotSrgs : DefaultTask() {
         val notchToSpigotSet = MappingSetMerger.create(
             mergedMappingSet,
             notchToSrgSet,
-            SpigotPackageMergerHandler(newPackage)
+            MergeConfig.builder()
+                .withHandler(SpigotPackageMergerHandler(newPackage))
+                .build()
         ).merge()
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
@@ -121,7 +123,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         right: TopLevelClassMapping,
         target: MappingSet,
         context: MergeContext
-    ): TopLevelClassMapping? {
+    ): MergeResult<TopLevelClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: $left")
     }
     override fun mergeDuplicateTopLevelClassMappings(
@@ -130,31 +132,35 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         rightContinuation: TopLevelClassMapping?,
         target: MappingSet,
         context: MergeContext
-    ): DuplicateMergeResult<TopLevelClassMapping?> {
+    ): MergeResult<TopLevelClassMapping?> {
         // If both are provided, keep spigot
-        // But don't map members
-        return DuplicateMergeResult(
+        return MergeResult(
             target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
-            DuplicateMergeAction.MAP_DUPLICATED_MEMBERS
+            right
         )
     }
     override fun addLeftTopLevelClassMapping(
         left: TopLevelClassMapping,
         target: MappingSet,
         context: MergeContext
-    ): TopLevelClassMapping? {
-        return target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName))
+    ): MergeResult<TopLevelClassMapping?> {
+        return MergeResult(
+            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName))
+        )
     }
     override fun addRightTopLevelClassMapping(
         right: TopLevelClassMapping,
         target: MappingSet,
         context: MergeContext
-    ): TopLevelClassMapping? {
+    ): MergeResult<TopLevelClassMapping?> {
         // We know we don't need client mappings
         return if (right.deobfuscatedName.contains("/client/")) {
-            null
+            MergeResult(null)
         } else {
-            target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName))
+            MergeResult(
+                target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName)),
+                right
+            )
         }
     }
 
@@ -163,8 +169,8 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         right: InnerClassMapping,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): InnerClassMapping? {
-        return target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName)
+    ): MergeResult<InnerClassMapping?> {
+        return MergeResult(target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName), right)
     }
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
@@ -172,19 +178,19 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         rightContinuation: InnerClassMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): DuplicateMergeResult<InnerClassMapping?> {
-        return DuplicateMergeResult(
+    ): MergeResult<InnerClassMapping?> {
+        return MergeResult(
             target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName),
-            DuplicateMergeAction.MAP_DUPLICATED_MEMBERS
+            right
         )
     }
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): InnerClassMapping? {
+    ): MergeResult<InnerClassMapping?> {
         // We want to get all of the inner classes from SRG, but not the SRG names
-        return target.createInnerClassMapping(right.obfuscatedName, right.obfuscatedName)
+        return MergeResult(target.createInnerClassMapping(right.obfuscatedName, right.obfuscatedName), right)
     }
 
     override fun mergeFieldMappings(
@@ -207,24 +213,24 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
 
     override fun mergeMethodMappings(
         left: MethodMapping,
-        right: MethodMapping,
+        standardRight: MethodMapping?,
+        wiggledRight: MethodMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): MethodMapping? {
+    ): MergeResult<MethodMapping?> {
         throw IllegalStateException("Unexpectedly merged method: $left")
     }
+
     override fun mergeDuplicateMethodMappings(
         left: MethodMapping,
-        right: MethodMapping,
-        rightContinuation: MethodMapping?,
+        standardRightDuplicate: MethodMapping?,
+        wiggledRightDuplicate: MethodMapping?,
+        standardRightContinuation: MethodMapping?,
+        wiggledRightContinuation: MethodMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): DuplicateMergeResult<MethodMapping?> {
-        return DuplicateMergeResult(
-            target.createMethodMapping(left.signature, left.deobfuscatedName),
-            // We don't have method parameter mappings to merge anyways
-            DuplicateMergeAction.MAP_NEITHER
-        )
+    ): MergeResult<MethodMapping?> {
+        return MergeResult(target.createMethodMapping(left.signature, left.deobfuscatedName))
     }
 
     // Disable srg member mappings
@@ -239,8 +245,8 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         right: MethodMapping,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): MethodMapping? {
-        return null
+    ): MergeResult<MethodMapping?> {
+        return MergeResult(null)
     }
 
     private fun prependPackage(name: String): String {
