@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,6 +30,7 @@ import com.google.gson.JsonObject
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.ext
 import io.papermc.paperweight.util.file
@@ -52,11 +52,7 @@ open class GetRemoteJsons : DefaultTask() {
     val config: Property<String> = project.objects.property()
 
     @OutputFile
-    val artifactOutputFile: RegularFileProperty = project.objects.run {
-        fileProperty().convention(project.toProvider {
-            project.cache.resolve(paperTaskOutput("mc-libraries", "txt"))
-        })
-    }
+    val artifactOutputFile: RegularFileProperty = defaultOutput("mc-libraries", "txt")
 
     init {
         outputs.upToDateWhen { false }

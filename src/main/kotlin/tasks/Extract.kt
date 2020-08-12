@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,11 +22,15 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -36,6 +39,11 @@ import org.gradle.kotlin.dsl.property
 
 open class Extract : DefaultTask() {
 
+    @Optional
+    @InputFile
+    val inputFile: RegularFileProperty = project.objects.fileProperty()
+
+    @Optional
     @Input
     val config: Property<String> = project.objects.property()
 
@@ -44,9 +52,15 @@ open class Extract : DefaultTask() {
 
     @TaskAction
     fun run() {
+        val input = inputFile.fileOrNull ?: project.configurations[config.get()].resolve().single()
+        val output = outputDir.file
+        if (output.exists()) {
+            output.deleteRecursively()
+        }
+        output.mkdirs()
         project.copy {
-            from(project.zipTree(project.configurations[config.get()].resolve().single()))
-            into(outputDir)
+            from(project.zipTree(input))
+            into(output)
         }
     }
 }

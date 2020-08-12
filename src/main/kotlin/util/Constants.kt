@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,6 +34,7 @@ object Constants {
     const val MINECRAFT_DEP_CONFIG = "minecraft"
     const val FORGE_FLOWER_CONFIG = "forgeFlower"
     const val MCINJECT_CONFIG = "mcinject"
+    const val SPECIAL_SOURCE_CONFIG = "specialSource"
 
     const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven"
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"

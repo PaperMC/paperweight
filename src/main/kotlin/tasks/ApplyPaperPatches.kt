@@ -22,22 +22,23 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.os.OperatingSystem
 import org.gradle.kotlin.dsl.property
+import java.util.Date
 
-open class ApplyGitPatches : DefaultTask() {
+open class ApplyPaperPatches : DefaultTask() {
 
     @Input
     val branch: Property<String> = project.objects.property()
@@ -47,14 +48,19 @@ open class ApplyGitPatches : DefaultTask() {
     val upstream: DirectoryProperty = project.objects.directoryProperty()
     @InputDirectory
     val patchDir: DirectoryProperty = project.objects.directoryProperty()
+    @InputFile
+    val remappedSource: RegularFileProperty = project.objects.fileProperty()
+    @Input
+    val remapTarget: Property<String> = project.objects.property()
 
     @OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
     @Console
-    val printOutput: Property<Boolean> = project.objects.property<Boolean>().convention(false)
+    val printOutput: Property<Boolean> = project.objects.property<Boolean>().convention(true)
 
     @TaskAction
     fun run() {
+        // We're not going to keep git history here anyways, just nuke it all instead
         Git(upstream.file).let { git ->
             git("fetch").setupOut().run()
             git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
@@ -70,6 +76,7 @@ open class ApplyGitPatches : DefaultTask() {
         if (printOutput.get()) {
             println("   Resetting $target to ${upstream.file.name}...")
         }
+
         Git(outputDir.file).let { git ->
             git("remote", "rm", "upstream").runSilently(silenceErr = true)
             git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
@@ -80,45 +87,22 @@ open class ApplyGitPatches : DefaultTask() {
             git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
 
             if (printOutput.get()) {
-                println("   Applying patches to $target...")
+                println("   Creating remap commit for $target...")
             }
 
-            val statusFile = outputDir.file.resolve(".git/patch-apply-failed")
-            if (statusFile.exists()) {
-                statusFile.delete()
+            val sourceDir = outputDir.file.resolve(remapTarget.get())
+            if (sourceDir.exists()) {
+                sourceDir.deleteRecursively()
             }
-            git("am", "--abort").runSilently(silenceErr = true)
+            sourceDir.mkdirs()
 
-            val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: run {
-                if (printOutput.get()) {
-                    println("No patches found")
-                }
-                return
+            project.copy {
+                from(project.zipTree(remappedSource.file))
+                into(sourceDir)
             }
 
-            patches.sort()
-
-            if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePath }.toTypedArray()).showErrors().run() != 0) {
-                Thread.sleep(100) // Wait for git
-                statusFile.writeText("1")
-                logger.error("***   Something did not apply cleanly to $target.")
-                logger.error("***   Please review above details and finish the apply then")
-                logger.error("***   save the changes with ./gradlew `rebuildPatches`")
-
-                if (OperatingSystem.current().isWindows) {
-                    logger.error("")
-                    logger.error("***   Because you're on Windows you'll need to finish the AM,")
-                    logger.error("***   rebuild all patches, and then re-run the patch apply again.")
-                    logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
-                }
-
-                throw PaperweightException("Failed to apply patches")
-            } else {
-                statusFile.delete()
-                if (printOutput.get()) {
-                    println("   Patches applied cleanly to $target")
-                }
-            }
+            git("add", ".").executeSilently()
+            git("commit", "-m", "Remap $ ${Date()}", "--author=Remap <auto@mated.null>").executeSilently()
         }
     }
 

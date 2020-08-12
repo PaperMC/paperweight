@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,10 +34,6 @@ open class ApplyMcpPatches : ZippedTask() {
     @InputFile
     val configFile: RegularFileProperty = project.objects.fileProperty()
 
-    init {
-        inputs.dir(configFile.map { mcpConfig(configFile) }.map { mcpFile(configFile, it.data.patches.server) })
-    }
-
     override fun run(rootDir: File) {
         val config = mcpConfig(configFile)
         val serverPatchDir = mcpFile(configFile, config.data.patches.server)
@@ -47,16 +42,9 @@ open class ApplyMcpPatches : ZippedTask() {
 
         val extension = ".java.patch"
         project.fileTree(serverPatchDir).matching {
-            include("*$extension")
+            include("**/*$extension")
         }.forEach { patch ->
-            val patchName = patch.name
-            print("Patching ${patchName.substring(0, extension.length)}")
-            val exit = git("apply", "--ignore-whitespace", patch.absolutePath).setup(System.out, null).run()
-            if (exit != 0) {
-                println("...Failed")
-            } else {
-                println()
-            }
+            git("apply", "--ignore-whitespace", patch.absolutePath).executeSilently()
         }
     }
 }

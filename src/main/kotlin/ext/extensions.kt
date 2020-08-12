@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,5 +29,8 @@ import org.gradle.api.file.RegularFileProperty
 fun Project.dirWithDefault(path: String): DirectoryProperty =
     project.objects.directoryProperty().convention(layout.dir(provider { file(path) }))
 
-fun Project.fileWithDefault(path: String): RegularFileProperty  =
-    project.objects.fileProperty().convention(layout.file(provider { file(path) }))
+fun Project.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
+    objects.directoryProperty().convention(base.dir(name))
+
+fun Project.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
+    objects.fileProperty().convention(base.file(name))

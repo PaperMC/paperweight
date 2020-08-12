@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -93,7 +92,6 @@ open class RemapVanillaJarSpigot : DefaultTask() {
         val accessTransformersPath = accessTransformers.asFile.get().canonicalPath
 
         try {
-            println("Applying class mappings...")
             wrapException("Failed to apply class mappings") {
                 val logFile = project.cache.resolve(paperTaskOutput("class.log"))
                 logFile.delete()
@@ -107,7 +105,6 @@ open class RemapVanillaJarSpigot : DefaultTask() {
                     }
                 )
             }
-            println("Applying member mappings...")
             wrapException("Failed to apply member mappings") {
                 val logFile = project.cache.resolve(paperTaskOutput("member.log"))
                 logFile.delete()
@@ -118,7 +115,6 @@ open class RemapVanillaJarSpigot : DefaultTask() {
                     args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
                 )
             }
-            println("Creating remapped jar...")
             wrapException("Failed to create remapped jar") {
                 val logFile = project.cache.resolve(paperTaskOutput("final.log"))
                 logFile.delete()

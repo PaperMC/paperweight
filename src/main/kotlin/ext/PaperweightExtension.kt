@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,25 +24,30 @@ package io.papermc.paperweight.ext
 
 import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.property
 
 open class PaperweightExtension(project: Project) {
 
+    @Suppress("MemberVisibilityCanBePrivate")
+    val workDir: DirectoryProperty = project.dirWithDefault("work")
+
     val minecraftVersion: Property<String> = project.objects.property()
     val mcpMinecraftVersion: Property<String> = project.objects.property<String>().convention(minecraftVersion)
-    val mcpVersion: Property<String> = project.objects.property()
     val mcpMappingsChannel: Property<String> = project.objects.property()
     val mcpMappingsVersion: Property<String> = project.objects.property()
 
-    val craftBukkit = CraftBukkitExtension(project)
-    val spigot = SpigotExtension(project)
+    val mcpConfigFile: RegularFileProperty = project.objects.fileProperty().convention(null)
+
+    val craftBukkit = CraftBukkitExtension(project, workDir)
+    val spigot = SpigotExtension(project, workDir)
     val paper = PaperExtension(project)
 
     init {
         minecraftVersion.disallowUnsafeRead()
         mcpMinecraftVersion.disallowUnsafeRead()
-        mcpVersion.disallowUnsafeRead()
         mcpMappingsChannel.disallowUnsafeRead()
         mcpMappingsVersion.disallowUnsafeRead()
     }

@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
@@ -40,6 +40,7 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.lang.IllegalStateException
@@ -56,8 +57,11 @@ open class GenerateSpigotSrgs : DefaultTask() {
     val memberMappings: RegularFileProperty = project.objects.fileProperty()
     @InputFile
     val packageMappings: RegularFileProperty = project.objects.fileProperty()
+    @Optional
     @InputFile
     val extraSpigotSrgMappings: RegularFileProperty = project.objects.fileProperty()
+    @InputFile
+    val loggerFields: RegularFileProperty = project.objects.fileProperty()
 
     @OutputFile
     val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
@@ -78,6 +82,12 @@ open class GenerateSpigotSrgs : DefaultTask() {
         val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.file.toPath()).use { it.read() }
         val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
 
+        for (line in loggerFields.file.readLines(Charsets.UTF_8)) {
+            val (className, fieldName) = line.split(' ')
+            val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
+            classMapping.getOrCreateFieldMapping(fieldName).deobfuscatedName = "LOGGER"
+        }
+
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
 
@@ -88,14 +98,16 @@ open class GenerateSpigotSrgs : DefaultTask() {
             mergedMappingSet,
             notchToSrgSet,
             MergeConfig.builder()
-                .withHandler(SpigotPackageMergerHandler(newPackage))
+                .withMergeHandler(SpigotPackageMergerHandler(newPackage))
                 .build()
         ).merge()
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 
         val spigotToSrgSet = MappingSetMerger.create(notchToSpigotSet.reverse(), notchToSrgSet).merge()
-        MappingFormats.TSRG.createReader(extraSpigotSrgMappings.file.toPath()).use { it.read(spigotToSrgSet) }
+        extraSpigotSrgMappings.fileOrNull?.toPath()?.let { path ->
+            MappingFormats.TSRG.createReader(path).use { it.read(spigotToSrgSet) }
+        }
 
         val mcpToNotchSet = MappingSetMerger.create(notchToSrgSet, srgToMcpSet).merge().reverse()
         val mcpToSpigotSet = MappingSetMerger.create(mcpToNotchSet, notchToSpigotSet).merge()
@@ -195,19 +207,23 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
 
     override fun mergeFieldMappings(
         left: FieldMapping,
-        right: FieldMapping,
+        strictRight: FieldMapping?,
+        looseRight: FieldMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): FieldMapping? {
+    ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: $left")
     }
+
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
-        right: FieldMapping,
-        rightContinuation: FieldMapping?,
+        strictRightDuplicate: FieldMapping?,
+        looseRightDuplicate: FieldMapping?,
+        strictRightContinuation: FieldMapping?,
+        looseRightContinuation: FieldMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): FieldMapping? {
+    ): FieldMapping {
         return target.createFieldMapping(left.obfuscatedName, left.deobfuscatedName)
     }
 

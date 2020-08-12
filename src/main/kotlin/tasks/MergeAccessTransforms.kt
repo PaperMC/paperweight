@@ -24,36 +24,35 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import org.cadixdev.at.AccessTransformSet
+import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.property
+import org.gradle.kotlin.dsl.listProperty
 
-open class WriteLibrariesFile : DefaultTask() {
+open class MergeAccessTransforms : DefaultTask() {
 
-    @Input
-    val config: Property<String> = project.objects.property()
+    @InputFiles
+    val inputFiles: ListProperty<RegularFile> = project.objects.listProperty()
 
     @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("txt")
-
-    init {
-        outputs.upToDateWhen { false }
-    }
+    val outputFile: RegularFileProperty = defaultOutput("at")
 
     @TaskAction
     fun run() {
-        val files = project.configurations[config.get()].resolve().sorted()
+        val ats = inputFiles.get()
+            .map { AccessTransformFormats.FML.read(it.asFile.toPath()) }
 
-        outputFile.file.delete()
-        outputFile.file.bufferedWriter().use { writer ->
-            for (file in files) {
-                writer.appendln("-e=${file.absolutePath}")
-            }
+        val outputAt = AccessTransformSet.create()
+        for (at in ats) {
+            outputAt.merge(at)
         }
+
+        AccessTransformFormats.FML.write(outputFile.file.toPath(), outputAt)
     }
 }

@@ -27,8 +27,12 @@ dependencies {
     compileOnly(gradleApi())
     compileOnly(gradleKotlinDsl())
 
+    // Utils
     implementation("net.sf.opencsv:opencsv:2.3")
     implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
+
+    // ASM for inspection
+    implementation("org.ow2.asm:asm:8.0.1")
 
     // Cadix
     implementation("org.cadixdev:lorenz:0.5.4-SNAPSHOT")
