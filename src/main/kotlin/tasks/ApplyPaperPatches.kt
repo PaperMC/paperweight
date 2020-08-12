@@ -36,7 +36,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.property
-import java.util.Date
 
 open class ApplyPaperPatches : DefaultTask() {
 
@@ -66,34 +65,22 @@ open class ApplyPaperPatches : DefaultTask() {
             git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
         }
 
-        if (!outputDir.file.exists() || !outputDir.file.resolve(".git").exists()) {
-            outputDir.file.deleteRecursively()
-            Git(outputDir.file.parentFile)("clone", upstream.file.absolutePath, outputDir.file.name).setupOut().run()
+        val outputFile = outputDir.file
+        if (outputFile.exists()) {
+            outputFile.deleteRecursively()
         }
+        outputFile.mkdirs()
 
-        val target = outputDir.file.name
+        val target = outputFile.name
 
         if (printOutput.get()) {
             println("   Resetting $target to ${upstream.file.name}...")
         }
 
         Git(outputDir.file).let { git ->
-            git("remote", "rm", "upstream").runSilently(silenceErr = true)
-            git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
-            if (git("checkout", "master").setupOut(showError = false).run() != 0) {
-                git("checkout", "-b", "master").setupOut(mergeOutput = true).run()
-            }
-            git("fetch", "upstream").runSilently(silenceErr = true)
-            git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
+            git("init").runSilently(silenceErr = true)
 
-            if (printOutput.get()) {
-                println("   Creating remap commit for $target...")
-            }
-
-            val sourceDir = outputDir.file.resolve(remapTarget.get())
-            if (sourceDir.exists()) {
-                sourceDir.deleteRecursively()
-            }
+            val sourceDir = outputFile.resolve(remapTarget.get())
             sourceDir.mkdirs()
 
             project.copy {
@@ -101,8 +88,10 @@ open class ApplyPaperPatches : DefaultTask() {
                 into(sourceDir)
             }
 
-            git("add", ".").executeSilently()
-            git("commit", "-m", "Remap $ ${Date()}", "--author=Remap <auto@mated.null>").executeSilently()
+            project.rootProject.file(".gitignore").copyTo(outputFile.resolve(".gitignore"))
+
+            git("add", ".gitignore", ".").executeSilently()
+            git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>")
         }
     }
 
@@ -120,14 +109,6 @@ open class ApplyPaperPatches : DefaultTask() {
             setup(System.out, err)
         } else {
             setup(null, null)
-        }
-    }
-
-    private fun Command.showErrors() = apply {
-        if (printOutput.get()) {
-            setup(System.out, System.err)
-        } else {
-            setup(null, System.err)
         }
     }
 }
