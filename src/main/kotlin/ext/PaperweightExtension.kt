@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,26 +23,33 @@
 package io.papermc.paperweight.ext
 
 import org.gradle.api.Action
-import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.property
 
-open class PaperweightExtension(project: Project) {
+open class PaperweightExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
-    val minecraftVersion: Property<String> = project.objects.property()
-    val mcpMinecraftVersion: Property<String> = project.objects.property<String>().convention(minecraftVersion)
-    val mcpVersion: Property<String> = project.objects.property()
-    val mcpMappingsChannel: Property<String> = project.objects.property()
-    val mcpMappingsVersion: Property<String> = project.objects.property()
+    @Suppress("MemberVisibilityCanBePrivate")
+    val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
-    val craftBukkit = CraftBukkitExtension(project)
-    val spigot = SpigotExtension(project)
-    val paper = PaperExtension(project)
+    val minecraftVersion: Property<String> = objects.property()
+    val mcpMinecraftVersion: Property<String> = objects.property<String>().convention(minecraftVersion)
+    val mcpConfigVersion: Property<String> = objects.property()
+    val mcpMappingsChannel: Property<String> = objects.property()
+    val mcpMappingsVersion: Property<String> = objects.property()
+
+    val mcpConfigFile: RegularFileProperty = objects.fileProperty().convention(null)
+
+    val craftBukkit = CraftBukkitExtension(objects, workDir)
+    val spigot = SpigotExtension(objects, workDir)
+    val paper = PaperExtension(objects, layout)
 
     init {
         minecraftVersion.disallowUnsafeRead()
         mcpMinecraftVersion.disallowUnsafeRead()
-        mcpVersion.disallowUnsafeRead()
         mcpMappingsChannel.disallowUnsafeRead()
         mcpMappingsVersion.disallowUnsafeRead()
     }

@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -32,14 +31,14 @@ import java.io.BufferedWriter
 import java.io.File
 import java.util.regex.Pattern
 
-open class RemapSrgSources : ZippedTask() {
+abstract class RemapSrgSources : ZippedTask() {
 
-    @InputFile
-    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val paramsCsv: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val methodsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val fieldsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val paramsCsv: RegularFileProperty
 
     private val methods = hashMapOf<String, String>()
     private val methodDocs = hashMapOf<String, String>()

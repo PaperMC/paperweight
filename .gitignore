@@ -1,25 +1,14 @@
-### Intellij ###
+# IntelliJ
 .idea/
+out/
 
-# File-based project format
+*.ipr
 *.iws
 *.iml
 
-# IntelliJ
-out/
-
-# JIRA plugin
-atlassian-ide-plugin.xml
-
-# Crashlytics plugin (for Android Studio and IntelliJ)
-com_crashlytics_export_strings.xml
-crashlytics.properties
-crashlytics-build.properties
-fabric.properties
-
-### Eclipse ###
-
+# Eclipse
 .metadata
+.project
 bin/
 tmp/
 *.tmp
@@ -30,143 +19,27 @@ local.properties
 .settings/
 .loadpath
 .recommenders
-
-# External tool builders
 .externalToolBuilders/
-
-# Locally stored "Eclipse launch configurations"
 *.launch
-
-# PyDev specific (Python IDE for Eclipse)
-*.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# CDT- autotools
-.autotools
-
-# Java annotation processor (APT)
 .factorypath
-
-# PDT-specific (PHP Development Tools)
-.buildpath
-
-# sbteclipse plugin
-.target
-
-# Tern plugin
-.tern-project
-
-# TeXlipse plugin
-.texlipse
-
-# STS (Spring Tool Suite)
-.springBeans
-
-# Code Recommenders
-.recommenders/
-
-# Annotation Processing
 .apt_generated/
 
-# Scala IDE specific (Scala & Java development for Eclipse)
-.cache-main
-.scala_dependencies
-.worksheet
-
-### Eclipse Patch ###
-# Eclipse Core
-.project
-
-# JDT-specific (Eclipse Java Development Tools)
-.classpath
-
-# Annotation Processing
-.apt_generated
-
-.sts4-cache/
-
-### Linux ###
-*~
-
-# temporary files which can be created if a process still has a handle open of a deleted file
-.fuse_hidden*
-
-# KDE directory preferences
-.directory
-
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
-
-# .nfs files are created when an open file is removed but is still being accessed
-.nfs*
-
-### macOS ###
-# General
+# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
 
-# Icon must end with two \r
-Icon
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-### Windows ###
+# Windows
 # Windows thumbnail cache files
 Thumbs.db
 ehthumbs.db
 ehthumbs_vista.db
-
-# Dump file
-*.stackdump
-
 # Folder config file
 [Dd]esktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-
-# Windows shortcuts
 *.lnk
 
-### Gradle ###
+# Gradle
 .gradle
 /build/
-
-# Ignore Gradle GUI config
-gradle-app.setting
-
-# Cache of project
 .gradletasknamecache
-
-# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
-# gradle/wrapper/gradle-wrapper.properties
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.ja

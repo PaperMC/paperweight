@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,42 +23,34 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
-import org.cadixdev.atlas.Atlas
-import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
-import org.cadixdev.lorenz.asm.LorenzRemapper
+import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-open class RemapVanillaJarSrg : DefaultTask() {
+abstract class RemapAccessTransform : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputFile: RegularFileProperty
+    @get:InputFile
+    abstract val mappings: RegularFileProperty
 
-    @InputFile
-    val mappings: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    override fun init() {
+        outputFile.convention(defaultOutput("at"))
+    }
 
     @TaskAction
     fun run() {
-        ensureParentExists(outputJar.file)
-        ensureDeleted(outputJar.file)
+        val at = AccessTransformFormats.FML.read(inputFile.file.toPath())
+        val mappingSet = MappingFormats.TSRG.createReader(mappings.file.toPath()).use { it.read() }
 
-        val mappings = MappingFormats.TSRG.createReader(mappings.file.toPath()).use { it.read() }
-        Atlas().apply {
-            install { ctx ->
-                JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider()))
-            }
-            run(inputJar.file.toPath(), outputJar.file.toPath())
-        }
-
+        val resultAt = at.remap(mappingSet)
+        AccessTransformFormats.FML.write(outputFile.file.toPath(), resultAt)
     }
 }

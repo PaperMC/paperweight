@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,22 +22,30 @@
 
 package io.papermc.paperweight.tasks
 
-import com.github.salomonbrys.kotson.fromJson
-import io.papermc.paperweight.util.gson
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.OutputFile
-import util.BuildDataInfo
+import io.papermc.paperweight.util.Command
+import io.papermc.paperweight.util.UselessOutputStream
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Console
 
-open class GatherBuildData : DefaultTask() {
+abstract class ControllableOutputTask : BaseTask() {
 
-    @OutputFile
-    val buildDataInfoFile: RegularFileProperty = project.objects.fileProperty()
+    @get:Console
+    abstract val printOutput: Property<Boolean>
 
-    val buildDataInfo: Provider<BuildDataInfo> = buildDataInfoFile.map {
-        it.asFile.bufferedReader().use { reader ->
-            gson.fromJson(reader)
+    fun Command.setupOut(showError: Boolean = true) = apply {
+        if (printOutput.get()) {
+            val err = if (showError) System.out else UselessOutputStream
+            setup(System.out, err)
+        } else {
+            setup(UselessOutputStream, UselessOutputStream)
+        }
+    }
+
+    fun Command.showErrors() = apply {
+        if (printOutput.get()) {
+            setup(System.out, System.out)
+        } else {
+            setup(UselessOutputStream, System.out)
         }
     }
 }

@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,15 +22,15 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.model.ObjectFactory
 
-open class SpigotExtension(project: Project) {
-    var spigotDir: DirectoryProperty = project.dirWithDefault("work/Spigot")
-    var spigotApiDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Spigot-API")
-    var spigotServerDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Spigot-Server")
-    var bukkitPatchDir: DirectoryProperty = project.dirWithDefault("work/Spigot/Bukkit-Patches")
-    var craftBukkitPatchDir: DirectoryProperty = project.dirWithDefault("work/Spigot/CraftBukkit-Patches")
+open class SpigotExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
+    var spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
+    var spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
+    var spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
+    var bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
+    var craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
 
     init {
         spigotDir.disallowUnsafeRead()

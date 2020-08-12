@@ -22,28 +22,39 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Git
-import org.gradle.api.file.DirectoryProperty
+import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.file
+import org.cadixdev.at.AccessTransformSet
+import org.cadixdev.at.io.AccessTransformFormats
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import java.io.File
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 
-abstract class ApplyMcpPatches : ZippedTask() {
+abstract class MergeAccessTransforms : BaseTask() {
 
-    @get:InputDirectory
-    abstract val serverPatchDir: DirectoryProperty
-    @get:InputFile
-    abstract val configFile: RegularFileProperty
+    @get:InputFiles
+    abstract val inputFiles: ListProperty<RegularFile>
 
-    override fun run(rootDir: File) {
-        val git = Git(rootDir)
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
 
-        val extension = ".java.patch"
-        objects.fileTree().from(serverPatchDir).matching {
-            include("**/*$extension")
-        }.forEach { patch ->
-            git("apply", "--ignore-whitespace", patch.absolutePath).executeSilently()
+    override fun init() {
+        outputFile.convention(defaultOutput("at"))
+    }
+
+    @TaskAction
+    fun run() {
+        val ats = inputFiles.get()
+            .map { AccessTransformFormats.FML.read(it.asFile.toPath()) }
+
+        val outputAt = AccessTransformSet.create()
+        for (at in ats) {
+            outputAt.merge(at)
         }
+
+        AccessTransformFormats.FML.write(outputFile.file.toPath(), outputAt)
     }
 }

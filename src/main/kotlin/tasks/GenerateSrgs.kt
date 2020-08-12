@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,10 +24,10 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.getCsvReader
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
 import io.papermc.paperweight.util.writeMappings
+import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -37,44 +36,46 @@ import org.cadixdev.lorenz.model.InnerClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-open class GenerateSrgs : DefaultTask() {
+abstract class GenerateSrgs : DefaultTask() {
 
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val extraNotchSrgMappings: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val methodsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val fieldsCsv: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val extraNotchSrgMappings: RegularFileProperty
 
-    @OutputFile
-    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val notchToMcp: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inSrg: RegularFileProperty
+
+    @get:OutputFile
+    abstract val notchToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val notchToMcp: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToMcp: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val config = mcpConfig(configFile)
-        val inSrg = mcpFile(configFile, config.data.mappings)
-
         val methods = HashMap<String, String>()
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = MappingFormats.TSRG.createReader(inSrg.toPath()).use { it.read() }
-        MappingFormats.TSRG.createReader(extraNotchSrgMappings.file.toPath()).use { it.read(inSet) }
+        val inSet = MappingFormats.TSRG.createReader(inSrg.file.toPath()).use { it.read() }
+        extraNotchSrgMappings.fileOrNull?.toPath()?.let { path ->
+            MappingFormats.TSRG.createReader(path).use { it.read(inSet) }
+        }
 
         ensureParentExists(notchToSrg, notchToMcp, mcpToNotch, mcpToSrg, srgToNotch, srgToMcp)
         createMappings(inSet, methods, fields)
@@ -96,10 +97,12 @@ open class GenerateSrgs : DefaultTask() {
 
     private fun createMappings(inSet: MappingSet, methods: Map<String, String>, fields: Map<String, String>) {
         val notchToSrgSet = MappingSet.create()
+
         for (mapping in inSet.topLevelClassMappings) {
             val newMapping = notchToSrgSet.createTopLevelClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
             remapMembers(mapping, newMapping)
         }
+        handleKeywordMappings(notchToSrgSet)
 
         // We have Notch -> SRG
         val srgToNotchSet = notchToSrgSet.reverse()
@@ -138,6 +141,39 @@ open class GenerateSrgs : DefaultTask() {
         )
     }
 
+    private fun handleKeywordMappings(mappings: MappingSet) {
+        for (classMapping in mappings.topLevelClassMappings) {
+            handleKeywordMappingClass(classMapping)
+        }
+    }
+
+    private fun handleKeywordMappingClass(classMapping: ClassMapping<*, *>) {
+        for (innerClassMapping in classMapping.innerClassMappings) {
+            handleKeywordMappingClass(innerClassMapping)
+        }
+        for (fieldMapping in classMapping.fieldMappings) {
+            if (fieldMapping.obfuscatedName in javaKeywords) {
+                val sourceName = fieldMapping.obfuscatedName + '_'
+                if (classMapping.hasFieldMapping(sourceName)) {
+                    // If the "source name" of the mapping already exists, just skip it. I don't even know what would
+                    // happen in this case at decompile time to be honest
+                    continue
+                }
+                classMapping.createFieldMapping(sourceName, fieldMapping.deobfuscatedName)
+            }
+        }
+        for (methodMapping in classMapping.methodMappings) {
+            if (methodMapping.obfuscatedName in javaKeywords) {
+                val sourceName = methodMapping.obfuscatedName + "_"
+                val sourceSignature = MethodSignature(sourceName, methodMapping.signature.descriptor)
+                if (classMapping.hasMethodMapping(sourceSignature)) {
+                    continue
+                }
+                classMapping.createMethodMapping(sourceSignature, methodMapping.deobfuscatedName)
+            }
+        }
+    }
+
     private fun mapClass(inClass: ClassMapping<*, *>, outClass: ClassMapping<*, *>, methods: Map<String, String>, fields: Map<String, String>) {
         for (fieldMapping in inClass.fieldMappings) {
             val mcpName = fields[fieldMapping.deobfuscatedName] ?: fieldMapping.deobfuscatedName
@@ -155,13 +191,7 @@ open class GenerateSrgs : DefaultTask() {
     }
 
     private fun remapAnonymousClasses(mapping: InnerClassMapping, target: ClassMapping<*, *>) {
-        val newMapping = if (mapping.obfuscatedName.toIntOrNull() != null) {
-            // This is an anonymous class, keep the index
-            target.createInnerClassMapping(mapping.deobfuscatedName, mapping.deobfuscatedName)
-        } else {
-            target.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-        }
-
+        val newMapping = target.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
         remapMembers(mapping, newMapping)
     }
 
@@ -177,3 +207,56 @@ open class GenerateSrgs : DefaultTask() {
         }
     }
 }
+
+private val javaKeywords: HashSet<String> = hashSetOf(
+    "abstract",
+    "continue",
+    "for",
+    "new",
+    "switch",
+    "assert",
+    "default",
+    "goto",
+    "package",
+    "synchronized",
+    "boolean",
+    "do",
+    "if",
+    "private",
+    "this",
+    "break",
+    "double",
+    "implements",
+    "protected",
+    "throw",
+    "byte",
+    "else",
+    "import",
+    "public",
+    "throws",
+    "case",
+    "enum",
+    "instanceof",
+    "return",
+    "transient",
+    "catch",
+    "extends",
+    "int",
+    "short",
+    "try",
+    "char",
+    "final",
+    "interface",
+    "static",
+    "void",
+    "class",
+    "finally",
+    "long",
+    "strictfp",
+    "volatile",
+    "const",
+    "float",
+    "native",
+    "super",
+    "while"
+)

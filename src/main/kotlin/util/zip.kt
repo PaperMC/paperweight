@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +23,7 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import org.gradle.api.Task
+import io.papermc.paperweight.tasks.BaseTask
 import java.io.File
 import java.net.URI
 import java.nio.file.FileSystems
@@ -35,26 +34,26 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ThreadLocalRandom
 
-fun Task.unzip(zip: Any, target: Any? = null): File {
-    val input = project.file(zip)
-    val outputDir = target?.let { project.file(it) }
+fun BaseTask.unzip(zip: Any, target: Any? = null): File {
+    val input = zip.convertToFile()
+    val outputDir = target?.convertToFile()
         ?: input.resolveSibling("${input.name}-" + ThreadLocalRandom.current().nextInt())
 
-    project.copy {
-        from(project.zipTree(zip))
+    fs.copy {
+        from(archives.zipTree(zip))
         into(outputDir)
     }
 
     return outputDir
 }
 
-fun Task.zip(inputDir: Any, zip: Any) {
-    val outputZipFile = project.file(zip)
+fun zip(inputDir: Any, zip: Any) {
+    val outputZipFile = zip.convertToFile()
     if (outputZipFile.exists() && !outputZipFile.delete()) {
         throw PaperweightException("Could not delete $outputZipFile")
     }
 
-    val dirPath = project.file(inputDir).toPath()
+    val dirPath = inputDir.convertToFile().toPath()
 
     val outUri = URI.create("jar:${outputZipFile.toURI()}")
     FileSystems.newFileSystem(outUri, mapOf("create" to "true")).use { fs ->

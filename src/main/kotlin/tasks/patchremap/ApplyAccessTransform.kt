@@ -1,5 +1,28 @@
-package io.papermc.paperweight.tasks
+/*
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
+ *
+ * Copyright (C) 2020 Kyle Wood
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
 
+package io.papermc.paperweight.tasks.patchremap
+
+import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
@@ -14,11 +37,8 @@ import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
-import org.cadixdev.lorenz.io.MappingFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassReader
@@ -28,19 +48,20 @@ import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
-open class ApplyAccessTransform : DefaultTask() {
+abstract class ApplyAccessTransform : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
 
-    @InputFile
-    val atFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val atFile: RegularFileProperty
 
-    @InputFile
-    val mapping: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
 
     @TaskAction
     fun run() {
@@ -48,12 +69,10 @@ open class ApplyAccessTransform : DefaultTask() {
         ensureDeleted(outputJar.file)
 
         val at = AccessTransformFormats.FML.read(atFile.file.toPath())
-        val mappings = MappingFormats.TSRG.createReader(mapping.file.toPath()).use { it.read() }
-        val remappedAt = at.remap(mappings)
 
         Atlas().apply {
             install {
-                AtJarEntryTransformer(remappedAt)
+                AtJarEntryTransformer(at)
             }
             run(inputJar.file.toPath(), outputJar.file.toPath())
         }

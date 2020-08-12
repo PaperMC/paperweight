@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,38 +24,34 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
-import org.gradle.api.DefaultTask
+import io.papermc.paperweight.util.download
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 import java.math.BigInteger
-import java.net.URL
 import java.security.MessageDigest
 
-open class DownloadServerJar : DefaultTask() {
+abstract class DownloadServerJar : BaseTask() {
 
-    @Input
-    val downloadUrl: Property<String> = project.objects.property()
-    @Input
-    val hash: Property<String> = project.objects.property()
+    @get:Input
+    abstract val downloadUrl: Property<String>
+    @get:Input
+    abstract val hash: Property<String>
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
+
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
 
     @TaskAction
     fun run() {
         val file = outputJar.asFile.get()
-        ensureParentExists(file)
-        ensureDeleted(file)
 
-        file.outputStream().buffered().use { out ->
-            URL(downloadUrl.get()).openStream().copyTo(out)
-        }
+        download(downloadUrl, outputJar)
 
         val digest = MessageDigest.getInstance("MD5")
 

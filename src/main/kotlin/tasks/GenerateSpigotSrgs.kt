@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
@@ -40,43 +40,52 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.lang.IllegalStateException
 
-open class GenerateSpigotSrgs : DefaultTask() {
+abstract class GenerateSpigotSrgs : DefaultTask() {
 
-    @InputFile
-    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val classMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val memberMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val packageMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val extraSpigotSrgMappings: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val notchToSrg: RegularFileProperty
+    @get:InputFile
+    abstract val srgToMcp: RegularFileProperty
+    @get:InputFile
+    abstract val classMappings: RegularFileProperty
+    @get:InputFile
+    abstract val memberMappings: RegularFileProperty
+    @get:InputFile
+    abstract val packageMappings: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val extraSpigotSrgMappings: RegularFileProperty
+    @get:InputFile
+    abstract val loggerFields: RegularFileProperty
 
-    @OutputFile
-    val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val spigotToMcp: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val spigotToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToSpigot: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToSpigot: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val notchToSpigot: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val spigotToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val spigotToMcp: RegularFileProperty
+    @get:OutputFile
+    abstract val spigotToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToSpigot: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToSpigot: RegularFileProperty
+    @get:OutputFile
+    abstract val notchToSpigot: RegularFileProperty
 
     @TaskAction
     fun run() {
         val classMappingSet = MappingFormats.CSRG.createReader(classMappings.file.toPath()).use { it.read() }
         val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.file.toPath()).use { it.read() }
         val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
+
+        for (line in loggerFields.file.readLines(Charsets.UTF_8)) {
+            val (className, fieldName) = line.split(' ')
+            val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
+            classMapping.getOrCreateFieldMapping(fieldName).deobfuscatedName = "LOGGER"
+        }
 
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
@@ -88,14 +97,16 @@ open class GenerateSpigotSrgs : DefaultTask() {
             mergedMappingSet,
             notchToSrgSet,
             MergeConfig.builder()
-                .withHandler(SpigotPackageMergerHandler(newPackage))
+                .withMergeHandler(SpigotPackageMergerHandler(newPackage))
                 .build()
         ).merge()
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 
         val spigotToSrgSet = MappingSetMerger.create(notchToSpigotSet.reverse(), notchToSrgSet).merge()
-        MappingFormats.TSRG.createReader(extraSpigotSrgMappings.file.toPath()).use { it.read(spigotToSrgSet) }
+        extraSpigotSrgMappings.fileOrNull?.toPath()?.let { path ->
+            MappingFormats.TSRG.createReader(path).use { it.read(spigotToSrgSet) }
+        }
 
         val mcpToNotchSet = MappingSetMerger.create(notchToSrgSet, srgToMcpSet).merge().reverse()
         val mcpToSpigotSet = MappingSetMerger.create(mcpToNotchSet, notchToSpigotSet).merge()
@@ -135,7 +146,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): MergeResult<TopLevelClassMapping?> {
         // If both are provided, keep spigot
         return MergeResult(
-            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
+            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName)),
             right
         )
     }
@@ -145,7 +156,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
         return MergeResult(
-            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName))
+            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName))
         )
     }
     override fun addRightTopLevelClassMapping(
@@ -157,8 +168,10 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         return if (right.deobfuscatedName.contains("/client/")) {
             MergeResult(null)
         } else {
+            // This is a mapping Spigot is totally missing, but Spigot maps all classes without a package to
+            // /net/minecraft regardless if there are mappings for the classes or not
             MergeResult(
-                target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName)),
+                target.createTopLevelClassMapping(prependPackage(right.obfuscatedName), right.obfuscatedName),
                 right
             )
         }
@@ -195,19 +208,23 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
 
     override fun mergeFieldMappings(
         left: FieldMapping,
-        right: FieldMapping,
+        strictRight: FieldMapping?,
+        looseRight: FieldMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): FieldMapping? {
+    ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: $left")
     }
+
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
-        right: FieldMapping,
-        rightContinuation: FieldMapping?,
+        strictRightDuplicate: FieldMapping?,
+        looseRightDuplicate: FieldMapping?,
+        strictRightContinuation: FieldMapping?,
+        looseRightContinuation: FieldMapping?,
         target: ClassMapping<*, *>,
         context: MergeContext
-    ): FieldMapping? {
+    ): FieldMapping {
         return target.createFieldMapping(left.obfuscatedName, left.deobfuscatedName)
     }
 

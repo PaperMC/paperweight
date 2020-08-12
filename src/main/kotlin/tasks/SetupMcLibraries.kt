@@ -20,17 +20,32 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.tasks
 
-data class MinecraftManifest(
-    internal val latest: Map<String, *>,
-    internal val versions: List<ManifestVersion>
-)
+import io.papermc.paperweight.util.file
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 
-data class ManifestVersion(
-    internal val id: String,
-    internal val type: String,
-    internal val time: String,
-    internal val releaseTime: String,
-    internal val url: String
-)
+abstract class SetupMcLibraries : DefaultTask() {
+
+    @get:Input
+    abstract val dependencies: ListProperty<String>
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun run() {
+        val list = dependencies.get().sorted()
+
+        outputFile.file.bufferedWriter().use { writer ->
+            for (line in list) {
+                writer.appendln(line)
+            }
+        }
+    }
+}

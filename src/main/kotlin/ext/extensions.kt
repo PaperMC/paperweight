@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,12 +22,16 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 
-fun Project.dirWithDefault(path: String): DirectoryProperty =
-    project.objects.directoryProperty().convention(layout.dir(provider { file(path) }))
+fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
+    directoryProperty().convention(layout.projectDirectory.dir(path))
 
-fun Project.fileWithDefault(path: String): RegularFileProperty  =
-    project.objects.fileProperty().convention(layout.file(provider { file(path) }))
+fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
+    directoryProperty().convention(base.dir(name))
+
+fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
+    fileProperty().convention(base.file(name))

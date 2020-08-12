@@ -3,7 +3,6 @@
  * some code and systems originally from ForgeGradle.
  *
  * Copyright (C) 2020 Kyle Wood
- * Copyright (C) 2018 Forge Development LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,52 +27,44 @@ import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.runJar
 import io.papermc.paperweight.util.wrapException
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 
-open class RemapVanillaJarSpigot : DefaultTask() {
+abstract class RemapVanillaJarSpigot : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+    @get:InputFile
+    abstract val classMappings: RegularFileProperty
+    @get:InputFile
+    abstract val memberMappings: RegularFileProperty
+    @get:InputFile
+    abstract val packageMappings: RegularFileProperty
+    @get:InputFile
+    abstract val accessTransformers: RegularFileProperty
+    @get:Input
+    abstract val workDirName: Property<String>
+    @get:InputFile
+    abstract val specialSourceJar: RegularFileProperty
+    @get:InputFile
+    abstract val specialSource2Jar: RegularFileProperty
+    @get:Input
+    abstract val classMapCommand: Property<String>
+    @get:Input
+    abstract val memberMapCommand: Property<String>
+    @get:Input
+    abstract val finalMapCommand: Property<String>
 
-    @InputFile
-    val classMappings: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
 
-    @InputFile
-    val memberMappings: RegularFileProperty = project.objects.fileProperty()
-
-    @InputFile
-    val packageMappings: RegularFileProperty = project.objects.fileProperty()
-
-    @InputFile
-    val accessTransformers: RegularFileProperty = project.objects.fileProperty()
-
-    @Input
-    val workDirName: Property<String> = project.objects.property()
-
-    @InputFile
-    val specialSourceJar: RegularFileProperty = project.objects.fileProperty()
-
-    @InputFile
-    val specialSource2Jar: RegularFileProperty = project.objects.fileProperty()
-
-    @Input
-    val classMapCommand: Property<String> = project.objects.property()
-
-    @Input
-    val memberMapCommand: Property<String> = project.objects.property()
-
-    @Input
-    val finalMapCommand: Property<String> = project.objects.property()
-
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
 
     @TaskAction
     fun run() {
@@ -92,14 +83,15 @@ open class RemapVanillaJarSpigot : DefaultTask() {
         val packageMappingsPath = packageMappings.asFile.get().canonicalPath
         val accessTransformersPath = accessTransformers.asFile.get().canonicalPath
 
+        val work = layout.projectDirectory.file(workDirName.get())
+
         try {
-            println("Applying class mappings...")
             wrapException("Failed to apply class mappings") {
-                val logFile = project.cache.resolve(paperTaskOutput("class.log"))
+                val logFile = layout.cache.resolve(paperTaskOutput("class.log"))
                 logFile.delete()
                 runJar(
                     specialSource2Jar,
-                    workingDir = workDirName.get(),
+                    workingDir = work,
                     logFile = logFile,
                     args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
                         // ignore excludes, we actually want to map every class
@@ -107,24 +99,22 @@ open class RemapVanillaJarSpigot : DefaultTask() {
                     }
                 )
             }
-            println("Applying member mappings...")
             wrapException("Failed to apply member mappings") {
-                val logFile = project.cache.resolve(paperTaskOutput("member.log"))
+                val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
                 logFile.delete()
                 runJar(
                     specialSource2Jar,
-                    workingDir = workDirName.get(),
+                    workingDir = work,
                     logFile = logFile,
                     args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
                 )
             }
-            println("Creating remapped jar...")
             wrapException("Failed to create remapped jar") {
-                val logFile = project.cache.resolve(paperTaskOutput("final.log"))
+                val logFile = layout.cache.resolve(paperTaskOutput("final.log"))
                 logFile.delete()
                 runJar(
                     specialSourceJar,
-                    workingDir = workDirName.get(),
+                    workingDir = work,
                     logFile = logFile,
                     args = *doReplacements(finalMapCommand.get(), membersJarPath, accessTransformersPath, packageMappingsPath, outputJarPath)
                 )
