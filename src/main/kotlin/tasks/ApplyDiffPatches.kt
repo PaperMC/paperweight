@@ -28,24 +28,21 @@ import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.UselessOutputStream
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Console
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.property
-import org.gradle.kotlin.dsl.support.zipTo
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.Date
 
-open class ApplyDiffPatches : DefaultTask() {
+open class ApplyDiffPatches : ControllableOutputTask() {
 
     @InputFile
     val sourceJar: RegularFileProperty = project.objects.fileProperty()
@@ -58,8 +55,10 @@ open class ApplyDiffPatches : DefaultTask() {
 
     @OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
-    @Console
-    val printOutput: Property<Boolean> = project.objects.property<Boolean>().convention(false)
+
+    init {
+        printOutput.convention(false)
+    }
 
     @TaskAction
     fun run() {

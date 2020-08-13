@@ -58,15 +58,35 @@ class Git(private var repo: File) {
 
 class Command(internal val process: Process, private val command: String) {
 
-    var outStream: OutputStream? = null
+    var outStream: OutputStream = UselessOutputStream
+    var errStream: OutputStream = UselessOutputStream
 
-    fun run(): Int = try {
-        outStream?.let { out ->
-            process.inputStream.copyTo(out)
+    fun run(): Int {
+        try {
+            val input = process.inputStream
+            val error = process.errorStream
+            val buffer = ByteArray(1000)
+
+            while (process.isAlive) {
+                // Read both stdout and stderr on the same thread
+                // This is important for how Gradle outputs the logs
+                if (input.available() > 0) {
+                    val count = input.read(buffer)
+                    outStream.write(buffer, 0, count)
+                }
+                if (error.available() > 0) {
+                    val count = error.read(buffer)
+                    errStream.write(buffer, 0, count)
+                }
+                Thread.sleep(1)
+            }
+            // Catch any other output we may have missed
+            outStream.write(input.readBytes())
+            errStream.write(error.readBytes())
+            return process.waitFor()
+        } catch (e: Exception) {
+            throw PaperweightException("Failed to call git command: $command", e)
         }
-        process.waitFor()
-    } catch (e: Exception) {
-        throw PaperweightException("Failed to call git command: $command", e)
     }
 
     fun runSilently(silenceOut: Boolean = true, silenceErr: Boolean = false): Int {
@@ -75,7 +95,7 @@ class Command(internal val process: Process, private val command: String) {
     }
 
     fun runOut(): Int {
-        setup(System.out, System.out)
+        setup(System.out, System.err)
         return run()
     }
 
@@ -92,8 +112,8 @@ class Command(internal val process: Process, private val command: String) {
     }
 
     private fun silence(silenceOut: Boolean, silenceErr: Boolean) {
-        val out = if (silenceOut) UselessOutputStream else System.out
-        val err = if (silenceErr) UselessOutputStream else System.err
+        val out = if (silenceOut) null else System.out
+        val err = if (silenceErr) null else System.err
         setup(out, err)
     }
 
@@ -103,10 +123,8 @@ class Command(internal val process: Process, private val command: String) {
     }
 
     fun setup(out: OutputStream? = null, err: OutputStream? = null): Command {
-        outStream = out
-        if (err != null) {
-            redirect(process.errorStream, err)
-        }
+        outStream = out ?: UselessOutputStream
+        errStream = err ?: UselessOutputStream
         return this
     }
 

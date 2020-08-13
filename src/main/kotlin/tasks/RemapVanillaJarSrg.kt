@@ -22,13 +22,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.runJar
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.asm.LorenzRemapper
@@ -41,7 +38,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.property
 
 open class RemapVanillaJarSrg : DefaultTask() {

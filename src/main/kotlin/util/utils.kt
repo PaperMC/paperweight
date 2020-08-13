@@ -31,10 +31,8 @@ import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat
-import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -57,8 +55,8 @@ fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, F
     }
 }
 
-fun redirect(input: InputStream, out: OutputStream) {
-    Thread {
+fun redirect(input: InputStream, out: OutputStream): Thread {
+    return Thread {
         try {
             input.copyTo(out)
         } catch (e: Exception) {

@@ -49,17 +49,12 @@ fun Task.runJar(
             val log = project.file(logFile)
             log.outputStream().buffered()
         }
-        else -> null
+        else -> UselessOutputStream
     }
 
     output.use {
-        output?.let {
-            redirect(process.inputStream, it)
-            redirect(process.errorStream, it)
-        } ?: run {
-            redirect(process.inputStream, UselessOutputStream)
-            redirect(process.errorStream, UselessOutputStream)
-        }
+        redirect(process.inputStream, it)
+        redirect(process.errorStream, it)
 
         val e = process.waitFor()
         if (e != 0) {

@@ -172,13 +172,9 @@ class Paperweight : Plugin<Project> {
             outputDir.set(extension.paper.paperApiDir)
         }
 
-        val patchPaperServer: TaskProvider<ApplyPaperPatches> = project.tasks.register<ApplyPaperPatches>("applyPaperPatches") {
-            branch.set("HEAD")
-            upstreamBranch.set("upstream")
-            upstream.set(extension.spigot.spigotServerDir)
+        val patchPaperServer: TaskProvider<ApplyPaperPatches> = project.tasks.register<ApplyPaperPatches>("patchPaperServer") {
             patchDir.set(extension.paper.spigotServerPatchDir)
             remappedSource.set(project.layout.file(mergeRemappedSources.map { it.outputs.files.singleFile }))
-            remapTarget.set("src/main/java")
 
             outputDir.set(extension.paper.paperServerDir)
         }

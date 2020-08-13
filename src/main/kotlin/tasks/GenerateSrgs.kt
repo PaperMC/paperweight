@@ -28,6 +28,7 @@ import io.papermc.paperweight.util.getCsvReader
 import io.papermc.paperweight.util.mcpConfig
 import io.papermc.paperweight.util.mcpFile
 import io.papermc.paperweight.util.writeMappings
+import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -104,6 +105,7 @@ open class GenerateSrgs : DefaultTask() {
             val newMapping = notchToSrgSet.createTopLevelClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
             remapMembers(mapping, newMapping)
         }
+        handleKeywordMappings(notchToSrgSet)
 
         // We have Notch -> SRG
         val srgToNotchSet = notchToSrgSet.reverse()
@@ -142,6 +144,39 @@ open class GenerateSrgs : DefaultTask() {
         )
     }
 
+    private fun handleKeywordMappings(mappings: MappingSet) {
+        for (classMapping in mappings.topLevelClassMappings) {
+            handleKeywordMappingClass(classMapping)
+        }
+    }
+
+    private fun handleKeywordMappingClass(classMapping: ClassMapping<*, *>) {
+        for (innerClassMapping in classMapping.innerClassMappings) {
+            handleKeywordMappingClass(innerClassMapping)
+        }
+        for (fieldMapping in classMapping.fieldMappings) {
+            if (fieldMapping.obfuscatedName in javaKeywords) {
+                val sourceName = fieldMapping.obfuscatedName + '_'
+                if (classMapping.hasFieldMapping(sourceName)) {
+                    // If the "source name" of the mapping already exists, just skip it. I don't even know what would
+                    // happen in this case at decompile time to be honest
+                    continue
+                }
+                classMapping.createFieldMapping(sourceName, fieldMapping.deobfuscatedName)
+            }
+        }
+        for (methodMapping in classMapping.methodMappings) {
+            if (methodMapping.obfuscatedName in javaKeywords) {
+                val sourceName = methodMapping.obfuscatedName + "_"
+                val sourceSignature = MethodSignature(sourceName, methodMapping.signature.descriptor)
+                if (classMapping.hasMethodMapping(sourceSignature)) {
+                    continue
+                }
+                classMapping.createMethodMapping(sourceSignature, methodMapping.deobfuscatedName)
+            }
+        }
+    }
+
     private fun mapClass(inClass: ClassMapping<*, *>, outClass: ClassMapping<*, *>, methods: Map<String, String>, fields: Map<String, String>) {
         for (fieldMapping in inClass.fieldMappings) {
             val mcpName = fields[fieldMapping.deobfuscatedName] ?: fieldMapping.deobfuscatedName
@@ -175,3 +210,56 @@ open class GenerateSrgs : DefaultTask() {
         }
     }
 }
+
+private val javaKeywords: HashSet<String> = hashSetOf(
+    "abstract",
+    "continue",
+    "for",
+    "new",
+    "switch",
+    "assert",
+    "default",
+    "goto",
+    "package",
+    "synchronized",
+    "boolean",
+    "do",
+    "if",
+    "private",
+    "this",
+    "break",
+    "double",
+    "implements",
+    "protected",
+    "throw",
+    "byte",
+    "else",
+    "import",
+    "public",
+    "throws",
+    "case",
+    "enum",
+    "instanceof",
+    "return",
+    "transient",
+    "catch",
+    "extends",
+    "int",
+    "short",
+    "try",
+    "char",
+    "final",
+    "interface",
+    "static",
+    "void",
+    "class",
+    "finally",
+    "long",
+    "strictfp",
+    "volatile",
+    "const",
+    "float",
+    "native",
+    "super",
+    "while"
+)

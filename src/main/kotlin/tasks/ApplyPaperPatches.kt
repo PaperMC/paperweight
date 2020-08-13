@@ -22,49 +22,33 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Console
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 
-open class ApplyPaperPatches : DefaultTask() {
+open class ApplyPaperPatches : ControllableOutputTask() {
 
-    @Input
-    val branch: Property<String> = project.objects.property()
-    @Input
-    val upstreamBranch: Property<String> = project.objects.property()
-    @InputDirectory
-    val upstream: DirectoryProperty = project.objects.directoryProperty()
     @InputDirectory
     val patchDir: DirectoryProperty = project.objects.directoryProperty()
     @InputFile
     val remappedSource: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val remapTarget: Property<String> = project.objects.property()
 
     @OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
-    @Console
-    val printOutput: Property<Boolean> = project.objects.property<Boolean>().convention(true)
+    @OutputDirectory
+    val remapTargetDir: DirectoryProperty = project.objects.directoryProperty().convention(outputDir.dir("src/main/java"))
+
+    init {
+        printOutput.convention(true)
+    }
 
     @TaskAction
     fun run() {
-        // We're not going to keep git history here anyways, just nuke it all instead
-        Git(upstream.file).let { git ->
-            git("fetch").setupOut().run()
-            git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
-        }
-
         val outputFile = outputDir.file
         if (outputFile.exists()) {
             outputFile.deleteRecursively()
@@ -74,13 +58,16 @@ open class ApplyPaperPatches : DefaultTask() {
         val target = outputFile.name
 
         if (printOutput.get()) {
-            println("   Resetting $target to ${upstream.file.name}...")
+            println("   Creating $target from remapped source...")
         }
 
-        Git(outputDir.file).let { git ->
+        Git(outputFile).let { git ->
             git("init").runSilently(silenceErr = true)
 
-            val sourceDir = outputFile.resolve(remapTarget.get())
+            val sourceDir = remapTargetDir.file
+            if (sourceDir.exists()) {
+                sourceDir.deleteRecursively()
+            }
             sourceDir.mkdirs()
 
             project.copy {
@@ -91,24 +78,9 @@ open class ApplyPaperPatches : DefaultTask() {
             project.rootProject.file(".gitignore").copyTo(outputFile.resolve(".gitignore"))
 
             git("add", ".gitignore", ".").executeSilently()
-            git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>")
-        }
-    }
+            git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>").executeSilently()
 
-    private fun Command.setupOut(mergeOutput: Boolean = false, showError: Boolean = true) = apply {
-        if (printOutput.get()) {
-            val err = if (showError) {
-                if (mergeOutput) {
-                    System.out
-                } else {
-                    System.err
-                }
-            } else {
-                null
-            }
-            setup(System.out, err)
-        } else {
-            setup(null, null)
+            applyGitPatches(git, target, outputFile, patchDir.file, printOutput.get())
         }
     }
 }

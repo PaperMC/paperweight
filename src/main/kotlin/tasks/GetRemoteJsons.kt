@@ -28,7 +28,6 @@ import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureParentExists
@@ -36,7 +35,6 @@ import io.papermc.paperweight.util.ext
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.getWithEtag
 import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.toProvider
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
