@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
@@ -36,7 +36,6 @@ import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
-import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -57,9 +56,6 @@ open class ApplyAccessTransform : DefaultTask() {
     @InputFile
     val atFile: RegularFileProperty = project.objects.fileProperty()
 
-    @InputFile
-    val mapping: RegularFileProperty = project.objects.fileProperty()
-
     @OutputFile
     val outputJar: RegularFileProperty = defaultOutput()
 
@@ -69,12 +65,10 @@ open class ApplyAccessTransform : DefaultTask() {
         ensureDeleted(outputJar.file)
 
         val at = AccessTransformFormats.FML.read(atFile.file.toPath())
-        val mappings = MappingFormats.TSRG.createReader(mapping.file.toPath()).use { it.read() }
-        val remappedAt = at.remap(mappings)
 
         Atlas().apply {
             install {
-                AtJarEntryTransformer(remappedAt)
+                AtJarEntryTransformer(at)
             }
             run(inputJar.file.toPath(), outputJar.file.toPath())
         }

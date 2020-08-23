@@ -44,7 +44,8 @@ import io.papermc.paperweight.tasks.InspectVanillaJar
 import io.papermc.paperweight.tasks.MergeAccessTransforms
 import io.papermc.paperweight.tasks.PatchMcpCsv
 import io.papermc.paperweight.tasks.RemapAccessTransform
-import io.papermc.paperweight.tasks.RemapSources
+import io.papermc.paperweight.tasks.patchremap.RemapPatches
+import io.papermc.paperweight.tasks.sourceremap.RemapSources
 import io.papermc.paperweight.tasks.RemapSpigotAt
 import io.papermc.paperweight.tasks.RemapVanillaJarSpigot
 import io.papermc.paperweight.tasks.RemapVanillaJarSrg
@@ -53,6 +54,8 @@ import io.papermc.paperweight.tasks.RunMcInjector
 import io.papermc.paperweight.tasks.SetupMcpDependencies
 import io.papermc.paperweight.tasks.SetupSpigotDependencies
 import io.papermc.paperweight.tasks.WriteLibrariesFile
+import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
+import io.papermc.paperweight.util.BuildDataInfo
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.cache
@@ -66,7 +69,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
-import util.BuildDataInfo
 import java.io.File
 
 class Paperweight : Plugin<Project> {
@@ -144,6 +146,8 @@ class Paperweight : Plugin<Project> {
         val mcpTasks = createMcpTasks(project, generalTasks)
         val spigotTasks = createSpigotTasks(project, generalTasks, mcpTasks)
 
+        createPatchRemapTasks(project, generalTasks, mcpTasks, spigotTasks)
+
         val applySourceAt: TaskProvider<ApplySourceAt> = project.tasks.register<ApplySourceAt>("applySourceAt") {
             inputZip.set(mcpTasks.applyMcpPatches.flatMap { it.outputZip })
             vanillaJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
@@ -207,6 +211,10 @@ class Paperweight : Plugin<Project> {
 
     data class SpigotTasks(
         val setupSpigotDependencies: TaskProvider<SetupSpigotDependencies>,
+        val generateSpigotSrgs: TaskProvider<GenerateSpigotSrgs>,
+        val decompileVanillaJarSpigot: TaskProvider<DecompileVanillaJar>,
+        val patchSpigotApi: TaskProvider<ApplyGitPatches>,
+        val patchSpigotServer: TaskProvider<ApplyGitPatches>,
         val remapSpigotSources: TaskProvider<RemapSources>,
         val mergeGeneratedAts: TaskProvider<MergeAccessTransforms>
     )
@@ -442,7 +450,6 @@ class Paperweight : Plugin<Project> {
             mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
             vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
             vanillaRemappedSpigotJar.set(removeSpigotExcludes.flatMap { it.outputZip })
-            vanillaRemappedSrgJar.set(remapVanillaJarSrg.flatMap { it.outputJar })
             configuration.set(setupSpigotDependencies.flatMap { it.configurationName })
             configFile.set(extractMcpData.flatMap { it.configJson })
         }
@@ -457,6 +464,60 @@ class Paperweight : Plugin<Project> {
             inputFiles.add(remapSpigotAt.flatMap { it.outputFile })
         }
 
-        return SpigotTasks(setupSpigotDependencies, remapSpigotSources, mergeGeneratedAts)
+        return SpigotTasks(
+            setupSpigotDependencies,
+            generateSpigotSrgs,
+            decompileVanillaJarSpigot,
+            patchSpigotApi,
+            patchSpigotServer,
+            remapSpigotSources,
+            mergeGeneratedAts
+        )
+    }
+
+    private fun createPatchRemapTasks(
+        project: Project,
+        generalTasks: GeneralTasks,
+        mcpTasks: McpTasks,
+        spigotTasks: SpigotTasks
+    ) {
+        val extension = project.ext
+        val cache = project.cache
+
+        val patchPaperServerForPatchRemap: TaskProvider<ApplyPaperPatches> = project.tasks.register<ApplyPaperPatches>("patchPaperServerForPatchRemap") {
+            patchDir.set(extension.paper.spigotServerPatchDir.get())
+            remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip }.get())
+
+            outputDir.set(cache.resolve("patch-paper-server-for-remap"))
+        }
+
+        val applyVanillaSrgAt: TaskProvider<ApplyAccessTransform> = project.tasks.register<ApplyAccessTransform>("applyVanillaSrgAt") {
+            inputJar.set(mcpTasks.remapVanillaJarSrg.flatMap { it.outputJar }.get())
+            atFile.set(spigotTasks.mergeGeneratedAts.flatMap { it.outputFile }.get())
+        }
+
+        val remapPatches: TaskProvider<RemapPatches> = project.tasks.register<RemapPatches>("remapPatches") {
+            inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
+            sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip }.get())
+            apiPatchDir.set(extension.paper.spigotApiPatchDir)
+
+            mappingsFile.set(spigotTasks.generateSpigotSrgs.flatMap { it.spigotToSrg }.get())
+
+            // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
+            classpathJars.addAll(
+                generalTasks.downloadServerJar.flatMap { it.outputJar }.get(),
+                spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get(),
+                applyVanillaSrgAt.flatMap { it.outputJar }.get()
+            )
+
+            spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir }.get())
+            spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir }.get())
+            spigotDecompJar.set(spigotTasks.decompileVanillaJarSpigot.flatMap { it.outputJar }.get())
+            configFile.set(spigotTasks.remapSpigotSources.flatMap { it.configFile }.get())
+
+            parameterNames.set(spigotTasks.remapSpigotSources.flatMap { it.parameterNames }.get())
+
+            outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
+        }
     }
 }

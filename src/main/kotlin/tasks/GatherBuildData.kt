@@ -23,12 +23,12 @@
 package io.papermc.paperweight.tasks
 
 import com.github.salomonbrys.kotson.fromJson
+import io.papermc.paperweight.util.BuildDataInfo
 import io.papermc.paperweight.util.gson
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.OutputFile
-import util.BuildDataInfo
 
 open class GatherBuildData : DefaultTask() {
 

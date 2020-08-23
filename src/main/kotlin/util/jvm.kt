@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.shared.PaperweightException
 import org.gradle.api.Task
 import org.gradle.internal.jvm.Jvm
 import java.io.OutputStream

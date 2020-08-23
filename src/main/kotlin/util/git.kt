@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.shared.PaperweightException
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -35,9 +35,6 @@ class Git(private var repo: File) {
             throw PaperweightException("Git directory does not exist: $repo")
         }
     }
-
-    val status
-        get() = this("status", "-z").getText()
 
     val ref
         get() = this("rev-parse", "HEAD").getText().replace('\n', ' ').replace(Regex("\\s+"), "")
@@ -131,6 +128,7 @@ class Command(internal val process: Process, private val command: String) {
     fun getText(): String {
         val out = ByteArrayOutputStream()
         setup(out, System.err)
+        execute()
         return String(out.toByteArray(), Charsets.UTF_8)
     }
 

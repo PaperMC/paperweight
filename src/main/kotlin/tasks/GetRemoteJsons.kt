@@ -28,6 +28,7 @@ import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MinecraftManifest
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureParentExists
@@ -42,7 +43,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.property
-import util.MinecraftManifest
 
 open class GetRemoteJsons : DefaultTask() {
 

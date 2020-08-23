@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.shared.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists

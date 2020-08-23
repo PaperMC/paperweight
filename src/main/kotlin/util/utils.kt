@@ -26,8 +26,8 @@ import au.com.bytecode.opencsv.CSVParser
 import au.com.bytecode.opencsv.CSVReader
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
+import io.papermc.paperweight.shared.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat

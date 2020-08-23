@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.shared.PaperweightException
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
 import org.gradle.api.file.DirectoryProperty

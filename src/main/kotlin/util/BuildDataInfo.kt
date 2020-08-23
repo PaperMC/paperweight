@@ -20,7 +20,7 @@
  * USA
  */
 
-package util
+package io.papermc.paperweight.util
 
 data class BuildDataInfo(
     val minecraftVersion: String,

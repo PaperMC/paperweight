@@ -31,6 +31,8 @@ open class PaperExtension(project: Project) {
     val baseTargetDir: DirectoryProperty = project.dirWithDefault(".")
     val spigotApiPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-API-Patches")
     val spigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches")
+    val remappedSpigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches-Remapped")
+    val unmappedSpigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches-Unmapped")
     val paperApiDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Paper-Server")
 

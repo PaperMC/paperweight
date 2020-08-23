@@ -20,7 +20,7 @@
  * USA
  */
 
-package util
+package io.papermc.paperweight.util
 
 data class MinecraftManifest(
     internal val latest: Map<String, *>,

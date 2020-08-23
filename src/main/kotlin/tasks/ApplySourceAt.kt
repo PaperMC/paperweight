@@ -22,10 +22,10 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.shared.RemapConfig
+import io.papermc.paperweight.shared.RemapOps
+import io.papermc.paperweight.tasks.sourceremap.MercuryExecutor
 import io.papermc.paperweight.util.file
-import org.cadixdev.at.io.AccessTransformFormats
-import org.cadixdev.mercury.Mercury
-import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import java.io.File
@@ -40,8 +40,6 @@ open class ApplySourceAt : ZippedTask() {
     val atFile: RegularFileProperty = project.objects.fileProperty()
 
     override fun run(rootDir: File) {
-        val ats = AccessTransformFormats.FML.read(atFile.file.toPath())
-
         val inputDir = rootDir.resolve("input")
         val outputDir = rootDir.resolve("output")
 
@@ -54,18 +52,13 @@ open class ApplySourceAt : ZippedTask() {
         }
         outputDir.mkdirs()
 
-        Mercury().apply {
-            classPath.addAll(listOf(
-                vanillaJar.file.toPath(),
-                vanillaRemappedSrgJar.file.toPath()
-            ))
-
-            processors.addAll(listOf(
-                AccessTransformerRewriter.create(ats)
-            ))
-
-            rewrite(inputDir.toPath(), outputDir.toPath())
-        }
+        MercuryExecutor.exec(RemapConfig(
+            inDir = inputDir,
+            outDir = outputDir,
+            classpath = listOf(vanillaJar.file, vanillaRemappedSrgJar.file),
+            atFile = atFile.file,
+            operations = listOf(RemapOps.APPLY_AT)
+        ))
 
         // Remove input files
         rootDir.listFiles()?.forEach { file ->
