@@ -44,36 +44,36 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-open class GenerateSpigotSrgs : DefaultTask() {
+abstract class GenerateSpigotSrgs : DefaultTask() {
 
-    @InputFile
-    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val classMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val memberMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val packageMappings: RegularFileProperty = project.objects.fileProperty()
-    @Optional
-    @InputFile
-    val extraSpigotSrgMappings: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val loggerFields: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val notchToSrg: RegularFileProperty
+    @get:InputFile
+    abstract val srgToMcp: RegularFileProperty
+    @get:InputFile
+    abstract val classMappings: RegularFileProperty
+    @get:InputFile
+    abstract val memberMappings: RegularFileProperty
+    @get:InputFile
+    abstract val packageMappings: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val extraSpigotSrgMappings: RegularFileProperty
+    @get:InputFile
+    abstract val loggerFields: RegularFileProperty
 
-    @OutputFile
-    val spigotToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val spigotToMcp: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val spigotToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToSpigot: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToSpigot: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val notchToSpigot: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val spigotToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val spigotToMcp: RegularFileProperty
+    @get:OutputFile
+    abstract val spigotToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToSpigot: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToSpigot: RegularFileProperty
+    @get:OutputFile
+    abstract val notchToSpigot: RegularFileProperty
 
     @TaskAction
     fun run() {
@@ -146,7 +146,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): MergeResult<TopLevelClassMapping?> {
         // If both are provided, keep spigot
         return MergeResult(
-            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
+            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName)),
             right
         )
     }
@@ -156,7 +156,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
         return MergeResult(
-            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName))
+            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName))
         )
     }
     override fun addRightTopLevelClassMapping(
@@ -168,8 +168,10 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         return if (right.deobfuscatedName.contains("/client/")) {
             MergeResult(null)
         } else {
+            // This is a mapping Spigot is totally missing, but Spigot maps all classes without a package to
+            // /net/minecraft regardless if there are mappings for the classes or not
             MergeResult(
-                target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName)),
+                target.createTopLevelClassMapping(prependPackage(right.obfuscatedName), right.obfuscatedName),
                 right
             )
         }

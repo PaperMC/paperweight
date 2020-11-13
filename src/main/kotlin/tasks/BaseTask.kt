@@ -22,22 +22,27 @@
 
 package io.papermc.paperweight.tasks
 
-import com.github.salomonbrys.kotson.fromJson
-import io.papermc.paperweight.util.BuildDataInfo
-import io.papermc.paperweight.util.gson
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.OutputFile
+import org.gradle.api.file.ArchiveOperations
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.model.ObjectFactory
+import javax.inject.Inject
 
-open class GatherBuildData : DefaultTask() {
+abstract class BaseTask : DefaultTask() {
 
-    @OutputFile
-    val buildDataInfoFile: RegularFileProperty = project.objects.fileProperty()
+    @get:Inject
+    abstract val objects: ObjectFactory
+    @get:Inject
+    abstract val layout: ProjectLayout
+    @get:Inject
+    abstract val fs: FileSystemOperations
+    @get:Inject
+    abstract val archives: ArchiveOperations
 
-    val buildDataInfo: Provider<BuildDataInfo> = buildDataInfoFile.map {
-        it.asFile.bufferedReader().use { reader ->
-            gson.fromJson(reader)
-        }
+    open fun init() {}
+
+    init {
+        this.init()
     }
 }

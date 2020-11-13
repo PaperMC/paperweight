@@ -22,15 +22,15 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.model.ObjectFactory
 
-open class SpigotExtension(project: Project, workDir: DirectoryProperty) {
-    var spigotDir: DirectoryProperty = project.dirFrom(workDir, "Spigot")
-    var spigotApiDir: DirectoryProperty = project.dirFrom(spigotDir, "Spigot-API")
-    var spigotServerDir: DirectoryProperty = project.dirFrom(spigotDir, "Spigot-Server")
-    var bukkitPatchDir: DirectoryProperty = project.dirFrom(spigotDir, "Bukkit-Patches")
-    var craftBukkitPatchDir: DirectoryProperty = project.dirFrom(spigotDir, "CraftBukkit-Patches")
+open class SpigotExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
+    var spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
+    var spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
+    var spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
+    var bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
+    var craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
 
     init {
         spigotDir.disallowUnsafeRead()

@@ -22,20 +22,13 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.shared.PaperweightException
-import org.gradle.api.Task
+import io.papermc.paperweight.PaperweightException
 import org.gradle.internal.jvm.Jvm
 import java.io.OutputStream
 
-fun Task.runJar(
-    jar: Any,
-    workingDir: Any,
-    logFile: Any?,
-    jvmArgs: List<String> = listOf(),
-    vararg args: String
-) {
-    val jarFile = project.file(jar)
-    val dir = project.file(workingDir)
+fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = listOf(), vararg args: String) {
+    val jarFile = jar.convertToFile()
+    val dir = workingDir.convertToFile()
 
     val process = ProcessBuilder(
         Jvm.current().javaExecutable.canonicalPath, *jvmArgs.toTypedArray(),
@@ -46,7 +39,7 @@ fun Task.runJar(
     val output = when {
         logFile is OutputStream -> logFile
         logFile != null -> {
-            val log = project.file(logFile)
+            val log = logFile.convertToFile()
             log.outputStream().buffered()
         }
         else -> UselessOutputStream

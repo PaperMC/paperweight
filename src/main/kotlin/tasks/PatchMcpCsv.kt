@@ -30,23 +30,23 @@ import org.gradle.api.tasks.TaskAction
 import java.io.PrintWriter
 import java.util.regex.Pattern
 
-open class PatchMcpCsv : DefaultTask() {
+abstract class PatchMcpCsv : DefaultTask() {
 
-    @InputFile
-    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val paramsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val changesFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val fieldsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val methodsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val paramsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val changesFile: RegularFileProperty
 
-    @OutputFile
-    val paperFieldCsv: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val paperMethodCsv: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val paperParamCsv: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val paperFieldCsv: RegularFileProperty
+    @get:OutputFile
+    abstract val paperMethodCsv: RegularFileProperty
+    @get:OutputFile
+    abstract val paperParamCsv: RegularFileProperty
 
     @TaskAction
     fun run() {

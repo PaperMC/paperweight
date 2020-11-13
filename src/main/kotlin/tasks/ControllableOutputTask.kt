@@ -24,15 +24,13 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.UselessOutputStream
-import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
-import org.gradle.kotlin.dsl.property
 
-abstract class ControllableOutputTask : DefaultTask() {
+abstract class ControllableOutputTask : BaseTask() {
 
-    @Console
-    val printOutput: Property<Boolean> = project.objects.property()
+    @get:Console
+    abstract val printOutput: Property<Boolean>
 
     fun Command.setupOut(showError: Boolean = true) = apply {
         if (printOutput.get()) {

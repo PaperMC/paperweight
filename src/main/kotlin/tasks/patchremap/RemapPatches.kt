@@ -22,13 +22,12 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.tasks.finalizeProperties
+import io.papermc.paperweight.tasks.BaseTask
+import io.papermc.paperweight.tasks.sourceremap.parseConstructors
+import io.papermc.paperweight.tasks.sourceremap.parseParamNames
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
 import org.cadixdev.lorenz.io.MappingFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -39,46 +38,42 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.listProperty
 import java.io.File
 import java.util.zip.ZipFile
 
-open class RemapPatches : DefaultTask() {
+abstract class RemapPatches : BaseTask() {
 
-    @InputDirectory
-    val inputPatchDir: DirectoryProperty = project.objects.directoryProperty()
-    @InputFile
-    val sourceJar: RegularFileProperty = project.objects.fileProperty()
-    @InputDirectory
-    val apiPatchDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:InputDirectory
+    abstract val inputPatchDir: DirectoryProperty
+    @get:InputFile
+    abstract val sourceJar: RegularFileProperty
+    @get:InputDirectory
+    abstract val apiPatchDir: DirectoryProperty
 
-    @InputFile
-    val mappingsFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val mappingsFile: RegularFileProperty
 
-    @Classpath
-    val classpathJars: ListProperty<RegularFile> = project.objects.listProperty()
+    @get:Classpath
+    abstract val classpathJars: ListProperty<RegularFile>
 
-    @InputDirectory
-    val spigotApiDir: DirectoryProperty = project.objects.directoryProperty()
-    @InputDirectory
-    val spigotServerDir: DirectoryProperty = project.objects.directoryProperty()
-    @InputFile
-    val spigotDecompJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputDirectory
+    abstract val spigotApiDir: DirectoryProperty
+    @get:InputDirectory
+    abstract val spigotServerDir: DirectoryProperty
+    @get:InputFile
+    abstract val spigotDecompJar: RegularFileProperty
 
     // For parameter name remapping
-    // configFile is for constructors
-    @InputFile
-    val parameterNames: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val parameterNames: RegularFileProperty
+    @get:InputFile
+    abstract val constructors: RegularFileProperty
 
-    @OutputDirectory
-    val outputPatchDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:OutputDirectory
+    abstract val outputPatchDir: DirectoryProperty
 
     @TaskAction
     fun run() {
-        finalizeProperties()
-
         // Check patches
         val patches = inputPatchDir.file.listFiles() ?: return run {
             println("No input patches found")
@@ -87,13 +82,13 @@ open class RemapPatches : DefaultTask() {
         patches.sort()
 
         // Setup param remapping
-        val config = mcpConfig(configFile)
-        val constructors = mcpFile(configFile, config.data.constructors)
+        val constructorsData = parseConstructors(constructors.file)
+        val paramMap = parseParamNames(parameterNames.file)
 
         val mappings = MappingFormats.TSRG.createReader(mappingsFile.file.toPath()).use { it.read() }
 
         // This should pull in any libraries needed for type bindings
-        val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolvedConfiguration.files
+        val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
         val classpathFiles = classpathJars.get().map { it.asFile } + configFiles
 
         // Remap output directory, after each output this directory will be re-named to the input directory below for
@@ -115,37 +110,35 @@ open class RemapPatches : DefaultTask() {
 
         PatchSourceRemapWorker(
             mappings,
-            classpathFiles,
-            tempApiDir.resolve("src/main/java"),
-            parameterNames.file,
-            constructors,
-            sourceInputDir,
-            tempOutputDir
-        ).use { remapper ->
-//        val patchApplier = PatchApplier("remapped", "old", tempInputDir)
+            listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")).map { it.toPath() },
+            paramMap,
+            constructorsData,
+            sourceInputDir.toPath(),
+            tempOutputDir.toPath()
+        ).let { remapper ->
+            val patchApplier = PatchApplier("remapped", "old", tempInputDir)
             // Setup patch remapping repo
-//        patchApplier.initRepo() // Create empty initial commit
-//            remapper.remap() // Remap to Spigot mappings
-            // We need to include any missing classes for the patches later on
-//            importMcDev(patches, tempInputDir.resolve("src/main/java"))
-//        patchApplier.commitInitialSource() // Initial commit of Spigot sources
-//        patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
-//            println("sleeping")
-//            Thread.sleep(60_000)
-            remapper.remapBack() // Remap to new mappings
-//        patchApplier.commitInitialSource() // Initial commit of Spigot sources mapped to new mappings
-//        patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+            patchApplier.initRepo() // Create empty initial commit
+            remapper.remap() // Remap to Spigot mappings
 
-            /*
-        // Repo setup is done, we can begin the patch loop now
-        remapper.remap() // Remap to to Spigot mappings
-        patchApplier.applyPatch(patches.first()) // Apply patch on Spigot mappings
-        patchApplier.recordCommit() // Keep track of commit author, message, and time
-        patchApplier.checkoutRemapped() // Switch to remapped branch without checkout out files
-        remapper.remapBack() // Remap to new mappings
-        patchApplier.commitChanges() // Commit the changes
-        patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
-         */
+            // We need to include any missing classes for the patches later on
+            importMcDev(patches, tempInputDir.resolve("src/main/java"))
+            patchApplier.commitInitialSource() // Initial commit of Spigot sources
+            patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
+
+            remapper.remapBack() // Remap to new mappings
+            patchApplier.commitInitialSource() // Initial commit of Spigot sources mapped to new mappings
+            patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+
+            // Repo setup is done, we can begin the patch "loop" now
+            //  - not a loop yet cause it doesn't even work for the first patch
+            remapper.remap() // Remap to to Spigot mappings TODO: verify this step produces correct results
+            patchApplier.applyPatch(patches.first()) // Apply patch on Spigot mappings
+            patchApplier.recordCommit() // Keep track of commit author, message, and time
+            patchApplier.checkoutRemapped() // Switch to remapped branch without checkout out files
+            remapper.remapBack() // Remap to new mappings
+            patchApplier.commitChanges() // Commit the changes
+            patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
         }
     }
 
@@ -164,7 +157,6 @@ open class RemapPatches : DefaultTask() {
                 }
             }
         }
-
     }
 
     private fun readMcDevNames(patches: Array<File>): Set<String> {
@@ -186,10 +178,10 @@ open class RemapPatches : DefaultTask() {
     }
 
     private fun createWorkDir(name: String, source: File? = null): File {
-        return project.cache.resolve("paperweight").resolve(name).apply {
-//            deleteRecursively()
-//            mkdirs()
-//            source?.copyRecursively(this)
+        return layout.cache.resolve("paperweight").resolve(name).apply {
+            deleteRecursively()
+            mkdirs()
+            source?.copyRecursively(this)
         }
     }
 }

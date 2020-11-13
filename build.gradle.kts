@@ -1,11 +1,9 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     idea
     eclipse
     maven
-    kotlin("jvm") version "1.3.70"
     `kotlin-dsl`
     id("net.minecrell.licenser") version "0.4.1"
     id("com.github.johnrengelman.shadow") version "6.0.0"
@@ -17,18 +15,16 @@ version = "1.0.0-SNAPSHOT"
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
     maven("https://files.minecraftforge.net/maven/")
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    compileOnly(gradleApi())
-    compileOnly(gradleKotlinDsl())
+    implementation("org.apache.httpcomponents:httpclient:4.5.12")
 
     // Utils
     implementation("net.sf.opencsv:opencsv:2.3")
-    implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
     implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
 
     // ASM for inspection

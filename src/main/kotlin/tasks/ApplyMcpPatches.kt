@@ -23,25 +23,24 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import java.io.File
 
-open class ApplyMcpPatches : ZippedTask() {
+abstract class ApplyMcpPatches : ZippedTask() {
 
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputDirectory
+    abstract val serverPatchDir: DirectoryProperty
+    @get:InputFile
+    abstract val configFile: RegularFileProperty
 
     override fun run(rootDir: File) {
-        val config = mcpConfig(configFile)
-        val serverPatchDir = mcpFile(configFile, config.data.patches.server)
-
         val git = Git(rootDir)
 
         val extension = ".java.patch"
-        project.fileTree(serverPatchDir).matching {
+        objects.fileTree().from(serverPatchDir).matching {
             include("**/*$extension")
         }.forEach { patch ->
             git("apply", "--ignore-whitespace", patch.absolutePath).executeSilently()

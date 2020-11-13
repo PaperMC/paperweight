@@ -1,3 +1,25 @@
+/*
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
+ *
+ * Copyright (C) 2020 Kyle Wood
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
+
 package io.papermc.paperweight.tasks.sourceremap
 
 import java.io.File
@@ -37,7 +59,10 @@ fun parseConstructors(constructors: File): ConstructorsData {
     return ConstructorsData(constructorMap)
 }
 
-fun writeParamNames(names: Map<String, Array<String?>>, file: File) {
+typealias ParamNames = MutableMap<String, Array<String?>>
+fun newParamNames(): ParamNames = mutableMapOf()
+
+fun writeParamNames(names: ParamNames, file: File) {
     file.bufferedWriter().use { writer ->
         for ((desc, params) in names.entries) {
             writer.append(desc).append(' ')
@@ -52,7 +77,7 @@ fun writeParamNames(names: Map<String, Array<String?>>, file: File) {
     }
 }
 
-fun parseParamNames(file: File): Map<String, Array<String?>> {
+fun parseParamNames(file: File): ParamNames {
     val paramNames: MutableMap<String, Array<String?>> = mutableMapOf()
     file.useLines { lines ->
         for (line in lines) {

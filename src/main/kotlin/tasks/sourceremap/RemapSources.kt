@@ -22,85 +22,93 @@
 
 package io.papermc.paperweight.tasks.sourceremap
 
-import io.papermc.paperweight.shared.PaperweightException
-import io.papermc.paperweight.shared.RemapConfig
-import io.papermc.paperweight.shared.RemapOps
 import io.papermc.paperweight.tasks.ZippedTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
+import io.papermc.paperweight.util.path
+import org.cadixdev.at.AccessTransformSet
+import org.cadixdev.at.io.AccessTransformFormats
+import org.cadixdev.lorenz.io.MappingFormats
+import org.cadixdev.mercury.Mercury
+import org.cadixdev.mercury.at.AccessTransformerRewriter
+import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
+import org.cadixdev.mercury.extra.BridgeMethodRewriter
+import org.cadixdev.mercury.remapper.MercuryRemapper
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.property
 import java.io.File
 
-open class RemapSources : ZippedTask() {
+abstract class RemapSources : ZippedTask() {
 
-    @InputFile
-    val vanillaJar: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val vanillaRemappedSpigotJar: RegularFileProperty = project.objects.fileProperty() // Required for pre-remap pass
-    @InputFile
-    val mappings: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val configuration: Property<String> = project.objects.property()
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
-    @InputDirectory
-    val spigotServerDir: DirectoryProperty = project.objects.directoryProperty()
-    @InputDirectory
-    val spigotApiDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:InputFile
+    abstract val vanillaJar: RegularFileProperty
+    @get:InputFile
+    abstract val vanillaRemappedSpigotJar: RegularFileProperty // Required for pre-remap pass
+    @get:InputFile
+    abstract val mappings: RegularFileProperty
 
-    @OutputFile
-    val generatedAt: RegularFileProperty = defaultOutput("at")
-    @OutputFile
-    val parameterNames: RegularFileProperty = defaultOutput("params")
+    @get:InputDirectory
+    abstract val spigotApiDeps: DirectoryProperty
+    @get:InputDirectory
+    abstract val spigotServerDeps: DirectoryProperty
+
+    @get:InputFile
+    abstract val constructors: RegularFileProperty
+    @get:InputDirectory
+    abstract val spigotServerDir: DirectoryProperty
+    @get:InputDirectory
+    abstract val spigotApiDir: DirectoryProperty
+
+    @get:OutputFile
+    abstract val generatedAt: RegularFileProperty
+    @get:OutputFile
+    abstract val parameterNames: RegularFileProperty
+
+    override fun init() {
+        super.init()
+        generatedAt.convention(defaultOutput("at"))
+        parameterNames.convention(defaultOutput("params"))
+    }
 
     override fun run(rootDir: File) {
-        val config = mcpConfig(configFile)
-        val constructors = mcpFile(configFile, config.data.constructors)
+        val constructorsData = parseConstructors(constructors.file)
+
+        val paramNames: ParamNames = newParamNames()
 
         val srcDir = spigotServerDir.file.resolve("src/main/java")
 
-        val configuration = project.configurations[configuration.get()]
-
-        val totalClasspath = arrayListOf<File>()
-        totalClasspath.addAll(listOf(
-            vanillaJar.file,
-            vanillaRemappedSpigotJar.file,
-            spigotApiDir.file.resolve("src/main/java")
-        ))
-        configuration.resolvedConfiguration.files.mapTo(totalClasspath) { it }
+        val mappingSet = MappingFormats.TSRG.read(mappings.path)
+        val processAt = AccessTransformSet.create()
 
         // Remap any references Spigot maps to SRG
-        val remapOutput = MercuryExecutor.exec(RemapConfig(
-            inDir = srcDir,
-            outDir = rootDir,
-            classpath = totalClasspath,
-            mappingsFile = mappings.file,
-            constructorsFile = constructors,
-            operations = listOf(
-                RemapOps.PROCESS_AT,
-                RemapOps.REMAP,
-                RemapOps.REWRITE_BRIDGE_METHODS,
-                RemapOps.APPLY_AT,
-                RemapOps.REMAP_PARAMS_SRG
-            )
-        ))
+        Mercury().apply {
+            classPath.addAll(listOf(
+                vanillaJar.path,
+                vanillaRemappedSpigotJar.path,
+                spigotApiDir.path.resolve("src/main/java"),
+                *spigotApiDeps.get().asFileTree.files.map { it.toPath() }.toTypedArray(),
+                *spigotServerDeps.get().asFileTree.files.map { it.toPath() }.toTypedArray()
+            ))
 
-        val atFile = remapOutput.atFile ?: throw PaperweightException("No atFile returned from Mercury")
-        atFile.copyTo(generatedAt.file)
-        atFile.delete()
+            processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
 
-        val paramMapFile = remapOutput.paramMapFile ?: throw PaperweightException("No paramMapFile returned from Mercury")
-        paramMapFile.copyTo(parameterNames.file)
-        paramMapFile.delete()
+            process(srcDir.toPath())
+
+            processors.clear()
+            processors.addAll(listOf(
+                MercuryRemapper.create(mappingSet),
+                BridgeMethodRewriter.create(),
+                AccessTransformerRewriter.create(processAt),
+                SrgParameterRemapper(mappingSet, constructorsData, paramNames)
+            ))
+
+            rewrite(srcDir.toPath(), rootDir.toPath())
+        }
+
+        AccessTransformFormats.FML.write(generatedAt.path, processAt)
+        writeParamNames(paramNames, parameterNames.file)
     }
 }

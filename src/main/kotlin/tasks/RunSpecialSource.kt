@@ -25,28 +25,30 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.McpConfig
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.decompile
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
+import io.papermc.paperweight.util.rename
 import io.papermc.paperweight.util.runJar
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class RunForgeFlower : BaseTask() {
+abstract class RunSpecialSource : BaseTask() {
+
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+    @get:InputFile
+    abstract val mappings: RegularFileProperty
 
     @get:InputFile
     abstract val configFile: RegularFileProperty
     @get:InputFile
     abstract val executable: RegularFileProperty
-
-    @get:InputFile
-    abstract val inputJar: RegularFileProperty
-    @get:InputFile
-    abstract val libraries: RegularFileProperty
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -58,32 +60,25 @@ abstract class RunForgeFlower : BaseTask() {
     @TaskAction
     fun run() {
         val out = outputJar.file
-        val target = out.resolveSibling("${out.name}.dir")
-        if (target.exists()) {
-            target.deleteRecursively()
-        }
-        target.mkdirs()
+        ensureParentExists(out)
+        ensureDeleted(out)
 
         val config = gson.fromJson<McpConfig>(configFile)
 
-        val argList = config.functions.decompile.args.map {
+        val argList = config.functions.rename.args.map {
             when (it) {
-                "{libraries}" -> libraries.file.absolutePath
                 "{input}" -> inputJar.file.absolutePath
-                "{output}" -> target.absolutePath
+                "{output}" -> outputJar.file.absolutePath
+                "{mappings}" -> mappings.file.absolutePath
                 else -> it
             }
         }
 
+        val jvmArgs = config.functions.rename.jvmargs ?: listOf()
+
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
         logFile.delete()
 
-        val jvmArgs = config.functions.decompile.jvmargs ?: listOf()
-
         runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
-
-        // FernFlower is weird with how it does directory output
-        target.resolve(inputJar.file.name).renameTo(out)
-        target.deleteRecursively()
     }
 }

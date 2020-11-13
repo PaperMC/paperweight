@@ -22,61 +22,65 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.McpConfig
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
+import io.papermc.paperweight.util.fromJson
+import io.papermc.paperweight.util.gson
+import io.papermc.paperweight.util.mcinject
 import io.papermc.paperweight.util.runJar
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.property
 
-open class RunMcInjector : DefaultTask() {
+abstract class RunMcInjector : BaseTask() {
 
-    @Input
-    val configuration: Property<String> = project.objects.property()
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val configFile: RegularFileProperty
+    @get:InputFile
+    abstract val executable: RegularFileProperty
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
-    @Internal
-    val logFile: RegularFileProperty = defaultOutput("log")
+    @get:InputFile
+    abstract val exceptions: RegularFileProperty
+    @get:InputFile
+    abstract val access: RegularFileProperty
+    @get:InputFile
+    abstract val constructors: RegularFileProperty
+
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
+    @get:Internal
+    abstract val logFile: RegularFileProperty
+
+    override fun init() {
+        outputJar.convention(defaultOutput())
+        logFile.convention(defaultOutput("log"))
+    }
 
     @TaskAction
     fun run() {
-        val config = mcpConfig(configFile)
-        val exceptions = mcpFile(configFile, config.data.exceptions)
-        val access = mcpFile(configFile, config.data.access)
-        val constructors = mcpFile(configFile, config.data.constructors)
+        val config = gson.fromJson<McpConfig>(configFile)
 
-        val mcInjectorArgs = config.functions.getValue("mcinject").args
-        val jvmArgs = config.functions.getValue("mcinject").jvmargs ?: listOf()
-
-        val argList = mcInjectorArgs.map {
+        val argList = config.functions.mcinject.args.map {
             when (it) {
                 "{input}" -> inputJar.file.absolutePath
                 "{output}" -> outputJar.file.absolutePath
                 "{log}" -> logFile.file.absolutePath
-                "{exceptions}" -> exceptions.absolutePath
-                "{access}" -> access.absolutePath
-                "{constructors}" -> constructors.absolutePath
+                "{exceptions}" -> exceptions.file.absolutePath
+                "{access}" -> access.file.absolutePath
+                "{constructors}" -> constructors.file.absolutePath
                 else -> it
             }
         }
 
-        val mcInjectorJar = project.configurations[configuration.get()].resolve().single()
+        val jvmArgs = config.functions.mcinject.jvmargs ?: listOf()
 
-        runJar(mcInjectorJar, project.cache, logFile = null, jvmArgs = jvmArgs, args = *argList.toTypedArray())
+        runJar(executable, layout.cache, logFile = null, jvmArgs = jvmArgs, args = *argList.toTypedArray())
     }
 }

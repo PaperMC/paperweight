@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.getCsvReader
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -31,14 +31,14 @@ import java.io.BufferedWriter
 import java.io.File
 import java.util.regex.Pattern
 
-open class RemapSrgSources : ZippedTask() {
+abstract class RemapSrgSources : ZippedTask() {
 
-    @InputFile
-    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val paramsCsv: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val methodsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val fieldsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val paramsCsv: RegularFileProperty
 
     private val methods = hashMapOf<String, String>()
     private val methodDocs = hashMapOf<String, String>()

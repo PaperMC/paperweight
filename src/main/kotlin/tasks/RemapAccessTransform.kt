@@ -26,21 +26,24 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-open class RemapAccessTransform : DefaultTask() {
+abstract class RemapAccessTransform : BaseTask() {
 
-    @InputFile
-    val inputFile: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val mappings: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputFile: RegularFileProperty
+    @get:InputFile
+    abstract val mappings: RegularFileProperty
 
-    @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("at")
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    override fun init() {
+        outputFile.convention(defaultOutput("at"))
+    }
 
     @TaskAction
     fun run() {

@@ -23,27 +23,29 @@
 package io.papermc.paperweight.ext
 
 import org.gradle.api.Action
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.property
 
-open class PaperweightExtension(project: Project) {
+open class PaperweightExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val workDir: DirectoryProperty = project.dirWithDefault("work")
+    val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
-    val minecraftVersion: Property<String> = project.objects.property()
-    val mcpMinecraftVersion: Property<String> = project.objects.property<String>().convention(minecraftVersion)
-    val mcpMappingsChannel: Property<String> = project.objects.property()
-    val mcpMappingsVersion: Property<String> = project.objects.property()
+    val minecraftVersion: Property<String> = objects.property()
+    val mcpMinecraftVersion: Property<String> = objects.property<String>().convention(minecraftVersion)
+    val mcpConfigVersion: Property<String> = objects.property()
+    val mcpMappingsChannel: Property<String> = objects.property()
+    val mcpMappingsVersion: Property<String> = objects.property()
 
-    val mcpConfigFile: RegularFileProperty = project.objects.fileProperty().convention(null)
+    val mcpConfigFile: RegularFileProperty = objects.fileProperty().convention(null)
 
-    val craftBukkit = CraftBukkitExtension(project, workDir)
-    val spigot = SpigotExtension(project, workDir)
-    val paper = PaperExtension(project)
+    val craftBukkit = CraftBukkitExtension(objects, workDir)
+    val spigot = SpigotExtension(objects, workDir)
+    val paper = PaperExtension(objects, layout)
 
     init {
         minecraftVersion.disallowUnsafeRead()

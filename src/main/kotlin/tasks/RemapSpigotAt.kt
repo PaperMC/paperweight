@@ -32,26 +32,27 @@ import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.bombe.type.MethodDescriptor
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.io.MappingFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.util.jar.JarFile
 
-open class RemapSpigotAt : DefaultTask() {
+abstract class RemapSpigotAt : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+    @get:InputFile
+    abstract val spigotAt: RegularFileProperty
+    @get:InputFile
+    abstract val mapping: RegularFileProperty
 
-    @InputFile
-    val spigotAt: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
 
-    @InputFile
-    val mapping: RegularFileProperty = project.objects.fileProperty()
-
-    @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("at")
+    override fun init() {
+        outputFile.convention(defaultOutput("at"))
+    }
 
     @TaskAction
     fun run() {

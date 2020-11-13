@@ -26,22 +26,24 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.listProperty
 
-open class MergeAccessTransforms : DefaultTask() {
+abstract class MergeAccessTransforms : BaseTask() {
 
-    @InputFiles
-    val inputFiles: ListProperty<RegularFile> = project.objects.listProperty()
+    @get:InputFiles
+    abstract val inputFiles: ListProperty<RegularFile>
 
-    @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("at")
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    override fun init() {
+        outputFile.convention(defaultOutput("at"))
+    }
 
     @TaskAction
     fun run() {

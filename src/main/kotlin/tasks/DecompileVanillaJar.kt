@@ -22,33 +22,35 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.runJar
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 import java.util.concurrent.ThreadLocalRandom
 
-open class DecompileVanillaJar : DefaultTask() {
+abstract class DecompileVanillaJar : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val fernFlowerJar: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val decompileCommand: Property<String> = project.objects.property()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+    @get:InputFile
+    abstract val fernFlowerJar: RegularFileProperty
+    @get:Input
+    abstract val decompileCommand: Property<String>
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
+
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
 
     @TaskAction
     fun run() {
@@ -67,10 +69,10 @@ open class DecompileVanillaJar : DefaultTask() {
             cmd += inputJarPath
             cmd += decomp.canonicalPath
 
-            val logFile = project.cache.resolve(paperTaskOutput("log"))
+            val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.delete()
 
-            runJar(fernFlowerJar, workingDir = project.cache, logFile = logFile, args = *cmd.toTypedArray())
+            runJar(fernFlowerJar, workingDir = layout.cache, logFile = logFile, args = *cmd.toTypedArray())
 
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).renameTo(outputJarFile)

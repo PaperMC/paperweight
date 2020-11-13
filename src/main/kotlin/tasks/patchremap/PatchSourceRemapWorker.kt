@@ -1,50 +1,62 @@
+/*
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
+ *
+ * Copyright (C) 2020 Kyle Wood
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
+
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.shared.PaperweightException
-import io.papermc.paperweight.shared.RemapConfig
-import io.papermc.paperweight.shared.RemapOps
-import io.papermc.paperweight.tasks.sourceremap.MercuryExecutor
+import io.papermc.paperweight.tasks.sourceremap.ConstructorsData
+import io.papermc.paperweight.tasks.sourceremap.ParamNames
+import io.papermc.paperweight.tasks.sourceremap.PatchParameterRemapper
+import io.papermc.paperweight.tasks.sourceremap.SrgParameterRemapper
 import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.io.MappingFormats
-import java.io.File
+import org.cadixdev.mercury.Mercury
+import org.cadixdev.mercury.remapper.MercuryRemapper
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 class PatchSourceRemapWorker(
     private val mappings: MappingSet,
-    classpath: Collection<File>,
-    apiDir: File,
-    private val paramMapFile: File,
-    private val constructorsFile: File,
-    private val inputDir: File,
-    private val outputDir: File
-) : AutoCloseable {
+    private val classpath: Collection<Path>,
+    private val paramNames: ParamNames,
+    private val constructorsData: ConstructorsData,
+    private val inputDir: Path,
+    private val outputDir: Path
+) {
 
-    private val totalClasspath = listOf(apiDir, *classpath.toTypedArray())
     private val reverseMappings: MappingSet = mappings.reverse()
-
-    private val mappingsFile: File = createTempFile("mappings", "tsrg")
-    private val reverseMappingsFile: File = createTempFile("reverse_mappings", "tsrg")
-
-    init {
-        mappingsFile.bufferedWriter().use { writer ->
-            MappingFormats.TSRG.createWriter(writer).write(mappings)
-        }
-        reverseMappingsFile.bufferedWriter().use { writer ->
-            MappingFormats.TSRG.createWriter(writer).write(reverseMappings)
-        }
-    }
 
     fun remap() {
         setup()
 
-        MercuryExecutor.exec(RemapConfig(
-            inDir = inputDir,
-            outDir = outputDir,
-            classpath = totalClasspath,
-            mappingsFile = reverseMappingsFile,
-            constructorsFile = constructorsFile,
-            paramMapFile = paramMapFile,
-            operations = listOf(RemapOps.REMAP, RemapOps.REMAP_PARAMS_PATCH)
-        ))
+        Mercury().apply {
+            classPath.addAll(classpath)
+
+            processors.addAll(listOf(
+                MercuryRemapper.create(reverseMappings),
+                PatchParameterRemapper(paramNames, constructorsData)
+            ))
+
+            rewrite(inputDir, outputDir)
+        }
 
         cleanup()
     }
@@ -52,33 +64,33 @@ class PatchSourceRemapWorker(
     fun remapBack() {
         setup()
 
-        val remapOutput = MercuryExecutor.exec(RemapConfig(
-            inDir = inputDir,
-            outDir = outputDir,
-            classpath = totalClasspath,
-            mappingsFile = mappingsFile,
-            constructorsFile = constructorsFile,
-            operations = listOf(RemapOps.REMAP, RemapOps.REMAP_PARAMS_SRG)
-        ))
+        Mercury().apply {
+            classPath.addAll(classpath)
 
-        val paramMapFile = remapOutput.paramMapFile ?: throw PaperweightException("No paramMapFile returned from Mercury")
-        paramMapFile.delete()
+            processors.addAll(listOf(
+                MercuryRemapper.create(mappings),
+                SrgParameterRemapper(mappings, constructorsData, paramNames)
+            ))
+
+            rewrite(inputDir, outputDir)
+        }
 
         cleanup()
     }
 
     private fun setup() {
-        outputDir.deleteRecursively()
-        outputDir.mkdirs()
+        Files.walk(outputDir).use { it.forEach(Files::delete) }
+        Files.createDirectories(outputDir)
     }
 
     private fun cleanup() {
-        inputDir.deleteRecursively()
-        outputDir.copyRecursively(inputDir, overwrite = true)
-    }
-
-    override fun close() {
-        mappingsFile.delete()
-        reverseMappingsFile.delete()
+        Files.walk(inputDir).use { it.forEach(Files::delete) }
+        Files.walk(outputDir).use {
+            it.forEach { src ->
+                val dest = inputDir.resolve(outputDir.relativize(src))
+                Files.createDirectories(dest.parent)
+                Files.copy(src, dest, REPLACE_EXISTING)
+            }
+        }
     }
 }

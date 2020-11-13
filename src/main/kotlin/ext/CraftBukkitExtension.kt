@@ -22,34 +22,35 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 
-open class CraftBukkitExtension(project: Project, workDir: DirectoryProperty) {
-    val bukkitDir: DirectoryProperty = project.dirFrom(workDir, "Bukkit")
-    val craftBukkitDir: DirectoryProperty = project.dirFrom(workDir, "CraftBukkit")
-    val patchDir: DirectoryProperty = project.dirFrom(craftBukkitDir, "nms-patches")
-    @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataDir: DirectoryProperty = project.dirFrom(workDir, "BuildData")
-    val mappingsDir: DirectoryProperty = project.dirFrom(buildDataDir, "mappings")
-    val excludesFile: RegularFileProperty = project.bukkitFileFrom(mappingsDir, "exclude")
-    val atFile: RegularFileProperty = project.bukkitFileFrom(mappingsDir, "at")
-    val buildDataInfo: RegularFileProperty = project.fileFrom(buildDataDir, "info.json")
-    @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataBinDir: DirectoryProperty = project.dirFrom(buildDataDir, "bin")
-    val fernFlowerJar: RegularFileProperty = project.fileFrom(buildDataBinDir, "fernflower.jar")
-    val specialSourceJar: RegularFileProperty = project.fileFrom(buildDataBinDir, "SpecialSource.jar")
-    val specialSource2Jar: RegularFileProperty = project.fileFrom(buildDataBinDir, "SpecialSource-2.jar")
+open class CraftBukkitExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
 
-    private fun Project.bukkitFileFrom(base: DirectoryProperty, extension: String): RegularFileProperty  =
-        objects.fileProperty().convention(base.flatMap { dir ->
+    val bukkitDir: DirectoryProperty = objects.dirFrom(workDir, "Bukkit")
+    val craftBukkitDir: DirectoryProperty = objects.dirFrom(workDir, "CraftBukkit")
+    val patchDir: DirectoryProperty = objects.dirFrom(craftBukkitDir, "nms-patches")
+    @Suppress("MemberVisibilityCanBePrivate")
+    val buildDataDir: DirectoryProperty = objects.dirFrom(workDir, "BuildData")
+    val mappingsDir: DirectoryProperty = objects.dirFrom(buildDataDir, "mappings")
+    val excludesFile: RegularFileProperty = objects.bukkitFileFrom(mappingsDir, "exclude")
+    val atFile: RegularFileProperty = objects.bukkitFileFrom(mappingsDir, "at")
+    val buildDataInfo: RegularFileProperty = objects.fileFrom(buildDataDir, "info.json")
+    @Suppress("MemberVisibilityCanBePrivate")
+    val buildDataBinDir: DirectoryProperty = objects.dirFrom(buildDataDir, "bin")
+    val fernFlowerJar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "fernflower.jar")
+    val specialSourceJar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "SpecialSource.jar")
+    val specialSource2Jar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "SpecialSource-2.jar")
+
+    private fun ObjectFactory.bukkitFileFrom(base: DirectoryProperty, extension: String): RegularFileProperty  =
+        fileProperty().convention(base.flatMap { dir ->
             val file = dir.asFile.listFiles()?.firstOrNull { it.name.endsWith(extension) }
             if (file != null) {
                 mappingsDir.file(file.name)
             } else {
                 // empty
-                objects.fileProperty()
+                fileProperty()
             }
         })
 }

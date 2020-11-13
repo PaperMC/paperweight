@@ -22,31 +22,25 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.McpConfig
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.decompile
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.runJar
+import io.papermc.paperweight.util.zip
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class RunForgeFlower : BaseTask() {
-
-    @get:InputFile
-    abstract val configFile: RegularFileProperty
-    @get:InputFile
-    abstract val executable: RegularFileProperty
+abstract class Filter : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
-    @get:InputFile
-    abstract val libraries: RegularFileProperty
+    @get:Input
+    abstract val includes: ListProperty<String>
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -59,31 +53,48 @@ abstract class RunForgeFlower : BaseTask() {
     fun run() {
         val out = outputJar.file
         val target = out.resolveSibling("${out.name}.dir")
-        if (target.exists()) {
-            target.deleteRecursively()
-        }
         target.mkdirs()
 
-        val config = gson.fromJson<McpConfig>(configFile)
-
-        val argList = config.functions.decompile.args.map {
-            when (it) {
-                "{libraries}" -> libraries.file.absolutePath
-                "{input}" -> inputJar.file.absolutePath
-                "{output}" -> target.absolutePath
-                else -> it
+        fs.copy {
+            from(archives.zipTree(inputJar)) {
+                for (inc in this@Filter.includes.get()) {
+                    include(inc)
+                }
             }
+            into(target)
         }
 
-        val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        logFile.delete()
+        zip(target, outputJar)
+        target.deleteRecursively()
+    }
+}
 
-        val jvmArgs = config.functions.decompile.jvmargs ?: listOf()
+abstract class Merge : BaseTask() {
+    @get:InputFiles
+    abstract val inputJars: ListProperty<RegularFile>
 
-        runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
 
-        // FernFlower is weird with how it does directory output
-        target.resolve(inputJar.file.name).renameTo(out)
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
+
+    @TaskAction
+    fun run() {
+        val out = outputJar.file
+        val target = out.resolveSibling("${out.name}.dir")
+        target.mkdirs()
+
+        fs.copy {
+            for (file in inputJars.get()) {
+                from(archives.zipTree(file))
+            }
+            into(target)
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        }
+
+        zip(target, outputJar)
         target.deleteRecursively()
     }
 }

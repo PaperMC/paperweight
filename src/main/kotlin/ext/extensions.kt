@@ -22,15 +22,16 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 
-fun Project.dirWithDefault(path: String): DirectoryProperty =
-    project.objects.directoryProperty().convention(layout.dir(provider { file(path) }))
+fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
+    directoryProperty().convention(layout.projectDirectory.dir(path))
 
-fun Project.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
-    objects.directoryProperty().convention(base.dir(name))
+fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
+    directoryProperty().convention(base.dir(name))
 
-fun Project.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
-    objects.fileProperty().convention(base.file(name))
+fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
+    fileProperty().convention(base.file(name))

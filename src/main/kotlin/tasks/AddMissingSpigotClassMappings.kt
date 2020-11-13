@@ -25,7 +25,6 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -33,24 +32,28 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
-open class AddMissingSpigotClassMappings : DefaultTask() {
+abstract class AddMissingSpigotClassMappings : BaseTask() {
 
-    @InputFile
-    val classSrg: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val memberSrg: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val classSrg: RegularFileProperty
+    @get:InputFile
+    abstract val memberSrg: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val missingClassEntriesSrg: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val missingMemberEntriesSrg: RegularFileProperty
 
-    @Optional
-    @InputFile
-    val missingClassEntriesSrg: RegularFileProperty = project.objects.fileProperty()
-    @Optional
-    @InputFile
-    val missingMemberEntriesSrg: RegularFileProperty = project.objects.fileProperty()
+    @get:OutputFile
+    abstract val outputClassSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val outputMemberSrg: RegularFileProperty
 
-    @OutputFile
-    val outputClassSrg: RegularFileProperty = defaultOutput("class.csrg")
-    @OutputFile
-    val outputMemberSrg: RegularFileProperty = defaultOutput("member.csrg")
+    override fun init() {
+        outputClassSrg.convention(defaultOutput("class.csrg"))
+        outputMemberSrg.convention(defaultOutput("member.csrg"))
+    }
 
     @TaskAction
     fun run() {
@@ -60,15 +63,11 @@ open class AddMissingSpigotClassMappings : DefaultTask() {
 
     private fun addLines(inFile: File, appendFile: File?, outputFile: File) {
         val lines = mutableListOf<String>()
-        inFile.bufferedReader().use { reader ->
-            lines.addAll(reader.readLines())
-        }
-        appendFile?.bufferedReader()?.use { reader ->
-            lines.addAll(reader.readLines())
-        }
+        inFile.useLines { seq -> seq.forEach { lines.add(it) } }
+        appendFile?.useLines { seq -> seq.forEach { lines.add(it) } }
         lines.sort()
         outputFile.bufferedWriter().use { writer ->
-            lines.forEach(writer::appendln)
+            lines.forEach { writer.appendln(it) }
         }
     }
 }

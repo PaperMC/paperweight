@@ -22,36 +22,30 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.mcpConfig
+import io.papermc.paperweight.util.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 
-open class SetupMcpDependencies : DefaultTask() {
+abstract class SetupMcLibraries : DefaultTask() {
 
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val forgeFlowerConfig: Property<String> = project.objects.property()
-    @Input
-    val mcInjectorConfig: Property<String> = project.objects.property()
-    @Input
-    val specialSourceConfig: Property<String> = project.objects.property()
+    @get:Input
+    abstract val dependencies: ListProperty<String>
 
-    init {
-        outputs.upToDateWhen { false }
-    }
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val config = mcpConfig(configFile)
+        val list = dependencies.get().sorted()
 
-        project.dependencies.add(forgeFlowerConfig.get(), config.functions.getValue("decompile").version)
-        project.dependencies.add(mcInjectorConfig.get(), config.functions.getValue("mcinject").version)
-        project.dependencies.add(specialSourceConfig.get(), config.functions.getValue("rename").version)
+        outputFile.file.bufferedWriter().use { writer ->
+            for (line in list) {
+                writer.appendln(line)
+            }
+        }
     }
 }

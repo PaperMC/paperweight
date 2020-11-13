@@ -22,24 +22,67 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
+import java.io.File
 
-data class ArtifactDescriptor(
-    val group: String,
-    val artifact: String,
-    val version: String,
-    val classifier: String?,
-    val extension: String
+class MavenArtifact(
+    private val group: String,
+    private val artifact: String,
+    private val version: String,
+    private val classifier: String? = null,
+    private val extension: String? = null
 ) {
+
+    private val classifierText: String
+        get() = if (classifier != null) "-$classifier" else ""
+
+    private val ext: String
+        get() = extension ?: "jar"
+
+    private val path: String
+        get() = "${group.replace('.', '/')}/$artifact/$version/$file"
+    val file: String
+        get() = "$artifact-$version$classifierText.$ext"
+
+    fun downloadToFile(targetFile: File, repos: List<String>) {
+        targetFile.parentFile.mkdirs()
+
+        var thrown: Exception? = null
+        for (repo in repos) {
+            try {
+                download(addSlash(repo) + path, targetFile)
+                return
+            } catch (e: Exception) {
+                if (thrown != null) {
+                    thrown.addSuppressed(e)
+                } else {
+                    thrown = e
+                }
+            }
+        }
+        thrown?.let { throw PaperweightException("Failed to download artifact: $this. Checked repos: $repos", it) }
+    }
+
+    fun downloadToDir(targetDir: File, repos: List<String>): File {
+        val out = targetDir.resolve(file)
+        downloadToFile(targetDir.resolve(file), repos)
+        return out
+    }
+
     override fun toString(): String {
-        val path = group.replace('.', '/')
-        val classifierText = classifier?.let { "-$it" } ?: ""
-        val file = "$artifact-$version$classifierText.$extension"
-        return "$path/$artifact/$version/$file"
+        return if (classifier == null) {
+            "$group:$artifact:$version"
+        } else {
+            "$group:$artifact:$version:$classifier"
+        }
+    }
+
+    private fun addSlash(url: String): String {
+        return if (url.endsWith('/')) url else "$url/"
     }
 
     companion object {
-        fun parse(text: String): ArtifactDescriptor {
+        fun parse(text: String): MavenArtifact {
             val (group, groupIndex) = text.nextSubstring(0, charArrayOf(':'))
             val (artifact, artifactIndex) = text.nextSubstring(groupIndex, charArrayOf(':'))
             val (version, versionIndex) = text.nextSubstring(artifactIndex, charArrayOf(':', '@'), goToEnd = true)
@@ -50,7 +93,7 @@ data class ArtifactDescriptor(
             artifact ?: throw PaperweightException("Invalid Maven artifact descriptor (no artifactId found): $text")
             version ?: throw PaperweightException("Invalid Maven artifact descriptor (no version found): $text")
 
-            return ArtifactDescriptor(group, artifact, version, classifier, extension ?: "jar")
+            return MavenArtifact(group, artifact, version, classifier, extension)
         }
 
         private fun String.nextSubstring(startIndex: Int, stops: CharArray, goToEnd: Boolean = false): Pair<String?, Int> {

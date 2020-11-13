@@ -24,7 +24,6 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -34,20 +33,24 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.Opcodes
 
-open class InspectVanillaJar : DefaultTask() {
+abstract class InspectVanillaJar : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
 
-    @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("txt")
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    override fun init() {
+        outputFile.convention(defaultOutput("txt"))
+    }
 
     @TaskAction
     fun run() {
         val outputList = mutableListOf<LoggerField>()
 
         val jarFile = inputJar.file
-        project.zipTree(jarFile).matching {
+        archives.zipTree(jarFile).matching {
             include("/*.class")
             include("/net/minecraft/**/*.class")
         }.forEach { file ->

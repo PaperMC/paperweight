@@ -31,20 +31,23 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-open class ApplyPaperPatches : ControllableOutputTask() {
+abstract class ApplyPaperPatches : ControllableOutputTask() {
 
-    @InputDirectory
-    val patchDir: DirectoryProperty = project.objects.directoryProperty()
-    @InputFile
-    val remappedSource: RegularFileProperty = project.objects.fileProperty()
+    @get:InputDirectory
+    abstract val patchDir: DirectoryProperty
+    @get:InputFile
+    abstract val remappedSource: RegularFileProperty
+    @get:InputFile
+    abstract val templateGitIgnore: RegularFileProperty
 
-    @OutputDirectory
-    val outputDir: DirectoryProperty = project.objects.directoryProperty()
-    @OutputDirectory
-    val remapTargetDir: DirectoryProperty = project.objects.directoryProperty().convention(outputDir.dir("src/main/java"))
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+    @get:OutputDirectory
+    abstract val remapTargetDir: DirectoryProperty
 
-    init {
+    override fun init() {
         printOutput.convention(true)
+        remapTargetDir.convention(outputDir.dir("src/main/java"))
     }
 
     @TaskAction
@@ -70,12 +73,12 @@ open class ApplyPaperPatches : ControllableOutputTask() {
             }
             sourceDir.mkdirs()
 
-            project.copy {
-                from(project.zipTree(remappedSource.file))
+            fs.copy {
+                from(archives.zipTree(remappedSource.file))
                 into(sourceDir)
             }
 
-            project.rootProject.file(".gitignore").copyTo(outputFile.resolve(".gitignore"))
+            templateGitIgnore.file.copyTo(outputFile.resolve(".gitignore"))
 
             git("add", ".gitignore", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>").executeSilently()

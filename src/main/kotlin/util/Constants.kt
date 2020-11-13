@@ -27,15 +27,6 @@ import org.gradle.api.Task
 object Constants {
     const val EXTENSION = "paperweight"
 
-    const val MCP_MAPPINGS_CONFIG = "mcpConfig"
-
-    const val MCP_DATA_CONFIG = "mcpData"
-    const val SPIGOT_DEP_CONFIG = "spigotDeps"
-    const val MINECRAFT_DEP_CONFIG = "minecraft"
-    const val FORGE_FLOWER_CONFIG = "forgeFlower"
-    const val MCINJECT_CONFIG = "mcinject"
-    const val SPECIAL_SOURCE_CONFIG = "specialSource"
-
     const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven"
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
     const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
@@ -43,9 +34,19 @@ object Constants {
     const val CACHE_PATH = "caches"
     private const val PAPER_PATH = "paperweight"
 
+    private const val JARS_PATH = "$PAPER_PATH/jars"
+    const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
+    const val MCP_TOOLS_PATH = "$JARS_PATH/tools"
+    const val MCP_ZIPS_PATH = "$JARS_PATH/mcp"
+    private const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
+    const val SPIGOT_API_JARS_PATH = "$SPIGOT_JARS_PATH/api"
+    const val SPIGOT_SERVER_JARS_PATH = "$SPIGOT_JARS_PATH/server"
+
     const val MCP_DATA_DIR = "mcp/data"
     const val MCP_MAPPINGS_DIR = "mcp/mappings"
-    const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
+    private const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
+
+    const val MCP_CONFIG_JSON = "$MCP_DATA_DIR/config.json"
 
     const val PAPER_FIELDS_CSV = "$MCP_MAPPINGS_DIR/paper_fields.csv"
     const val PAPER_METHODS_CSV = "$MCP_MAPPINGS_DIR/paper_methods.csv"
@@ -69,10 +70,10 @@ object Constants {
 
     const val MC_MANIFEST = "jsons/McManifest.json"
     const val VERSION_JSON = "jsons/McVersion.json"
+    const val MC_LIBRARIES = "jsons/McLibraries.txt"
 
-    const val TASK_CACHE = "$PAPER_PATH/taskCache"
+    private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
-    fun Task.paperTaskOutput() = paperTaskOutput("jar")
     fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
-    fun Task.paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
+    fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
 }

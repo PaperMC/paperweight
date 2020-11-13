@@ -22,27 +22,28 @@
 
 package io.papermc.paperweight.ext
 
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 
-open class PaperExtension(project: Project) {
+open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     @Suppress("MemberVisibilityCanBePrivate")
-    val baseTargetDir: DirectoryProperty = project.dirWithDefault(".")
-    val spigotApiPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-API-Patches")
-    val spigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches")
-    val remappedSpigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches-Remapped")
-    val unmappedSpigotServerPatchDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Spigot-Server-Patches-Unmapped")
-    val paperApiDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Paper-API")
-    val paperServerDir: DirectoryProperty = project.dirFrom(baseTargetDir, "Paper-Server")
+    val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
+    val spigotApiPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-API-Patches")
+    val spigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches")
+    val remappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches-Remapped")
+    val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches-Unmapped")
+    val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
+    val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val mcpDir: DirectoryProperty = project.dirWithDefault("mcp")
-    val mcpRewritesFile: RegularFileProperty = project.fileFrom(mcpDir, "mcp-rewrites.txt")
-    val missingClassEntriesSrgFile: RegularFileProperty = project.fileFrom(mcpDir, "missing-spigot-class-mappings.csrg")
-    val missingMemberEntriesSrgFile: RegularFileProperty = project.fileFrom(mcpDir, "missing-spigot-member-mappings.csrg")
-    val extraNotchSrgMappings: RegularFileProperty = project.fileFrom(mcpDir, "extra-notch-srg.tsrg")
-    val extraSpigotSrgMappings: RegularFileProperty = project.fileFrom(mcpDir, "extra-spigot-srg.tsrg")
+    val mcpDir: DirectoryProperty = objects.dirWithDefault(layout, "mcp")
+    val mcpRewritesFile: RegularFileProperty = objects.fileFrom(mcpDir, "mcp-rewrites.txt")
+    val missingClassEntriesSrgFile: RegularFileProperty = objects.fileFrom(mcpDir, "missing-spigot-class-mappings.csrg")
+    val missingMemberEntriesSrgFile: RegularFileProperty = objects.fileFrom(mcpDir, "missing-spigot-member-mappings.csrg")
+    val extraNotchSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-notch-srg.tsrg")
+    val extraSpigotSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-spigot-srg.tsrg")
 
     init {
         spigotApiPatchDir.disallowUnsafeRead()

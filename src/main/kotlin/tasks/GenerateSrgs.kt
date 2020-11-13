@@ -23,10 +23,9 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.getCsvReader
-import io.papermc.paperweight.util.mcpConfig
-import io.papermc.paperweight.util.mcpFile
 import io.papermc.paperweight.util.writeMappings
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
@@ -41,41 +40,39 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-open class GenerateSrgs : DefaultTask() {
+abstract class GenerateSrgs : DefaultTask() {
 
-    @InputFile
-    val configFile: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val methodsCsv: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val fieldsCsv: RegularFileProperty = project.objects.fileProperty()
-    @Optional
-    @InputFile
-    val extraNotchSrgMappings: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val methodsCsv: RegularFileProperty
+    @get:InputFile
+    abstract val fieldsCsv: RegularFileProperty
+    @get:Optional
+    @get:InputFile
+    abstract val extraNotchSrgMappings: RegularFileProperty
 
-    @OutputFile
-    val notchToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val notchToMcp: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val mcpToSrg: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToNotch: RegularFileProperty = project.objects.fileProperty()
-    @OutputFile
-    val srgToMcp: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inSrg: RegularFileProperty
+
+    @get:OutputFile
+    abstract val notchToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val notchToMcp: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val mcpToSrg: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToNotch: RegularFileProperty
+    @get:OutputFile
+    abstract val srgToMcp: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val config = mcpConfig(configFile)
-        val inSrg = mcpFile(configFile, config.data.mappings)
-
         val methods = HashMap<String, String>()
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = MappingFormats.TSRG.createReader(inSrg.toPath()).use { it.read() }
+        val inSet = MappingFormats.TSRG.createReader(inSrg.file.toPath()).use { it.read() }
         extraNotchSrgMappings.fileOrNull?.toPath()?.let { path ->
             MappingFormats.TSRG.createReader(path).use { it.read(inSet) }
         }

@@ -31,10 +31,10 @@ import java.io.File
  * Because Spigot doesn't remap all classes, there are class and package name clashes if we don't do this in the source
  * remap step. Other than that, we don't need this jar
  */
-open class FilterExcludes : ZippedTask() {
+abstract class FilterExcludes : ZippedTask() {
 
-    @InputFile
-    val excludesFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val excludesFile: RegularFileProperty
 
     override fun run(rootDir: File) {
         excludesFile.file.useLines { lines ->

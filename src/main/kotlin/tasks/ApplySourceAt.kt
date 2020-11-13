@@ -22,22 +22,22 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.shared.RemapConfig
-import io.papermc.paperweight.shared.RemapOps
-import io.papermc.paperweight.tasks.sourceremap.MercuryExecutor
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
+import org.cadixdev.at.io.AccessTransformFormats
+import org.cadixdev.mercury.Mercury
+import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import java.io.File
 
-open class ApplySourceAt : ZippedTask() {
+abstract class ApplySourceAt : ZippedTask() {
 
-    @InputFile
-    val vanillaJar: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val vanillaRemappedSrgJar: RegularFileProperty = project.objects.fileProperty()
-    @InputFile
-    val atFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val vanillaJar: RegularFileProperty
+    @get:InputFile
+    abstract val vanillaRemappedSrgJar: RegularFileProperty
+    @get:InputFile
+    abstract val atFile: RegularFileProperty
 
     override fun run(rootDir: File) {
         val inputDir = rootDir.resolve("input")
@@ -52,13 +52,18 @@ open class ApplySourceAt : ZippedTask() {
         }
         outputDir.mkdirs()
 
-        MercuryExecutor.exec(RemapConfig(
-            inDir = inputDir,
-            outDir = outputDir,
-            classpath = listOf(vanillaJar.file, vanillaRemappedSrgJar.file),
-            atFile = atFile.file,
-            operations = listOf(RemapOps.APPLY_AT)
-        ))
+        val at = AccessTransformFormats.FML.read(atFile.path)
+
+        Mercury().apply {
+            classPath.addAll(listOf(
+                vanillaJar.path,
+                vanillaRemappedSrgJar.path
+            ))
+
+            processors.add(AccessTransformerRewriter.create(at))
+
+            rewrite(inputDir.toPath(), outputDir.toPath())
+        }
 
         // Remove input files
         rootDir.listFiles()?.forEach { file ->

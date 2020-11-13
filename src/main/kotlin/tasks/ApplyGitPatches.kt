@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
 import org.gradle.api.file.DirectoryProperty
@@ -32,24 +32,23 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.os.OperatingSystem
-import org.gradle.kotlin.dsl.property
 import java.io.File
 
-open class ApplyGitPatches : ControllableOutputTask() {
+abstract class ApplyGitPatches : ControllableOutputTask() {
 
-    @Input
-    val branch: Property<String> = project.objects.property()
-    @Input
-    val upstreamBranch: Property<String> = project.objects.property()
-    @InputDirectory
-    val upstream: DirectoryProperty = project.objects.directoryProperty()
-    @InputDirectory
-    val patchDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:Input
+    abstract val branch: Property<String>
+    @get:Input
+    abstract val upstreamBranch: Property<String>
+    @get:InputDirectory
+    abstract val upstream: DirectoryProperty
+    @get:InputDirectory
+    abstract val patchDir: DirectoryProperty
 
-    @OutputDirectory
-    val outputDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
 
-    init {
+    override fun init() {
         printOutput.convention(false)
     }
 

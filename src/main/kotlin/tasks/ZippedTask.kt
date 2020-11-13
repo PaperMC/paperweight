@@ -28,7 +28,6 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.unzip
 import io.papermc.paperweight.util.zip
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -37,16 +36,20 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.util.concurrent.ThreadLocalRandom
 
-abstract class ZippedTask : DefaultTask() {
+abstract class ZippedTask : BaseTask() {
 
-    @InputFile
-    @Optional
-    val inputZip: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    @get:Optional
+    abstract val inputZip: RegularFileProperty
 
-    @OutputFile
-    val outputZip: RegularFileProperty = defaultOutput("zip")
+    @get:OutputFile
+    abstract val outputZip: RegularFileProperty
 
     abstract fun run(rootDir: File)
+
+    override fun init() {
+        outputZip.convention(defaultOutput("zip"))
+    }
 
     @TaskAction
     fun exec() {

@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.UselessOutputStream
@@ -36,27 +36,26 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.property
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.Date
 
-open class ApplyDiffPatches : ControllableOutputTask() {
+abstract class ApplyDiffPatches : ControllableOutputTask() {
 
-    @InputFile
-    val sourceJar: RegularFileProperty = project.objects.fileProperty()
-    @Input
-    val sourceBasePath: Property<String> = project.objects.property()
-    @InputDirectory
-    val patchDir: DirectoryProperty = project.objects.directoryProperty()
-    @Input
-    val branch: Property<String> = project.objects.property()
+    @get:InputFile
+    abstract val sourceJar: RegularFileProperty
+    @get:Input
+    abstract val sourceBasePath: Property<String>
+    @get:InputDirectory
+    abstract val patchDir: DirectoryProperty
+    @get:Input
+    abstract val branch: Property<String>
 
-    @OutputDirectory
-    val outputDir: DirectoryProperty = project.objects.directoryProperty()
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
 
-    init {
+    override fun init() {
         printOutput.convention(false)
     }
 

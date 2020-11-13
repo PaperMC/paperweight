@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
+import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
@@ -36,7 +37,6 @@ import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -48,16 +48,20 @@ import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
-open class ApplyAccessTransform : DefaultTask() {
+abstract class ApplyAccessTransform : BaseTask() {
 
-    @InputFile
-    val inputJar: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
 
-    @InputFile
-    val atFile: RegularFileProperty = project.objects.fileProperty()
+    @get:InputFile
+    abstract val atFile: RegularFileProperty
 
-    @OutputFile
-    val outputJar: RegularFileProperty = defaultOutput()
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
+
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
 
     @TaskAction
     fun run() {

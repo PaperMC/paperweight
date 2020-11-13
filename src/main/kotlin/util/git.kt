@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.shared.PaperweightException
+import io.papermc.paperweight.PaperweightException
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -35,9 +35,6 @@ class Git(private var repo: File) {
             throw PaperweightException("Git directory does not exist: $repo")
         }
     }
-
-    val ref
-        get() = this("rev-parse", "HEAD").getText().replace('\n', ' ').replace(Regex("\\s+"), "")
 
     operator fun invoke(vararg args: String, disableGpg: Boolean = true): Command {
         val cmd = if (disableGpg) {
@@ -53,10 +50,10 @@ class Git(private var repo: File) {
     }
 }
 
-class Command(internal val process: Process, private val command: String) {
+class Command(private val process: Process, private val command: String) {
 
-    var outStream: OutputStream = UselessOutputStream
-    var errStream: OutputStream = UselessOutputStream
+    private var outStream: OutputStream = UselessOutputStream
+    private var errStream: OutputStream = UselessOutputStream
 
     fun run(): Int {
         try {

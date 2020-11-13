@@ -22,6 +22,14 @@
 
 package io.papermc.paperweight.util
 
+typealias FunctionMap = Map<String, McpJvmCommand>
+val FunctionMap.decompile: McpJvmCommand
+    get() = getValue("decompile")
+val FunctionMap.mcinject: McpJvmCommand
+    get() = getValue("mcinject")
+val FunctionMap.rename: McpJvmCommand
+    get() = getValue("rename")
+
 data class McpConfig(
     val spec: Int,
     val version: String,

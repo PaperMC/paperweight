@@ -22,32 +22,31 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.property
 
-open class WriteLibrariesFile : DefaultTask() {
+abstract class WriteLibrariesFile : BaseTask() {
 
-    @Input
-    val config: Property<String> = project.objects.property()
+    @get:Classpath
+    abstract val libraries: DirectoryProperty
 
-    @OutputFile
-    val outputFile: RegularFileProperty = defaultOutput("txt")
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
 
-    init {
-        outputs.upToDateWhen { false }
+    override fun init() {
+        outputFile.convention(defaultOutput("txt"))
     }
 
     @TaskAction
     fun run() {
-        val files = project.configurations[config.get()].resolve().sorted()
+        val files = libraries.file.listFiles()?.sorted()
+            ?: throw PaperweightException("Libraries directory does not exist")
 
         outputFile.file.delete()
         outputFile.file.bufferedWriter().use { writer ->
