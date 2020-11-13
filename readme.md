@@ -41,7 +41,7 @@ subprojects {
 
 paperweight {
     minecraftVersion.set("1.16.1")
-    mcpVersion.set("20200625.160719")
+    mcpConfigVersion.set("20200625.160719")
     mcpMappingsChannel.set("snapshot")
     mcpMappingsVersion.set("20200702-1.15.1")
 }
