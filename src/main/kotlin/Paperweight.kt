@@ -89,6 +89,8 @@ class Paperweight : Plugin<Project> {
         target.extensions.create(Constants.EXTENSION, PaperweightExtension::class.java, target.objects, target.layout)
 
         target.tasks.register<Delete>("cleanCache") {
+            group = "Paper"
+            description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
 
@@ -146,6 +148,8 @@ class Paperweight : Plugin<Project> {
         }
 
         val patchPaper by tasks.registering<Task> {
+            group = "Paper"
+            description = "Set up the Paper development environment"
             dependsOn(patchPaperApi, patchPaperServer)
         }
 
@@ -513,6 +517,9 @@ class Paperweight : Plugin<Project> {
         }
 
         val remapPatches by tasks.registering<RemapPatches> {
+            group = "Paper"
+            description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."
+
             inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
             sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
             apiPatchDir.set(extension.paper.spigotApiPatchDir)
