@@ -84,8 +84,8 @@ abstract class RemapSources : ZippedTask() {
         val processAt = AccessTransformSet.create()
 
         // Remap any references Spigot maps to SRG
-        Mercury().apply {
-            classPath.addAll(listOf(
+        Mercury().let { merc ->
+            merc.classPath.addAll(listOf(
                 vanillaJar.path,
                 vanillaRemappedSpigotJar.path,
                 spigotApiDir.path.resolve("src/main/java"),
@@ -93,19 +93,19 @@ abstract class RemapSources : ZippedTask() {
                 *spigotServerDeps.get().asFileTree.files.map { it.toPath() }.toTypedArray()
             ))
 
-            processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
+            merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
 
-            process(srcDir.toPath())
+            merc.process(srcDir.toPath())
 
-            processors.clear()
-            processors.addAll(listOf(
+            merc.processors.clear()
+            merc.processors.addAll(listOf(
                 MercuryRemapper.create(mappingSet),
                 BridgeMethodRewriter.create(),
                 AccessTransformerRewriter.create(processAt),
                 SrgParameterRemapper(mappingSet, constructorsData, paramNames)
             ))
 
-            rewrite(srcDir.toPath(), rootDir.toPath())
+            merc.rewrite(srcDir.toPath(), rootDir.toPath())
         }
 
         AccessTransformFormats.FML.write(generatedAt.path, processAt)

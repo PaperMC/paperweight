@@ -516,27 +516,39 @@ class Paperweight : Plugin<Project> {
             atFile.set(spigotTasks.mergeGeneratedAts.flatMap { it.outputFile })
         }
 
+        /*
+         * To ease the waiting time for debugging this task, all of the task dependencies have been removed (notice all
+         * of those .get() calls). This means when you make changes to paperweight Gradle won't know that this task
+         * technically depends on the output of all of those other tasks.
+         *
+         * In order to run all of the other necessary tasks before running this task in order to setup the inputs, run:
+         *
+         *   ./gradlew patchPaper applyVanillaSrgAt
+         *
+         * Then you should be able to run `./gradlew remapPatches` without having to worry about all of the other tasks
+         * running whenever you make changes to paperweight.
+         */
         val remapPatches by tasks.registering<RemapPatches> {
             group = "Paper"
             description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."
 
             inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
-            sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
+            sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip }.get())
             apiPatchDir.set(extension.paper.spigotApiPatchDir)
 
-            mappingsFile.set(spigotTasks.generateSpigotSrgs.flatMap { it.spigotToSrg })
+            mappingsFile.set(spigotTasks.generateSpigotSrgs.flatMap { it.spigotToSrg }.get())
 
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
-            classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar })
-            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar })
-            classpathJars.add(applyVanillaSrgAt.flatMap { it.outputJar })
+            classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar }.get())
+            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get())
+            classpathJars.add(applyVanillaSrgAt.flatMap { it.outputJar }.get())
 
-            spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir })
-            spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir })
-            spigotDecompJar.set(spigotTasks.decompileVanillaJarSpigot.flatMap { it.outputJar })
-            constructors.set(initialTasks.extractMcp.flatMap { it.constructors })
+            spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir }.get())
+            spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir }.get())
+            spigotDecompJar.set(spigotTasks.decompileVanillaJarSpigot.flatMap { it.outputJar }.get())
+            constructors.set(initialTasks.extractMcp.flatMap { it.constructors }.get())
 
-            parameterNames.set(spigotTasks.remapSpigotSources.flatMap { it.parameterNames })
+            parameterNames.set(spigotTasks.remapSpigotSources.flatMap { it.parameterNames }.get())
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
         }

@@ -54,15 +54,15 @@ abstract class ApplySourceAt : ZippedTask() {
 
         val at = AccessTransformFormats.FML.read(atFile.path)
 
-        Mercury().apply {
-            classPath.addAll(listOf(
+        Mercury().let { merc ->
+            merc.classPath.addAll(listOf(
                 vanillaJar.path,
                 vanillaRemappedSrgJar.path
             ))
 
-            processors.add(AccessTransformerRewriter.create(at))
+            merc.processors.add(AccessTransformerRewriter.create(at))
 
-            rewrite(inputDir.toPath(), outputDir.toPath())
+            merc.rewrite(inputDir.toPath(), outputDir.toPath())
         }
 
         // Remove input files
