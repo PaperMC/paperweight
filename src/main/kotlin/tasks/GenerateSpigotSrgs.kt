@@ -24,8 +24,12 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.writeMappings
+import org.cadixdev.atlas.Atlas
+import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.MappingSet
+import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -61,6 +65,9 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     abstract val extraSpigotSrgMappings: RegularFileProperty
     @get:InputFile
     abstract val loggerFields: RegularFileProperty
+    // test
+    @get:InputFile
+    abstract val vanillaJar: RegularFileProperty
 
     @get:OutputFile
     abstract val spigotToSrg: RegularFileProperty
@@ -74,6 +81,9 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     abstract val mcpToSpigot: RegularFileProperty
     @get:OutputFile
     abstract val notchToSpigot: RegularFileProperty
+    // tet
+    @get:OutputFile
+    abstract val atlasTest: RegularFileProperty
 
     @TaskAction
     fun run() {
@@ -100,6 +110,15 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
                 .withMergeHandler(SpigotPackageMergerHandler(newPackage))
                 .build()
         ).merge()
+
+        // notch <-> spigot is incomplete here, it would result in inheritance issues to work with this incomplete set.
+        // so we use it once to remap some jar
+        println("running atlas to complete mappings...")
+        Atlas().apply {
+            install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
+            run(vanillaJar.path, atlasTest.path)
+            close()
+        }
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 

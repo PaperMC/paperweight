@@ -85,7 +85,7 @@ class PatchApplier(
         val result = git("am", "--3way", "--ignore-whitespace", patch.absolutePath).runOut()
         if (result != 0) {
             System.err.println("Patch failed to apply: $patch")
-//            throw RuntimeException("Patch failed to apply: $patch")
+            throw RuntimeException("Patch failed to apply: $patch")
         }
     }
 }

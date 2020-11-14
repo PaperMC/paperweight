@@ -46,7 +46,7 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
-        println("remapping")
+        println("remapping to spigot")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
@@ -66,7 +66,7 @@ class PatchSourceRemapWorker(
     fun remapBack() {
         setup()
 
-        println("mapping back")
+        println("mapping back to srg")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
