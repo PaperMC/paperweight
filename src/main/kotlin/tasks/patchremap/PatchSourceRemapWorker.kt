@@ -31,7 +31,6 @@ import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.remapper.MercuryRemapper
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 class PatchSourceRemapWorker(
     private val mappings: MappingSet,
@@ -47,6 +46,7 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
+        println("remapping")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
@@ -54,6 +54,8 @@ class PatchSourceRemapWorker(
                 MercuryRemapper.create(reverseMappings),
                 PatchParameterRemapper(paramNames, constructorsData)
             ))
+
+            merc.isGracefulClasspathChecks = true
 
             merc.rewrite(inputDir, outputDir)
         }
@@ -64,6 +66,7 @@ class PatchSourceRemapWorker(
     fun remapBack() {
         setup()
 
+        println("mapping back")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
@@ -71,6 +74,8 @@ class PatchSourceRemapWorker(
                 MercuryRemapper.create(mappings),
                 SrgParameterRemapper(mappings, constructorsData, paramNames)
             ))
+
+            merc.isGracefulClasspathChecks = true
 
             merc.rewrite(inputDir, outputDir)
         }
