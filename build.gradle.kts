@@ -13,9 +13,7 @@ group = "io.papermc.paperweight"
 version = "1.0.0-SNAPSHOT"
 
 repositories {
-    mavenLocal()
     mavenCentral()
-    jcenter()
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
     maven("https://files.minecraftforge.net/maven/")
 }
@@ -31,8 +29,8 @@ dependencies {
     implementation("org.ow2.asm:asm:8.0.1")
 
     // Cadix
-    implementation("org.cadixdev:lorenz:0.5.4-SNAPSHOT")
-    implementation("org.cadixdev:lorenz-asm:0.5.3")
+    implementation("org.cadixdev:lorenz:0.5.5")
+    implementation("org.cadixdev:lorenz-asm:0.5.5")
     implementation("org.cadixdev:atlas:0.2.0")
     implementation("org.cadixdev:at:0.1.0-SNAPSHOT")
 

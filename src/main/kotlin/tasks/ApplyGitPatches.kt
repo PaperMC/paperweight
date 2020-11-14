@@ -94,7 +94,8 @@ fun ControllableOutputTask.applyGitPatches(git: Git, target: String, outputDir: 
     }
     git("am", "--abort").runSilently(silenceErr = true)
 
-    val patches = patchDir.listFiles { _, name -> name.endsWith(".patch") } ?: run {
+    val patches = patchDir.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
+    if (patches.isEmpty()) {
         if (printOutput) {
             println("No patches found")
         }

@@ -146,7 +146,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): MergeResult<TopLevelClassMapping?> {
         // If both are provided, keep spigot
         return MergeResult(
-            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName)),
+            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
             right
         )
     }
@@ -155,26 +155,19 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        return MergeResult(
-            target.createTopLevelClassMapping(prependPackage(left.obfuscatedName), prependPackage(left.deobfuscatedName))
-        )
+        throw IllegalStateException("Unexpectedly add class from Spigot: $left")
     }
     override fun addRightTopLevelClassMapping(
         right: TopLevelClassMapping,
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        // We know we don't need client mappings
-        return if (right.deobfuscatedName.contains("/client/")) {
-            MergeResult(null)
-        } else {
-            // This is a mapping Spigot is totally missing, but Spigot maps all classes without a package to
-            // /net/minecraft regardless if there are mappings for the classes or not
-            MergeResult(
-                target.createTopLevelClassMapping(prependPackage(right.obfuscatedName), right.obfuscatedName),
-                right
-            )
-        }
+        // This is a mapping Spigot is totally missing, but Spigot maps all classes without a package to
+        // /net/minecraft regardless if there are mappings for the classes or not
+        return MergeResult(
+            target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName)),
+            right
+        )
     }
 
     override fun mergeInnerClassMappings(
@@ -215,7 +208,6 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: $left")
     }
-
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
         strictRightDuplicate: FieldMapping?,
