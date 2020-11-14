@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks.patchremap
 import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.tasks.sourceremap.parseConstructors
 import io.papermc.paperweight.tasks.sourceremap.parseParamNames
+import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
 import org.cadixdev.lorenz.io.MappingFormats
@@ -93,8 +94,9 @@ abstract class RemapPatches : BaseTask() {
 
         // Remap output directory, after each output this directory will be re-named to the input directory below for
         // the next remap operation
+        println("setting up repo")
         val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.file)
-        val tempInputDir = createWorkDir("patch-remap-input", source = spigotServerDir.file)
+        val tempInputDir = createWorkDirByCloning("patch-remap-input", source = spigotServerDir.file)
         val tempOutputDir = createWorkDir("patch-remap-output")
 
         val sourceInputDir = tempInputDir.resolve("src/main/java")
@@ -106,7 +108,7 @@ abstract class RemapPatches : BaseTask() {
             into(sourceInputDir)
         }
 
-        tempInputDir.resolve(".git").deleteRecursively()
+//        tempInputDir.resolve(".git").deleteRecursively()
 
         PatchSourceRemapWorker(
             mappings,
@@ -132,13 +134,21 @@ abstract class RemapPatches : BaseTask() {
 
             // Repo setup is done, we can begin the patch "loop" now
             //  - not a loop yet cause it doesn't even work for the first patch
-            remapper.remap() // Remap to to Spigot mappings TODO: verify this step produces correct results
-            patchApplier.applyPatch(patches.first()) // Apply patch on Spigot mappings
-            patchApplier.recordCommit() // Keep track of commit author, message, and time
-            patchApplier.checkoutRemapped() // Switch to remapped branch without checkout out files
-            remapper.remapBack() // Remap to new mappings
-            patchApplier.commitChanges() // Commit the changes
-            patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+            patches.forEach { patch ->
+                println("===========================")
+                println("attempting to remap " + patch)
+                println("===========================")
+                remapper.remap() // Remap to to Spigot mappings TODO: verify this step produces correct results
+                patchApplier.applyPatch(patch) // Apply patch on Spigot mappings
+                patchApplier.recordCommit() // Keep track of commit author, message, and time
+                patchApplier.checkoutRemapped() // Switch to remapped branch without checkout out files
+                remapper.remapBack() // Remap to new mappings
+                patchApplier.commitChanges() // Commit the changes
+                patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+                println("===========================")
+                println("done remapping patch " + patch)
+                println("===========================")
+            }
         }
     }
 
@@ -182,6 +192,15 @@ abstract class RemapPatches : BaseTask() {
             deleteRecursively()
             mkdirs()
             source?.copyRecursively(this)
+        }
+    }
+
+    private fun createWorkDirByCloning(name: String, source: File): File {
+        val workdDir = layout.cache.resolve("paperweight")
+        return workdDir.resolve(name).apply {
+            deleteRecursively()
+            mkdirs()
+            Git(workdDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
         }
     }
 }
