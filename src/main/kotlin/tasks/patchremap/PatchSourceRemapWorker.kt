@@ -47,15 +47,15 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
-        Mercury().apply {
-            classPath.addAll(classpath)
+        Mercury().let { merc ->
+            merc.classPath.addAll(classpath)
 
-            processors.addAll(listOf(
+            merc.processors.addAll(listOf(
                 MercuryRemapper.create(reverseMappings),
                 PatchParameterRemapper(paramNames, constructorsData)
             ))
 
-            rewrite(inputDir, outputDir)
+            merc.rewrite(inputDir, outputDir)
         }
 
         cleanup()
@@ -64,33 +64,35 @@ class PatchSourceRemapWorker(
     fun remapBack() {
         setup()
 
-        Mercury().apply {
-            classPath.addAll(classpath)
+        Mercury().let { merc ->
+            merc.classPath.addAll(classpath)
 
-            processors.addAll(listOf(
+            merc.processors.addAll(listOf(
                 MercuryRemapper.create(mappings),
                 SrgParameterRemapper(mappings, constructorsData, paramNames)
             ))
 
-            rewrite(inputDir, outputDir)
+            merc.rewrite(inputDir, outputDir)
         }
 
         cleanup()
     }
 
     private fun setup() {
-        Files.walk(outputDir).use { it.forEach(Files::delete) }
+        outputDir.deleteRecursively()
         Files.createDirectories(outputDir)
     }
 
     private fun cleanup() {
-        Files.walk(inputDir).use { it.forEach(Files::delete) }
-        Files.walk(outputDir).use {
-            it.forEach { src ->
-                val dest = inputDir.resolve(outputDir.relativize(src))
-                Files.createDirectories(dest.parent)
-                Files.copy(src, dest, REPLACE_EXISTING)
-            }
+        inputDir.deleteRecursively()
+        Files.move(outputDir, inputDir)
+        outputDir.deleteRecursively()
+    }
+
+    private fun Path.deleteRecursively() {
+        if (Files.notExists(this)) {
+            return
         }
+        Files.walk(this).use { stream -> stream.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
     }
 }
