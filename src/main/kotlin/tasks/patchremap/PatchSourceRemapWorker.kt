@@ -46,6 +46,7 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
+        println("remapping to spigot")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
@@ -53,6 +54,8 @@ class PatchSourceRemapWorker(
                 MercuryRemapper.create(reverseMappings),
                 PatchParameterRemapper(paramNames, constructorsData)
             ))
+
+            merc.isGracefulClasspathChecks = true
 
             merc.rewrite(inputDir, outputDir)
         }
@@ -63,6 +66,7 @@ class PatchSourceRemapWorker(
     fun remapBack() {
         setup()
 
+        println("mapping back to srg")
         Mercury().let { merc ->
             merc.classPath.addAll(classpath)
 
@@ -70,6 +74,8 @@ class PatchSourceRemapWorker(
                 MercuryRemapper.create(mappings),
                 SrgParameterRemapper(mappings, constructorsData, paramNames)
             ))
+
+            merc.isGracefulClasspathChecks = true
 
             merc.rewrite(inputDir, outputDir)
         }

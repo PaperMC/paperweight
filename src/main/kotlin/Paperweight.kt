@@ -380,6 +380,7 @@ class Paperweight : Plugin<Project> {
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
             extraSpigotSrgMappings.set(extension.paper.extraSpigotSrgMappings)
             loggerFields.set(inspectVanillaJar.flatMap { it.outputFile })
+            vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
 
             spigotToSrg.set(cache.resolve(Constants.SPIGOT_TO_SRG))
             spigotToMcp.set(cache.resolve(Constants.SPIGOT_TO_MCP))
@@ -387,6 +388,7 @@ class Paperweight : Plugin<Project> {
             srgToSpigot.set(cache.resolve(Constants.SRG_TO_SPIGOT))
             mcpToSpigot.set(cache.resolve(Constants.MCP_TO_SPIGOT))
             notchToSpigot.set(cache.resolve(Constants.NOTCH_TO_SPIGOT))
+            atlasTest.set(cache.resolve("atlasTest.jar"))
         }
 
         val remapVanillaJarSpigot by tasks.registering<RemapVanillaJarSpigot> {
