@@ -22,11 +22,12 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MavenArtifact
 import io.papermc.paperweight.util.McpConfig
+import io.papermc.paperweight.util.McpJvmCommand
 import io.papermc.paperweight.util.decompile
-import io.papermc.paperweight.util.download
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
@@ -43,11 +44,14 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.w3c.dom.Element
 
@@ -59,8 +63,11 @@ abstract class DownloadTask : DefaultTask() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
     @TaskAction
-    fun run() = download(url, outputFile)
+    fun run() = downloader.get().download(url, outputFile)
 }
 
 abstract class DownloadMcpFiles : DefaultTask() {
@@ -79,6 +86,9 @@ abstract class DownloadMcpFiles : DefaultTask() {
     @get:OutputFile
     abstract val mappingsZip: RegularFileProperty
 
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
     @TaskAction
     fun run() {
         val repo = listOf(Constants.FORGE_MAVEN_URL)
@@ -88,14 +98,14 @@ abstract class DownloadMcpFiles : DefaultTask() {
             artifact = "mcp_config",
             version = mcpMinecraftVersion.get() + "-" + mcpConfigVersion.get(),
             extension = "zip"
-        ).downloadToFile(configZip.file, repo)
+        ).downloadToFile(downloader.get(), configZip.file, repo)
 
         MavenArtifact(
             group = "de.oceanlabs.mcp",
             artifact = "mcp_${mcpMappingsChannel.get()}",
             version = mcpMappingsVersion.get(),
             extension = "zip"
-        ).downloadToFile(mappingsZip.file, repo)
+        ).downloadToFile(downloader.get(), mappingsZip.file, repo)
     }
 }
 
@@ -111,6 +121,9 @@ abstract class DownloadMcpTools : DefaultTask() {
     @get:OutputFile
     abstract val specialSourceFile: RegularFileProperty
 
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
@@ -119,23 +132,19 @@ abstract class DownloadMcpTools : DefaultTask() {
         val config = gson.fromJson<McpConfig>(configFile)
 
         val queue = workerExecutor.noIsolation()
-        queue.submit(DownloadWorker::class.java) {
-            repos.add(config.functions.decompile.repo)
-            artifact.set(config.functions.decompile.version)
-            target.set(forgeFlowerFile.file)
+
+        submitDownload(queue, config.functions.decompile, forgeFlowerFile)
+        submitDownload(queue, config.functions.mcinject, mcInjectorFile)
+        submitDownload(queue, config.functions.rename, specialSourceFile)
+    }
+
+    private fun submitDownload(queue: WorkQueue, cmd: McpJvmCommand, file: RegularFileProperty) {
+        queue.submit(DownloadWorker::class) {
+            repos.add(cmd.repo)
+            artifact.set(cmd.version)
+            target.set(file.file)
             downloadToDir.set(false)
-        }
-        queue.submit(DownloadWorker::class.java) {
-            repos.add(config.functions.mcinject.repo)
-            artifact.set(config.functions.mcinject.version)
-            target.set(mcInjectorFile.file)
-            downloadToDir.set(false)
-        }
-        queue.submit(DownloadWorker::class.java) {
-            repos.add(config.functions.rename.repo)
-            artifact.set(config.functions.rename.version)
-            target.set(specialSourceFile.file)
-            downloadToDir.set(false)
+            downloader.set(this@DownloadMcpTools.downloader)
         }
     }
 }
@@ -150,6 +159,9 @@ abstract class DownloadMcLibraries : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
@@ -163,11 +175,12 @@ abstract class DownloadMcLibraries : DefaultTask() {
         val queue = workerExecutor.noIsolation()
         mcLibrariesFile.file.useLines { lines ->
             lines.forEach { line ->
-                queue.submit(DownloadWorker::class.java) {
+                queue.submit(DownloadWorker::class) {
                     repos.set(mcRepos)
                     artifact.set(line)
                     target.set(out)
                     downloadToDir.set(true)
+                    downloader.set(this@DownloadMcLibraries.downloader)
                 }
             }
         }
@@ -183,6 +196,9 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
@@ -205,11 +221,12 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
         val queue = workerExecutor.noIsolation()
         for (art in artifacts) {
-            queue.submit(DownloadWorker::class.java) {
+            queue.submit(DownloadWorker::class) {
                 repos.set(spigotRepos)
                 artifact.set(art.toString())
                 target.set(out)
                 downloadToDir.set(true)
+                downloader.set(this@DownloadSpigotDependencies.downloader)
             }
         }
     }
@@ -295,6 +312,7 @@ interface DownloadParams : WorkParameters {
     val artifact: Property<String>
     val target: RegularFileProperty
     val downloadToDir: Property<Boolean>
+    val downloader: Property<DownloadService>
 }
 abstract class DownloadWorker : WorkAction<DownloadParams> {
     @get:Inject
@@ -303,9 +321,9 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
     override fun execute() {
         val artifact = MavenArtifact.parse(parameters.artifact.get())
         if (parameters.downloadToDir.get()) {
-            artifact.downloadToDir(parameters.target.file, parameters.repos.get())
+            artifact.downloadToDir(parameters.downloader.get(), parameters.target.file, parameters.repos.get())
         } else {
-            artifact.downloadToFile(parameters.target.file, parameters.repos.get())
+            artifact.downloadToFile(parameters.downloader.get(), parameters.target.file, parameters.repos.get())
         }
     }
 }

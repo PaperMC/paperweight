@@ -47,6 +47,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import java.nio.file.Files
 
 abstract class GenerateSpigotSrgs : DefaultTask() {
 
@@ -65,7 +66,7 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     abstract val extraSpigotSrgMappings: RegularFileProperty
     @get:InputFile
     abstract val loggerFields: RegularFileProperty
-    // test
+
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
 
@@ -81,9 +82,6 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     abstract val mcpToSpigot: RegularFileProperty
     @get:OutputFile
     abstract val notchToSpigot: RegularFileProperty
-    // tet
-    @get:OutputFile
-    abstract val atlasTest: RegularFileProperty
 
     @TaskAction
     fun run() {
@@ -112,12 +110,15 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         ).merge()
 
         // notch <-> spigot is incomplete here, it would result in inheritance issues to work with this incomplete set.
-        // so we use it once to remap some jar
-        println("running atlas to complete mappings...")
-        Atlas().apply {
-            install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
-            run(vanillaJar.path, atlasTest.path)
-            close()
+        // so we use it once to remap some jar, which fills out the inheritance data
+        val atlasOut = Files.createTempFile("paperweight", "jar")
+        try {
+            Atlas().use { atlas ->
+                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
+                atlas.run(vanillaJar.path, atlasOut)
+            }
+        } finally {
+            Files.deleteIfExists(atlasOut)
         }
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }

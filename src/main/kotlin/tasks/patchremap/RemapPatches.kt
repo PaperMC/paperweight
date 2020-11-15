@@ -108,8 +108,6 @@ abstract class RemapPatches : BaseTask() {
             into(sourceInputDir)
         }
 
-//        tempInputDir.resolve(".git").deleteRecursively()
-
         PatchSourceRemapWorker(
             mappings,
             listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")).map { it.toPath() },
@@ -136,7 +134,7 @@ abstract class RemapPatches : BaseTask() {
             //  - not a loop yet cause it doesn't even work for the first patch
             patches.forEach { patch ->
                 println("===========================")
-                println("attempting to remap " + patch)
+                println("attempting to remap $patch")
                 println("===========================")
                 remapper.remap() // Remap to to Spigot mappings TODO: verify this step produces correct results
                 patchApplier.applyPatch(patch) // Apply patch on Spigot mappings
@@ -146,7 +144,7 @@ abstract class RemapPatches : BaseTask() {
                 patchApplier.commitChanges() // Commit the changes
                 patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
                 println("===========================")
-                println("done remapping patch " + patch)
+                println("done remapping patch $patch")
                 println("===========================")
             }
         }
@@ -196,11 +194,11 @@ abstract class RemapPatches : BaseTask() {
     }
 
     private fun createWorkDirByCloning(name: String, source: File): File {
-        val workdDir = layout.cache.resolve("paperweight")
-        return workdDir.resolve(name).apply {
+        val workDir = layout.cache.resolve("paperweight")
+        return workDir.resolve(name).apply {
             deleteRecursively()
             mkdirs()
-            Git(workdDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
+            Git(workDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
         }
     }
 }

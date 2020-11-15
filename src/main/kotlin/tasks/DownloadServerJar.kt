@@ -22,14 +22,15 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.download
 import java.math.BigInteger
 import java.security.MessageDigest
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -43,6 +44,9 @@ abstract class DownloadServerJar : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
     override fun init() {
         outputJar.convention(defaultOutput())
     }
@@ -51,7 +55,7 @@ abstract class DownloadServerJar : BaseTask() {
     fun run() {
         val file = outputJar.asFile.get()
 
-        download(downloadUrl, outputJar)
+        downloader.get().download(downloadUrl, outputJar)
 
         val digest = MessageDigest.getInstance("MD5")
 

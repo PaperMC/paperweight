@@ -32,6 +32,7 @@ import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFile
+import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
@@ -65,7 +66,7 @@ abstract class ApplySourceAt : ZippedTask() {
             forkOptions.jvmArgs("-Xmx2G")
         }
 
-        queue.submit(AtAction::class.java) {
+        queue.submit(AtAction::class) {
             classpath.add(vanillaJar.file)
             classpath.add(vanillaRemappedSrgJar.file)
 

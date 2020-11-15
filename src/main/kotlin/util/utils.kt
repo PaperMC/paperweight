@@ -48,6 +48,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import java.net.URI
+import java.net.URL
 
 val gson: Gson = Gson()
 
@@ -83,14 +85,6 @@ object UselessOutputStream : OutputStream() {
     }
 }
 
-inline fun wrapException(msg: String, func: () -> Unit) {
-    try {
-        func()
-    } catch (e: Exception) {
-        throw PaperweightException(msg, e)
-    }
-}
-
 fun getCsvReader(file: File) = CSVReader(
     file.reader(),
     CSVParser.DEFAULT_SEPARATOR,
@@ -107,6 +101,16 @@ fun Any.convertToFile(): File {
         is RegularFile -> this.asFile
         is Provider<*> -> this.get().convertToFile()
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
+    }
+}
+
+fun Any.convertToUrl(): URL {
+    return when (this) {
+        is URL -> this
+        is URI -> this.toURL()
+        is String -> URI.create(this).toURL()
+        is Provider<*> -> this.get().convertToUrl()
+        else -> throw PaperweightException("Unknown URL type: ${this.javaClass.name}")
     }
 }
 
@@ -161,7 +165,7 @@ inline fun <reified T> Project.contents(contentFile: Any, crossinline convert: (
         .map { convert(it) }
 }
 
-// We have to create our own delegate because the ones Gradle provides don't work in plugin dev environments
+// We have to create our own task delegate because the ones Gradle provides don't work in plugin dev environments
 inline fun <reified T : Task> TaskContainer.registering(noinline configure: T.() -> Unit): TaskDelegateProvider<T> {
     return TaskDelegateProvider(this, T::class, configure)
 }

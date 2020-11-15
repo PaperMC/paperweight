@@ -22,11 +22,11 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.runJar
-import io.papermc.paperweight.util.wrapException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -86,7 +86,7 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
         val work = layout.projectDirectory.file(workDirName.get())
 
         try {
-            wrapException("Failed to apply class mappings") {
+            try {
                 val logFile = layout.cache.resolve(paperTaskOutput("class.log"))
                 logFile.delete()
                 runJar(
@@ -98,8 +98,11 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
                         it != "-e"
                     }
                 )
+            } catch (e: Exception) {
+                throw PaperweightException("Failed to apply class mappings", e)
             }
-            wrapException("Failed to apply member mappings") {
+
+            try {
                 val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
                 logFile.delete()
                 runJar(
@@ -108,8 +111,11 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
                     logFile = logFile,
                     args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
                 )
+            } catch (e: Exception) {
+                throw PaperweightException("Failed to apply member mappings", e)
             }
-            wrapException("Failed to create remapped jar") {
+
+            try {
                 val logFile = layout.cache.resolve(paperTaskOutput("final.log"))
                 logFile.delete()
                 runJar(
@@ -118,6 +124,8 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
                     logFile = logFile,
                     args = *doReplacements(finalMapCommand.get(), membersJarPath, accessTransformersPath, packageMappingsPath, outputJarPath)
                 )
+            } catch (e: Exception) {
+                throw PaperweightException("Failed to create remapped jar", e)
             }
         } finally {
             classJarFile.delete()

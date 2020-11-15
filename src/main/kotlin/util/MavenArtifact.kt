@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import java.io.File
 
@@ -44,13 +45,13 @@ data class MavenArtifact(
     val file: String
         get() = "$artifact-$version$classifierText.$ext"
 
-    fun downloadToFile(targetFile: File, repos: List<String>) {
+    fun downloadToFile(downloadService: DownloadService, targetFile: File, repos: List<String>) {
         targetFile.parentFile.mkdirs()
 
         var thrown: Exception? = null
         for (repo in repos) {
             try {
-                download(addSlash(repo) + path, targetFile)
+                downloadService.download(addSlash(repo) + path, targetFile)
                 return
             } catch (e: Exception) {
                 if (thrown != null) {
@@ -63,9 +64,9 @@ data class MavenArtifact(
         thrown?.let { throw PaperweightException("Failed to download artifact: $this. Checked repos: $repos", it) }
     }
 
-    fun downloadToDir(targetDir: File, repos: List<String>): File {
+    fun downloadToDir(downloadService: DownloadService, targetDir: File, repos: List<String>): File {
         val out = targetDir.resolve(file)
-        downloadToFile(targetDir.resolve(file), repos)
+        downloadToFile(downloadService, targetDir.resolve(file), repos)
         return out
     }
 
