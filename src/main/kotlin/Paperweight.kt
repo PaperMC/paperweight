@@ -558,7 +558,7 @@ class Paperweight : Plugin<Project> {
             description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."
 
             inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
-            sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip }.get())
+//            sourceJar.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip }.get())
             apiPatchDir.set(extension.paper.spigotApiPatchDir)
 
             mappingsFile.set(spigotTasks.generateSpigotSrgs.flatMap { it.spigotToSrg }.get())

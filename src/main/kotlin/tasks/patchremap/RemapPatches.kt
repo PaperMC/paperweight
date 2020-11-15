@@ -46,8 +46,8 @@ abstract class RemapPatches : BaseTask() {
 
     @get:InputDirectory
     abstract val inputPatchDir: DirectoryProperty
-    @get:InputFile
-    abstract val sourceJar: RegularFileProperty
+//    @get:InputFile
+//    abstract val sourceJar: RegularFileProperty
     @get:InputDirectory
     abstract val apiPatchDir: DirectoryProperty
 
@@ -100,13 +100,13 @@ abstract class RemapPatches : BaseTask() {
         val tempOutputDir = createWorkDir("patch-remap-output")
 
         val sourceInputDir = tempInputDir.resolve("src/main/java")
-        sourceInputDir.deleteRecursively()
-        sourceInputDir.mkdirs()
+//        sourceInputDir.deleteRecursively()
+//        sourceInputDir.mkdirs()
 
-        project.copy {
-            from(project.zipTree(sourceJar.file))
-            into(sourceInputDir)
-        }
+//        project.copy {
+//            from(project.zipTree(sourceJar.file))
+//            into(sourceInputDir)
+//        }
 
         PatchSourceRemapWorker(
             mappings,
@@ -118,29 +118,27 @@ abstract class RemapPatches : BaseTask() {
         ).let { remapper ->
             val patchApplier = PatchApplier("remapped", "old", tempInputDir)
             // Setup patch remapping repo
-            patchApplier.initRepo() // Create empty initial commit
-            remapper.remap() // Remap to Spigot mappings
+//            patchApplier.initRepo() // Create empty initial commit
+//            remapper.remap() // Remap to Spigot mappings
 
             // We need to include any missing classes for the patches later on
             importMcDev(patches, tempInputDir.resolve("src/main/java"))
             patchApplier.commitInitialSource() // Initial commit of Spigot sources
             patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
 
-            remapper.remapBack() // Remap to new mappings
-            patchApplier.commitInitialSource() // Initial commit of Spigot sources mapped to new mappings
+            remapper.remap() // Remap to new mappings
+            patchApplier.commitInitialRemappedSource() // Initial commit of Spigot sources mapped to new mappings
             patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
 
-            // Repo setup is done, we can begin the patch "loop" now
-            //  - not a loop yet cause it doesn't even work for the first patch
+            // Repo setup is done, we can begin the patch loop now
             patches.forEach { patch ->
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")
-                remapper.remap() // Remap to to Spigot mappings TODO: verify this step produces correct results
                 patchApplier.applyPatch(patch) // Apply patch on Spigot mappings
                 patchApplier.recordCommit() // Keep track of commit author, message, and time
                 patchApplier.checkoutRemapped() // Switch to remapped branch without checkout out files
-                remapper.remapBack() // Remap to new mappings
+                remapper.remap() // Remap to new mappings
                 patchApplier.commitChanges() // Commit the changes
                 patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
                 println("===========================")
@@ -175,10 +173,8 @@ abstract class RemapPatches : BaseTask() {
 
         for (patch in patches) {
             patch.useLines { lines ->
-                lines
-                    .filter { it.startsWith(prefix) }
-                    .map { it.substring(prefix.length, it.length - suffix.length) }
-                    .forEach { result.add(it) }
+                lines.filter { it.startsWith(prefix) }
+                    .mapTo(result) { it.substring(prefix.length, it.length - suffix.length) }
             }
         }
 

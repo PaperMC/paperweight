@@ -41,29 +41,29 @@ class PatchSourceRemapWorker(
     private val outputDir: Path
 ) {
 
-    private val reverseMappings: MappingSet = mappings.reverse()
+//    private val reverseMappings: MappingSet = mappings.reverse()
+
+//    fun remap() {
+//        setup()
+//
+//        println("remapping to spigot")
+//        Mercury().let { merc ->
+//            merc.classPath.addAll(classpath)
+//
+//            merc.processors.addAll(listOf(
+//                MercuryRemapper.create(reverseMappings),
+//                PatchParameterRemapper(paramNames, constructorsData)
+//            ))
+//
+//            merc.isGracefulClasspathChecks = true
+//
+//            merc.rewrite(inputDir, outputDir)
+//        }
+//
+//        cleanup()
+//    }
 
     fun remap() {
-        setup()
-
-        println("remapping to spigot")
-        Mercury().let { merc ->
-            merc.classPath.addAll(classpath)
-
-            merc.processors.addAll(listOf(
-                MercuryRemapper.create(reverseMappings),
-                PatchParameterRemapper(paramNames, constructorsData)
-            ))
-
-            merc.isGracefulClasspathChecks = true
-
-            merc.rewrite(inputDir, outputDir)
-        }
-
-        cleanup()
-    }
-
-    fun remapBack() {
         setup()
 
         println("mapping back to srg")

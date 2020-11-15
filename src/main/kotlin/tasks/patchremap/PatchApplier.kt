@@ -38,13 +38,13 @@ class PatchApplier(
     private var commitAuthor: String? = null
     private var commitTime: String? = null
 
-    fun initRepo() {
-        println("Initializing patch remap repo")
-        git("branch", unmappedBranch).executeSilently()
-        git("checkout", "--orphan", remappedBranch).executeSilently()
-        git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>", "--allow-empty").executeSilently()
-        git("checkout", unmappedBranch).executeSilently()
-    }
+//    fun initRepo() {
+//        println("Initializing patch remap repo")
+//        git("branch", unmappedBranch).executeSilently()
+//        git("checkout", "--orphan", remappedBranch).executeSilently()
+//        git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>", "--allow-empty").executeSilently()
+//        git("checkout", unmappedBranch).executeSilently()
+//    }
 
     fun checkoutRemapped() {
         println("Switching to $remappedBranch without losing changes")
@@ -57,8 +57,15 @@ class PatchApplier(
     }
 
     fun commitInitialSource() {
+        git("checkout", "-b", unmappedBranch).executeSilently()
         git("add", ".").executeSilently()
         git("commit", "-m", "Initial Source", "--author=Initial <auto@mated.null>").executeSilently()
+        git("branch", remappedBranch).executeSilently()
+    }
+
+    fun commitInitialRemappedSource() {
+        git("add", ".").executeSilently()
+        git("commit", "-m", "Initial Remapped Source", "--author=Initial <auto@mated.null>").executeSilently()
     }
 
     fun recordCommit() {
