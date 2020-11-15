@@ -42,6 +42,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
@@ -86,7 +87,7 @@ abstract class RemapSources : ZippedTask() {
             forkOptions.jvmArgs("-Xmx2G")
         }
 
-        queue.submit(RemapAction::class.java) {
+        queue.submit(RemapAction::class) {
             classpath.add(vanillaJar.file)
             classpath.add(vanillaRemappedSpigotJar.file)
             classpath.add(spigotApiDir.dir("src/main/java").get().asFile)

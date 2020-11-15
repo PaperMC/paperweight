@@ -83,10 +83,13 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.registerIfAbsent
 
 class Paperweight : Plugin<Project> {
     override fun apply(target: Project) {
         target.extensions.create(Constants.EXTENSION, PaperweightExtension::class.java, target.objects, target.layout)
+
+        val downloadService = target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
         target.tasks.register<Delete>("cleanCache") {
             group = "Paper"
@@ -104,16 +107,16 @@ class Paperweight : Plugin<Project> {
             maven("https://hub.spigotmc.org/nexus/content/groups/public/")
         }
 
-        target.createTasks()
+        target.createTasks(downloadService)
     }
 
-    private fun Project.createTasks() {
+    private fun Project.createTasks(downloadService: Provider<DownloadService>) {
         val extension = ext
 
-        val initialTasks = createInitialTasks()
-        val generalTasks = createGeneralTasks()
-        val mcpTasks = createMcpTasks(initialTasks, generalTasks)
-        val spigotTasks = createSpigotTasks(initialTasks, generalTasks, mcpTasks)
+        val initialTasks = createInitialTasks(downloadService)
+        val generalTasks = createGeneralTasks(downloadService)
+        val mcpTasks = createMcpTasks(downloadService, initialTasks, generalTasks)
+        val spigotTasks = createSpigotTasks(downloadService, initialTasks, generalTasks, mcpTasks)
 
         createPatchRemapTasks(initialTasks, generalTasks, mcpTasks, spigotTasks)
 
@@ -194,13 +197,15 @@ class Paperweight : Plugin<Project> {
         val mergeGeneratedAts: TaskProvider<MergeAccessTransforms>
     )
 
-    private fun Project.createInitialTasks(): InitialTasks {
+    private fun Project.createInitialTasks(downloadService: Provider<DownloadService>): InitialTasks {
         val cache: File = layout.cache
         val extension: PaperweightExtension = ext
 
         val downloadMcManifest by tasks.registering<DownloadTask> {
             url.set(Constants.MC_MANIFEST_URL)
             outputFile.set(cache.resolve(Constants.MC_MANIFEST))
+
+            downloader.set(downloadService)
         }
 
         val mcManifest = downloadMcManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftManifest>(it) }
@@ -210,6 +215,8 @@ class Paperweight : Plugin<Project> {
                 manifest.versions.first { it.id == version }.url
             })
             outputFile.set(cache.resolve(Constants.VERSION_JSON))
+
+            downloader.set(downloadService)
         }
 
         val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<JsonObject>(it) }
@@ -231,6 +238,8 @@ class Paperweight : Plugin<Project> {
 
             configZip.set(cache.resolve(Constants.MCP_ZIPS_PATH).resolve("McpConfig.zip"))
             mappingsZip.set(cache.resolve(Constants.MCP_ZIPS_PATH).resolve("McpMappings.zip"))
+
+            downloader.set(downloadService)
         }
 
         val extractMcpConfig by tasks.registering<ExtractMcp> {
@@ -249,6 +258,8 @@ class Paperweight : Plugin<Project> {
             forgeFlowerFile.set(toolsPath.resolve("ForgeFlower.jar"))
             mcInjectorFile.set(toolsPath.resolve("McInjector.jar"))
             specialSourceFile.set(toolsPath.resolve("SpecialSource.jar"))
+
+            downloader.set(downloadService)
         }
 
         return InitialTasks(
@@ -259,7 +270,7 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createGeneralTasks(): GeneralTasks {
+    private fun Project.createGeneralTasks(downloadService: Provider<DownloadService>): GeneralTasks {
         val buildDataInfo: Provider<BuildDataInfo> = contents(ext.craftBukkit.buildDataInfo) {
             gson.fromJson(it)
         }
@@ -267,6 +278,8 @@ class Paperweight : Plugin<Project> {
         val downloadServerJar by tasks.registering<DownloadServerJar> {
             downloadUrl.set(buildDataInfo.map { it.serverUrl })
             hash.set(buildDataInfo.map { it.minecraftHash })
+
+            downloader.set(downloadService)
         }
 
         val filterVanillaJar by tasks.registering<Filter> {
@@ -277,7 +290,11 @@ class Paperweight : Plugin<Project> {
         return GeneralTasks(buildDataInfo, downloadServerJar, filterVanillaJar)
     }
 
-    private fun Project.createMcpTasks(initialTasks: InitialTasks, generalTasks: GeneralTasks): McpTasks {
+    private fun Project.createMcpTasks(
+        downloadService: Provider<DownloadService>,
+        initialTasks: InitialTasks,
+        generalTasks: GeneralTasks
+    ): McpTasks {
         val filterVanillaJar: TaskProvider<Filter> = generalTasks.filterVanillaJar
         val cache: File = layout.cache
         val extension: PaperweightExtension = ext
@@ -331,6 +348,8 @@ class Paperweight : Plugin<Project> {
             mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
             mcRepo.set(Constants.MC_LIBRARY_URL)
             outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
+
+            downloader.set(downloadService)
         }
 
         val writeLibrariesFile by tasks.registering<WriteLibrariesFile> {
@@ -354,7 +373,12 @@ class Paperweight : Plugin<Project> {
         return McpTasks(generateSrgs, remapVanillaJarSrg, applyMcpPatches)
     }
 
-    private fun Project.createSpigotTasks(initialTasks: InitialTasks, generalTasks: GeneralTasks, mcpTasks: McpTasks): SpigotTasks {
+    private fun Project.createSpigotTasks(
+        downloadService: Provider<DownloadService>,
+        initialTasks: InitialTasks,
+        generalTasks: GeneralTasks,
+        mcpTasks: McpTasks
+    ): SpigotTasks {
         val cache: File = layout.cache
         val extension: PaperweightExtension = ext
 
@@ -388,7 +412,6 @@ class Paperweight : Plugin<Project> {
             srgToSpigot.set(cache.resolve(Constants.SRG_TO_SPIGOT))
             mcpToSpigot.set(cache.resolve(Constants.MCP_TO_SPIGOT))
             notchToSpigot.set(cache.resolve(Constants.NOTCH_TO_SPIGOT))
-            atlasTest.set(cache.resolve("atlasTest.jar"))
         }
 
         val remapVanillaJarSpigot by tasks.registering<RemapVanillaJarSpigot> {
@@ -455,6 +478,8 @@ class Paperweight : Plugin<Project> {
             apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
             serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
             outputDir.set(cache.resolve(Constants.SPIGOT_JARS_PATH))
+
+            downloader.set(downloadService)
         }
 
         val remapSpigotAt by tasks.registering<RemapSpigotAt> {
