@@ -38,9 +38,7 @@ object Constants {
     const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
     const val MCP_TOOLS_PATH = "$JARS_PATH/tools"
     const val MCP_ZIPS_PATH = "$JARS_PATH/mcp"
-    private const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
-    const val SPIGOT_API_JARS_PATH = "$SPIGOT_JARS_PATH/api"
-    const val SPIGOT_SERVER_JARS_PATH = "$SPIGOT_JARS_PATH/server"
+    const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
 
     const val MCP_DATA_DIR = "mcp/data"
     const val MCP_MAPPINGS_DIR = "mcp/mappings"

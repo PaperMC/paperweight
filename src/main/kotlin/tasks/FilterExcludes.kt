@@ -23,9 +23,9 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.file
+import java.io.File
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
-import java.io.File
 
 /**
  * Because Spigot doesn't remap all classes, there are class and package name clashes if we don't do this in the source

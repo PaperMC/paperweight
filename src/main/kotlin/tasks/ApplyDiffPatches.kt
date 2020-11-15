@@ -28,6 +28,10 @@ import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.UselessOutputStream
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
+import java.net.URI
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.util.Date
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -36,10 +40,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.util.Date
 
 abstract class ApplyDiffPatches : ControllableOutputTask() {
 

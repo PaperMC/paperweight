@@ -26,13 +26,13 @@ import io.papermc.paperweight.util.McpConfig
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
+import java.io.File
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 
 abstract class Extract : BaseTask() {
 

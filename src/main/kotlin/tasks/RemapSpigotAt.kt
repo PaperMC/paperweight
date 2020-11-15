@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import java.util.jar.JarFile
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -36,7 +37,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.util.jar.JarFile
 
 abstract class RemapSpigotAt : BaseTask() {
 

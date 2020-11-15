@@ -32,6 +32,9 @@ import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.mcinject
 import io.papermc.paperweight.util.rename
+import java.io.File
+import javax.inject.Inject
+import javax.xml.parsers.DocumentBuilderFactory
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
@@ -47,9 +50,6 @@ import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 import org.w3c.dom.Element
-import java.io.File
-import javax.inject.Inject
-import javax.xml.parsers.DocumentBuilderFactory
 
 abstract class DownloadTask : DefaultTask() {
 
@@ -182,9 +182,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     abstract val serverPom: RegularFileProperty
 
     @get:OutputDirectory
-    abstract val apiOutputDir: DirectoryProperty
-    @get:OutputDirectory
-    abstract val serverOutputDir: DirectoryProperty
+    abstract val outputDir: DirectoryProperty
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
@@ -194,26 +192,23 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         val apiSetup = parsePom(apiPom.file)
         val serverSetup = parsePom(serverPom.file)
 
-        val apiOut = apiOutputDir.file
-        apiOut.deleteRecursively()
+        val out = outputDir.file
+        out.deleteRecursively()
 
-        val serverOut = serverOutputDir.file
-        serverOut.deleteRecursively()
+        val spigotRepos = mutableSetOf<String>()
+        spigotRepos += apiSetup.repos
+        spigotRepos += serverSetup.repos
+
+        val artifacts = mutableSetOf<MavenArtifact>()
+        artifacts += apiSetup.artifacts
+        artifacts += serverSetup.artifacts
 
         val queue = workerExecutor.noIsolation()
-        for (art in apiSetup.artifacts) {
+        for (art in artifacts) {
             queue.submit(DownloadWorker::class.java) {
-                repos.set(apiSetup.repos)
+                repos.set(spigotRepos)
                 artifact.set(art.toString())
-                target.set(apiOut)
-                downloadToDir.set(true)
-            }
-        }
-        for (art in serverSetup.artifacts) {
-            queue.submit(DownloadWorker::class.java) {
-                repos.set(serverSetup.repos)
-                artifact.set(art.toString())
-                target.set(serverOut)
+                target.set(out)
                 downloadToDir.set(true)
             }
         }

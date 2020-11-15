@@ -23,6 +23,12 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
+import java.io.File
+import java.net.URI
+import java.net.URL
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 import org.apache.http.HttpHost
 import org.apache.http.HttpStatus
 import org.apache.http.client.config.CookieSpecs
@@ -32,11 +38,6 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.DateUtils
 import org.apache.http.impl.client.HttpClientBuilder
 import org.gradle.api.provider.Provider
-import java.io.File
-import java.net.URI
-import java.net.URL
-import java.util.Date
-import java.util.concurrent.TimeUnit
 
 fun download(source: Any, target: Any) {
     val url = source.convertToUrl()
@@ -72,7 +73,8 @@ private fun download(source: URL, target: File) {
             .build()
 
         if (time > 0) {
-            httpGet.setHeader("If-Modified-Since", DateUtils.formatDate(Date(time)))
+            val value = DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(time))
+            httpGet.setHeader("If-Modified-Since", value)
         }
         if (etag != null) {
             httpGet.setHeader("If-None-Match", etag)

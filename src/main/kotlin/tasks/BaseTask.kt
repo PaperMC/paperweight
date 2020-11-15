@@ -22,12 +22,12 @@
 
 package io.papermc.paperweight.tasks
 
+import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
-import javax.inject.Inject
 
 abstract class BaseTask : DefaultTask() {
 

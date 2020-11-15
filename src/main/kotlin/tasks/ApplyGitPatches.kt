@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
+import java.io.File
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -32,7 +33,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.os.OperatingSystem
-import java.io.File
 
 abstract class ApplyGitPatches : ControllableOutputTask() {
 
