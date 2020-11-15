@@ -26,6 +26,8 @@ import io.papermc.paperweight.tasks.ZippedTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
+import java.io.File
+import javax.inject.Inject
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
@@ -36,10 +38,13 @@ import org.cadixdev.mercury.extra.BridgeMethodRewriter
 import org.cadixdev.mercury.remapper.MercuryRemapper
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import java.io.File
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 
 abstract class RemapSources : ZippedTask() {
 
@@ -51,9 +56,7 @@ abstract class RemapSources : ZippedTask() {
     abstract val mappings: RegularFileProperty
 
     @get:InputDirectory
-    abstract val spigotApiDeps: DirectoryProperty
-    @get:InputDirectory
-    abstract val spigotServerDeps: DirectoryProperty
+    abstract val spigotDeps: DirectoryProperty
 
     @get:InputFile
     abstract val constructors: RegularFileProperty
@@ -67,6 +70,9 @@ abstract class RemapSources : ZippedTask() {
     @get:OutputFile
     abstract val parameterNames: RegularFileProperty
 
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
     override fun init() {
         super.init()
         generatedAt.convention(defaultOutput("at"))
@@ -74,41 +80,71 @@ abstract class RemapSources : ZippedTask() {
     }
 
     override fun run(rootDir: File) {
-        val constructorsData = parseConstructors(constructors.file)
-
-        val paramNames: ParamNames = newParamNames()
-
         val srcDir = spigotServerDir.file.resolve("src/main/java")
 
-        val mappingSet = MappingFormats.TSRG.read(mappings.path)
-        val processAt = AccessTransformSet.create()
-
-        // Remap any references Spigot maps to SRG
-        Mercury().let { merc ->
-            merc.classPath.addAll(listOf(
-                vanillaJar.path,
-                vanillaRemappedSpigotJar.path,
-                spigotApiDir.path.resolve("src/main/java"),
-                *spigotApiDeps.get().asFileTree.files.map { it.toPath() }.toTypedArray(),
-                *spigotServerDeps.get().asFileTree.files.map { it.toPath() }.toTypedArray()
-            ))
-
-            merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
-
-            merc.process(srcDir.toPath())
-
-            merc.processors.clear()
-            merc.processors.addAll(listOf(
-                MercuryRemapper.create(mappingSet),
-                BridgeMethodRewriter.create(),
-                AccessTransformerRewriter.create(processAt),
-                SrgParameterRemapper(mappingSet, constructorsData, paramNames)
-            ))
-
-            merc.rewrite(srcDir.toPath(), rootDir.toPath())
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs("-Xmx2G")
         }
 
-        AccessTransformFormats.FML.write(generatedAt.path, processAt)
-        writeParamNames(paramNames, parameterNames.file)
+        queue.submit(RemapAction::class.java) {
+            classpath.add(vanillaJar.file)
+            classpath.add(vanillaRemappedSpigotJar.file)
+            classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
+            classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") }.files)
+
+            mappings.set(this@RemapSources.mappings.file)
+            constructors.set(this@RemapSources.constructors.file)
+            inputDir.set(srcDir)
+
+            outputDir.set(rootDir)
+            generatedAtOutput.set(generatedAt.file)
+            paramNamesOutput.set(parameterNames.file)
+        }
+
+        queue.await()
+    }
+
+    abstract class RemapAction : WorkAction<RemapParams> {
+        override fun execute() {
+            val mappingSet = MappingFormats.TSRG.read(parameters.mappings.path)
+            val processAt = AccessTransformSet.create()
+
+            val constructorsData = parseConstructors(parameters.constructors.file)
+
+            val paramNames: ParamNames = newParamNames()
+
+            // Remap any references Spigot maps to SRG
+            Mercury().let { merc ->
+                merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
+
+                merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
+
+                merc.process(parameters.inputDir.path)
+
+                merc.processors.clear()
+                merc.processors.addAll(listOf(
+                    MercuryRemapper.create(mappingSet),
+                    BridgeMethodRewriter.create(),
+                    AccessTransformerRewriter.create(processAt),
+                    SrgParameterRemapper(mappingSet, constructorsData, paramNames)
+                ))
+
+                merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
+            }
+
+            AccessTransformFormats.FML.write(parameters.generatedAtOutput.path, processAt)
+            writeParamNames(paramNames, parameters.paramNamesOutput.file)
+        }
+    }
+
+    interface RemapParams : WorkParameters {
+        val classpath: ListProperty<File>
+        val mappings: RegularFileProperty
+        val constructors: RegularFileProperty
+        val inputDir: RegularFileProperty
+
+        val generatedAtOutput: RegularFileProperty
+        val outputDir: RegularFileProperty
+        val paramNamesOutput: RegularFileProperty
     }
 }

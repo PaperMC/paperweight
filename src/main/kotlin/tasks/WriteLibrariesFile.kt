@@ -51,7 +51,9 @@ abstract class WriteLibrariesFile : BaseTask() {
         outputFile.file.delete()
         outputFile.file.bufferedWriter().use { writer ->
             for (file in files) {
-                writer.appendln("-e=${file.absolutePath}")
+                if (file.name.endsWith(".jar")) {
+                    writer.appendln("-e=${file.absolutePath}")
+                }
             }
         }
     }

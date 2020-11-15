@@ -23,11 +23,11 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
+import java.io.File
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import java.io.File
 
 abstract class ApplyMcpPatches : ZippedTask() {
 

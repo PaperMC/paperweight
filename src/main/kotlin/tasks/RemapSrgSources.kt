@@ -24,12 +24,12 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.getCsvReader
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputFile
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
 import java.util.regex.Pattern
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
 
 abstract class RemapSrgSources : ZippedTask() {
 

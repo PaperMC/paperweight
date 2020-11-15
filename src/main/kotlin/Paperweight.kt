@@ -74,6 +74,7 @@ import io.papermc.paperweight.util.ext
 import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.registering
+import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -82,7 +83,6 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
-import java.io.File
 
 class Paperweight : Plugin<Project> {
     override fun apply(target: Project) {
@@ -452,8 +452,7 @@ class Paperweight : Plugin<Project> {
             dependsOn(patchSpigot)
             apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
             serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
-            apiOutputDir.set(cache.resolve(Constants.SPIGOT_API_JARS_PATH))
-            serverOutputDir.set(cache.resolve(Constants.SPIGOT_SERVER_JARS_PATH))
+            outputDir.set(cache.resolve(Constants.SPIGOT_JARS_PATH))
         }
 
         val remapSpigotAt by tasks.registering<RemapSpigotAt> {
@@ -468,8 +467,7 @@ class Paperweight : Plugin<Project> {
             mappings.set(generateSpigotSrgs.flatMap { it.spigotToSrg })
             vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
             vanillaRemappedSpigotJar.set(removeSpigotExcludes.flatMap { it.outputZip })
-            spigotApiDeps.set(downloadSpigotDependencies.flatMap { it.apiOutputDir })
-            spigotServerDeps.set(downloadSpigotDependencies.flatMap { it.serverOutputDir })
+            spigotDeps.set(downloadSpigotDependencies.flatMap { it.outputDir })
             constructors.set(initialTasks.extractMcp.flatMap { it.constructors })
         }
 

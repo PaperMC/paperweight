@@ -25,13 +25,13 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.download
+import java.math.BigInteger
+import java.security.MessageDigest
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.math.BigInteger
-import java.security.MessageDigest
 
 abstract class DownloadServerJar : BaseTask() {
 

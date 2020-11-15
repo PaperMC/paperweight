@@ -23,8 +23,8 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import org.gradle.internal.jvm.Jvm
 import java.io.OutputStream
+import org.gradle.internal.jvm.Jvm
 
 fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = listOf(), vararg args: String) {
     val jarFile = jar.convertToFile()

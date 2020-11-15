@@ -25,7 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.io.File
 
-class MavenArtifact(
+data class MavenArtifact(
     private val group: String,
     private val artifact: String,
     private val version: String,

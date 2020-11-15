@@ -26,12 +26,11 @@ import io.papermc.paperweight.tasks.sourceremap.ConstructorsData
 import io.papermc.paperweight.tasks.sourceremap.ParamNames
 import io.papermc.paperweight.tasks.sourceremap.PatchParameterRemapper
 import io.papermc.paperweight.tasks.sourceremap.SrgParameterRemapper
+import java.nio.file.Files
+import java.nio.file.Path
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.remapper.MercuryRemapper
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 class PatchSourceRemapWorker(
     private val mappings: MappingSet,

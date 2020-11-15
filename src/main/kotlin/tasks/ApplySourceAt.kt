@@ -22,13 +22,19 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
+import java.io.File
+import javax.inject.Inject
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFile
-import java.io.File
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 
 abstract class ApplySourceAt : ZippedTask() {
 
@@ -39,43 +45,70 @@ abstract class ApplySourceAt : ZippedTask() {
     @get:InputFile
     abstract val atFile: RegularFileProperty
 
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
     override fun run(rootDir: File) {
-        val inputDir = rootDir.resolve("input")
-        val outputDir = rootDir.resolve("output")
+        val input = rootDir.resolve("input")
+        val output = rootDir.resolve("output")
 
         // Move everything into `input/` so we can put output into `output/`
-        inputDir.mkdirs()
+        input.mkdirs()
         rootDir.listFiles()?.forEach { file ->
-            if (file != inputDir) {
-                file.renameTo(inputDir.resolve(file.name))
+            if (file != input) {
+                file.renameTo(input.resolve(file.name))
             }
         }
-        outputDir.mkdirs()
+        output.mkdirs()
 
-        val at = AccessTransformFormats.FML.read(atFile.path)
-
-        Mercury().let { merc ->
-            merc.classPath.addAll(listOf(
-                vanillaJar.path,
-                vanillaRemappedSrgJar.path
-            ))
-
-            merc.processors.add(AccessTransformerRewriter.create(at))
-
-            merc.rewrite(inputDir.toPath(), outputDir.toPath())
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs("-Xmx2G")
         }
+
+        queue.submit(AtAction::class.java) {
+            classpath.add(vanillaJar.file)
+            classpath.add(vanillaRemappedSrgJar.file)
+
+            at.set(atFile.file)
+
+            inputDir.set(input)
+            outputDir.set(output)
+        }
+
+        queue.await()
 
         // Remove input files
         rootDir.listFiles()?.forEach { file ->
-            if (file != outputDir) {
+            if (file != output) {
                 file.deleteRecursively()
             }
         }
 
         // Move output into root
-        outputDir.listFiles()?.forEach { file ->
+        output.listFiles()?.forEach { file ->
             file.renameTo(rootDir.resolve(file.name))
         }
-        outputDir.delete()
+        output.delete()
+    }
+
+    abstract class AtAction : WorkAction<AtParams> {
+        override fun execute() {
+            val at = AccessTransformFormats.FML.read(parameters.at.path)
+
+            Mercury().let { merc ->
+                merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
+
+                merc.processors.add(AccessTransformerRewriter.create(at))
+
+                merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
+            }
+        }
+    }
+
+    interface AtParams : WorkParameters {
+        val classpath: ListProperty<File>
+        val at: RegularFileProperty
+        val inputDir: RegularFileProperty
+        val outputDir: RegularFileProperty
     }
 }

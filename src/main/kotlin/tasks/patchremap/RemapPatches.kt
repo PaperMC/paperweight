@@ -27,6 +27,8 @@ import io.papermc.paperweight.tasks.sourceremap.parseConstructors
 import io.papermc.paperweight.tasks.sourceremap.parseParamNames
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
+import java.io.File
+import java.util.zip.ZipFile
 import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -38,8 +40,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.get
-import java.io.File
-import java.util.zip.ZipFile
 
 abstract class RemapPatches : BaseTask() {
 

@@ -30,6 +30,13 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.Constants.paperTaskOutput
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.file.Path
+import java.util.Optional
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat
 import org.gradle.api.Project
@@ -41,13 +48,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.nio.file.Path
-import java.util.Optional
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 
 val gson: Gson = Gson()
 
