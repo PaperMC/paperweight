@@ -102,6 +102,7 @@ class PatchApplier(
     fun generatePatches(target: File) {
         target.deleteRecursively()
         target.mkdirs()
+        git("checkout", "-b", remappedBranch).executeSilently()
         git(
             "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
             target.absolutePath, remappedBaseTag

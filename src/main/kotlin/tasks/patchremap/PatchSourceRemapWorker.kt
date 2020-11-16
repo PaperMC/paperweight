@@ -32,52 +32,33 @@ import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.remapper.MercuryRemapper
 
 class PatchSourceRemapWorker(
-    private val mappings: MappingSet,
-    private val classpath: Collection<Path>,
-    private val paramNames: ParamNames,
-    private val constructorsData: ConstructorsData,
+    mappings: MappingSet,
+    classpath: Collection<Path>,
+    paramNames: ParamNames,
+    constructorsData: ConstructorsData,
     private val inputDir: Path,
     private val outputDir: Path
 ) {
 
-//    private val reverseMappings: MappingSet = mappings.reverse()
+    private val merc : Mercury = Mercury()
 
-//    fun remap() {
-//        setup()
-//
-//        println("remapping to spigot")
-//        Mercury().let { merc ->
-//            merc.classPath.addAll(classpath)
-//
-//            merc.processors.addAll(listOf(
-//                MercuryRemapper.create(reverseMappings),
-//                PatchParameterRemapper(paramNames, constructorsData)
-//            ))
-//
-//            merc.isGracefulClasspathChecks = true
-//
-//            merc.rewrite(inputDir, outputDir)
-//        }
-//
-//        cleanup()
-//    }
+    init {
+        merc.classPath.addAll(classpath)
+
+        merc.processors.addAll(listOf(
+                 MercuryRemapper.create(mappings),
+                 SrgParameterRemapper(mappings, constructorsData, paramNames)
+        ))
+
+        merc.isGracefulClasspathChecks = true
+    }
 
     fun remap() {
         setup()
 
         println("mapping back to srg")
-        Mercury().let { merc ->
-            merc.classPath.addAll(classpath)
 
-            merc.processors.addAll(listOf(
-                MercuryRemapper.create(mappings),
-                SrgParameterRemapper(mappings, constructorsData, paramNames)
-            ))
-
-            merc.isGracefulClasspathChecks = true
-
-            merc.rewrite(inputDir, outputDir)
-        }
+        merc.rewrite(inputDir, outputDir)
 
         cleanup()
     }
