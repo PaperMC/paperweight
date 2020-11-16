@@ -91,7 +91,7 @@ abstract class RemapSources : ZippedTask() {
             classpath.add(vanillaJar.file)
             classpath.add(vanillaRemappedSpigotJar.file)
             classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-            classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") }.files)
+            classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files)
 
             mappings.set(this@RemapSources.mappings.file)
             constructors.set(this@RemapSources.constructors.file)

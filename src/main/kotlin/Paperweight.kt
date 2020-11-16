@@ -185,6 +185,7 @@ class Paperweight : Plugin<Project> {
     data class McpTasks(
         val generateSrgs: TaskProvider<GenerateSrgs>,
         val remapVanillaJarSrg: TaskProvider<RunSpecialSource>,
+        val downloadMcLibraries: TaskProvider<DownloadMcLibraries>,
         val applyMcpPatches: TaskProvider<ApplyMcpPatches>
     )
 
@@ -317,6 +318,8 @@ class Paperweight : Plugin<Project> {
             fieldsCsv.set(mcpRewrites.flatMap { it.paperFieldCsv })
             extraNotchSrgMappings.set(extension.paper.extraNotchSrgMappings)
 
+            vanillaJar.set(generalTasks.filterVanillaJar.flatMap { it.outputJar })
+
             notchToSrg.set(cache.resolve(Constants.NOTCH_TO_SRG))
             notchToMcp.set(cache.resolve(Constants.NOTCH_TO_MCP))
             srgToNotch.set(cache.resolve(Constants.SRG_TO_NOTCH))
@@ -370,7 +373,7 @@ class Paperweight : Plugin<Project> {
             configFile.set(cache.resolve(Constants.MCP_CONFIG_JSON))
         }
 
-        return McpTasks(generateSrgs, remapVanillaJarSrg, applyMcpPatches)
+        return McpTasks(generateSrgs, remapVanillaJarSrg, downloadMcLibraries, applyMcpPatches)
     }
 
     private fun Project.createSpigotTasks(
@@ -572,6 +575,10 @@ class Paperweight : Plugin<Project> {
             spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir }.get())
             spigotDecompJar.set(spigotTasks.decompileVanillaJarSpigot.flatMap { it.outputJar }.get())
             constructors.set(initialTasks.extractMcp.flatMap { it.constructors }.get())
+
+            // library class imports
+            mcLibrariesDir.set(mcpTasks.downloadMcLibraries.flatMap { it.outputDir }.get())
+            libraryImports.set(extension.paper.libraryClassImports)
 
             parameterNames.set(spigotTasks.remapSpigotSources.flatMap { it.parameterNames }.get())
 

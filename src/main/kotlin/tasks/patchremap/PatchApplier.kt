@@ -38,6 +38,8 @@ class PatchApplier(
     private var commitAuthor: String? = null
     private var commitTime: String? = null
 
+    private val remappedBaseTag: String = "remapped-base"
+
 //    fun initRepo() {
 //        println("Initializing patch remap repo")
 //        git("branch", unmappedBranch).executeSilently()
@@ -66,6 +68,7 @@ class PatchApplier(
     fun commitInitialRemappedSource() {
         git("add", ".").executeSilently()
         git("commit", "-m", "Initial Remapped Source", "--author=Initial <auto@mated.null>").executeSilently()
+        git("tag", remappedBaseTag)
     }
 
     fun recordCommit() {
@@ -94,5 +97,14 @@ class PatchApplier(
             System.err.println("Patch failed to apply: $patch")
             throw RuntimeException("Patch failed to apply: $patch")
         }
+    }
+
+    fun generatePatches(target: File) {
+        target.deleteRecursively()
+        target.mkdirs()
+        git(
+            "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
+            target.absolutePath, remappedBaseTag
+        ).runOut()
     }
 }

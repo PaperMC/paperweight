@@ -26,9 +26,14 @@ import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.getCsvReader
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.writeMappings
+import java.nio.file.Files
+import org.cadixdev.atlas.Atlas
+import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
+import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.model.ClassMapping
@@ -53,6 +58,9 @@ abstract class GenerateSrgs : DefaultTask() {
     @get:InputFile
     abstract val inSrg: RegularFileProperty
 
+    @get:InputFile
+    abstract val vanillaJar: RegularFileProperty
+
     @get:OutputFile
     abstract val notchToSrg: RegularFileProperty
     @get:OutputFile
@@ -75,6 +83,17 @@ abstract class GenerateSrgs : DefaultTask() {
         val inSet = MappingFormats.TSRG.createReader(inSrg.file.toPath()).use { it.read() }
         extraNotchSrgMappings.fileOrNull?.toPath()?.let { path ->
             MappingFormats.TSRG.createReader(path).use { it.read(inSet) }
+        }
+
+        // Fill out any missing inheritance info in the mappings
+        val atlasOut = Files.createTempFile("paperweight", "jar")
+        try {
+            Atlas().use { atlas ->
+                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(inSet, ctx.inheritanceProvider())) }
+                atlas.run(vanillaJar.path, atlasOut)
+            }
+        } finally {
+            Files.deleteIfExists(atlasOut)
         }
 
         ensureParentExists(notchToSrg, notchToMcp, mcpToNotch, mcpToSrg, srgToNotch, srgToMcp)

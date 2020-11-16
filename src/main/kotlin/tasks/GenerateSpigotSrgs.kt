@@ -26,6 +26,7 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.writeMappings
+import java.nio.file.Files
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.MappingSet
@@ -47,7 +48,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import java.nio.file.Files
 
 abstract class GenerateSpigotSrgs : DefaultTask() {
 
@@ -109,6 +109,7 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
                 .build()
         ).merge()
 
+        // TODO Not sure if this is still needed here since it's already ran in GenerateSrgs too now
         // notch <-> spigot is incomplete here, it would result in inheritance issues to work with this incomplete set.
         // so we use it once to remap some jar, which fills out the inheritance data
         val atlasOut = Files.createTempFile("paperweight", "jar")

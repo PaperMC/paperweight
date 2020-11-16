@@ -44,6 +44,7 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val missingMemberEntriesSrgFile: RegularFileProperty = objects.fileFrom(mcpDir, "missing-spigot-member-mappings.csrg")
     val extraNotchSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-notch-srg.tsrg")
     val extraSpigotSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-spigot-srg.tsrg")
+    val libraryClassImports: RegularFileProperty = objects.fileFrom(mcpDir, "library-imports.txt")
 
     init {
         spigotApiPatchDir.disallowUnsafeRead()

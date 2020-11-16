@@ -33,6 +33,8 @@ import io.papermc.paperweight.util.Constants.paperTaskOutput
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.URI
+import java.net.URL
 import java.nio.file.Path
 import java.util.Optional
 import kotlin.reflect.KClass
@@ -48,8 +50,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
-import java.net.URI
-import java.net.URL
 
 val gson: Gson = Gson()
 
