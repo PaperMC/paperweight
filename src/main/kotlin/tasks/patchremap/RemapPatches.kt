@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.tasks.sourceremap.parseConstructors
 import io.papermc.paperweight.tasks.sourceremap.parseParamNames
@@ -35,11 +36,13 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.get
 
 abstract class RemapPatches : BaseTask() {
@@ -64,6 +67,11 @@ abstract class RemapPatches : BaseTask() {
     @get:InputFile
     abstract val spigotDecompJar: RegularFileProperty
 
+    @get:InputDirectory
+    abstract val mcLibrariesDir: DirectoryProperty
+    @get:InputFile
+    abstract val libraryImports: RegularFileProperty
+
     // For parameter name remapping
     @get:InputFile
     abstract val parameterNames: RegularFileProperty
@@ -73,8 +81,17 @@ abstract class RemapPatches : BaseTask() {
     @get:OutputDirectory
     abstract val outputPatchDir: DirectoryProperty
 
+    @get:Option(option = "skip-patches", description = "For resuming, skip first # of patches (e.g. --skip-patches=300)")
+    abstract val skipPatches: Property<String>
+
+    override fun init() {
+        skipPatches.convention("0")
+    }
+
     @TaskAction
     fun run() {
+        val skip = skipPatches.get().toInt()
+
         // Check patches
         val patches = inputPatchDir.file.listFiles() ?: return run {
             println("No input patches found")
@@ -95,8 +112,8 @@ abstract class RemapPatches : BaseTask() {
         // Remap output directory, after each output this directory will be re-named to the input directory below for
         // the next remap operation
         println("setting up repo")
-        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.file)
-        val tempInputDir = createWorkDirByCloning("patch-remap-input", source = spigotServerDir.file)
+        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.file, recreate = skip == 0)
+        val tempInputDir = createWorkDirByCloning("patch-remap-input", source = spigotServerDir.file, recreate = skip == 0)
         val tempOutputDir = createWorkDir("patch-remap-output")
 
         val sourceInputDir = tempInputDir.resolve("src/main/java")
@@ -121,17 +138,19 @@ abstract class RemapPatches : BaseTask() {
 //            patchApplier.initRepo() // Create empty initial commit
 //            remapper.remap() // Remap to Spigot mappings
 
-            // We need to include any missing classes for the patches later on
-            importMcDev(patches, tempInputDir.resolve("src/main/java"))
-            patchApplier.commitInitialSource() // Initial commit of Spigot sources
-            patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
+            if (skip == 0) {
+                // We need to include any missing classes for the patches later on
+                importMcDev(patches, tempInputDir.resolve("src/main/java"))
+                patchApplier.commitInitialSource() // Initial commit of Spigot sources
+                patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
 
-            remapper.remap() // Remap to new mappings
-            patchApplier.commitInitialRemappedSource() // Initial commit of Spigot sources mapped to new mappings
-            patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+                remapper.remap() // Remap to new mappings
+                patchApplier.commitInitialRemappedSource() // Initial commit of Spigot sources mapped to new mappings
+                patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+            }
 
             // Repo setup is done, we can begin the patch loop now
-            patches.forEach { patch ->
+            patches.asSequence().drop(skip).forEach { patch ->
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")
@@ -145,6 +164,8 @@ abstract class RemapPatches : BaseTask() {
                 println("done remapping patch $patch")
                 println("===========================")
             }
+
+            patchApplier.generatePatches(outputPatchDir.file)
         }
     }
 
@@ -158,6 +179,38 @@ abstract class RemapPatches : BaseTask() {
                 val zipEntry = zipFile.getEntry(file.relativeTo(inputDir).path) ?: continue
                 zipFile.getInputStream(zipEntry).use { input ->
                     file.outputStream().buffered().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+        }
+
+        // Import library classes
+        val libraryLines = libraryImports.file.readLines()
+        if (libraryLines.isEmpty()) {
+            return
+        }
+
+        val libDir = mcLibrariesDir.file
+        val libFiles = (libDir.listFiles() ?: emptyArray()).filter { it.name.endsWith("-sources.jar" )}
+        if (libFiles.isEmpty()) {
+            throw PaperweightException("No library files found")
+        }
+
+        for (line in libraryLines) {
+            val (libraryName, filePath) = line.split(" ")
+            val libFile = libFiles.firstOrNull { it.name.startsWith(libraryName) }
+                ?: throw PaperweightException("Failed to find library: $libraryName for class $filePath")
+
+            val outputFile = inputDir.resolve(filePath)
+            if (outputFile.exists()) {
+                continue
+            }
+            outputFile.parentFile.mkdirs()
+            ZipFile(libFile).use { zipFile ->
+                val zipEntry = zipFile.getEntry(filePath)
+                zipFile.getInputStream(zipEntry).use { input ->
+                    outputFile.outputStream().buffered().use { output ->
                         input.copyTo(output)
                     }
                 }
@@ -181,20 +234,24 @@ abstract class RemapPatches : BaseTask() {
         return result
     }
 
-    private fun createWorkDir(name: String, source: File? = null): File {
+    private fun createWorkDir(name: String, source: File? = null, recreate: Boolean = true): File {
         return layout.cache.resolve("paperweight").resolve(name).apply {
-            deleteRecursively()
-            mkdirs()
-            source?.copyRecursively(this)
+            if (recreate) {
+                deleteRecursively()
+                mkdirs()
+                source?.copyRecursively(this)
+            }
         }
     }
 
-    private fun createWorkDirByCloning(name: String, source: File): File {
+    private fun createWorkDirByCloning(name: String, source: File, recreate: Boolean = true): File {
         val workDir = layout.cache.resolve("paperweight")
         return workDir.resolve(name).apply {
-            deleteRecursively()
-            mkdirs()
-            Git(workDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
+            if (recreate) {
+                deleteRecursively()
+                mkdirs()
+                Git(workDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
+            }
         }
     }
 }

@@ -319,12 +319,17 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
     abstract val layout: ProjectLayout
 
     override fun execute() {
+        val target = parameters.target.file
         val artifact = MavenArtifact.parse(parameters.artifact.get())
+        val source = artifact.copy(classifier = "sources")
+
         if (parameters.downloadToDir.get()) {
-            artifact.downloadToDir(parameters.downloader.get(), parameters.target.file, parameters.repos.get())
+            artifact.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
+            try {
+                source.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
+            } catch (ignored: Exception) {}
         } else {
-            artifact.downloadToFile(parameters.downloader.get(), parameters.target.file, parameters.repos.get())
+            artifact.downloadToFile(parameters.downloader.get(), target, parameters.repos.get())
         }
     }
 }
-

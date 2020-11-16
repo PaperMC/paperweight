@@ -24,7 +24,6 @@ package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.tasks.sourceremap.ConstructorsData
 import io.papermc.paperweight.tasks.sourceremap.ParamNames
-import io.papermc.paperweight.tasks.sourceremap.PatchParameterRemapper
 import io.papermc.paperweight.tasks.sourceremap.SrgParameterRemapper
 import java.nio.file.Files
 import java.nio.file.Path

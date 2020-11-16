@@ -24,6 +24,12 @@ package io.papermc.paperweight
 
 import io.papermc.paperweight.util.convertToFile
 import io.papermc.paperweight.util.convertToUrl
+import java.io.File
+import java.net.URL
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 import org.apache.http.HttpHost
 import org.apache.http.HttpStatus
 import org.apache.http.client.config.CookieSpecs
@@ -35,12 +41,6 @@ import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClientBuilder
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
-import java.io.File
-import java.net.URL
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
 
 abstract class DownloadService : BuildService<BuildServiceParameters.None>, AutoCloseable {
 
