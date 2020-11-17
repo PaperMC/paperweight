@@ -112,15 +112,15 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         // TODO Not sure if this is still needed here since it's already ran in GenerateSrgs too now
         // notch <-> spigot is incomplete here, it would result in inheritance issues to work with this incomplete set.
         // so we use it once to remap some jar, which fills out the inheritance data
-        val atlasOut = Files.createTempFile("paperweight", "jar")
-        try {
-            Atlas().use { atlas ->
-                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
-                atlas.run(vanillaJar.path, atlasOut)
-            }
-        } finally {
-            Files.deleteIfExists(atlasOut)
-        }
+//        val atlasOut = Files.createTempFile("paperweight", "jar")
+//        try {
+//            Atlas().use { atlas ->
+//                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
+//                atlas.run(vanillaJar.path, atlasOut)
+//            }
+//        } finally {
+//            Files.deleteIfExists(atlasOut)
+//        }
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 
@@ -156,7 +156,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        throw IllegalStateException("Unexpectedly merged class: $left")
+        throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
     }
     override fun mergeDuplicateTopLevelClassMappings(
         left: TopLevelClassMapping,
@@ -176,7 +176,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        throw IllegalStateException("Unexpectedly add class from Spigot: $left")
+        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullDeobfuscatedName}")
     }
     override fun addRightTopLevelClassMapping(
         right: TopLevelClassMapping,
@@ -197,7 +197,8 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<InnerClassMapping?> {
-        return MergeResult(target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName), right)
+        throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
+//        return MergeResult(target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName), right)
     }
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
@@ -210,6 +211,13 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
             target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName),
             right
         )
+    }
+    override fun addLeftInnerClassMapping(
+        left: InnerClassMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): MergeResult<InnerClassMapping> {
+        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullDeobfuscatedName}")
     }
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
@@ -227,7 +235,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: ClassMapping<*, *>,
         context: MergeContext
     ): FieldMapping {
-        throw IllegalStateException("Unexpectedly merged field: $left")
+        throw IllegalStateException("Unexpectedly merged field: ${left.fullObfuscatedName}")
     }
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
