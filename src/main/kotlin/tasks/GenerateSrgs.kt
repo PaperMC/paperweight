@@ -23,12 +23,14 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.getCsvReader
+import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.writeMappings
+import java.nio.file.FileSystems
 import java.nio.file.Files
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
@@ -61,6 +63,11 @@ abstract class GenerateSrgs : DefaultTask() {
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
 
+    @get:InputFile
+    abstract val vanillaMappings: RegularFileProperty
+    @get:InputFile
+    abstract val fabricMappings: RegularFileProperty
+
     @get:OutputFile
     abstract val notchToSrg: RegularFileProperty
     @get:OutputFile
@@ -74,13 +81,20 @@ abstract class GenerateSrgs : DefaultTask() {
     @get:OutputFile
     abstract val srgToMcp: RegularFileProperty
 
+    @get:OutputFile
+    abstract val outputVanillaMappings: RegularFileProperty
+    @get:OutputFile
+    abstract val outputYarnMappings: RegularFileProperty
+    @get:OutputFile
+    abstract val outputMergedMappings: RegularFileProperty
+
     @TaskAction
     fun run() {
         val methods = HashMap<String, String>()
         val fields = HashMap<String, String>()
         readCsvs(methods, fields)
 
-        val inSet = MappingFormats.TSRG.createReader(inSrg.file.toPath()).use { it.read() }
+        val inSet = MappingFormats.TSRG.createReader(inSrg.path).use { it.read() }
         extraNotchSrgMappings.fileOrNull?.toPath()?.let { path ->
             MappingFormats.TSRG.createReader(path).use { it.read(inSet) }
         }
@@ -98,6 +112,23 @@ abstract class GenerateSrgs : DefaultTask() {
 
         ensureParentExists(notchToSrg, notchToMcp, mcpToNotch, mcpToSrg, srgToNotch, srgToMcp)
         createMappings(inSet, methods, fields)
+
+        val vanillaMappings = MappingFormats.byId("proguard").createReader(vanillaMappings.path).use { it.read() }.reverse()
+        TinyMappingFormat.STANDARD.write(vanillaMappings, outputVanillaMappings.path, "official", "mojang")
+
+        val yarn = FileSystems.newFileSystem(fabricMappings.path, null).use { fs ->
+            val path = fs.getPath("mappings", "mappings.tiny")
+            TinyMappingFormat.STANDARD.read(path, "official", "named")
+        }
+
+        TinyMappingFormat.STANDARD.write(yarn, outputYarnMappings.path, "notch", "yarn")
+
+        for (vanillaMapping in vanillaMappings.topLevelClassMappings) {
+            val yarnMapping = yarn.getTopLevelClassMapping(vanillaMapping.obfuscatedName).orNull ?: continue
+            mergeClass(vanillaMapping, yarnMapping)
+        }
+
+        TinyMappingFormat.STANDARD.write(vanillaMappings, outputMergedMappings.path, "official", "named")
     }
 
     private fun readCsvs(methods: MutableMap<String, String>, fields: MutableMap<String, String>) {
@@ -223,6 +254,20 @@ abstract class GenerateSrgs : DefaultTask() {
         }
         for (innerClassMapping in mapping.innerClassMappings) {
             remapAnonymousClasses(innerClassMapping, newMapping)
+        }
+    }
+
+    private fun mergeClass(vanillaMapping: ClassMapping<*, *>, yarnMapping: ClassMapping<*, *>) {
+        for (vanillaMethod in vanillaMapping.methodMappings) {
+            val yarnMethod = yarnMapping.getMethodMapping(vanillaMethod.signature).orNull ?: continue
+            for (yarnParam in yarnMethod.parameterMappings) {
+                vanillaMethod.getOrCreateParameterMapping(yarnParam.index).deobfuscatedName = yarnParam.deobfuscatedName
+            }
+        }
+
+        for (vanillaClass in vanillaMapping.innerClassMappings) {
+            val yarnClass = yarnMapping.getInnerClassMapping(vanillaClass.obfuscatedName).orNull ?: continue
+            mergeClass(vanillaClass, yarnClass)
         }
     }
 }

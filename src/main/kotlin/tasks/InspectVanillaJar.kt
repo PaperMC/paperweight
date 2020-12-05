@@ -31,7 +31,9 @@ import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 
 abstract class InspectVanillaJar : BaseTask() {
 
@@ -39,18 +41,26 @@ abstract class InspectVanillaJar : BaseTask() {
     abstract val inputJar: RegularFileProperty
 
     @get:OutputFile
-    abstract val outputFile: RegularFileProperty
+    abstract val loggerFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val paramIndexes: RegularFileProperty
 
     override fun init() {
-        outputFile.convention(defaultOutput("txt"))
+        loggerFile.convention(defaultOutput("$name-loggerFields", "txt"))
+        paramIndexes.convention(defaultOutput("$name-paramIndexes", "txt"))
     }
 
     @TaskAction
     fun run() {
-        val outputList = mutableListOf<LoggerField>()
+        val loggers = mutableListOf<LoggerField>()
+        val params = mutableListOf<MethodData>()
 
-        val jarFile = inputJar.file
-        archives.zipTree(jarFile).matching {
+        var visitor: ClassVisitor
+        visitor = LoggerFinder(null, loggers)
+        visitor = ParamIndexInspector(visitor, params)
+
+        archives.zipTree(inputJar.file).matching {
             include("/*.class")
             include("/net/minecraft/**/*.class")
         }.forEach { file ->
@@ -59,25 +69,39 @@ abstract class InspectVanillaJar : BaseTask() {
             }
             val classData = file.readBytes()
 
-            val reader = ClassReader(classData)
-            reader.accept(LoggerFinder(outputList), 0)
-
+            ClassReader(classData).accept(visitor, 0)
         }
 
-        outputFile.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            for (loggerField in outputList) {
+        loggerFile.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+            for (loggerField in loggers) {
                 writer.append(loggerField.className)
                 writer.append(' ')
                 writer.append(loggerField.fieldName)
                 writer.newLine()
             }
         }
+
+        paramIndexes.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+            for (methodData in params) {
+                writer.append(methodData.className)
+                writer.append(' ')
+                writer.append(methodData.methodName)
+                writer.append(' ')
+                writer.append(methodData.methodDescriptor)
+                for (target in methodData.params) {
+                    writer.append(' ')
+                    writer.append(target.binaryIndex.toString())
+                    writer.append(' ')
+                    writer.append(target.sourceIndex.toString())
+                }
+                writer.newLine()
+            }
+        }
     }
 }
 
-class LoggerFinder(private val fields: MutableList<LoggerField>) : ClassVisitor(Opcodes.ASM8) {
-
-    private var currentClass: String? = null
+abstract class BaseClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM8, classVisitor) {
+    protected var currentClass: String? = null
 
     override fun visit(
         version: Int,
@@ -88,7 +112,14 @@ class LoggerFinder(private val fields: MutableList<LoggerField>) : ClassVisitor(
         interfaces: Array<out String>?
     ) {
         this.currentClass = name
+        super.visit(version, access, name, signature, superName, interfaces)
     }
+}
+
+class LoggerFinder(
+    classVisitor: ClassVisitor?,
+    private val fields: MutableList<LoggerField>
+) : BaseClassVisitor(classVisitor) {
 
     override fun visitField(
         access: Int,
@@ -97,6 +128,8 @@ class LoggerFinder(private val fields: MutableList<LoggerField>) : ClassVisitor(
         signature: String?,
         value: Any?
     ): FieldVisitor? {
+        super.visitField(access, name, descriptor, signature, value)
+
         val className = currentClass ?: return null
         if (descriptor != "Lorg/apache/logging/log4j/Logger;") {
             return null
@@ -107,3 +140,55 @@ class LoggerFinder(private val fields: MutableList<LoggerField>) : ClassVisitor(
 }
 
 data class LoggerField(val className: String, val fieldName: String)
+
+class ParamIndexInspector(
+    classVisitor: ClassVisitor?,
+    private val methods: MutableList<MethodData>
+) : BaseClassVisitor(classVisitor) {
+
+    override fun visitMethod(
+        access: Int,
+        name: String,
+        descriptor: String,
+        signature: String?,
+        exceptions: Array<out String>?
+    ): MethodVisitor? {
+        super.visitMethod(access, name, descriptor, signature, exceptions)
+
+        val className = currentClass ?: return null
+
+        val isStatic = access and Opcodes.ACC_STATIC != 0
+        var currentIndex = if (isStatic) 0 else 1
+
+        val types = Type.getArgumentTypes(descriptor)
+        if (types.isEmpty()) {
+            return null
+        }
+
+        val params = ArrayList<ParamTarget>(types.size)
+        val data = MethodData(className, name, descriptor, params)
+        methods += data
+
+        for (i in types.indices) {
+            params += ParamTarget(currentIndex, i)
+            currentIndex++
+
+            // Figure out if we should skip the next index
+            val type = types[i]
+            if (type === Type.LONG_TYPE || type === Type.DOUBLE_TYPE) {
+                currentIndex++
+            }
+        }
+
+        return null
+    }
+}
+
+data class MethodData(
+    val className: String,
+    val methodName: String,
+    val methodDescriptor: String,
+    val params: List<ParamTarget>
+)
+
+data class ParamTarget(val binaryIndex: Int, val sourceIndex: Int)

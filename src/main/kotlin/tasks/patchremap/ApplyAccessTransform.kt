@@ -28,6 +28,7 @@ import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
+import io.papermc.paperweight.util.path
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -74,7 +75,7 @@ abstract class ApplyAccessTransform : BaseTask() {
             install {
                 AtJarEntryTransformer(at)
             }
-            run(inputJar.file.toPath(), outputJar.file.toPath())
+            run(inputJar.path, outputJar.path)
         }
     }
 }

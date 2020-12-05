@@ -26,11 +26,8 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.writeMappings
-import java.nio.file.Files
-import org.cadixdev.atlas.Atlas
-import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -55,20 +52,27 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     abstract val notchToSrg: RegularFileProperty
     @get:InputFile
     abstract val srgToMcp: RegularFileProperty
+
     @get:InputFile
     abstract val classMappings: RegularFileProperty
     @get:InputFile
     abstract val memberMappings: RegularFileProperty
     @get:InputFile
     abstract val packageMappings: RegularFileProperty
+
     @get:Optional
     @get:InputFile
     abstract val extraSpigotSrgMappings: RegularFileProperty
     @get:InputFile
     abstract val loggerFields: RegularFileProperty
+    @get:InputFile
+    abstract val paramIndexes: RegularFileProperty
 
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
+
+    @get:InputFile
+    abstract val mergedMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val spigotToSrg: RegularFileProperty
@@ -83,6 +87,9 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     @get:OutputFile
     abstract val notchToSpigot: RegularFileProperty
 
+    @get:OutputFile
+    abstract val spigotToNamed: RegularFileProperty
+
     @TaskAction
     fun run() {
         val classMappingSet = MappingFormats.CSRG.createReader(classMappings.file.toPath()).use { it.read() }
@@ -92,7 +99,7 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         for (line in loggerFields.file.readLines(Charsets.UTF_8)) {
             val (className, fieldName) = line.split(' ')
             val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
-            classMapping.getOrCreateFieldMapping(fieldName).deobfuscatedName = "LOGGER"
+            classMapping.getOrCreateFieldMapping(fieldName, "Lorg/apache/logging/log4j/Logger;").deobfuscatedName = "LOGGER"
         }
 
         // Get the new package name
@@ -101,26 +108,15 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         // We'll use notch->srg to pick up any classes spigot doesn't map for the package mapping
         val notchToSrgSet = MappingFormats.TSRG.createReader(notchToSrg.file.toPath()).use { it.read() }
 
+        val mergedMojangMappings = TinyMappingFormat.STANDARD.read(mergedMappings.path, "official", "named")
+
         val notchToSpigotSet = MappingSetMerger.create(
             mergedMappingSet,
-            notchToSrgSet,
+            mergedMojangMappings,
             MergeConfig.builder()
                 .withMergeHandler(SpigotPackageMergerHandler(newPackage))
                 .build()
         ).merge()
-
-        // TODO Not sure if this is still needed here since it's already ran in GenerateSrgs too now
-        // notch <-> spigot is incomplete here, it would result in inheritance issues to work with this incomplete set.
-        // so we use it once to remap some jar, which fills out the inheritance data
-//        val atlasOut = Files.createTempFile("paperweight", "jar")
-//        try {
-//            Atlas().use { atlas ->
-//                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(notchToSpigotSet, ctx.inheritanceProvider())) }
-//                atlas.run(vanillaJar.path, atlasOut)
-//            }
-//        } finally {
-//            Files.deleteIfExists(atlasOut)
-//        }
 
         val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
 
@@ -145,6 +141,69 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
             mcpToSpigotSet to mcpToSpigot.file,
             notchToSpigotSet to notchToSpigot.file
         )
+
+        val adjustedMergedMojangMappings = adjustParamIndexes(mergedMojangMappings)
+        val spigotToNamedSet = MappingSetMerger.create(
+            notchToSpigotSet.reverse(),
+            adjustedMergedMojangMappings
+        ).merge()
+        TinyMappingFormat.STANDARD.write(spigotToNamedSet, spigotToNamed.path, "spigot", "named")
+    }
+
+    private fun adjustParamIndexes(mappings: MappingSet): MappingSet {
+        val indexes = hashMapOf<String, HashMap<String, HashMap<Int, Int>>>()
+
+        paramIndexes.file.useLines { lines ->
+            lines.forEach { line ->
+                val parts = line.split(" ")
+                val (className, methodName, descriptor) = parts
+
+                val paramMap = indexes.computeIfAbsent(className) { hashMapOf() }
+                    .computeIfAbsent(methodName + descriptor) { hashMapOf() }
+
+                for (i in 3 until parts.size step 2) {
+                    paramMap[parts[i].toInt()] = parts[i + 1].toInt()
+                }
+            }
+        }
+
+        val result = MappingSet.create()
+        for (old in mappings.topLevelClassMappings) {
+            val new = result.createTopLevelClassMapping(old.obfuscatedName, old.deobfuscatedName)
+            copyClass(old, new, indexes)
+        }
+
+        return result
+    }
+
+    private fun copyClass(
+        from: ClassMapping<*, *>,
+        to: ClassMapping<*, *>,
+        params: Map<String, Map<String, Map<Int, Int>>>
+    ) {
+        for (mapping in from.fieldMappings) {
+            to.createFieldMapping(mapping.signature, mapping.deobfuscatedName)
+        }
+        for (mapping in from.innerClassMappings) {
+            val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
+            copyClass(mapping, newMapping, params)
+        }
+
+        val classMap = params[from.fullObfuscatedName]
+        for (mapping in from.methodMappings) {
+            val newMapping = to.createMethodMapping(mapping.signature, mapping.deobfuscatedName)
+
+            val paramMappings = mapping.parameterMappings
+            if (paramMappings.isEmpty() || classMap == null) {
+                continue
+            }
+
+            val methodMap = classMap[mapping.signature.toJvmsIdentifier()] ?: continue
+            for (paramMapping in paramMappings) {
+                val i = methodMap[paramMapping.index] ?: paramMapping.index
+                newMapping.createParameterMapping(i, paramMapping.deobfuscatedName)
+            }
+        }
     }
 }
 
@@ -158,6 +217,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): MergeResult<TopLevelClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateTopLevelClassMappings(
         left: TopLevelClassMapping,
         right: TopLevelClassMapping,
@@ -171,13 +231,15 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
             right
         )
     }
+
     override fun addLeftTopLevelClassMapping(
         left: TopLevelClassMapping,
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullDeobfuscatedName}")
+        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}")
     }
+
     override fun addRightTopLevelClassMapping(
         right: TopLevelClassMapping,
         target: MappingSet,
@@ -200,6 +262,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
 //        return MergeResult(target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName), right)
     }
+
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
         right: InnerClassMapping,
@@ -212,13 +275,15 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
             right
         )
     }
+
     override fun addLeftInnerClassMapping(
         left: InnerClassMapping,
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<InnerClassMapping> {
-        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullDeobfuscatedName}")
+        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}")
     }
+
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
         target: ClassMapping<*, *>,
@@ -237,6 +302,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
         strictRightDuplicate: FieldMapping?,
@@ -246,7 +312,8 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: ClassMapping<*, *>,
         context: MergeContext
     ): FieldMapping {
-        return target.createFieldMapping(left.obfuscatedName, left.deobfuscatedName)
+        val right = strictRightDuplicate ?: looseRightDuplicate ?: strictRightContinuation ?: looseRightContinuation ?: left
+        return target.createFieldMapping(right.signature, left.deobfuscatedName)
     }
 
     override fun mergeMethodMappings(
@@ -279,6 +346,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): FieldMapping? {
         return null
     }
+
     override fun addRightMethodMapping(
         right: MethodMapping,
         target: ClassMapping<*, *>,
