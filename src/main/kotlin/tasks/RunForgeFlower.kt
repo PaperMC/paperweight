@@ -66,14 +66,23 @@ abstract class RunForgeFlower : BaseTask() {
 
         val config = gson.fromJson<McpConfig>(configFile)
 
-        val argList = config.functions.decompile.args.map {
-            when (it) {
-                "{libraries}" -> libraries.file.absolutePath
-                "{input}" -> inputJar.file.absolutePath
-                "{output}" -> target.absolutePath
-                else -> it
-            }
-        }
+        val argList = listOf(
+            "-ind=    ",
+            "-din=1",
+            "-rbr=1",
+            "-dgs=1",
+            "-asc=1",
+            "-rsy=1",
+            "-iec=1",
+            "-jvn=0",
+            "-isl=0",
+            "-iib=1",
+            "-log=TRACE",
+            "-cfg",
+            libraries.file.absolutePath,
+            inputJar.file.absolutePath,
+            target.absolutePath
+        )
 
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
         logFile.delete()

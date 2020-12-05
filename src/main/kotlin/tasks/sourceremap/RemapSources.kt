@@ -23,11 +23,13 @@
 package io.papermc.paperweight.tasks.sourceremap
 
 import io.papermc.paperweight.tasks.ZippedTask
+import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
 import javax.inject.Inject
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
@@ -107,7 +109,7 @@ abstract class RemapSources : ZippedTask() {
 
     abstract class RemapAction : WorkAction<RemapParams> {
         override fun execute() {
-            val mappingSet = MappingFormats.TSRG.read(parameters.mappings.path)
+            val mappingSet = TinyMappingFormat.STANDARD.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
             val processAt = AccessTransformSet.create()
 
             val constructorsData = parseConstructors(parameters.constructors.file)

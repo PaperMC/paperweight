@@ -32,7 +32,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class AddMissingSpigotClassMappings : BaseTask() {
+abstract class AddAdditionalSpigotMappings : BaseTask() {
 
     @get:InputFile
     abstract val classSrg: RegularFileProperty
@@ -40,10 +40,10 @@ abstract class AddMissingSpigotClassMappings : BaseTask() {
     abstract val memberSrg: RegularFileProperty
     @get:Optional
     @get:InputFile
-    abstract val missingClassEntriesSrg: RegularFileProperty
+    abstract val additionalClassEntriesSrg: RegularFileProperty
     @get:Optional
     @get:InputFile
-    abstract val missingMemberEntriesSrg: RegularFileProperty
+    abstract val additionalMemberEntriesSrg: RegularFileProperty
 
     @get:OutputFile
     abstract val outputClassSrg: RegularFileProperty
@@ -57,8 +57,8 @@ abstract class AddMissingSpigotClassMappings : BaseTask() {
 
     @TaskAction
     fun run() {
-        addLines(classSrg.file, missingClassEntriesSrg.fileOrNull, outputClassSrg.file)
-        addLines(memberSrg.file, missingMemberEntriesSrg.fileOrNull, outputMemberSrg.file)
+        addLines(classSrg.file, additionalClassEntriesSrg.fileOrNull, outputClassSrg.file)
+        addLines(memberSrg.file, additionalMemberEntriesSrg.fileOrNull, outputMemberSrg.file)
     }
 
     private fun addLines(inFile: File, appendFile: File?, outputFile: File) {

@@ -22,10 +22,11 @@
 
 package io.papermc.paperweight.util
 
-import au.com.bytecode.opencsv.CSVParser
-import au.com.bytecode.opencsv.CSVReader
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
+import com.opencsv.CSVParserBuilder
+import com.opencsv.CSVReader
+import com.opencsv.CSVReaderBuilder
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.BaseTask
@@ -85,14 +86,9 @@ object UselessOutputStream : OutputStream() {
     }
 }
 
-fun getCsvReader(file: File) = CSVReader(
-    file.reader(),
-    CSVParser.DEFAULT_SEPARATOR,
-    CSVParser.DEFAULT_QUOTE_CHARACTER,
-    CSVParser.NULL_CHARACTER,
-    1,
-    false
-)
+fun getCsvReader(file: File): CSVReader = CSVReaderBuilder(file.bufferedReader())
+    .withCSVParser(CSVParserBuilder().withStrictQuotes(false).build())
+    .build()
 
 fun Any.convertToFile(): File {
     return when (this) {
@@ -153,6 +149,8 @@ val RegularFileProperty.fileOrNull: File?
     get() = orNull?.asFile
 val RegularFileProperty.path: Path
     get() = file.toPath()
+val RegularFileProperty.pathOrNull: Path?
+    get() = fileOrNull?.toPath()
 val DirectoryProperty.file: File
     get() = get().asFile
 val DirectoryProperty.path: Path

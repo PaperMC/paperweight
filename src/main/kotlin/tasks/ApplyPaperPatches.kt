@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
+import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.file
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -39,6 +40,12 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     abstract val remappedSource: RegularFileProperty
     @get:InputFile
     abstract val templateGitIgnore: RegularFileProperty
+    @get:InputFile
+    abstract val sourceMcDevJar: RegularFileProperty
+    @get:InputDirectory
+    abstract val mcLibrariesDir: DirectoryProperty
+    @get:InputFile
+    abstract val libraryImports: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -77,6 +84,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 from(archives.zipTree(remappedSource.file))
                 into(sourceDir)
             }
+
+            val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
+            McDev.importMcDev(patches, sourceMcDevJar.file, libraryImports.file, mcLibrariesDir.file, sourceDir)
 
             templateGitIgnore.file.copyTo(outputFile.resolve(".gitignore"))
 

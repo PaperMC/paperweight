@@ -31,6 +31,9 @@ object Constants {
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
     const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
 
+    const val YARN_CONFIG = "yarn"
+    const val REMAPPER_CONFIG = "remapper"
+
     const val CACHE_PATH = "caches"
     private const val PAPER_PATH = "paperweight"
 
@@ -42,7 +45,12 @@ object Constants {
 
     const val MCP_DATA_DIR = "mcp/data"
     const val MCP_MAPPINGS_DIR = "mcp/mappings"
-    private const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
+    const val SERVER_MAPPINGS = "mcp/server_mappings.txt"
+    const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
+
+    const val OBF_NAMESPACE = "official"
+    const val SPIGOT_NAMESPACE = "spigot"
+    const val DEOBF_NAMESPACE = "mojang+yarn"
 
     const val MCP_CONFIG_JSON = "$MCP_DATA_DIR/config.json"
 

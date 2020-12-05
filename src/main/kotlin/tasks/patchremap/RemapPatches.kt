@@ -27,8 +27,10 @@ import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.tasks.sourceremap.parseConstructors
 import io.papermc.paperweight.tasks.sourceremap.parseParamNames
 import io.papermc.paperweight.util.Git
+import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
 import java.io.File
 import java.util.zip.ZipFile
 import org.cadixdev.lorenz.io.MappingFormats
@@ -103,7 +105,7 @@ abstract class RemapPatches : BaseTask() {
         val constructorsData = parseConstructors(constructors.file)
         val paramMap = parseParamNames(parameterNames.file)
 
-        val mappings = MappingFormats.TSRG.createReader(mappingsFile.file.toPath()).use { it.read() }
+        val mappings = MappingFormats.TSRG.createReader(mappingsFile.path).use { it.read() }
 
         // This should pull in any libraries needed for type bindings
         val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
@@ -140,7 +142,7 @@ abstract class RemapPatches : BaseTask() {
 
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on
-                importMcDev(patches, tempInputDir.resolve("src/main/java"))
+                McDev.importMcDev(patches, spigotDecompJar.file, libraryImports.file, mcLibrariesDir.file, tempInputDir.resolve("src/main/java"))
                 patchApplier.commitInitialSource() // Initial commit of Spigot sources
                 patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
 
@@ -167,71 +169,6 @@ abstract class RemapPatches : BaseTask() {
 
             patchApplier.generatePatches(outputPatchDir.file)
         }
-    }
-
-    private fun importMcDev(patches: Array<File>, inputDir: File) {
-        val importMcDev = readMcDevNames(patches).asSequence()
-            .map { inputDir.resolve("net/minecraft/server/$it.java") }
-            .filter { !it.exists() }
-            .toSet()
-        ZipFile(spigotDecompJar.file).use { zipFile ->
-            for (file in importMcDev) {
-                val zipEntry = zipFile.getEntry(file.relativeTo(inputDir).path) ?: continue
-                zipFile.getInputStream(zipEntry).use { input ->
-                    file.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            }
-        }
-
-        // Import library classes
-        val libraryLines = libraryImports.file.readLines()
-        if (libraryLines.isEmpty()) {
-            return
-        }
-
-        val libDir = mcLibrariesDir.file
-        val libFiles = (libDir.listFiles() ?: emptyArray()).filter { it.name.endsWith("-sources.jar" )}
-        if (libFiles.isEmpty()) {
-            throw PaperweightException("No library files found")
-        }
-
-        for (line in libraryLines) {
-            val (libraryName, filePath) = line.split(" ")
-            val libFile = libFiles.firstOrNull { it.name.startsWith(libraryName) }
-                ?: throw PaperweightException("Failed to find library: $libraryName for class $filePath")
-
-            val outputFile = inputDir.resolve(filePath)
-            if (outputFile.exists()) {
-                continue
-            }
-            outputFile.parentFile.mkdirs()
-            ZipFile(libFile).use { zipFile ->
-                val zipEntry = zipFile.getEntry(filePath)
-                zipFile.getInputStream(zipEntry).use { input ->
-                    outputFile.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun readMcDevNames(patches: Array<File>): Set<String> {
-        val result = hashSetOf<String>()
-
-        val prefix = "+++ b/src/main/java/net/minecraft/server/"
-        val suffix = ".java"
-
-        for (patch in patches) {
-            patch.useLines { lines ->
-                lines.filter { it.startsWith(prefix) }
-                    .mapTo(result) { it.substring(prefix.length, it.length - suffix.length) }
-            }
-        }
-
-        return result
     }
 
     private fun createWorkDir(name: String, source: File? = null, recreate: Boolean = true): File {
