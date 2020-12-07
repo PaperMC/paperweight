@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.RegularFile
@@ -55,6 +56,6 @@ abstract class MergeAccessTransforms : BaseTask() {
             outputAt.merge(at)
         }
 
-        AccessTransformFormats.FML.write(outputFile.file.toPath(), outputAt)
+        AccessTransformFormats.FML.write(outputFile.path, outputAt)
     }
 }

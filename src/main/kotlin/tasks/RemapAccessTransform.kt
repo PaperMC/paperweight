@@ -22,8 +22,11 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.RegularFileProperty
@@ -47,10 +50,10 @@ abstract class RemapAccessTransform : BaseTask() {
 
     @TaskAction
     fun run() {
-        val at = AccessTransformFormats.FML.read(inputFile.file.toPath())
-        val mappingSet = MappingFormats.TSRG.createReader(mappings.file.toPath()).use { it.read() }
+        val at = AccessTransformFormats.FML.read(inputFile.path)
+        val mappingSet = TinyMappingFormat.STANDARD.read(mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
         val resultAt = at.remap(mappingSet)
-        AccessTransformFormats.FML.write(outputFile.file.toPath(), resultAt)
+        AccessTransformFormats.FML.write(outputFile.path, resultAt)
     }
 }

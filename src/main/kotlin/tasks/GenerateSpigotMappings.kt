@@ -22,11 +22,13 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.writeMappings
+import java.util.Optional
 import net.fabricmc.lorenztiny.TinyMappingFormat
+import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -42,16 +44,10 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class GenerateSpigotSrgs : DefaultTask() {
-
-    @get:InputFile
-    abstract val notchToSrg: RegularFileProperty
-    @get:InputFile
-    abstract val srgToMcp: RegularFileProperty
+abstract class GenerateSpigotMappings : DefaultTask() {
 
     @get:InputFile
     abstract val classMappings: RegularFileProperty
@@ -60,40 +56,23 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
     @get:InputFile
     abstract val packageMappings: RegularFileProperty
 
-    @get:Optional
-    @get:InputFile
-    abstract val extraSpigotSrgMappings: RegularFileProperty
     @get:InputFile
     abstract val loggerFields: RegularFileProperty
     @get:InputFile
     abstract val paramIndexes: RegularFileProperty
+    @get:InputFile
+    abstract val syntheticMethods: RegularFileProperty
 
     @get:InputFile
-    abstract val vanillaJar: RegularFileProperty
-
-    @get:InputFile
-    abstract val mergedMappings: RegularFileProperty
+    abstract val sourceMappings: RegularFileProperty
 
     @get:OutputFile
-    abstract val spigotToSrg: RegularFileProperty
-    @get:OutputFile
-    abstract val spigotToMcp: RegularFileProperty
-    @get:OutputFile
-    abstract val spigotToNotch: RegularFileProperty
-    @get:OutputFile
-    abstract val srgToSpigot: RegularFileProperty
-    @get:OutputFile
-    abstract val mcpToSpigot: RegularFileProperty
-    @get:OutputFile
-    abstract val notchToSpigot: RegularFileProperty
-
-    @get:OutputFile
-    abstract val spigotToNamed: RegularFileProperty
+    abstract val outputMappings: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val classMappingSet = MappingFormats.CSRG.createReader(classMappings.file.toPath()).use { it.read() }
-        val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.file.toPath()).use { it.read() }
+        val classMappingSet = MappingFormats.CSRG.createReader(classMappings.path).use { it.read() }
+        val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.path).use { it.read() }
         val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
 
         for (line in loggerFields.file.readLines(Charsets.UTF_8)) {
@@ -105,49 +84,33 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
 
-        // We'll use notch->srg to pick up any classes spigot doesn't map for the package mapping
-        val notchToSrgSet = MappingFormats.TSRG.createReader(notchToSrg.file.toPath()).use { it.read() }
+        val sourceMappings = TinyMappingFormat.STANDARD.read(sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
-        val mergedMojangMappings = TinyMappingFormat.STANDARD.read(mergedMappings.path, "official", "named")
+        val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+        syntheticMethods.file.useLines { lines ->
+            for (line in lines) {
+                val (className, desc, synthName, baseName) = line.split(" ")
+                synths.computeIfAbsent(className) { hashMapOf() }
+                    .computeIfAbsent(desc) { hashMapOf() }[baseName] = synthName
+            }
+        }
 
         val notchToSpigotSet = MappingSetMerger.create(
             mergedMappingSet,
-            mergedMojangMappings,
+            sourceMappings,
             MergeConfig.builder()
-                .withMergeHandler(SpigotPackageMergerHandler(newPackage))
+                .withMergeHandler(SpigotPackageMergerHandler(newPackage, synths))
                 .build()
         ).merge()
 
-        val srgToMcpSet = MappingFormats.TSRG.createReader(srgToMcp.file.toPath()).use { it.read() }
+        val adjustedSourceMappings = adjustParamIndexes(sourceMappings)
 
-        val spigotToSrgSet = MappingSetMerger.create(notchToSpigotSet.reverse(), notchToSrgSet).merge()
-        extraSpigotSrgMappings.fileOrNull?.toPath()?.let { path ->
-            MappingFormats.TSRG.createReader(path).use { it.read(spigotToSrgSet) }
-        }
-
-        val mcpToNotchSet = MappingSetMerger.create(notchToSrgSet, srgToMcpSet).merge().reverse()
-        val mcpToSpigotSet = MappingSetMerger.create(mcpToNotchSet, notchToSpigotSet).merge()
-
-        val srgToSpigotSet = spigotToSrgSet.reverse()
-        val spigotToMcpSet = mcpToSpigotSet.reverse()
-        val spigotToNotchSet = notchToSpigotSet.reverse()
-
-        writeMappings(
-            MappingFormats.TSRG,
-            spigotToSrgSet to spigotToSrg.file,
-            spigotToMcpSet to spigotToMcp.file,
-            spigotToNotchSet to spigotToNotch.file,
-            srgToSpigotSet to srgToSpigot.file,
-            mcpToSpigotSet to mcpToSpigot.file,
-            notchToSpigotSet to notchToSpigot.file
-        )
-
-        val adjustedMergedMojangMappings = adjustParamIndexes(mergedMojangMappings)
         val spigotToNamedSet = MappingSetMerger.create(
             notchToSpigotSet.reverse(),
-            adjustedMergedMojangMappings
+            adjustedSourceMappings
         ).merge()
-        TinyMappingFormat.STANDARD.write(spigotToNamedSet, spigotToNamed.path, "spigot", "named")
+
+        TinyMappingFormat.STANDARD.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 
     private fun adjustParamIndexes(mappings: MappingSet): MappingSet {
@@ -170,13 +133,13 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         val result = MappingSet.create()
         for (old in mappings.topLevelClassMappings) {
             val new = result.createTopLevelClassMapping(old.obfuscatedName, old.deobfuscatedName)
-            copyClass(old, new, indexes)
+            copyClassParam(old, new, indexes)
         }
 
         return result
     }
 
-    private fun copyClass(
+    private fun copyClassParam(
         from: ClassMapping<*, *>,
         to: ClassMapping<*, *>,
         params: Map<String, Map<String, Map<Int, Int>>>
@@ -186,7 +149,7 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
         }
         for (mapping in from.innerClassMappings) {
             val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-            copyClass(mapping, newMapping, params)
+            copyClassParam(mapping, newMapping, params)
         }
 
         val classMap = params[from.fullObfuscatedName]
@@ -205,9 +168,60 @@ abstract class GenerateSpigotSrgs : DefaultTask() {
             }
         }
     }
+
+    /*
+    private fun addSyntheticMethodMappings(mappings: MappingSet): MappingSet {
+        val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+        syntheticMethods.file.useLines { lines ->
+            for (line in lines) {
+                val (className, desc, synthName, baseName) = line.split(" ")
+                synths.computeIfAbsent(className) { hashMapOf() }
+                    .computeIfAbsent(desc) { hashMapOf() }[baseName] = synthName
+            }
+        }
+
+        val result = MappingSet.create()
+        for (old in mappings.topLevelClassMappings) {
+            val new = result.createTopLevelClassMapping(old.obfuscatedName, old.deobfuscatedName)
+            copyClassSynth(old, new, synths)
+        }
+
+        return result
+    }
+
+    private fun copyClassSynth(
+        from: ClassMapping<*, *>,
+        to: ClassMapping<*, *>,
+        synths: Map<String, MutableMap<String, MutableMap<String, String>>>
+    ) {
+        for (mapping in from.fieldMappings) {
+            to.createFieldMapping(mapping.signature, mapping.deobfuscatedName)
+        }
+        for (mapping in from.innerClassMappings) {
+            val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
+            copyClassSynth(mapping, newMapping, synths)
+        }
+
+        val classMap = synths[from.fullObfuscatedName]
+        for (mapping in from.methodMappings) {
+            val names = classMap?.get(mapping.descriptor.toString())
+            val newName = names?.get(mapping.obfuscatedName) ?: mapping.obfuscatedName
+
+            val newMapping = to.createMethodMapping(MethodSignature.of(newName, mapping.descriptor.toString()), mapping.deobfuscatedName)
+            for (paramMapping in mapping.parameterMappings) {
+                newMapping.createParameterMapping(paramMapping.index, paramMapping.deobfuscatedName)
+            }
+        }
+    }
+     */
 }
 
-class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMergerHandler {
+typealias Synths = Map<String, Map<String, Map<String, String>>>
+
+class SpigotPackageMergerHandler(
+    private val newPackage: String,
+    private val synths: Synths
+) : MappingSetMergerHandler {
 
     override fun mergeTopLevelClassMappings(
         left: TopLevelClassMapping,
@@ -260,9 +274,7 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         context: MergeContext
     ): MergeResult<InnerClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
-//        return MergeResult(target.createInnerClassMapping(left.obfuscatedName, left.deobfuscatedName), right)
     }
-
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
         right: InnerClassMapping,
@@ -283,7 +295,6 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): MergeResult<InnerClassMapping> {
         throw IllegalStateException("Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}")
     }
-
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
         target: ClassMapping<*, *>,
@@ -302,7 +313,6 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
     ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: ${left.fullObfuscatedName}")
     }
-
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
         strictRightDuplicate: FieldMapping?,
@@ -335,10 +345,23 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
-        return MergeResult(target.createMethodMapping(left.signature, left.deobfuscatedName))
+        // Check if Spigot calls this mapping something else
+        val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
+        val newName = synthMethods?.get(left.obfuscatedName)
+        return if (newName != null) {
+            val newLeftMapping: MethodMapping? = (left.parent.getMethodMapping(MethodSignature.of(newName, left.obfuscatedDescriptor)) as Optional<MethodMapping>).orNull
+            val newMapping = if (newLeftMapping != null) {
+                target.createMethodMapping(newLeftMapping.signature, left.deobfuscatedName)
+            } else {
+                target.createMethodMapping(left.signature, newName)
+            }
+            MergeResult(newMapping)
+        } else {
+            MergeResult(target.createMethodMapping(left.signature, left.deobfuscatedName))
+        }
     }
 
-    // Disable srg member mappings
+    // Disable non-spigot mappings
     override fun addRightFieldMapping(
         right: FieldMapping,
         target: ClassMapping<*, *>,
@@ -352,7 +375,10 @@ class SpigotPackageMergerHandler(private val newPackage: String) : MappingSetMer
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
-        return MergeResult(null)
+        // Check if spigot changes this method automatically
+        val synthMethods = synths[right.parent.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
+        val newName = synthMethods?.get(right.obfuscatedName) ?: return MergeResult(null)
+        return MergeResult(target.createMethodMapping(MethodSignature.of(right.obfuscatedName, right.obfuscatedDescriptor), newName))
     }
 
     private fun prependPackage(name: String): String {

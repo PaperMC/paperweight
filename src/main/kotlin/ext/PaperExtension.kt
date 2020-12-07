@@ -39,19 +39,15 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     val mcpDir: DirectoryProperty = objects.dirWithDefault(layout, "mcp")
-    val mcpRewritesFile: RegularFileProperty = objects.fileFrom(mcpDir, "mcp-rewrites.txt")
-    val missingClassEntriesSrgFile: RegularFileProperty = objects.fileFrom(mcpDir, "missing-spigot-class-mappings.csrg")
-    val missingMemberEntriesSrgFile: RegularFileProperty = objects.fileFrom(mcpDir, "missing-spigot-member-mappings.csrg")
-    val extraNotchSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-notch-srg.tsrg")
-    val extraSpigotSrgMappings: RegularFileProperty = objects.fileFrom(mcpDir, "extra-spigot-srg.tsrg")
+    val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
+    val additionalSpigotMemberMappings: RegularFileProperty = objects.fileProperty()
     val libraryClassImports: RegularFileProperty = objects.fileFrom(mcpDir, "library-imports.txt")
+    val mappingsPatch: RegularFileProperty = objects.fileProperty()
 
     init {
         spigotApiPatchDir.disallowUnsafeRead()
         spigotServerPatchDir.disallowUnsafeRead()
         paperApiDir.disallowUnsafeRead()
         paperServerDir.disallowUnsafeRead()
-
-        mcpRewritesFile.disallowUnsafeRead()
     }
 }

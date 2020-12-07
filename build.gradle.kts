@@ -17,6 +17,7 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
     maven("https://files.minecraftforge.net/maven/")
     maven("https://maven.fabricmc.net/")
+    mavenLocal()
 }
 
 dependencies {
@@ -27,7 +28,9 @@ dependencies {
     implementation("com.github.salomonbrys.kotson:kotson:2.5.0")
 
     // ASM for inspection
-    implementation("org.ow2.asm:asm:9.0")
+    val asmVersion = "9.0"
+    implementation("org.ow2.asm:asm:$asmVersion")
+    implementation("org.ow2.asm:asm-tree:$asmVersion")
 
     // Cadix
     val lorenzVersion = "0.5.6"
@@ -36,7 +39,7 @@ dependencies {
     implementation("org.cadixdev:lorenz-io-proguard:$lorenzVersion")
     implementation("org.cadixdev:atlas:0.2.0")
     implementation("org.cadixdev:at:0.1.0-rc1")
-    implementation("org.cadixdev:mercury:0.1.0-rc1")
+    implementation("org.cadixdev:mercury:0.1.0-PW0-SNAPSHOT")
 
     implementation("net.fabricmc:lorenz-tiny:3.0.0")
 }

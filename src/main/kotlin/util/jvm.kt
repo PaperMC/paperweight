@@ -31,12 +31,6 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
     val jarFile = jar.convertToFile()
     val dir = workingDir.convertToFile()
 
-    val process = ProcessBuilder(
-        Jvm.current().javaExecutable.canonicalPath, *jvmArgs.toTypedArray(),
-        "-jar", jarFile.canonicalPath,
-        *args
-    ).directory(dir).start()
-
     val output = when {
         logFile is OutputStream -> logFile
         logFile != null -> {
@@ -45,6 +39,19 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
         }
         else -> UselessOutputStream
     }
+
+    val processBuilder = ProcessBuilder(
+        Jvm.current().javaExecutable.canonicalPath, *jvmArgs.toTypedArray(),
+        "-jar", jarFile.canonicalPath,
+        *args
+    ).directory(dir)
+
+    output.writer().let {
+        it.appendln("Command: ${processBuilder.command().joinToString(" ")}")
+        it.flush()
+    }
+
+    val process = processBuilder.start()
 
     output.use {
         redirect(process.inputStream, it)

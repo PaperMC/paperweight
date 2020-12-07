@@ -69,6 +69,7 @@ abstract class Filter : BaseTask() {
     }
 }
 
+/*
 abstract class Merge : BaseTask() {
     @get:InputFiles
     abstract val inputJars: ListProperty<RegularFile>
@@ -98,3 +99,4 @@ abstract class Merge : BaseTask() {
         target.deleteRecursively()
     }
 }
+*/

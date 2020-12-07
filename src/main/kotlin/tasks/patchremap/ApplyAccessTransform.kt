@@ -69,7 +69,7 @@ abstract class ApplyAccessTransform : BaseTask() {
         ensureParentExists(outputJar.file)
         ensureDeleted(outputJar.file)
 
-        val at = AccessTransformFormats.FML.read(atFile.file.toPath())
+        val at = AccessTransformFormats.FML.read(atFile.path)
 
         Atlas().apply {
             install {

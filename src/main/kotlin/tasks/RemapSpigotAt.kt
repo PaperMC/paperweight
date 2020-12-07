@@ -22,9 +22,12 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
 import java.util.jar.JarFile
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -32,7 +35,6 @@ import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.bombe.type.MethodDescriptor
 import org.cadixdev.bombe.type.signature.MethodSignature
-import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -97,10 +99,10 @@ abstract class RemapSpigotAt : BaseTask() {
             }
         }
 
-        val mappings = MappingFormats.TSRG.createReader(mapping.file.toPath()).use { it.read() }
+        val mappings = TinyMappingFormat.STANDARD.read(mapping.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
         val remappedAt = outputAt.remap(mappings)
 
-        AccessTransformFormats.FML.write(outputFile.file.toPath(), remappedAt)
+        AccessTransformFormats.FML.write(outputFile.path, remappedAt)
     }
 
     private fun parseAccess(text: String): AccessTransform {

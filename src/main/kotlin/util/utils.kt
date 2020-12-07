@@ -149,6 +149,8 @@ val RegularFileProperty.fileOrNull: File?
     get() = orNull?.asFile
 val RegularFileProperty.path: Path
     get() = file.toPath()
+val RegularFileProperty.pathOrNull: Path?
+    get() = fileOrNull?.toPath()
 val DirectoryProperty.file: File
     get() = get().asFile
 val DirectoryProperty.path: Path
