@@ -78,7 +78,7 @@ abstract class GenerateMappings : DefaultTask() {
             yarnMappings,
             MergeConfig.builder()
                 .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
-                .withMergeHandler(MergeHandler())
+                .withMergeHandler(ParamsMergeHandler())
                 .build()
         ).merge()
 
@@ -133,7 +133,7 @@ abstract class GenerateMappings : DefaultTask() {
      */
 }
 
-class MergeHandler : MappingSetMergerHandler {
+class ParamsMergeHandler : MappingSetMergerHandler {
 
     override fun mergeTopLevelClassMappings(
         left: TopLevelClassMapping,

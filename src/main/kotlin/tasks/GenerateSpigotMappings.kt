@@ -25,8 +25,8 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
+import io.papermc.paperweight.util.parentClass
 import io.papermc.paperweight.util.path
-import java.util.Optional
 import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
@@ -99,16 +99,12 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             mergedMappingSet,
             sourceMappings,
             MergeConfig.builder()
-                .withMergeHandler(SpigotPackageMergerHandler(newPackage, synths))
+                .withMergeHandler(SpigotMappingsMergerHandler(newPackage, synths))
                 .build()
         ).merge()
 
         val adjustedSourceMappings = adjustParamIndexes(sourceMappings)
-
-        val spigotToNamedSet = MappingSetMerger.create(
-            notchToSpigotSet.reverse(),
-            adjustedSourceMappings
-        ).merge()
+        val spigotToNamedSet = notchToSpigotSet.reverse().merge(adjustedSourceMappings)
 
         TinyMappingFormat.STANDARD.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
@@ -168,57 +164,11 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             }
         }
     }
-
-    /*
-    private fun addSyntheticMethodMappings(mappings: MappingSet): MappingSet {
-        val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
-        syntheticMethods.file.useLines { lines ->
-            for (line in lines) {
-                val (className, desc, synthName, baseName) = line.split(" ")
-                synths.computeIfAbsent(className) { hashMapOf() }
-                    .computeIfAbsent(desc) { hashMapOf() }[baseName] = synthName
-            }
-        }
-
-        val result = MappingSet.create()
-        for (old in mappings.topLevelClassMappings) {
-            val new = result.createTopLevelClassMapping(old.obfuscatedName, old.deobfuscatedName)
-            copyClassSynth(old, new, synths)
-        }
-
-        return result
-    }
-
-    private fun copyClassSynth(
-        from: ClassMapping<*, *>,
-        to: ClassMapping<*, *>,
-        synths: Map<String, MutableMap<String, MutableMap<String, String>>>
-    ) {
-        for (mapping in from.fieldMappings) {
-            to.createFieldMapping(mapping.signature, mapping.deobfuscatedName)
-        }
-        for (mapping in from.innerClassMappings) {
-            val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-            copyClassSynth(mapping, newMapping, synths)
-        }
-
-        val classMap = synths[from.fullObfuscatedName]
-        for (mapping in from.methodMappings) {
-            val names = classMap?.get(mapping.descriptor.toString())
-            val newName = names?.get(mapping.obfuscatedName) ?: mapping.obfuscatedName
-
-            val newMapping = to.createMethodMapping(MethodSignature.of(newName, mapping.descriptor.toString()), mapping.deobfuscatedName)
-            for (paramMapping in mapping.parameterMappings) {
-                newMapping.createParameterMapping(paramMapping.index, paramMapping.deobfuscatedName)
-            }
-        }
-    }
-     */
 }
 
 typealias Synths = Map<String, Map<String, Map<String, String>>>
 
-class SpigotPackageMergerHandler(
+class SpigotMappingsMergerHandler(
     private val newPackage: String,
     private val synths: Synths
 ) : MappingSetMergerHandler {
@@ -335,7 +285,6 @@ class SpigotPackageMergerHandler(
     ): MergeResult<MethodMapping?> {
         throw IllegalStateException("Unexpectedly merged method: $left")
     }
-
     override fun mergeDuplicateMethodMappings(
         left: MethodMapping,
         standardRightDuplicate: MethodMapping?,
@@ -349,16 +298,45 @@ class SpigotPackageMergerHandler(
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
         val newName = synthMethods?.get(left.obfuscatedName)
         return if (newName != null) {
-            val newLeftMapping: MethodMapping? = (left.parent.getMethodMapping(MethodSignature.of(newName, left.obfuscatedDescriptor)) as Optional<MethodMapping>).orNull
+            val newLeftMapping = left.parentClass.getMethodMapping(MethodSignature(newName, left.descriptor)).orNull
             val newMapping = if (newLeftMapping != null) {
-                target.createMethodMapping(newLeftMapping.signature, left.deobfuscatedName)
+                target.getOrCreateMethodMapping(newLeftMapping.signature).also {
+                    it.deobfuscatedName = left.deobfuscatedName
+                }
             } else {
-                target.createMethodMapping(left.signature, newName)
+                target.getOrCreateMethodMapping(left.signature).also {
+                    it.deobfuscatedName = newName
+                }
             }
             MergeResult(newMapping)
         } else {
-            MergeResult(target.createMethodMapping(left.signature, left.deobfuscatedName))
+            val newMapping = target.getOrCreateMethodMapping(left.signature).also {
+                it.deobfuscatedName = left.deobfuscatedName
+            }
+            return MergeResult(newMapping)
         }
+    }
+    override fun addLeftMethodMapping(
+        left: MethodMapping,
+        target: ClassMapping<*, *>,
+        context: MergeContext
+    ): MergeResult<MethodMapping?> {
+        // Check if Spigot maps this from a synthetic method name
+        var obfName = left.obfuscatedName
+        val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
+        if (synthMethods != null) {
+            // This is a reverse lookup
+            for ((base, synth) in synthMethods) {
+                if (left.obfuscatedName == synth) {
+                    obfName = base
+                    break
+                }
+            }
+        }
+
+        val newMapping = target.getOrCreateMethodMapping(obfName, left.descriptor)
+        newMapping.deobfuscatedName =  left.deobfuscatedName
+        return MergeResult(newMapping)
     }
 
     // Disable non-spigot mappings
@@ -376,9 +354,18 @@ class SpigotPackageMergerHandler(
         context: MergeContext
     ): MergeResult<MethodMapping?> {
         // Check if spigot changes this method automatically
-        val synthMethods = synths[right.parent.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
+        val synthMethods = synths[right.parentClass.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
         val newName = synthMethods?.get(right.obfuscatedName) ?: return MergeResult(null)
-        return MergeResult(target.createMethodMapping(MethodSignature.of(right.obfuscatedName, right.obfuscatedDescriptor), newName))
+
+        val newClassMapping = context.left.getClassMapping(right.parentClass.fullObfuscatedName).orNull
+        val newMethodMapping = newClassMapping?.getMethodMapping(MethodSignature(newName, right.descriptor))?.orNull
+        val newMapping = target.getOrCreateMethodMapping(right.signature)
+        if (newMethodMapping != null) {
+            newMapping.deobfuscatedName = newMethodMapping.deobfuscatedName
+        } else {
+            newMapping.deobfuscatedName = newName
+        }
+        return MergeResult(newMapping)
     }
 
     private fun prependPackage(name: String): String {
