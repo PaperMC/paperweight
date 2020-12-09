@@ -42,6 +42,8 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.io.TextMappingFormat
+import org.cadixdev.lorenz.model.ClassMapping
+import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.DirectoryProperty
@@ -156,12 +158,15 @@ val DirectoryProperty.file: File
 val DirectoryProperty.path: Path
     get() = file.toPath()
 
-inline fun <reified T> Project.contents(contentFile: Any, crossinline convert: (String) -> T): Provider<T> {
+inline fun <reified T : Any> Project.contents(contentFile: Any, crossinline convert: (String) -> T): Provider<T> {
     return providers.fileContents(layout.projectDirectory.file(contentFile.convertToFile().absolutePath))
         .asText
         .forUseAtConfigurationTime()
         .map { convert(it) }
 }
+
+val MemberMapping<*, *>.parentClass: ClassMapping<*, *>
+    get() = parent as ClassMapping<*, *>
 
 // We have to create our own task delegate because the ones Gradle provides don't work in plugin dev environments
 inline fun <reified T : Task> TaskContainer.registering(noinline configure: T.() -> Unit): TaskDelegateProvider<T> {

@@ -272,7 +272,7 @@ class SyntheticMethods {
         private val methods: MutableList<Data>
     ) : MethodNode(Opcodes.ASM9, access, name, descriptor, signature, exceptions) {
 
-        // This emulates the behavior of SpecialSource2's SyntheticFinder.addSynthetics() method
+        // This tries to match the behavior of SpecialSource2's SyntheticFinder.addSynthetics() method
         override fun visitEnd() {
             var nextLvt = 0
 
