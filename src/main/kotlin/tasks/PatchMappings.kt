@@ -1,6 +1,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.commentRegex
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
 import java.nio.file.Files
@@ -29,7 +30,7 @@ abstract class PatchMappings : DefaultTask() {
         patchMappings.pathOrNull?.let { patchFile ->
             val temp = Files.createTempFile("patch", "tiny")
             try {
-                val comment = Regex("\\s*#.*")
+                val comment = commentRegex()
                 // tiny format doesn't allow comments, so we manually remove them
                 // The tiny mappings reader also doesn't have a InputStream or Reader input...
                 Files.newBufferedReader(patchFile).useLines { lines ->

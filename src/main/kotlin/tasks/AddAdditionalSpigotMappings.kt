@@ -63,7 +63,10 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
 
     private fun addLines(inFile: File, appendFile: File?, outputFile: File) {
         val lines = mutableListOf<String>()
-        inFile.useLines { seq -> seq.forEach { lines.add(it) } }
+        inFile.useLines { seq ->
+            seq.filter { it.startsWith("") }
+        }
+        inFile.forEachLine { line -> lines += line }
         appendFile?.useLines { seq -> seq.forEach { lines.add(it) } }
         lines.sort()
         outputFile.bufferedWriter().use { writer ->

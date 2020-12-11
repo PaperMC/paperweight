@@ -24,9 +24,6 @@ package io.papermc.paperweight.util
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
-import com.opencsv.CSVParserBuilder
-import com.opencsv.CSVReader
-import com.opencsv.CSVReaderBuilder
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.BaseTask
@@ -40,8 +37,6 @@ import java.nio.file.Path
 import java.util.Optional
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.io.TextMappingFormat
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
@@ -64,10 +59,8 @@ val Project.ext: PaperweightExtension
 val ProjectLayout.cache: File
     get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").asFile
 
-fun writeMappings(format: TextMappingFormat, vararg mappings: Pair<MappingSet, File>) {
-    for ((set, file) in mappings) {
-        format.createWriter(file.toPath()).use { it.write(set) }
-    }
+fun commentRegex(): Regex {
+    return Regex("\\s*#.*")
 }
 
 fun redirect(input: InputStream, out: OutputStream): Thread {
@@ -87,10 +80,6 @@ object UselessOutputStream : OutputStream() {
     override fun write(b: Int) {
     }
 }
-
-fun getCsvReader(file: File): CSVReader = CSVReaderBuilder(file.bufferedReader())
-    .withCSVParser(CSVParserBuilder().withStrictQuotes(false).build())
-    .build()
 
 fun Any.convertToFile(): File {
     return when (this) {

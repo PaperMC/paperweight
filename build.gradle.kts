@@ -39,7 +39,7 @@ dependencies {
     implementation("org.cadixdev:lorenz-io-proguard:$lorenzVersion")
     implementation("org.cadixdev:atlas:0.2.0")
     implementation("org.cadixdev:at:0.1.0-rc1")
-    implementation("org.cadixdev:mercury:0.1.0-PW0-SNAPSHOT")
+    implementation("org.cadixdev:mercury:0.1.0-rc2-PW-SNAPSHOT")
 
     implementation("net.fabricmc:lorenz-tiny:3.0.0")
 }

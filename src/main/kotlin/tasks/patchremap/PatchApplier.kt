@@ -40,14 +40,6 @@ class PatchApplier(
 
     private val remappedBaseTag: String = "remapped-base"
 
-//    fun initRepo() {
-//        println("Initializing patch remap repo")
-//        git("branch", unmappedBranch).executeSilently()
-//        git("checkout", "--orphan", remappedBranch).executeSilently()
-//        git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>", "--allow-empty").executeSilently()
-//        git("checkout", unmappedBranch).executeSilently()
-//    }
-
     fun checkoutRemapped() {
         println("Switching to $remappedBranch without losing changes")
         git("symbolic-ref", "HEAD", "refs/heads/$remappedBranch").executeSilently()

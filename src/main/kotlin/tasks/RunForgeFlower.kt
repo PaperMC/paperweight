@@ -23,15 +23,13 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.McpConfig
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.decompile
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.runJar
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -39,14 +37,13 @@ import org.gradle.api.tasks.TaskAction
 abstract class RunForgeFlower : BaseTask() {
 
     @get:InputFile
-    abstract val configFile: RegularFileProperty
-    @get:InputFile
     abstract val executable: RegularFileProperty
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
-    @get:InputFile
-    abstract val libraries: RegularFileProperty
+
+    @get:Classpath
+    abstract val libraries: DirectoryProperty
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -64,35 +61,48 @@ abstract class RunForgeFlower : BaseTask() {
         }
         target.mkdirs()
 
-        val config = gson.fromJson<McpConfig>(configFile)
+        val libs = libraries.file.listFiles()?.sorted() ?: emptyList()
+        val tempFile = createTempFile("paperweight", "txt")
 
-        val argList = listOf(
-            "-ind=    ",
-            "-din=1",
-            "-rbr=1",
-            "-dgs=1",
-            "-asc=1",
-            "-rsy=1",
-            "-iec=1",
-            "-jvn=0",
-            "-isl=0",
-            "-iib=1",
-            "-log=TRACE",
-            "-cfg",
-            libraries.file.absolutePath,
-            inputJar.file.absolutePath,
-            target.absolutePath
-        )
+        try {
+            tempFile.bufferedWriter().use { writer ->
+                for (lib in libs) {
+                    if (lib.name.endsWith(".jar") && !lib.name.endsWith("-sources.jar")) {
+                        writer.appendln("-e=${lib.absolutePath}")
+                    }
+                }
+            }
 
-        val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        logFile.delete()
+            val argList = listOf(
+                "-ind=    ",
+                "-din=1",
+                "-rbr=1",
+                "-dgs=1",
+                "-asc=1",
+                "-rsy=1",
+                "-iec=1",
+                "-jvn=0",
+                "-isl=0",
+                "-iib=1",
+                "-log=TRACE",
+                "-cfg",
+                tempFile.absolutePath,
+                inputJar.file.absolutePath,
+                target.absolutePath
+            )
 
-        val jvmArgs = config.functions.decompile.jvmargs ?: listOf()
+            val logFile = layout.cache.resolve(paperTaskOutput("log"))
+            logFile.delete()
 
-        runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
+            val jvmArgs = listOf("-Xmx4G")
 
-        // FernFlower is weird with how it does directory output
-        target.resolve(inputJar.file.name).renameTo(out)
-        target.deleteRecursively()
+            runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
+
+            // FernFlower is weird with how it does directory output
+            target.resolve(inputJar.file.name).renameTo(out)
+            target.deleteRecursively()
+        } finally {
+            tempFile.delete()
+        }
     }
 }

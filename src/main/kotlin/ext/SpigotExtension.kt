@@ -26,17 +26,10 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 
 open class SpigotExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
-    var spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
-    var spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
-    var spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
-    var bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
-    var craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
-
-    init {
-        spigotDir.disallowUnsafeRead()
-        spigotApiDir.disallowUnsafeRead()
-        spigotServerDir.disallowUnsafeRead()
-        bukkitPatchDir.disallowUnsafeRead()
-        craftBukkitPatchDir.disallowUnsafeRead()
-    }
+    @Suppress("MemberVisibilityCanBePrivate")
+    val spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
+    val spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
+    val spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
+    val bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
+    val craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
 }

@@ -22,33 +22,28 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
-import io.papermc.paperweight.util.McpConfig
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.rename
 import io.papermc.paperweight.util.runJar
+import java.util.concurrent.ThreadLocalRandom
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class RunSpecialSource : BaseTask() {
+abstract class SpigotDecompileJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
     @get:InputFile
-    abstract val mappings: RegularFileProperty
-
-    @get:InputFile
-    abstract val configFile: RegularFileProperty
-    @get:InputFile
-    abstract val executable: RegularFileProperty
+    abstract val fernFlowerJar: RegularFileProperty
+    @get:Input
+    abstract val decompileCommand: Property<String>
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -59,26 +54,30 @@ abstract class RunSpecialSource : BaseTask() {
 
     @TaskAction
     fun run() {
-        val out = outputJar.file
-        ensureParentExists(out)
-        ensureDeleted(out)
+        val inputJarFile = inputJar.asFile.get()
+        val inputJarPath = inputJarFile.canonicalPath
 
-        val config = gson.fromJson<McpConfig>(configFile)
+        val outputJarFile = outputJar.asFile.get()
+        val decomp = outputJarFile.resolveSibling("decomp" + ThreadLocalRandom.current().nextInt())
 
-        val argList = config.functions.rename.args.map {
-            when (it) {
-                "{input}" -> inputJar.file.absolutePath
-                "{output}" -> outputJar.file.absolutePath
-                "{mappings}" -> mappings.file.absolutePath
-                else -> it
+        try {
+            if (!decomp.exists() && !decomp.mkdirs()) {
+                throw PaperweightException("Failed to create output directory: $decomp")
             }
+
+            val cmd = decompileCommand.get().split(" ").let { it.subList(3, it.size - 2) }.toMutableList()
+            cmd += inputJarPath
+            cmd += decomp.canonicalPath
+
+            val logFile = layout.cache.resolve(paperTaskOutput("log"))
+            logFile.delete()
+
+            runJar(fernFlowerJar, workingDir = layout.cache, logFile = logFile, args = *cmd.toTypedArray())
+
+            ensureDeleted(outputJarFile)
+            decomp.resolve(inputJarFile.name).renameTo(outputJarFile)
+        } finally {
+            decomp.deleteRecursively()
         }
-
-        val jvmArgs = config.functions.rename.jvmargs ?: listOf()
-
-        val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        logFile.delete()
-
-        runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
     }
 }

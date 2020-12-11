@@ -59,7 +59,7 @@ abstract class GenerateMappings : DefaultTask() {
     @get:InputFile
     abstract val vanillaMappings: RegularFileProperty
     @get:InputFile
-    abstract val yarnMappings: RegularFileProperty
+    abstract val paramMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
@@ -68,14 +68,14 @@ abstract class GenerateMappings : DefaultTask() {
     fun run() {
         val vanillaMappings = MappingFormats.byId("proguard").createReader(vanillaMappings.path).use { it.read() }.reverse()
 
-        val yarnMappings = FileSystems.newFileSystem(yarnMappings.path, null).use { fs ->
+        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null).use { fs ->
             val path = fs.getPath("mappings", "mappings.tiny")
             TinyMappingFormat.STANDARD.read(path, "official", "named")
         }
 
         val merged = MappingSetMerger.create(
             vanillaMappings,
-            yarnMappings,
+            paramMappings,
             MergeConfig.builder()
                 .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
                 .withMergeHandler(ParamsMergeHandler())
@@ -96,41 +96,6 @@ abstract class GenerateMappings : DefaultTask() {
         ensureParentExists(outputMappings)
         TinyMappingFormat.STANDARD.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
-
-    /*
-    private fun remapAnonymousClasses(mapping: InnerClassMapping, target: ClassMapping<*, *>) {
-        val newMapping = target.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-        remapMembers(mapping, newMapping)
-    }
-
-    private fun <T : ClassMapping<*, *>> remapMembers(mapping: T, newMapping: T) {
-        for (fieldMapping in mapping.fieldMappings) {
-            newMapping.createFieldMapping(fieldMapping.obfuscatedName, fieldMapping.deobfuscatedName)
-        }
-        for (methodMapping in mapping.methodMappings) {
-            newMapping.createMethodMapping(methodMapping.signature, methodMapping.deobfuscatedName)
-        }
-        for (innerClassMapping in mapping.innerClassMappings) {
-            remapAnonymousClasses(innerClassMapping, newMapping)
-        }
-    }
-     */
-
-    /*
-    private fun mergeClass(vanillaMapping: ClassMapping<*, *>, yarnMapping: ClassMapping<*, *>) {
-        for (vanillaMethod in vanillaMapping.methodMappings) {
-            val yarnMethod = yarnMapping.getMethodMapping(vanillaMethod.signature).orNull ?: continue
-            for (yarnParam in yarnMethod.parameterMappings) {
-                vanillaMethod.getOrCreateParameterMapping(yarnParam.index).deobfuscatedName = yarnParam.deobfuscatedName
-            }
-        }
-
-        for (vanillaClass in vanillaMapping.innerClassMappings) {
-            val yarnClass = yarnMapping.getInnerClassMapping(vanillaClass.obfuscatedName).orNull ?: continue
-            mergeClass(vanillaClass, yarnClass)
-        }
-    }
-     */
 }
 
 class ParamsMergeHandler : MappingSetMergerHandler {

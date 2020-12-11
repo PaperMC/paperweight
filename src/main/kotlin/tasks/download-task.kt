@@ -23,16 +23,8 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MavenArtifact
-import io.papermc.paperweight.util.McpConfig
-import io.papermc.paperweight.util.McpJvmCommand
-import io.papermc.paperweight.util.decompile
 import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.mcinject
-import io.papermc.paperweight.util.rename
 import java.io.File
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
@@ -51,7 +43,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
-import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.w3c.dom.Element
 
@@ -68,85 +59,6 @@ abstract class DownloadTask : DefaultTask() {
 
     @TaskAction
     fun run() = downloader.get().download(url, outputFile)
-}
-
-abstract class DownloadMcpFiles : DefaultTask() {
-
-    @get:Input
-    abstract val mcpMinecraftVersion: Property<String>
-    @get:Input
-    abstract val mcpConfigVersion: Property<String>
-    @get:Input
-    abstract val mcpMappingsChannel: Property<String>
-    @get:Input
-    abstract val mcpMappingsVersion: Property<String>
-
-    @get:OutputFile
-    abstract val configZip: RegularFileProperty
-    @get:OutputFile
-    abstract val mappingsZip: RegularFileProperty
-
-    @get:Internal
-    abstract val downloader: Property<DownloadService>
-
-    @TaskAction
-    fun run() {
-        val repo = listOf(Constants.FORGE_MAVEN_URL)
-
-        MavenArtifact(
-            group = "de.oceanlabs.mcp",
-            artifact = "mcp_config",
-            version = mcpMinecraftVersion.get() + "-" + mcpConfigVersion.get(),
-            extension = "zip"
-        ).downloadToFile(downloader.get(), configZip.file, repo)
-
-        MavenArtifact(
-            group = "de.oceanlabs.mcp",
-            artifact = "mcp_${mcpMappingsChannel.get()}",
-            version = mcpMappingsVersion.get(),
-            extension = "zip"
-        ).downloadToFile(downloader.get(), mappingsZip.file, repo)
-    }
-}
-
-abstract class DownloadMcpTools : DefaultTask() {
-
-    @get:InputFile
-    abstract val configFile: RegularFileProperty
-
-    @get:OutputFile
-    abstract val forgeFlowerFile: RegularFileProperty
-    @get:OutputFile
-    abstract val mcInjectorFile: RegularFileProperty
-    @get:OutputFile
-    abstract val specialSourceFile: RegularFileProperty
-
-    @get:Internal
-    abstract val downloader: Property<DownloadService>
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    @TaskAction
-    fun run() {
-        val config = gson.fromJson<McpConfig>(configFile)
-
-        val queue = workerExecutor.noIsolation()
-
-        submitDownload(queue, config.functions.decompile, forgeFlowerFile)
-        submitDownload(queue, config.functions.mcinject, mcInjectorFile)
-        submitDownload(queue, config.functions.rename, specialSourceFile)
-    }
-
-    private fun submitDownload(queue: WorkQueue, cmd: McpJvmCommand, file: RegularFileProperty) {
-        queue.submit(DownloadWorker::class) {
-            repos.add(cmd.repo)
-            artifact.set(cmd.version)
-            target.set(file.file)
-            downloadToDir.set(false)
-            downloader.set(this@DownloadMcpTools.downloader)
-        }
-    }
 }
 
 abstract class DownloadMcLibraries : DefaultTask() {

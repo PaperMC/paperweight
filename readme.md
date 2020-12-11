@@ -8,7 +8,7 @@ Install this plugin to Maven Local:
 ./gradlew install
 ```
 
-Clone a new Paper repo and checkout the `feature/mcp` branch.
+Clone a new Paper repo and checkout the `feature/mojmap` branch.
 
 Run the task (on the Paper repo) to set up the development environment:
 

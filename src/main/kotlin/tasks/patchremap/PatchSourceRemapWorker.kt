@@ -22,9 +22,6 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.tasks.sourceremap.ConstructorsData
-import io.papermc.paperweight.tasks.sourceremap.ParamNames
-import io.papermc.paperweight.tasks.sourceremap.SrgParameterRemapper
 import java.nio.file.Files
 import java.nio.file.Path
 import org.cadixdev.lorenz.MappingSet
@@ -34,8 +31,6 @@ import org.cadixdev.mercury.remapper.MercuryRemapper
 class PatchSourceRemapWorker(
     mappings: MappingSet,
     classpath: Collection<Path>,
-    paramNames: ParamNames,
-    constructorsData: ConstructorsData,
     private val inputDir: Path,
     private val outputDir: Path
 ) {
@@ -46,8 +41,7 @@ class PatchSourceRemapWorker(
         merc.classPath.addAll(classpath)
 
         merc.processors.addAll(listOf(
-                 MercuryRemapper.create(mappings),
-                 SrgParameterRemapper(mappings, constructorsData, paramNames)
+                 MercuryRemapper.create(mappings)
         ))
 
         merc.isGracefulClasspathChecks = true

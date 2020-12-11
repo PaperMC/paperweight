@@ -31,12 +31,14 @@ open class CraftBukkitExtension(objects: ObjectFactory, workDir: DirectoryProper
     val bukkitDir: DirectoryProperty = objects.dirFrom(workDir, "Bukkit")
     val craftBukkitDir: DirectoryProperty = objects.dirFrom(workDir, "CraftBukkit")
     val patchDir: DirectoryProperty = objects.dirFrom(craftBukkitDir, "nms-patches")
+
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataDir: DirectoryProperty = objects.dirFrom(workDir, "BuildData")
+    val buildDataInfo: RegularFileProperty = objects.fileFrom(buildDataDir, "info.json")
     val mappingsDir: DirectoryProperty = objects.dirFrom(buildDataDir, "mappings")
     val excludesFile: RegularFileProperty = objects.bukkitFileFrom(mappingsDir, "exclude")
     val atFile: RegularFileProperty = objects.bukkitFileFrom(mappingsDir, "at")
-    val buildDataInfo: RegularFileProperty = objects.fileFrom(buildDataDir, "info.json")
+
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataBinDir: DirectoryProperty = objects.dirFrom(buildDataDir, "bin")
     val fernFlowerJar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "fernflower.jar")

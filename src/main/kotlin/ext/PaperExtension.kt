@@ -38,16 +38,9 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val mcpDir: DirectoryProperty = objects.dirWithDefault(layout, "mcp")
+    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
     val additionalSpigotMemberMappings: RegularFileProperty = objects.fileProperty()
-    val libraryClassImports: RegularFileProperty = objects.fileFrom(mcpDir, "library-imports.txt")
+    val libraryClassImports: RegularFileProperty = objects.fileFrom(buildDataDir, "library-imports.txt")
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
-
-    init {
-        spigotApiPatchDir.disallowUnsafeRead()
-        spigotServerPatchDir.disallowUnsafeRead()
-        paperApiDir.disallowUnsafeRead()
-        paperServerDir.disallowUnsafeRead()
-    }
 }
