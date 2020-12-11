@@ -39,8 +39,6 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:InputFile
     abstract val remappedSource: RegularFileProperty
     @get:InputFile
-    abstract val templateGitIgnore: RegularFileProperty
-    @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
@@ -88,10 +86,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
             McDev.importMcDev(patches, sourceMcDevJar.file, libraryImports.file, mcLibrariesDir.file, sourceDir)
 
-            templateGitIgnore.file.copyTo(outputFile.resolve(".gitignore"))
-
-            git("add", ".gitignore", ".").executeSilently()
+            git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>").executeSilently()
+            git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.file, printOutput.get())
         }

@@ -32,7 +32,6 @@ import javax.inject.Inject
 import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
-import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
@@ -61,8 +60,6 @@ abstract class RemapSources : ZippedTask() {
     @get:InputDirectory
     abstract val spigotDeps: DirectoryProperty
 
-    @get:InputFile
-    abstract val constructors: RegularFileProperty
     @get:InputDirectory
     abstract val spigotServerDir: DirectoryProperty
     @get:InputDirectory
@@ -96,7 +93,6 @@ abstract class RemapSources : ZippedTask() {
             classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files)
 
             mappings.set(this@RemapSources.mappings.file)
-            constructors.set(this@RemapSources.constructors.file)
             inputDir.set(srcDir)
 
             outputDir.set(rootDir)
@@ -112,10 +108,6 @@ abstract class RemapSources : ZippedTask() {
             val mappingSet = TinyMappingFormat.STANDARD.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
             val processAt = AccessTransformSet.create()
 
-            val constructorsData = parseConstructors(parameters.constructors.file)
-
-            val paramNames: ParamNames = newParamNames()
-
             // Remap any references Spigot maps to SRG
             Mercury().let { merc ->
                 merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
@@ -128,22 +120,19 @@ abstract class RemapSources : ZippedTask() {
                 merc.processors.addAll(listOf(
                     MercuryRemapper.create(mappingSet),
                     BridgeMethodRewriter.create(),
-                    AccessTransformerRewriter.create(processAt),
-                    SrgParameterRemapper(mappingSet, constructorsData, paramNames)
+                    AccessTransformerRewriter.create(processAt)
                 ))
 
                 merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
             }
 
             AccessTransformFormats.FML.write(parameters.generatedAtOutput.path, processAt)
-            writeParamNames(paramNames, parameters.paramNamesOutput.file)
         }
     }
 
     interface RemapParams : WorkParameters {
         val classpath: ListProperty<File>
         val mappings: RegularFileProperty
-        val constructors: RegularFileProperty
         val inputDir: RegularFileProperty
 
         val generatedAtOutput: RegularFileProperty

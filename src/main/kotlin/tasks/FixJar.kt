@@ -3,7 +3,6 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.AsmUtil
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import java.io.ByteArrayInputStream
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -76,8 +75,12 @@ abstract class FixJar : BaseTask(), AsmUtil {
             }
         }
     }
-}
+    }
 
+/*
+ * This was adapted from code originally written by Pokechu22 in MCInjector
+ * Link: https://github.com/ModCoderPack/MCInjector/pull/3
+ */
 class ParameterAnnotationFixer(
     private val node: ClassNode,
     classVisitor: ClassVisitor?

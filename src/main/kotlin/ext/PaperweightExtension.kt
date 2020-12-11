@@ -23,9 +23,9 @@
 package io.papermc.paperweight.ext
 
 import org.gradle.api.Action
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.property
@@ -36,23 +36,11 @@ open class PaperweightExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
     val minecraftVersion: Property<String> = objects.property()
-    val mcpMinecraftVersion: Property<String> = objects.property<String>().convention(minecraftVersion)
-    val mcpConfigVersion: Property<String> = objects.property()
-    val mcpMappingsChannel: Property<String> = objects.property()
-    val mcpMappingsVersion: Property<String> = objects.property()
-
-    val mcpConfigFile: RegularFileProperty = objects.fileProperty().convention(null)
+    val serverProject: Property<Project> = objects.property()
 
     val craftBukkit = CraftBukkitExtension(objects, workDir)
     val spigot = SpigotExtension(objects, workDir)
     val paper = PaperExtension(objects, layout)
-
-    init {
-        minecraftVersion.disallowUnsafeRead()
-        mcpMinecraftVersion.disallowUnsafeRead()
-        mcpMappingsChannel.disallowUnsafeRead()
-        mcpMappingsVersion.disallowUnsafeRead()
-    }
 
     fun craftBukkit(action: Action<in CraftBukkitExtension>) {
         action.execute(craftBukkit)

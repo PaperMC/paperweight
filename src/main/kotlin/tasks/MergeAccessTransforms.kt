@@ -23,7 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats

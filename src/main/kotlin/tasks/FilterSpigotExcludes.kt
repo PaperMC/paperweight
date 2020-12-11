@@ -22,38 +22,32 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
-import org.gradle.api.file.DirectoryProperty
+import java.io.File
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.InputFile
 
-abstract class WriteLibrariesFile : BaseTask() {
+/**
+ * Because Spigot doesn't remap all classes, there are class and package name clashes if we don't do this in the source
+ * remap step. Other than that, we don't need this jar
+ */
+abstract class FilterSpigotExcludes : ZippedTask() {
 
-    @get:Classpath
-    abstract val libraries: DirectoryProperty
+    @get:InputFile
+    abstract val excludesFile: RegularFileProperty
 
-    @get:OutputFile
-    abstract val outputFile: RegularFileProperty
-
-    override fun init() {
-        outputFile.convention(defaultOutput("txt"))
-    }
-
-    @TaskAction
-    fun run() {
-        val files = libraries.file.listFiles()?.sorted()
-            ?: throw PaperweightException("Libraries directory does not exist")
-
-        outputFile.file.delete()
-        outputFile.file.bufferedWriter().use { writer ->
-            for (file in files) {
-                if (file.name.endsWith(".jar") && !file.name.endsWith("-sources.jar")) {
-                    writer.appendln("-e=${file.absolutePath}")
+    override fun run(rootDir: File) {
+        excludesFile.file.useLines { lines ->
+            for (line in lines) {
+                if (line.startsWith('#') || line.isBlank()) {
+                    continue
                 }
+                val file = if (line.contains('/')) {
+                    rootDir.resolve("$line.class")
+                } else {
+                    rootDir.resolve("net/minecraft/server/$line.class")
+                }
+                file.delete()
             }
         }
     }

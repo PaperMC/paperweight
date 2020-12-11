@@ -27,7 +27,6 @@ import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.runJar
-import java.nio.file.Paths
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -35,7 +34,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class RemapVanillaJarSpigot : BaseTask() {
+abstract class SpigotRemapJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
@@ -92,10 +91,8 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
                 logFile.delete()
                 runJar(
                     specialSource2Jar,
-//                    Paths.get("/home/demonwav/IdeaProjects/SpecialSource2/build/libs/SpecialSource2-2.0.0-PW-SNAPSHOT-all.jar"),
                     workingDir = work,
                     logFile = logFile,
-//                    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"),
                     args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
                         // ignore excludes, we actually want to map every class
                         it != "-e"
@@ -109,11 +106,9 @@ abstract class RemapVanillaJarSpigot : BaseTask() {
                 val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
                 logFile.delete()
                 runJar(
-//                    Paths.get("/home/demonwav/IdeaProjects/SpecialSource2/build/libs/SpecialSource2-2.0.0-PW-SNAPSHOT-all.jar"),
                     specialSource2Jar,
                     workingDir = work,
                     logFile = logFile,
-//                    jvmArgs = listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"),
                     args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
                 )
             } catch (e: Exception) {

@@ -27,58 +27,41 @@ import org.gradle.api.Task
 object Constants {
     const val EXTENSION = "paperweight"
 
-    const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven"
+    const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven/"
+    const val FABRIC_MAVEN_URL = "https://maven.fabricmc.net/"
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
+
     const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
 
-    const val YARN_CONFIG = "yarn"
+    const val PARAM_MAPPINGS_CONFIG = "paramMappings"
     const val REMAPPER_CONFIG = "remapper"
+    const val DECOMPILER_CONFIG = "decompiler"
 
     const val CACHE_PATH = "caches"
     private const val PAPER_PATH = "paperweight"
 
     private const val JARS_PATH = "$PAPER_PATH/jars"
     const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
-    const val MCP_TOOLS_PATH = "$JARS_PATH/tools"
-    const val MCP_ZIPS_PATH = "$JARS_PATH/mcp"
     const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
 
-    const val MCP_DATA_DIR = "mcp/data"
-    const val MCP_MAPPINGS_DIR = "mcp/mappings"
-    const val SERVER_MAPPINGS = "mcp/server_mappings.txt"
-    const val SRG_DIR = "$MCP_MAPPINGS_DIR/srgs"
+    private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
+    const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
+    const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
+    const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
+    const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patch.tiny"
 
     const val OBF_NAMESPACE = "official"
     const val SPIGOT_NAMESPACE = "spigot"
     const val DEOBF_NAMESPACE = "mojang+yarn"
 
-    const val MCP_CONFIG_JSON = "$MCP_DATA_DIR/config.json"
-
-    const val PAPER_FIELDS_CSV = "$MCP_MAPPINGS_DIR/paper_fields.csv"
-    const val PAPER_METHODS_CSV = "$MCP_MAPPINGS_DIR/paper_methods.csv"
-    const val PAPER_PARAMS_CSV = "$MCP_MAPPINGS_DIR/paper_params.csv"
-
-    const val NOTCH_TO_SRG = "$SRG_DIR/notch-srg.tsrg"
-    const val NOTCH_TO_MCP = "$SRG_DIR/notch-mcp.tsrg"
-    const val NOTCH_TO_SPIGOT = "$SRG_DIR/notch-spigot.tsrg"
-
-    const val MCP_TO_NOTCH = "$SRG_DIR/mcp-notch.tsrg"
-    const val MCP_TO_SRG = "$SRG_DIR/mcp-srg.tsrg"
-    const val MCP_TO_SPIGOT = "$SRG_DIR/mcp-spigot.tsrg"
-
-    const val SRG_TO_NOTCH = "$SRG_DIR/srg-notch.tsrg"
-    const val SRG_TO_MCP = "$SRG_DIR/srg-mcp.tsrg"
-    const val SRG_TO_SPIGOT = "$SRG_DIR/srg-spigot.tsrg"
-
-    const val SPIGOT_TO_NOTCH = "$SRG_DIR/spigot-notch.tsrg"
-    const val SPIGOT_TO_SRG = "$SRG_DIR/spigot-srg.tsrg"
-    const val SPIGOT_TO_MCP = "$SRG_DIR/spigot-mcp.tsrg"
-
-    const val MC_MANIFEST = "jsons/McManifest.json"
-    const val VERSION_JSON = "jsons/McVersion.json"
-    const val MC_LIBRARIES = "jsons/McLibraries.txt"
+    private const val DATA_PATH = "$PAPER_PATH/data"
+    const val MC_MANIFEST = "$DATA_PATH/McManifest.json"
+    const val VERSION_JSON = "$DATA_PATH/McVersion.json"
+    const val MC_LIBRARIES = "$DATA_PATH/McLibraries.txt"
 
     private const val TASK_CACHE = "$PAPER_PATH/taskCache"
+
+    const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
 
     fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
     fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"

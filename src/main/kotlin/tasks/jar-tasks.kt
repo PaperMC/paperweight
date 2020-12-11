@@ -25,17 +25,14 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.zip
-import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class Filter : BaseTask() {
+abstract class FilterJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
@@ -57,7 +54,7 @@ abstract class Filter : BaseTask() {
 
         fs.copy {
             from(archives.zipTree(inputJar)) {
-                for (inc in this@Filter.includes.get()) {
+                for (inc in this@FilterJar.includes.get()) {
                     include(inc)
                 }
             }
@@ -68,35 +65,3 @@ abstract class Filter : BaseTask() {
         target.deleteRecursively()
     }
 }
-
-/*
-abstract class Merge : BaseTask() {
-    @get:InputFiles
-    abstract val inputJars: ListProperty<RegularFile>
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    fun run() {
-        val out = outputJar.file
-        val target = out.resolveSibling("${out.name}.dir")
-        target.mkdirs()
-
-        fs.copy {
-            for (file in inputJars.get()) {
-                from(archives.zipTree(file))
-            }
-            into(target)
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        }
-
-        zip(target, outputJar)
-        target.deleteRecursively()
-    }
-}
-*/

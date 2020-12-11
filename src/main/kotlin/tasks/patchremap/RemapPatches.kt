@@ -22,17 +22,13 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.BaseTask
-import io.papermc.paperweight.tasks.sourceremap.parseConstructors
-import io.papermc.paperweight.tasks.sourceremap.parseParamNames
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
-import java.util.zip.ZipFile
 import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -51,8 +47,6 @@ abstract class RemapPatches : BaseTask() {
 
     @get:InputDirectory
     abstract val inputPatchDir: DirectoryProperty
-//    @get:InputFile
-//    abstract val sourceJar: RegularFileProperty
     @get:InputDirectory
     abstract val apiPatchDir: DirectoryProperty
 
@@ -74,12 +68,6 @@ abstract class RemapPatches : BaseTask() {
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
 
-    // For parameter name remapping
-    @get:InputFile
-    abstract val parameterNames: RegularFileProperty
-    @get:InputFile
-    abstract val constructors: RegularFileProperty
-
     @get:OutputDirectory
     abstract val outputPatchDir: DirectoryProperty
 
@@ -100,10 +88,6 @@ abstract class RemapPatches : BaseTask() {
         }
 
         patches.sort()
-
-        // Setup param remapping
-        val constructorsData = parseConstructors(constructors.file)
-        val paramMap = parseParamNames(parameterNames.file)
 
         val mappings = MappingFormats.TSRG.createReader(mappingsFile.path).use { it.read() }
 
@@ -130,8 +114,6 @@ abstract class RemapPatches : BaseTask() {
         PatchSourceRemapWorker(
             mappings,
             listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")).map { it.toPath() },
-            paramMap,
-            constructorsData,
             sourceInputDir.toPath(),
             tempOutputDir.toPath()
         ).let { remapper ->

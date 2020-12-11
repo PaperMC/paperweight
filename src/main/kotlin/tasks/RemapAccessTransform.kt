@@ -24,11 +24,9 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.io.AccessTransformFormats
-import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile

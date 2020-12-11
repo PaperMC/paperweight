@@ -272,54 +272,76 @@ class SyntheticMethods {
         private val methods: MutableList<Data>
     ) : MethodNode(Opcodes.ASM9, access, name, descriptor, signature, exceptions) {
 
+        private enum class State {
+            IN_PARAMS,
+            INVOKE,
+            RETURN,
+            OTHER_INSN
+        }
+
         // This tries to match the behavior of SpecialSource2's SyntheticFinder.addSynthetics() method
         override fun visitEnd() {
+            var state = State.IN_PARAMS
             var nextLvt = 0
 
-            val insns = instructions.iterator().asSequence()
-                .filter { it !is LabelNode && it !is LineNumberNode && it !is TypeInsnNode }
-                .dropWhile {
-                    if (it !is VarInsnNode || it.`var` != nextLvt) {
-                        return@dropWhile false
-                    }
+            var invokeInsn: MethodInsnNode? = null
 
-                    nextLvt++
-                    if (it.opcode == Opcodes.LLOAD || it.opcode == Opcodes.DLOAD) {
-                        nextLvt++
-                    }
-                    return@dropWhile true
+            loop@for (insn in instructions) {
+                if (insn is LabelNode || insn is LineNumberNode || insn is TypeInsnNode) {
+                    continue
                 }
-                .take(3)
-                .toList()
 
-            // Must only have 2 instructions left
-            if (insns.size != 2) {
-                return
+                if (state == State.IN_PARAMS) {
+                    if (insn !is VarInsnNode || insn.`var` != nextLvt) {
+                        state = State.INVOKE
+                    }
+                }
+
+                when (state) {
+                    State.IN_PARAMS -> {
+                        nextLvt++
+                        if (insn.opcode == Opcodes.LLOAD || insn.opcode == Opcodes.DLOAD) {
+                            nextLvt++
+                        }
+                    }
+                    State.INVOKE -> {
+                        // Must be a virtual or interface invoke instruction
+                        if ((insn.opcode != Opcodes.INVOKEVIRTUAL && insn.opcode != Opcodes.INVOKEINTERFACE) || insn !is MethodInsnNode) {
+                            return
+                        }
+
+                        invokeInsn = insn
+                        state = State.RETURN
+                    }
+                    State.RETURN -> {
+                        // The next instruction must be a return
+                        if (insn.opcode !in Opcodes.IRETURN..Opcodes.RETURN) {
+                            return
+                        }
+
+                        state = State.OTHER_INSN
+                    }
+                    State.OTHER_INSN -> {
+                        // We shouldn't see any other instructions
+                        return
+                    }
+                }
             }
 
-            val insn = insns.first()
-            // Must be a virtual or interface invoke instruction
-            if ((insn.opcode != Opcodes.INVOKEVIRTUAL && insn.opcode != Opcodes.INVOKEINTERFACE) || insn !is MethodInsnNode) {
-                return
-            }
-
-            // The next instruction must be a return
-            val next = insns[1]
-            if (next.opcode !in Opcodes.IRETURN..Opcodes.RETURN) {
-                return
-            }
+            val invoke = invokeInsn ?: return
 
             // Must be a method in the same class with a different signature
-            if (className != insn.owner || name == insn.name || desc == insn.desc) {
+            if (className != invoke.owner || name == invoke.name || desc == invoke.desc) {
                 return
             }
+
             // The descriptors need to be the same size
-            if (Type.getArgumentTypes(desc).size != Type.getArgumentTypes(insn.desc).size) {
+            if (Type.getArgumentTypes(desc).size != Type.getArgumentTypes(invoke.desc).size) {
                 return
             }
 
             // Add this method as a synthetic accessor for insn.name
-            methods += Data(className, insn.desc, name, insn.name)
+            methods += Data(className, invoke.desc, name, invoke.name)
         }
     }
 
