@@ -82,6 +82,15 @@ class PatchApplier(
         git("commit", "-m", message, "--author=$author", "--date=$time").execute()
     }
 
+    fun commitRemappingDifferences(remapper: PatchSourceRemapWorker) {
+        checkoutRemapped() // Switch to remapped branch without checkout out files
+        remapper.remap() // Remap to new mappings
+        println("Committing remap")
+        git("add", ".").executeSilently()
+        git("commit", "-m", "Remap", "--author=Initial <auto@mated.null>").executeSilently()
+        checkoutOld()
+    }
+
     fun applyPatch(patch: File) {
         println("Applying patch ${patch.name}")
         val result = git("am", "--3way", "--ignore-whitespace", patch.absolutePath).runOut()
