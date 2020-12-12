@@ -107,7 +107,7 @@ fun ControllableOutputTask.applyGitPatches(git: Git, target: String, outputDir: 
     if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePath }.toTypedArray()).showErrors().run() != 0) {
         statusFile.writeText("1")
         logger.error("***   Please review above details and finish the apply then")
-        logger.error("***   save the changes with ./gradlew `rebuildPatches`")
+        logger.error("***   save the changes with `./gradlew rebuildPaperPatches`")
 
         if (OperatingSystem.current().isWindows) {
             logger.error("")
