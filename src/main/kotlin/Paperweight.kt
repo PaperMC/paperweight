@@ -30,32 +30,9 @@ import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.ext.PaperweightExtension
-import io.papermc.paperweight.tasks.AddAdditionalSpigotMappings
-import io.papermc.paperweight.tasks.ApplyDiffPatches
-import io.papermc.paperweight.tasks.ApplyGitPatches
-import io.papermc.paperweight.tasks.ApplyPaperPatches
-import io.papermc.paperweight.tasks.DownloadMcLibraries
-import io.papermc.paperweight.tasks.DownloadServerJar
-import io.papermc.paperweight.tasks.DownloadSpigotDependencies
-import io.papermc.paperweight.tasks.DownloadTask
-import io.papermc.paperweight.tasks.FilterJar
-import io.papermc.paperweight.tasks.FilterSpigotExcludes
-import io.papermc.paperweight.tasks.FixJar
-import io.papermc.paperweight.tasks.GenerateMappings
-import io.papermc.paperweight.tasks.GenerateSpigotMappings
-import io.papermc.paperweight.tasks.InspectVanillaJar
-import io.papermc.paperweight.tasks.MergeAccessTransforms
-import io.papermc.paperweight.tasks.PatchMappings
-import io.papermc.paperweight.tasks.RemapAccessTransform
-import io.papermc.paperweight.tasks.RemapJar
-import io.papermc.paperweight.tasks.RemapSpigotAt
-import io.papermc.paperweight.tasks.RunForgeFlower
-import io.papermc.paperweight.tasks.SetupMcLibraries
-import io.papermc.paperweight.tasks.SpigotDecompileJar
-import io.papermc.paperweight.tasks.SpigotRemapJar
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
-import io.papermc.paperweight.tasks.RemapSources
 import io.papermc.paperweight.util.BuildDataInfo
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
@@ -186,6 +163,25 @@ class Paperweight : Plugin<Project> {
             group = "Paper"
             description = "Set up the Paper development environment"
             dependsOn(patchPaperApi, patchPaperServer)
+        }
+
+        val rebuildPaperApi by tasks.registering<RebuildPaperPatches> {
+            inputDir.set(extension.paper.paperApiDir)
+
+            patchDir.set(extension.paper.spigotApiPatchDir)
+        }
+
+        val rebuildPaperServer by tasks.registering<RebuildPaperPatches> {
+            inputDir.set(extension.paper.paperServerDir)
+            server.set(true)
+
+            patchDir.set(extension.paper.spigotServerPatchDir)
+        }
+
+        val rebuildPaperPatches by tasks.registering<Task> {
+            group = "Paper"
+            description = "Rebuilds patches to api and server"
+            dependsOn(rebuildPaperApi, rebuildPaperServer)
         }
 
         createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks, applyMergedAt)
