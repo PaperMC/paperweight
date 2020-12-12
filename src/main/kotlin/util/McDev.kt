@@ -34,6 +34,8 @@ object McDev {
             .filter { !it.exists() }
             .toSet()
 
+        println("Importing ${importMcDev.size} classes from vanilla...")
+
         ZipFile(decompJar).use { zipFile ->
             for (file in importMcDev) {
                 if (!file.parentFile.exists()) {
