@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
+import io.papermc.paperweight.util.Constants
 import java.nio.file.Files
 import java.nio.file.Path
 import org.cadixdev.lorenz.MappingSet
@@ -50,7 +51,7 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
-        println("mapping back to srg")
+        println("mapping to ${Constants.DEOBF_NAMESPACE}")
 
         merc.rewrite(inputDir, outputDir)
 

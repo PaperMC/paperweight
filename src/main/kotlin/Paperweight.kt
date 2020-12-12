@@ -55,7 +55,7 @@ import io.papermc.paperweight.tasks.SpigotDecompileJar
 import io.papermc.paperweight.tasks.SpigotRemapJar
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
-import io.papermc.paperweight.tasks.sourceremap.RemapSources
+import io.papermc.paperweight.tasks.RemapSources
 import io.papermc.paperweight.util.BuildDataInfo
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
@@ -103,9 +103,6 @@ class Paperweight : Plugin<Project> {
                 }
             }
             maven(Constants.FORGE_MAVEN_URL) {
-                metadataSources {
-                    artifact()
-                }
                 content {
                     onlyForConfigurations(Constants.DECOMPILER_CONFIG)
                 }
@@ -151,8 +148,6 @@ class Paperweight : Plugin<Project> {
         val vanillaTasks = createVanillaTasks(initialTasks, generalTasks)
         val spigotTasks = createSpigotTasks(generalTasks, vanillaTasks)
 
-        createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks)
-
         val applyMergedAt by tasks.registering<ApplyAccessTransform> {
             inputJar.set(vanillaTasks.fixJar.flatMap { it.outputJar })
             atFile.set(spigotTasks.mergeGeneratedAts.flatMap { it.outputFile })
@@ -192,6 +187,8 @@ class Paperweight : Plugin<Project> {
             description = "Set up the Paper development environment"
             dependsOn(patchPaperApi, patchPaperServer)
         }
+
+        createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks, applyMergedAt)
     }
 
     // Shared task containers
@@ -465,23 +462,13 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createPatchRemapTasks(generalTasks: GeneralTasks, vanillaTasks: VanillaTasks, spigotTasks: SpigotTasks) {
+    private fun Project.createPatchRemapTasks(
+        generalTasks: GeneralTasks,
+        vanillaTasks: VanillaTasks,
+        spigotTasks: SpigotTasks,
+        applyMergedAt: TaskProvider<ApplyAccessTransform>
+    ) {
         val extension: PaperweightExtension = ext
-
-        /*
-         * I don't remember what this is supposed to be for tbh
-        val patchPaperServerForPatchRemap by tasks.registering<ApplyPaperPatches> {
-            patchDir.set(extension.paper.spigotServerPatchDir)
-            remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
-
-            outputDir.set(cache.resolve("patch-paper-server-for-remap"))
-        }
-         */
-
-        val applyVanillaSrgAt by tasks.registering<ApplyAccessTransform> {
-            inputJar.set(vanillaTasks.fixJar.flatMap { it.outputJar })
-            atFile.set(spigotTasks.mergeGeneratedAts.flatMap { it.outputFile })
-        }
 
         /*
          * To ease the waiting time for debugging this task, all of the task dependencies have been removed (notice all
@@ -507,7 +494,7 @@ class Paperweight : Plugin<Project> {
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
             classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar }.get())
             classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get())
-            classpathJars.add(applyVanillaSrgAt.flatMap { it.outputJar }.get())
+            classpathJars.add(applyMergedAt.flatMap { it.outputJar }.get())
 
             spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir }.get())
             spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir }.get())

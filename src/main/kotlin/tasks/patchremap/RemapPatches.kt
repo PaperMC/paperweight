@@ -23,12 +23,14 @@
 package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.tasks.BaseTask
+import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
+import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -89,7 +91,7 @@ abstract class RemapPatches : BaseTask() {
 
         patches.sort()
 
-        val mappings = MappingFormats.TSRG.createReader(mappingsFile.path).use { it.read() }
+        val mappings = TinyMappingFormat.STANDARD.read(mappingsFile.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
         // This should pull in any libraries needed for type bindings
         val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
@@ -103,13 +105,6 @@ abstract class RemapPatches : BaseTask() {
         val tempOutputDir = createWorkDir("patch-remap-output")
 
         val sourceInputDir = tempInputDir.resolve("src/main/java")
-//        sourceInputDir.deleteRecursively()
-//        sourceInputDir.mkdirs()
-
-//        project.copy {
-//            from(project.zipTree(sourceJar.file))
-//            into(sourceInputDir)
-//        }
 
         PatchSourceRemapWorker(
             mappings,
@@ -118,9 +113,6 @@ abstract class RemapPatches : BaseTask() {
             tempOutputDir.toPath()
         ).let { remapper ->
             val patchApplier = PatchApplier("remapped", "old", tempInputDir)
-            // Setup patch remapping repo
-//            patchApplier.initRepo() // Create empty initial commit
-//            remapper.remap() // Remap to Spigot mappings
 
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on

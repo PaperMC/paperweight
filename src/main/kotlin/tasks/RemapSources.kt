@@ -20,9 +20,8 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.sourceremap
+package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.tasks.ZippedTask
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file

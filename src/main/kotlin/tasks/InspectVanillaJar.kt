@@ -86,6 +86,7 @@ abstract class InspectVanillaJar : BaseTask() {
         }
 
         loggerFile.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+            loggers.sort()
             for (loggerField in loggers) {
                 writer.append(loggerField.className)
                 writer.append(' ')
@@ -95,6 +96,7 @@ abstract class InspectVanillaJar : BaseTask() {
         }
 
         paramIndexes.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+            params.sort()
             for (methodData in params) {
                 writer.append(methodData.className)
                 writer.append(' ')
@@ -112,6 +114,7 @@ abstract class InspectVanillaJar : BaseTask() {
         }
 
         syntheticMethods.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+            synthMethods.sort()
             for ((className, desc, synthName, baseName) in synthMethods) {
                 writer.append(className)
                 writer.append(' ')
@@ -146,7 +149,7 @@ abstract class BaseClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opco
  * SpecialSource2 automatically maps all Logger fields to the name LOGGER, without needing mappings defined, so we need
  * to make a note of all of those fields
  */
-class LoggerFields {
+object LoggerFields {
     class Visitor(
         classVisitor: ClassVisitor?,
         private val fields: MutableList<Data>
@@ -173,14 +176,19 @@ class LoggerFields {
         }
     }
 
-    data class Data(val className: String, val fieldName: String)
+    data class Data(val className: String, val fieldName: String) : Comparable<Data> {
+        override fun compareTo(other: Data) = compareValuesBy(this, other,
+            { it.className },
+            { it.fieldName }
+        )
+    }
 }
 
 /*
  * Source-remapping uses 0-based param indexes, but the param indexes we have are LVT-based. We have to look at the
  * actual bytecode to translate the LVT-based indexes back to 0-based param indexes.
  */
-class ParamIndexes {
+object ParamIndexes {
     class Visitor(
         classVisitor: ClassVisitor?,
         private val methods: MutableList<Data>
@@ -228,9 +236,17 @@ class ParamIndexes {
         val methodName: String,
         val methodDescriptor: String,
         val params: List<ParamTarget>
-    )
+    ) : Comparable<Data> {
+        override fun compareTo(other: Data) = compareValuesBy(this, other,
+            { it.className },
+            { it.methodName },
+            { it.methodDescriptor }
+        )
+    }
 
-    data class ParamTarget(val binaryIndex: Int, val sourceIndex: Int)
+    data class ParamTarget(val binaryIndex: Int, val sourceIndex: Int) : Comparable<ParamTarget> {
+        override fun compareTo(other: ParamTarget) = compareValuesBy(this, other) { it.binaryIndex }
+    }
 }
 
 /*
@@ -238,7 +254,7 @@ class ParamIndexes {
  * existing mapping. We need to make a note of all of the synthetic methods which match SpecialSource2's checks so we
  * can handle it in our generated mappings.
  */
-class SyntheticMethods {
+object SyntheticMethods {
     class Visitor(
         classVisitor: ClassVisitor?,
         private val methods: MutableList<Data>
@@ -345,5 +361,17 @@ class SyntheticMethods {
         }
     }
 
-    data class Data(val className: String, val desc: String, val synthName: String, val baseName: String)
+    data class Data(
+        val className: String,
+        val desc: String,
+        val synthName: String,
+        val baseName: String
+    ) : Comparable<Data> {
+        override fun compareTo(other: Data) = compareValuesBy(this, other,
+            { it.className },
+            { it.desc },
+            { it.synthName },
+            { it.baseName }
+        )
+    }
 }
