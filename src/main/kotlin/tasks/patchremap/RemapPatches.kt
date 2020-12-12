@@ -31,7 +31,6 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
 import net.fabricmc.lorenztiny.TinyMappingFormat
-import org.cadixdev.lorenz.io.MappingFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
