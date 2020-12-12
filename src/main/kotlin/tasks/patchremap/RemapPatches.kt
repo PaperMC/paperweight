@@ -77,17 +77,27 @@ abstract class RemapPatches : BaseTask() {
     @get:Option(option = "skip-patches", description = "For resuming, skip first # of patches (e.g. --skip-patches=300)")
     abstract val skipPatches: Property<String>
 
+    @get:Internal
+    @get:Option(option = "limit-patches", description = "For testing, you can limit the # of patches (e.g. --limit-patches=10)")
+    abstract val limitPatches: Property<String>
+
     override fun init() {
         skipPatches.convention("0")
+        limitPatches.convention("-1")
     }
 
     @TaskAction
     fun run() {
         val skip = skipPatches.get().toInt()
+        var limit = limitPatches.get().toInt()
 
         // Check patches
         val patches = inputPatchDir.file.listFiles() ?: return run {
             println("No input patches found")
+        }
+
+        if (limit == -1) {
+            limit = patches.size
         }
 
         patches.sort()
@@ -126,8 +136,12 @@ abstract class RemapPatches : BaseTask() {
                 patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
             }
 
+            // remapping renames params, we don't want to leak these changes into the patches below
+            println("setting up remap commit")
+            patchApplier.commitRemappingDifferences(remapper)
+
             // Repo setup is done, we can begin the patch loop now
-            patches.asSequence().drop(skip).forEach { patch ->
+            patches.asSequence().drop(skip).take(limit).forEach { patch ->
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")

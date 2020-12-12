@@ -30,12 +30,15 @@ object McDev {
 
     fun importMcDev(patches: Array<File>, decompJar: File, libraryImports: File, libraryDir: File, targetDir: File) {
         val importMcDev = readMcDevNames(patches).asSequence()
-            .map { targetDir.resolve("net/minecraft/server/$it.java") }
+            .map { targetDir.resolve("net/minecraft/$it.java") }
             .filter { !it.exists() }
             .toSet()
 
         ZipFile(decompJar).use { zipFile ->
             for (file in importMcDev) {
+                if (!file.parentFile.exists()) {
+                    file.parentFile.mkdirs()
+                }
                 val zipEntry = zipFile.getEntry(file.relativeTo(targetDir).path) ?: continue
                 zipFile.getInputStream(zipEntry).use { input ->
                     file.outputStream().buffered().use { output ->
@@ -80,7 +83,7 @@ object McDev {
     private fun readMcDevNames(patches: Array<File>): Set<String> {
         val result = hashSetOf<String>()
 
-        val prefix = "+++ b/src/main/java/net/minecraft/server/"
+        val prefix = "+++ b/src/main/java/net/minecraft/"
         val suffix = ".java"
 
         for (patch in patches) {
