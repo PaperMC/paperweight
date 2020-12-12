@@ -1,3 +1,25 @@
+/*
+ * paperweight is a Gradle plugin for the PaperMC project. It uses
+ * some code and systems originally from ForgeGradle.
+ *
+ * Copyright (C) 2020 Kyle Wood
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
+
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.AsmUtil
@@ -46,14 +68,7 @@ abstract class FixJar : BaseTask(), AsmUtil {
                         continue
                     }
 
-                    val classData = if (entry.size != -1L) {
-                        ByteArray(entry.size.toInt()).also { data ->
-                            jarFile.getInputStream(entry).readNBytes(data, 0, data.size)
-                        }
-                    } else {
-                        jarFile.getInputStream(entry).readAllBytes()
-                    }
-
+                    val classData = jarFile.getInputStream(entry).readBytes()
                     try {
                         val node = ClassNode(Opcodes.ASM9)
                         var visitor: ClassVisitor = node
