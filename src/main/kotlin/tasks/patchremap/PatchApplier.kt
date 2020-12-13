@@ -63,6 +63,15 @@ class PatchApplier(
         git("tag", remappedBaseTag)
     }
 
+    fun commitRemappingDifferences(remapper: PatchSourceRemapWorker) {
+        checkoutRemapped() // Switch to remapped branch without checkout out files
+        remapper.remap() // Remap to new mappings
+        println("Committing remap")
+        git("add", ".").executeSilently()
+        git("commit", "-m", "Remap", "--author=Initial <auto@mated.null>").executeSilently()
+        checkoutOld()
+    }
+
     fun recordCommit() {
         commitMessage = git("log", "--format=%B", "-n", "1", "HEAD").getText()
         commitAuthor = git("log", "--format=%an <%ae>", "-n", "1", "HEAD").getText()
@@ -80,15 +89,6 @@ class PatchApplier(
 
         git("add", ".").executeSilently()
         git("commit", "-m", message, "--author=$author", "--date=$time").execute()
-    }
-
-    fun commitRemappingDifferences(remapper: PatchSourceRemapWorker) {
-        checkoutRemapped() // Switch to remapped branch without checkout out files
-        remapper.remap() // Remap to new mappings
-        println("Committing remap")
-        git("add", ".").executeSilently()
-        git("commit", "-m", "Remap", "--author=Initial <auto@mated.null>").executeSilently()
-        checkoutOld()
     }
 
     fun applyPatch(patch: File) {

@@ -38,6 +38,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     abstract val patchDir: DirectoryProperty
     @get:InputFile
     abstract val remappedSource: RegularFileProperty
+    @get:InputDirectory
+    abstract val spigotServerDir: DirectoryProperty
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
     @get:InputDirectory
@@ -70,7 +72,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         }
 
         Git(outputFile).let { git ->
-            git("init").runSilently(silenceErr = true)
+            git("clone", spigotServerDir.file.absolutePath, outputFile.absolutePath).executeSilently()
 
             val sourceDir = remapTargetDir.file
             if (sourceDir.exists()) {
@@ -87,7 +89,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             McDev.importMcDev(patches, sourceMcDevJar.file, libraryImports.file, mcLibrariesDir.file, sourceDir)
 
             git("add", ".").executeSilently()
-            git("commit", "-m", "Initial", "--author=Initial <auto@mated.null>").executeSilently()
+            git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.file, printOutput.get())

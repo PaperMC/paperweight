@@ -152,6 +152,7 @@ class Paperweight : Plugin<Project> {
         val patchPaperServer by tasks.registering<ApplyPaperPatches> {
             patchDir.set(extension.paper.spigotServerPatchDir)
             remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
+            spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir })
             sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
             mcLibrariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir }.get())
             libraryImports.set(extension.paper.libraryClassImports)
@@ -486,11 +487,12 @@ class Paperweight : Plugin<Project> {
             apiPatchDir.set(extension.paper.spigotApiPatchDir)
 
             mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappings }.get())
+            ats.set(spigotTasks.remapSpigotSources.flatMap { it.generatedAt }.get())
 
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
-            classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar }.get())
-            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get())
-            classpathJars.add(applyMergedAt.flatMap { it.outputJar }.get())
+            classpathJars.add(applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
+            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get())   // Spigot remapped jar
+            classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar }.get()) // pure vanilla jar
 
             spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir }.get())
             spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir }.get())

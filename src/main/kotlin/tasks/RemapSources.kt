@@ -34,7 +34,6 @@ import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
-import org.cadixdev.mercury.extra.BridgeMethodRewriter
 import org.cadixdev.mercury.remapper.MercuryRemapper
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -52,7 +51,7 @@ abstract class RemapSources : ZippedTask() {
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
     @get:InputFile
-    abstract val vanillaRemappedSpigotJar: RegularFileProperty // Required for pre-remap pass
+    abstract val vanillaRemappedSpigotJar: RegularFileProperty
     @get:InputFile
     abstract val mappings: RegularFileProperty
 
@@ -66,8 +65,6 @@ abstract class RemapSources : ZippedTask() {
 
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
-    @get:OutputFile
-    abstract val parameterNames: RegularFileProperty
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
@@ -75,7 +72,6 @@ abstract class RemapSources : ZippedTask() {
     override fun init() {
         super.init()
         generatedAt.convention(defaultOutput("at"))
-        parameterNames.convention(defaultOutput("params"))
     }
 
     override fun run(rootDir: File) {
@@ -86,8 +82,8 @@ abstract class RemapSources : ZippedTask() {
         }
 
         queue.submit(RemapAction::class) {
-            classpath.add(vanillaJar.file)
             classpath.add(vanillaRemappedSpigotJar.file)
+            classpath.add(vanillaJar.file)
             classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
             classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files)
 
@@ -96,7 +92,6 @@ abstract class RemapSources : ZippedTask() {
 
             outputDir.set(rootDir)
             generatedAtOutput.set(generatedAt.file)
-            paramNamesOutput.set(parameterNames.file)
         }
 
         queue.await()
@@ -107,7 +102,7 @@ abstract class RemapSources : ZippedTask() {
             val mappingSet = TinyMappingFormat.STANDARD.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
             val processAt = AccessTransformSet.create()
 
-            // Remap any references Spigot maps to SRG
+            // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
                 merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
 
@@ -118,7 +113,6 @@ abstract class RemapSources : ZippedTask() {
                 merc.processors.clear()
                 merc.processors.addAll(listOf(
                     MercuryRemapper.create(mappingSet),
-                    BridgeMethodRewriter.create(),
                     AccessTransformerRewriter.create(processAt)
                 ))
 
@@ -136,6 +130,5 @@ abstract class RemapSources : ZippedTask() {
 
         val generatedAtOutput: RegularFileProperty
         val outputDir: RegularFileProperty
-        val paramNamesOutput: RegularFileProperty
     }
 }
