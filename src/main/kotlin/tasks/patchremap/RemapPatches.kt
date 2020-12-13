@@ -31,6 +31,7 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
 import net.fabricmc.lorenztiny.TinyMappingFormat
+import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -54,6 +55,8 @@ abstract class RemapPatches : BaseTask() {
 
     @get:InputFile
     abstract val mappingsFile: RegularFileProperty
+    @get:InputFile
+    abstract val ats: RegularFileProperty
 
     @get:Classpath
     abstract val classpathJars: ListProperty<RegularFile>
@@ -119,6 +122,7 @@ abstract class RemapPatches : BaseTask() {
 
         PatchSourceRemapWorker(
             mappings,
+            AccessTransformFormats.FML.read(ats.path),
             listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")).map { it.toPath() },
             sourceInputDir.toPath(),
             tempOutputDir.toPath()
@@ -127,7 +131,9 @@ abstract class RemapPatches : BaseTask() {
 
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on
+                // TODO we should pull these from the vanilla remapped jar instead
                 McDev.importMcDev(patches, spigotDecompJar.file, libraryImports.file, mcLibrariesDir.file, tempInputDir.resolve("src/main/java"))
+
                 patchApplier.commitInitialSource() // Initial commit of Spigot sources
                 patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
 

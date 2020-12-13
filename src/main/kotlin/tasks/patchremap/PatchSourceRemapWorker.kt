@@ -25,34 +25,47 @@ package io.papermc.paperweight.tasks.patchremap
 import io.papermc.paperweight.util.Constants
 import java.nio.file.Files
 import java.nio.file.Path
+import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.mercury.Mercury
+import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.remapper.MercuryRemapper
 
 class PatchSourceRemapWorker(
-    mappings: MappingSet,
-    classpath: Collection<Path>,
+    private val mappings: MappingSet,
+    private val ats: AccessTransformSet,
+    private val classpath: Collection<Path>,
     private val inputDir: Path,
     private val outputDir: Path
 ) {
 
-    private val merc : Mercury = Mercury()
+//    private val merc : Mercury = Mercury()
 
-    init {
-        merc.classPath.addAll(classpath)
-
-        merc.processors.addAll(listOf(
-                 MercuryRemapper.create(mappings)
-        ))
-
-        merc.isGracefulClasspathChecks = true
-    }
+//    init {
+//        merc.classPath.addAll(classpath)
+//
+//        merc.processors.addAll(listOf(
+//            MercuryRemapper.create(mappings),
+//            AccessTransformerRewriter.create(ats)
+//        ))
+//
+//        merc.isGracefulClasspathChecks = true
+//    }
 
     fun remap() {
         setup()
 
         println("mapping to ${Constants.DEOBF_NAMESPACE}")
 
+        val merc = Mercury()
+        merc.classPath.addAll(classpath)
+
+        merc.processors.addAll(listOf(
+            MercuryRemapper.create(mappings),
+            AccessTransformerRewriter.create(ats)
+        ))
+
+        merc.isGracefulClasspathChecks = true
         merc.rewrite(inputDir, outputDir)
 
         cleanup()

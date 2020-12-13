@@ -16,7 +16,7 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
     abstract val inputDir: DirectoryProperty
     @get:Console
     abstract val server: Property<Boolean>
-    @get:Option(option = "filter-patches", description = "Controlls if patches should be cleaned up, defaults to true")
+    @get:Option(option = "filter-patches", description = "Controls if patches should be cleaned up, defaults to true")
     abstract val filterPatches: Property<Boolean>
 
     @get:OutputDirectory
