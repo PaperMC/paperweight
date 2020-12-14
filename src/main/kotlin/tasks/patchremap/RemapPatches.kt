@@ -131,7 +131,6 @@ abstract class RemapPatches : BaseTask() {
 
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on
-                // TODO we should pull these from the vanilla remapped jar instead
                 McDev.importMcDev(patches, spigotDecompJar.file, libraryImports.file, mcLibrariesDir.file, tempInputDir.resolve("src/main/java"))
 
                 patchApplier.commitInitialSource() // Initial commit of Spigot sources
@@ -143,8 +142,8 @@ abstract class RemapPatches : BaseTask() {
             }
 
             // remapping renames params, we don't want to leak these changes into the patches below
-            println("setting up remap commit")
-            patchApplier.commitRemappingDifferences(remapper)
+//            println("setting up remap commit")
+//            patchApplier.commitRemappingDifferences(remapper)
 
             // Repo setup is done, we can begin the patch loop now
             patches.asSequence().drop(skip).take(limit).forEach { patch ->

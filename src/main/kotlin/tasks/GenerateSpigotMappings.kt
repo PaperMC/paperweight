@@ -104,7 +104,8 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         ).merge()
 
         val adjustedSourceMappings = adjustParamIndexes(sourceMappings)
-        val spigotToNamedSet = notchToSpigotSet.reverse().merge(adjustedSourceMappings)
+        val cleanedSourceMappings = removeLambdaMappings(adjustedSourceMappings)
+        val spigotToNamedSet = notchToSpigotSet.reverse().merge(cleanedSourceMappings)
 
         TinyMappingFormat.STANDARD.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
@@ -161,6 +162,37 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             for (paramMapping in paramMappings) {
                 val i = methodMap[paramMapping.index] ?: paramMapping.index
                 newMapping.createParameterMapping(i, paramMapping.deobfuscatedName)
+            }
+        }
+    }
+
+    private fun removeLambdaMappings(mappings: MappingSet): MappingSet {
+        val result = MappingSet.create()
+
+        for (classMapping in mappings.topLevelClassMappings) {
+            val newClassMapping = result.createTopLevelClassMapping(classMapping.obfuscatedName, classMapping.deobfuscatedName)
+            removeLambdaMappings(classMapping, newClassMapping)
+        }
+
+        return result
+    }
+    private fun removeLambdaMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *>) {
+        for (inner in old.innerClassMappings) {
+            val newInner = new.createInnerClassMapping(inner.obfuscatedName, inner.deobfuscatedName)
+            removeLambdaMappings(inner, newInner)
+        }
+
+        for (field in old.fieldMappings) {
+            new.createFieldMapping(field.signature, field.deobfuscatedName)
+        }
+
+        for (method in old.methodMappings) {
+            if (method.deobfuscatedName.startsWith("lambda$")) {
+                continue
+            }
+            val newMethod = new.createMethodMapping(method.signature, method.deobfuscatedName)
+            for (param in method.parameterMappings) {
+                newMethod.createParameterMapping(param.index, param.deobfuscatedName)
             }
         }
     }

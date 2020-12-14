@@ -63,7 +63,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         if (outputFile.exists()) {
             outputFile.deleteRecursively()
         }
-        outputFile.mkdirs()
+        outputFile.parentFile.mkdirs()
 
         val target = outputFile.name
 

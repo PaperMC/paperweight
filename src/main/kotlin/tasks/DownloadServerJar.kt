@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.file
 import java.math.BigInteger
 import java.security.MessageDigest
 import org.gradle.api.file.RegularFileProperty
@@ -54,6 +55,7 @@ abstract class DownloadServerJar : BaseTask() {
     @TaskAction
     fun run() {
         val file = outputJar.asFile.get()
+        outputJar.file.parentFile.mkdirs()
 
         downloader.get().download(downloadUrl, outputJar)
 
