@@ -71,9 +71,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             println("   Creating $target from remapped source...")
         }
 
-        Git(outputFile).let { git ->
-            git("clone", spigotServerDir.file.absolutePath, outputFile.absolutePath).executeSilently()
+        Git(outputFile.parentFile)("clone", spigotServerDir.file.absolutePath, outputFile.absolutePath).executeSilently()
 
+        Git(outputFile).let { git ->
             val sourceDir = remapTargetDir.file
             if (sourceDir.exists()) {
                 sourceDir.deleteRecursively()
