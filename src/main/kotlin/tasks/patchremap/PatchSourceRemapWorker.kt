@@ -32,32 +32,16 @@ import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.remapper.MercuryRemapper
 
 class PatchSourceRemapWorker(
-    private val mappings: MappingSet,
-    private val ats: AccessTransformSet,
-    private val classpath: Collection<Path>,
+    mappings: MappingSet,
+    ats: AccessTransformSet,
+    classpath: Collection<Path>,
     private val inputDir: Path,
     private val outputDir: Path
 ) {
 
-//    private val merc : Mercury = Mercury()
+    private val merc : Mercury = Mercury()
 
-//    init {
-//        merc.classPath.addAll(classpath)
-//
-//        merc.processors.addAll(listOf(
-//            MercuryRemapper.create(mappings),
-//            AccessTransformerRewriter.create(ats)
-//        ))
-//
-//        merc.isGracefulClasspathChecks = true
-//    }
-
-    fun remap() {
-        setup()
-
-        println("mapping to ${Constants.DEOBF_NAMESPACE}")
-
-        val merc = Mercury()
+    init {
         merc.classPath.addAll(classpath)
 
         merc.processors.addAll(listOf(
@@ -66,6 +50,13 @@ class PatchSourceRemapWorker(
         ))
 
         merc.isGracefulClasspathChecks = true
+    }
+
+    fun remap() {
+        setup()
+
+        println("mapping to ${Constants.DEOBF_NAMESPACE}")
+
         merc.rewrite(inputDir, outputDir)
 
         cleanup()

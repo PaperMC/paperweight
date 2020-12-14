@@ -73,7 +73,12 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
     }
 
     private fun cleanupPatches() {
-        patchDir.file.listFiles { f -> f.name.endsWith(".patch") }?.forEach { patch ->
+        val patchFiles = patchDir.file.listFiles { f -> f.name.endsWith(".patch") } ?: emptyArray()
+        if (patchFiles.isEmpty())  {
+            return
+        }
+        patchFiles.sortBy { it.name }
+        for (patch in patchFiles) {
             if (printOutput.get()) {
                 println(patch.name)
             }
