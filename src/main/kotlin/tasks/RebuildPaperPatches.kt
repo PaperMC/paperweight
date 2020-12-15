@@ -44,8 +44,8 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
             // in middle of a rebase, be smarter
             if (printOutput.get()) {
                 println("REBASE DETECTED - PARTIAL SAVE")
-                val last= inputDir.file.resolve("/.git/rebase-apply/last").readText().toInt()
-                val next = inputDir.file.resolve("/.git/rebase-apply/next").readText().toInt()
+                val last= inputDir.file.resolve(".git/rebase-apply/last").readText().trim().toInt()
+                val next = inputDir.file.resolve(".git/rebase-apply/next").readText().trim().toInt()
                 val orderedFiles = patchFolder.listFiles { f -> f.name.endsWith(".patch") }!!
                 orderedFiles.sort()
 
