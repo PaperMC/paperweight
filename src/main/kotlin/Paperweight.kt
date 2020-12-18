@@ -128,6 +128,12 @@ class Paperweight : Plugin<Project> {
         val applyMergedAt by tasks.registering<ApplyAccessTransform> {
             inputJar.set(vanillaTasks.fixJar.flatMap { it.outputJar })
             atFile.set(spigotTasks.mergeGeneratedAts.flatMap { it.outputFile })
+        }
+
+        val copyResources by tasks.registering<CopyResources> {
+            inputJar.set(applyMergedAt.flatMap { it.outputJar })
+            vanillaJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
+            includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta"))
 
             outputJar.set(cache.resolve(Constants.FINAL_REMAPPED_JAR))
         }
@@ -135,7 +141,7 @@ class Paperweight : Plugin<Project> {
         val decompileJar by tasks.registering<RunForgeFlower> {
             executable.fileProvider(configurations.named(Constants.DECOMPILER_CONFIG).map { it.singleFile })
 
-            inputJar.set(applyMergedAt.flatMap { it.outputJar })
+            inputJar.set(copyResources.flatMap { it.outputJar })
             libraries.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir })
         }
 
