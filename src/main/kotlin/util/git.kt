@@ -50,7 +50,7 @@ class Git(private var repo: File) {
     }
 }
 
-class Command(private val process: Process, private val command: String) {
+class Command(private val process: Process, private val command: String, private val ignoreError : Boolean = false) {
 
     private var outStream: OutputStream = UselessOutputStream
     private var errStream: OutputStream = UselessOutputStream
@@ -95,7 +95,7 @@ class Command(private val process: Process, private val command: String) {
 
     fun execute() {
         val res = run()
-        if (res != 0) {
+        if (res != 0 && !ignoreError) {
             throw PaperweightException("Command finished with $res exit code: $command")
         }
     }
@@ -132,6 +132,6 @@ class Command(private val process: Process, private val command: String) {
     fun readText(): String? {
         val out = ByteArrayOutputStream()
         setup(out, System.err)
-        return if (run() == 0) String(out.toByteArray(), Charsets.UTF_8) else null
+        return if (run() == 0 && !ignoreError) String(out.toByteArray(), Charsets.UTF_8) else null
     }
 }

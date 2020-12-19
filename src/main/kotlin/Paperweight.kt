@@ -31,6 +31,7 @@ import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.minishit.CreatePerFilePatches
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.BuildDataInfo
@@ -192,6 +193,7 @@ class Paperweight : Plugin<Project> {
         }
 
         createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks, applyMergedAt)
+        createMiniShitTasks(spigotTasks, decompileJar)
     }
 
     // Shared task containers
@@ -509,6 +511,13 @@ class Paperweight : Plugin<Project> {
             libraryImports.set(extension.paper.libraryClassImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
+        }
+    }
+
+    private fun Project.createMiniShitTasks(spigotTasks: SpigotTasks, decompileJar: TaskProvider<RunForgeFlower>) {
+        val createPerFilePatches by tasks.registering<CreatePerFilePatches> {
+            spigotSources.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
+            minecraftSources.set(decompileJar.flatMap { it.outputJar })
         }
     }
 
