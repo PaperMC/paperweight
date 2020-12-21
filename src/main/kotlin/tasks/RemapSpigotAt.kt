@@ -23,11 +23,11 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.util.jar.JarFile
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -99,7 +99,7 @@ abstract class RemapSpigotAt : BaseTask() {
             }
         }
 
-        val mappings = TinyMappingFormat.STANDARD.read(mapping.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(mapping.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
         val remappedAt = outputAt.remap(mappings)
 
         AccessTransformFormats.FML.write(outputFile.path, remappedAt)

@@ -23,12 +23,12 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
 import javax.inject.Inject
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
@@ -99,7 +99,7 @@ abstract class RemapSources : ZippedTask() {
 
     abstract class RemapAction : WorkAction<RemapParams> {
         override fun execute() {
-            val mappingSet = TinyMappingFormat.STANDARD.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+            val mappingSet = MappingFormats.TINY.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
             val processAt = AccessTransformSet.create()
 
             // Remap any references Spigot maps to mojmap+yarn

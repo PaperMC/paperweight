@@ -23,14 +23,13 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.parentClass
 import io.papermc.paperweight.util.path
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
 import org.cadixdev.lorenz.merge.MergeConfig
@@ -84,7 +83,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
 
-        val sourceMappings = TinyMappingFormat.STANDARD.read(sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val sourceMappings = MappingFormats.TINY.read(sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
         val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
         syntheticMethods.file.useLines { lines ->
@@ -107,7 +106,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         val cleanedSourceMappings = removeLambdaMappings(adjustedSourceMappings)
         val spigotToNamedSet = notchToSpigotSet.reverse().merge(cleanedSourceMappings)
 
-        TinyMappingFormat.STANDARD.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 
     private fun adjustParamIndexes(mappings: MappingSet): MappingSet {

@@ -23,16 +23,15 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
 import java.nio.file.FileSystems
 import java.nio.file.Files
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.asm.LorenzRemapper
-import org.cadixdev.lorenz.io.MappingFormats
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -66,11 +65,11 @@ abstract class GenerateMappings : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val vanillaMappings = MappingFormats.byId("proguard").createReader(vanillaMappings.path).use { it.read() }.reverse()
+        val vanillaMappings = MappingFormats.PROGUARD.createReader(vanillaMappings.path).use { it.read() }.reverse()
 
         val paramMappings = FileSystems.newFileSystem(paramMappings.path, null).use { fs ->
             val path = fs.getPath("mappings", "mappings.tiny")
-            TinyMappingFormat.STANDARD.read(path, "official", "named")
+            MappingFormats.TINY.read(path, "official", "named")
         }
 
         val merged = MappingSetMerger.create(
@@ -94,7 +93,7 @@ abstract class GenerateMappings : DefaultTask() {
         }
 
         ensureParentExists(outputMappings)
-        TinyMappingFormat.STANDARD.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 }
 

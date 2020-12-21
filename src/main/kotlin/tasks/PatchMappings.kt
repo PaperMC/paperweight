@@ -23,11 +23,11 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.commentRegex
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
 import java.nio.file.Files
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -48,7 +48,7 @@ abstract class PatchMappings : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val mappings = TinyMappingFormat.STANDARD.read(inputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(inputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
         patchMappings.pathOrNull?.let { patchFile ->
             val temp = Files.createTempFile("patch", "tiny")
             try {
@@ -65,12 +65,12 @@ abstract class PatchMappings : DefaultTask() {
                         }
                     }
                 }
-                TinyMappingFormat.STANDARD.read(mappings, temp, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+                MappingFormats.TINY.read(mappings, temp, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
             } finally {
                 Files.deleteIfExists(temp)
             }
         }
 
-        TinyMappingFormat.STANDARD.write(mappings, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(mappings, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 }

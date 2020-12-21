@@ -25,12 +25,12 @@ package io.papermc.paperweight.tasks.patchremap
 import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.io.File
-import net.fabricmc.lorenztiny.TinyMappingFormat
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -105,7 +105,7 @@ abstract class RemapPatches : BaseTask() {
 
         patches.sort()
 
-        val mappings = TinyMappingFormat.STANDARD.read(mappingsFile.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(mappingsFile.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
         // This should pull in any libraries needed for type bindings
         val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
