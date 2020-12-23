@@ -1,4 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
 import org.gradle.api.publish.maven.MavenPom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -110,36 +109,16 @@ val isSnapshot = version.toString().endsWith("-SNAPSHOT")
 publishing {
     publications {
         register<MavenPublication>("shadow") {
-            groupId = project.group.toString()
-            artifactId = "io.papermc.paperweight.gradle.plugin"
-            version = project.version.toString()
-
-            project.shadow.component(this)
-            artifact(project.tasks.named("sourcesJar"))
-
-            for (artifact in artifacts) {
-                if (artifact.classifier == "all") {
-                    artifact.classifier = null
-                }
-            }
-
-            withoutBuildIdentifier()
-            pom {
-                pomConfig()
-            }
+            pluginConfig(project.version.toString())
         }
-
         register<MavenPublication>("maven") {
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
-
-            from(components["java"])
-
-            withoutBuildIdentifier()
-            pom {
-                pomConfig()
-            }
+            standardConfig(project.version.toString())
+        }
+        register<MavenPublication>("shadowLocal") {
+            pluginConfig(localVersion())
+        }
+        register<MavenPublication>("mavenLocal") {
+            standardConfig(localVersion())
         }
 
         repositories {
@@ -153,6 +132,50 @@ publishing {
                 name = "demonwav"
             }
         }
+    }
+}
+
+tasks.withType(PublishToMavenRepository::class).configureEach {
+    onlyIf {
+        !publication.name.endsWith("Local")
+    }
+}
+tasks.withType(PublishToMavenLocal::class).configureEach {
+    onlyIf {
+        publication.name.endsWith("Local")
+    }
+}
+
+fun MavenPublication.standardConfig(versionName: String) {
+    groupId = project.group.toString()
+    artifactId = project.name
+    version = versionName
+
+    from(components["java"])
+
+    withoutBuildIdentifier()
+    pom {
+        pomConfig()
+    }
+}
+
+fun MavenPublication.pluginConfig(versionName: String) {
+    groupId = project.group.toString()
+    artifactId = "io.papermc.paperweight.gradle.plugin"
+    version = versionName
+
+    project.shadow.component(this)
+    artifact(project.tasks.named("sourcesJar"))
+
+    for (artifact in artifacts) {
+        if (artifact.classifier == "all") {
+            artifact.classifier = null
+        }
+    }
+
+    withoutBuildIdentifier()
+    pom {
+        pomConfig()
     }
 }
 
@@ -191,5 +214,13 @@ fun MavenPom.pomConfig() {
         url.set(repoUrl)
         connection.set("scm:git:$repoUrl.git")
         developerConnection.set(connection)
+    }
+}
+
+fun localVersion(): String {
+    return if (isSnapshot) {
+        project.version.toString().substringBefore('-') + "-LOCAL-SNAPSHOT"
+    } else {
+        project.version.toString() + "-LOCAL"
     }
 }

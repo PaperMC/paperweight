@@ -2,6 +2,11 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
@@ -30,7 +35,7 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        val what =inputDir.file.name
+        val what = inputDir.file.name
         val patchFolder = patchDir.file
         if (!patchFolder.exists()) {
             patchFolder.mkdirs()
@@ -61,10 +66,11 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
         }
 
         Git(inputDir.file)("format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o", patchFolder.absolutePath, if (server.get()) "base" else "upstream/upstream").executeSilently()
-        Git(patchFolder)("add", "-A", ".").executeSilently()
+        val patchDirGit = Git(patchFolder)
+        patchDirGit("add", "-A", ".").executeSilently()
 
         if (filterPatches.get()) {
-            cleanupPatches()
+            cleanupPatches(patchDirGit)
         }
 
         if (printOutput.get()) {
@@ -72,25 +78,47 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
         }
     }
 
-    private fun cleanupPatches() {
+    private fun cleanupPatches(git: Git) {
         val patchFiles = patchDir.file.listFiles { f -> f.name.endsWith(".patch") } ?: emptyArray()
         if (patchFiles.isEmpty())  {
             return
         }
         patchFiles.sortBy { it.name }
-        for (patch in patchFiles) {
-            if (printOutput.get()) {
-                println(patch.name)
+
+        val noChangesPatches = ConcurrentLinkedQueue<File>()
+        val futures = mutableListOf<Future<*>>()
+
+        // Calling out to git over and over again for each `git diff --staged` command is really slow from the JVM
+        // so to mitigate this we do it parallel
+        val executor = Executors.newWorkStealingPool()
+        try {
+            for (patch in patchFiles) {
+                futures += executor.submit {
+                    val hasNoChanges = git("diff", "--staged", patch.name).getText().lineSequence()
+                        .filter { it.startsWith('+') || it.startsWith('-') }
+                        .filterNot { it.startsWith("+++") || it.startsWith("---") }
+                        .all { it.startsWith("+index") || it.startsWith("-index") }
+
+                    if (hasNoChanges) {
+                        noChangesPatches += patch
+                    }
+                }
             }
 
-            // TODO implement patch cleanup
-            //
-            //        diffs=$($gitcmd diff --staged "$patch" | grep --color=none -E "^(\+|\-)" | grep --color=none -Ev "(\-\-\- a|\+\+\+ b|^.index)")
-            //
-            //        if [ "x$diffs" == "x" ] ; then
-            //            $gitcmd reset HEAD "$patch" >/dev/null
-            //            $gitcmd checkout -- "$patch" >/dev/null
-            //        fi
+            futures.forEach { it.get() }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        if (noChangesPatches.isNotEmpty()) {
+            git("reset", "HEAD", *noChangesPatches.map { it.name }.toTypedArray()).executeSilently()
+            git("checkout", "--", *noChangesPatches.map { it.name }.toTypedArray()).executeSilently()
+        }
+
+        if (printOutput.get()) {
+            for (patch in patchFiles) {
+                println(patch.name)
+            }
         }
     }
 }
