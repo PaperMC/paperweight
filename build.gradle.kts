@@ -104,15 +104,15 @@ tasks.shadowJar {
     }
 }
 
-val isSnapshot = version.toString().endsWith("-SNAPSHOT")
+val isSnapshot = version().endsWith("-SNAPSHOT")
 
 publishing {
     publications {
         register<MavenPublication>("shadow") {
-            pluginConfig(project.version.toString())
+            pluginConfig(version())
         }
         register<MavenPublication>("maven") {
-            standardConfig(project.version.toString())
+            standardConfig(version())
         }
         register<MavenPublication>("shadowLocal") {
             pluginConfig(localVersion())
@@ -217,10 +217,13 @@ fun MavenPom.pomConfig() {
     }
 }
 
+fun version(): String {
+    return project.version.toString()
+}
 fun localVersion(): String {
     return if (isSnapshot) {
-        project.version.toString().substringBefore('-') + "-LOCAL-SNAPSHOT"
+        version().substringBefore('-') + "-LOCAL-SNAPSHOT"
     } else {
-        project.version.toString() + "-LOCAL"
+        version() + "-LOCAL"
     }
 }
