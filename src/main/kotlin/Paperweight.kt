@@ -309,6 +309,7 @@ class Paperweight : Plugin<Project> {
 
         val fixJar by tasks.registering<FixJar> {
             inputJar.set(remapJar.flatMap { it.outputJar })
+            vanillaJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
         }
 
         val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {

@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.AsmUtil
+import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import org.gradle.api.file.RegularFileProperty
@@ -288,76 +289,13 @@ object SyntheticMethods {
         private val methods: MutableList<Data>
     ) : MethodNode(Opcodes.ASM9, access, name, descriptor, signature, exceptions) {
 
-        private enum class State {
-            IN_PARAMS,
-            INVOKE,
-            RETURN,
-            OTHER_INSN
-        }
-
-        // This tries to match the behavior of SpecialSource2's SyntheticFinder.addSynthetics() method
         override fun visitEnd() {
-            var state = State.IN_PARAMS
-            var nextLvt = 0
+            val (baseName, baseDesc) = SyntheticUtil.findBaseMethod(this, className)
 
-            var invokeInsn: MethodInsnNode? = null
-
-            loop@for (insn in instructions) {
-                if (insn is LabelNode || insn is LineNumberNode || insn is TypeInsnNode) {
-                    continue
-                }
-
-                if (state == State.IN_PARAMS) {
-                    if (insn !is VarInsnNode || insn.`var` != nextLvt) {
-                        state = State.INVOKE
-                    }
-                }
-
-                when (state) {
-                    State.IN_PARAMS -> {
-                        nextLvt++
-                        if (insn.opcode == Opcodes.LLOAD || insn.opcode == Opcodes.DLOAD) {
-                            nextLvt++
-                        }
-                    }
-                    State.INVOKE -> {
-                        // Must be a virtual or interface invoke instruction
-                        if ((insn.opcode != Opcodes.INVOKEVIRTUAL && insn.opcode != Opcodes.INVOKEINTERFACE) || insn !is MethodInsnNode) {
-                            return
-                        }
-
-                        invokeInsn = insn
-                        state = State.RETURN
-                    }
-                    State.RETURN -> {
-                        // The next instruction must be a return
-                        if (insn.opcode !in Opcodes.IRETURN..Opcodes.RETURN) {
-                            return
-                        }
-
-                        state = State.OTHER_INSN
-                    }
-                    State.OTHER_INSN -> {
-                        // We shouldn't see any other instructions
-                        return
-                    }
-                }
+            if (baseName != name || baseDesc != desc) {
+                // Add this method as a synthetic for baseName
+                methods += Data(className, baseDesc, name, baseName)
             }
-
-            val invoke = invokeInsn ?: return
-
-            // Must be a method in the same class with a different signature
-            if (className != invoke.owner || name == invoke.name || desc == invoke.desc) {
-                return
-            }
-
-            // The descriptors need to be the same size
-            if (Type.getArgumentTypes(desc).size != Type.getArgumentTypes(invoke.desc).size) {
-                return
-            }
-
-            // Add this method as a synthetic accessor for insn.name
-            methods += Data(className, invoke.desc, name, invoke.name)
         }
     }
 
