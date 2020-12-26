@@ -5,10 +5,13 @@ How to use this for testing:
 Install this plugin to Maven Local:
 
 ```bash
-./gradlew install
+./gradlew publishToMavenLocal
 ```
 
 Clone a new Paper repo and checkout the `feature/mojmap` branch.
+
+* Add `mavenLocal()` to the list of repos in `settings.gradle.kts`.
+* Change `paperweight` version to `1.0.0-LOCAL-SNAPSHOT` in the `plugins {}` block in `build.gradle.kts`.
 
 Run the task (on the Paper repo) to set up the development environment:
 
