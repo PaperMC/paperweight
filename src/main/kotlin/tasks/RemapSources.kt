@@ -85,7 +85,9 @@ abstract class RemapSources : ZippedTask() {
             classpath.add(vanillaRemappedSpigotJar.file)
             classpath.add(vanillaJar.file)
             classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-            classpath.addAll(spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files)
+            classpath.addAll(
+                spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files
+            )
 
             mappings.set(this@RemapSources.mappings.file)
             inputDir.set(srcDir)
@@ -99,7 +101,11 @@ abstract class RemapSources : ZippedTask() {
 
     abstract class RemapAction : WorkAction<RemapParams> {
         override fun execute() {
-            val mappingSet = MappingFormats.TINY.read(parameters.mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+            val mappingSet = MappingFormats.TINY.read(
+                parameters.mappings.path,
+                Constants.SPIGOT_NAMESPACE,
+                Constants.DEOBF_NAMESPACE
+            )
             val processAt = AccessTransformSet.create()
 
             // Remap any references Spigot maps to mojmap+yarn
@@ -111,10 +117,12 @@ abstract class RemapSources : ZippedTask() {
                 merc.process(parameters.inputDir.path)
 
                 merc.processors.clear()
-                merc.processors.addAll(listOf(
-                    MercuryRemapper.create(mappingSet),
-                    AccessTransformerRewriter.create(processAt)
-                ))
+                merc.processors.addAll(
+                    listOf(
+                        MercuryRemapper.create(mappingSet),
+                        AccessTransformerRewriter.create(processAt)
+                    )
+                )
 
                 merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
             }

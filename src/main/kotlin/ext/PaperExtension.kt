@@ -32,8 +32,14 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
     val spigotApiPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-API-Patches")
     val spigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches")
-    val remappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches-Remapped")
-    val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Spigot-Server-Patches-Unmapped")
+    val remappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(
+        baseTargetDir,
+        "Spigot-Server-Patches-Remapped"
+    )
+    val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(
+        baseTargetDir,
+        "Spigot-Server-Patches-Unmapped"
+    )
     val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 

@@ -77,11 +77,17 @@ abstract class RemapPatches : BaseTask() {
     abstract val outputPatchDir: DirectoryProperty
 
     @get:Internal
-    @get:Option(option = "skip-patches", description = "For resuming, skip first # of patches (e.g. --skip-patches=300)")
+    @get:Option(
+        option = "skip-patches",
+        description = "For resuming, skip first # of patches (e.g. --skip-patches=300)"
+    )
     abstract val skipPatches: Property<String>
 
     @get:Internal
-    @get:Option(option = "limit-patches", description = "For testing, you can limit the # of patches (e.g. --limit-patches=10)")
+    @get:Option(
+        option = "limit-patches",
+        description = "For testing, you can limit the # of patches (e.g. --limit-patches=10)"
+    )
     abstract val limitPatches: Property<String>
 
     override fun init() {
@@ -105,7 +111,11 @@ abstract class RemapPatches : BaseTask() {
 
         patches.sort()
 
-        val mappings = MappingFormats.TINY.read(mappingsFile.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(
+            mappingsFile.path,
+            Constants.SPIGOT_NAMESPACE,
+            Constants.DEOBF_NAMESPACE
+        )
 
         // This should pull in any libraries needed for type bindings
         val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
@@ -115,7 +125,11 @@ abstract class RemapPatches : BaseTask() {
         // the next remap operation
         println("setting up repo")
         val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.file, recreate = skip == 0)
-        val tempInputDir = createWorkDirByCloning("patch-remap-input", source = spigotServerDir.file, recreate = skip == 0)
+        val tempInputDir = createWorkDirByCloning(
+            "patch-remap-input",
+            source = spigotServerDir.file,
+            recreate = skip == 0
+        )
         val tempOutputDir = createWorkDir("patch-remap-output")
 
         val sourceInputDir = tempInputDir.resolve("src/main/java")
@@ -131,7 +145,13 @@ abstract class RemapPatches : BaseTask() {
 
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on
-                McDev.importMcDev(patches, spigotDecompJar.file, libraryImports.file, mcLibrariesDir.file, tempInputDir.resolve("src/main/java"))
+                McDev.importMcDev(
+                    patches,
+                    spigotDecompJar.file,
+                    libraryImports.file,
+                    mcLibrariesDir.file,
+                    tempInputDir.resolve("src/main/java")
+                )
 
                 patchApplier.commitInitialSource() // Initial commit of Spigot sources
                 patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files

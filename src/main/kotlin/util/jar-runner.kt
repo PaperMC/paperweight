@@ -40,8 +40,10 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
     }
 
     val processBuilder = ProcessBuilder(
-        Jvm.current().javaExecutable.canonicalPath, *jvmArgs.toTypedArray(),
-        "-jar", jarFile.canonicalPath,
+        Jvm.current().javaExecutable.canonicalPath,
+        *jvmArgs.toTypedArray(),
+        "-jar",
+        jarFile.canonicalPath,
         *args
     ).directory(dir)
 

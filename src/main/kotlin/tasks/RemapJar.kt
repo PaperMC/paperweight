@@ -60,9 +60,12 @@ abstract class RemapJar : BaseTask() {
             inputJar.file.absolutePath,
             outputJar.file.absolutePath,
             mappingsFile.file.absolutePath,
-            Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE,
-            "--fixpackageaccess", "--renameinvalidlocals", "--rebuildsourcefilenames"
+            Constants.OBF_NAMESPACE,
+            Constants.DEOBF_NAMESPACE,
+            "--fixpackageaccess",
+            "--renameinvalidlocals",
+            "--rebuildsourcefilenames"
         )
-        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args);
+        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args)
     }
 }

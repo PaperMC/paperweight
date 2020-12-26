@@ -36,12 +36,7 @@ import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.LabelNode
-import org.objectweb.asm.tree.LineNumberNode
-import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
-import org.objectweb.asm.tree.TypeInsnNode
-import org.objectweb.asm.tree.VarInsnNode
 
 abstract class InspectVanillaJar : BaseTask() {
 
@@ -166,7 +161,7 @@ object LoggerFields {
             val ret = super.visitField(access, name, descriptor, signature, value)
             val className = currentClass ?: return ret
 
-            if (Opcodes.ACC_STATIC !in access || Opcodes.ACC_FINAL !in access)  {
+            if (Opcodes.ACC_STATIC !in access || Opcodes.ACC_FINAL !in access) {
                 return ret
             }
             if (descriptor != "Lorg/apache/logging/log4j/Logger;") {
@@ -178,7 +173,9 @@ object LoggerFields {
     }
 
     data class Data(val className: String, val fieldName: String) : Comparable<Data> {
-        override fun compareTo(other: Data) = compareValuesBy(this, other,
+        override fun compareTo(other: Data) = compareValuesBy(
+            this,
+            other,
             { it.className },
             { it.fieldName }
         )
@@ -238,7 +235,9 @@ object ParamIndexes {
         val methodDescriptor: String,
         val params: List<ParamTarget>
     ) : Comparable<Data> {
-        override fun compareTo(other: Data) = compareValuesBy(this, other,
+        override fun compareTo(other: Data) = compareValuesBy(
+            this,
+            other,
             { it.className },
             { it.methodName },
             { it.methodDescriptor }
@@ -305,7 +304,9 @@ object SyntheticMethods {
         val synthName: String,
         val baseName: String
     ) : Comparable<Data> {
-        override fun compareTo(other: Data) = compareValuesBy(this, other,
+        override fun compareTo(other: Data) = compareValuesBy(
+            this,
+            other,
             { it.className },
             { it.desc },
             { it.synthName },

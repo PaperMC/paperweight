@@ -25,7 +25,6 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -74,14 +73,14 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
             // in middle of a rebase, be smarter
             if (printOutput.get()) {
                 println("REBASE DETECTED - PARTIAL SAVE")
-                val last= inputDir.file.resolve(".git/rebase-apply/last").readText().trim().toInt()
+                val last = inputDir.file.resolve(".git/rebase-apply/last").readText().trim().toInt()
                 val next = inputDir.file.resolve(".git/rebase-apply/next").readText().trim().toInt()
                 val orderedFiles = patchFolder.listFiles { f -> f.name.endsWith(".patch") }!!
                 orderedFiles.sort()
 
                 for (i in 1..last) {
                     if (i < next) {
-                        orderedFiles[i].delete();
+                        orderedFiles[i].delete()
                     }
                 }
             }
@@ -90,7 +89,12 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
             patchFolder.mkdirs()
         }
 
-        Git(inputDir.file)("format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o", patchFolder.absolutePath, if (server.get()) "base" else "upstream/upstream").executeSilently()
+        Git(inputDir.file)(
+            "format-patch",
+            "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
+            "-o", patchFolder.absolutePath,
+            if (server.get()) "base" else "upstream/upstream"
+        ).executeSilently()
         val patchDirGit = Git(patchFolder)
         patchDirGit("add", "-A", ".").executeSilently()
 
@@ -105,7 +109,7 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
 
     private fun cleanupPatches(git: Git) {
         val patchFiles = patchDir.file.listFiles { f -> f.name.endsWith(".patch") } ?: emptyArray()
-        if (patchFiles.isEmpty())  {
+        if (patchFiles.isEmpty()) {
             return
         }
         patchFiles.sortBy { it.name }

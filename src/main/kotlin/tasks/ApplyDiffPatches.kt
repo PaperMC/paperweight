@@ -68,7 +68,9 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
         val outputDirFile = basePatchDirFile.resolve(sourceBasePath.get())
         outputDirFile.deleteRecursively()
 
-        val patchList = patchDir.file.listFiles() ?: throw PaperweightException("Patch directory does not exist ${patchDir.file}")
+        val patchList = patchDir.file.listFiles() ?: throw PaperweightException(
+            "Patch directory does not exist ${patchDir.file}"
+        )
         if (patchList.isEmpty()) {
             throw PaperweightException("No patch files found in ${patchDir.file}")
         }

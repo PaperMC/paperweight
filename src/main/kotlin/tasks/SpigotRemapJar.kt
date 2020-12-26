@@ -122,7 +122,13 @@ abstract class SpigotRemapJar : BaseTask() {
                     specialSourceJar,
                     workingDir = work,
                     logFile = logFile,
-                    args = *doReplacements(finalMapCommand.get(), membersJarPath, accessTransformersPath, packageMappingsPath, outputJarPath)
+                    args = *doReplacements(
+                        finalMapCommand.get(),
+                        membersJarPath,
+                        accessTransformersPath,
+                        packageMappingsPath,
+                        outputJarPath
+                    )
                 )
             } catch (e: Exception) {
                 throw PaperweightException("Failed to create remapped jar", e)

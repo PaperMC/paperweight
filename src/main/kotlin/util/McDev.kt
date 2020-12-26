@@ -56,7 +56,7 @@ object McDev {
             return
         }
 
-        val libFiles = (libraryDir.listFiles() ?: emptyArray()).filter { it.name.endsWith("-sources.jar" )}
+        val libFiles = (libraryDir.listFiles() ?: emptyArray()).filter { it.name.endsWith("-sources.jar") }
         if (libFiles.isEmpty()) {
             throw PaperweightException("No library files found")
         }

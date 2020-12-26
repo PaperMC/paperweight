@@ -8,6 +8,7 @@ plugins {
     `maven-publish`
     id("net.minecrell.licenser") version "0.4.1"
     id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("org.jlleitschuh.gradle.ktlint") version "9.4.1"
 }
 
 group = "io.papermc.paperweight"
@@ -59,23 +60,27 @@ dependencies {
     shade("net.fabricmc:lorenz-tiny:3.0.0")
 }
 
-idea {
-    module {
-        isDownloadSources = true
-        isDownloadJavadoc = true
-    }
+ktlint {
+    enableExperimentalRules.set(true)
+
+    disabledRules.add("no-wildcard-imports")
 }
 
-eclipse {
-    classpath {
-        isDownloadSources = true
-        isDownloadJavadoc = true
-    }
+tasks.register("format") {
+    group = "formatting"
+    description = "Formats source code according to project style"
+    dependsOn(tasks.licenseFormat, tasks.ktlintFormat)
 }
 
 license {
     header = file("license/copyright.txt")
     include("**/*.kt")
+}
+
+idea {
+    module {
+        isDownloadSources = true
+    }
 }
 
 tasks.shadowJar {

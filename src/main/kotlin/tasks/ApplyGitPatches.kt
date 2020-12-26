@@ -83,7 +83,13 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     }
 }
 
-fun ControllableOutputTask.applyGitPatches(git: Git, target: String, outputDir: File, patchDir: File, printOutput: Boolean) {
+fun ControllableOutputTask.applyGitPatches(
+    git: Git,
+    target: String,
+    outputDir: File,
+    patchDir: File,
+    printOutput: Boolean
+) {
     if (printOutput) {
         println("   Applying patches to $target...")
     }
@@ -124,4 +130,3 @@ fun ControllableOutputTask.applyGitPatches(git: Git, target: String, outputDir: 
         }
     }
 }
-

@@ -48,7 +48,11 @@ abstract class PatchMappings : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val mappings = MappingFormats.TINY.read(inputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(
+            inputMappings.path,
+            Constants.SPIGOT_NAMESPACE,
+            Constants.DEOBF_NAMESPACE
+        )
         patchMappings.pathOrNull?.let { patchFile ->
             val temp = Files.createTempFile("patch", "tiny")
             try {

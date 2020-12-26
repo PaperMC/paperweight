@@ -83,7 +83,11 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
 
-        val sourceMappings = MappingFormats.TINY.read(sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val sourceMappings = MappingFormats.TINY.read(
+            sourceMappings.path,
+            Constants.OBF_NAMESPACE,
+            Constants.DEOBF_NAMESPACE
+        )
 
         val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
         syntheticMethods.file.useLines { lines ->
@@ -106,7 +110,12 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         val cleanedSourceMappings = removeLambdaMappings(adjustedSourceMappings)
         val spigotToNamedSet = notchToSpigotSet.reverse().merge(cleanedSourceMappings)
 
-        MappingFormats.TINY.write(spigotToNamedSet, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(
+            spigotToNamedSet,
+            outputMappings.path,
+            Constants.SPIGOT_NAMESPACE,
+            Constants.DEOBF_NAMESPACE
+        )
     }
 
     private fun adjustParamIndexes(mappings: MappingSet): MappingSet {
@@ -169,7 +178,10 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         val result = MappingSet.create()
 
         for (classMapping in mappings.topLevelClassMappings) {
-            val newClassMapping = result.createTopLevelClassMapping(classMapping.obfuscatedName, classMapping.deobfuscatedName)
+            val newClassMapping = result.createTopLevelClassMapping(
+                classMapping.obfuscatedName,
+                classMapping.deobfuscatedName
+            )
             removeLambdaMappings(classMapping, newClassMapping)
         }
 
@@ -232,7 +244,9 @@ class SpigotMappingsMergerHandler(
         target: MappingSet,
         context: MergeContext
     ): MergeResult<TopLevelClassMapping?> {
-        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}")
+        throw IllegalStateException(
+            "Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}"
+        )
     }
 
     override fun addRightTopLevelClassMapping(
@@ -274,7 +288,9 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<InnerClassMapping> {
-        throw IllegalStateException("Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}")
+        throw IllegalStateException(
+            "Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}"
+        )
     }
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
@@ -366,7 +382,7 @@ class SpigotMappingsMergerHandler(
         }
 
         val newMapping = target.getOrCreateMethodMapping(obfName, left.descriptor)
-        newMapping.deobfuscatedName =  left.deobfuscatedName
+        newMapping.deobfuscatedName = left.deobfuscatedName
         return MergeResult(newMapping)
     }
 

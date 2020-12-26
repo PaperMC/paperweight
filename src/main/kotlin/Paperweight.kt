@@ -235,9 +235,11 @@ class Paperweight : Plugin<Project> {
         val mcManifest = downloadMcManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftManifest>(it) }
 
         val downloadMcVersionManifest by tasks.registering<DownloadTask> {
-            url.set(mcManifest.zip(extension.minecraftVersion) { manifest, version ->
-                manifest.versions.first { it.id == version }.url
-            })
+            url.set(
+                mcManifest.zip(extension.minecraftVersion) { manifest, version ->
+                    manifest.versions.first { it.id == version }.url
+                }
+            )
             outputFile.set(cache.resolve(Constants.VERSION_JSON))
 
             downloader.set(downloadService)
@@ -245,18 +247,22 @@ class Paperweight : Plugin<Project> {
         val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<JsonObject>(it) }
 
         val setupMcLibraries by tasks.registering<SetupMcLibraries> {
-            dependencies.set(versionManifest.map { version ->
-                version["libraries"].array.map { library ->
-                    library["name"].string
-                }.filter { !it.contains("lwjgl") } // we don't need these on the server
-            })
+            dependencies.set(
+                versionManifest.map { version ->
+                    version["libraries"].array.map { library ->
+                        library["name"].string
+                    }.filter { !it.contains("lwjgl") } // we don't need these on the server
+                }
+            )
             outputFile.set(cache.resolve(Constants.MC_LIBRARIES))
         }
 
         val downloadMappings by tasks.registering<DownloadTask> {
-            url.set(versionManifest.map { version ->
-                version["downloads"]["server_mappings"]["url"].string
-            })
+            url.set(
+                versionManifest.map { version ->
+                    version["downloads"]["server_mappings"]["url"].string
+                }
+            )
             outputFile.set(cache.resolve(Constants.SERVER_MAPPINGS))
 
             downloader.set(downloadService)
@@ -498,7 +504,7 @@ class Paperweight : Plugin<Project> {
 
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
             classpathJars.add(applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
-            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get())   // Spigot remapped jar
+            classpathJars.add(spigotTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
             classpathJars.add(generalTasks.downloadServerJar.flatMap { it.outputJar }.get()) // pure vanilla jar
 
             spigotApiDir.set(spigotTasks.patchSpigotApi.flatMap { it.outputDir }.get())

@@ -96,7 +96,6 @@ abstract class FixJar : BaseTask(), AsmUtil {
                 }
             }
         }
-
     }
 }
 
@@ -248,9 +247,11 @@ class ClassNodeCache(private val jarFile: JarFile, private val fallbackJar: JarF
 
     private fun findClassData(className: String): ByteArray? {
         val entry = ZipEntry(className)
-        return (jarFile.getInputStream(entry) // remapped class
-            ?: fallbackJar.getInputStream(entry) // library class
-            ?: ClassLoader.getSystemResourceAsStream(className))?.use { it.readBytes() } // JDK class
+        return (
+            jarFile.getInputStream(entry) // remapped class
+                ?: fallbackJar.getInputStream(entry) // library class
+                ?: ClassLoader.getSystemResourceAsStream(className)
+            )?.use { it.readBytes() } // JDK class
     }
 
     private fun normalize(name: String): String {

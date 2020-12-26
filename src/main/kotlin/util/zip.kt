@@ -57,18 +57,21 @@ fun zip(inputDir: Any, zip: Any) {
 
     val outUri = URI.create("jar:${outputZipFile.toURI()}")
     FileSystems.newFileSystem(outUri, mapOf("create" to "true")).use { fs ->
-        Files.walkFileTree(dirPath, object : SimpleFileVisitor<Path>() {
-            override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-                if (dir != dirPath) {
-                    Files.createDirectories(fs.getPath(dirPath.relativize(dir).toString()))
+        Files.walkFileTree(
+            dirPath,
+            object : SimpleFileVisitor<Path>() {
+                override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    if (dir != dirPath) {
+                        Files.createDirectories(fs.getPath(dirPath.relativize(dir).toString()))
+                    }
+                    return FileVisitResult.CONTINUE
                 }
-                return FileVisitResult.CONTINUE
-            }
 
-            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                Files.copy(file, fs.getPath(dirPath.relativize(file).toString()))
-                return FileVisitResult.CONTINUE
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    Files.copy(file, fs.getPath(dirPath.relativize(file).toString()))
+                    return FileVisitResult.CONTINUE
+                }
             }
-        })
+        )
     }
 }

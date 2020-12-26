@@ -23,6 +23,6 @@
 package io.papermc.paperweight
 
 class PaperweightException : Exception {
-    constructor(message: String): super(message)
-    constructor(message: String, cause: Throwable): super(message, cause)
+    constructor(message: String) : super(message)
+    constructor(message: String, cause: Throwable) : super(message, cause)
 }
