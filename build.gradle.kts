@@ -30,7 +30,7 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
     maven("https://files.minecraftforge.net/maven/")
     maven("https://maven.fabricmc.net/")
-    mavenLocal()
+    maven("https://repo.demonwav.com/snapshots/")
 }
 
 val shade: Configuration by configurations.creating

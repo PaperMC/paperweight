@@ -17,4 +17,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - uses: gradle/wrapper-validation-action@v1
-      - run: ./gradlew build --info --stacktrace
+      - run: ./gradlew build --no-daemon --info --stacktrace
