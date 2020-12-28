@@ -64,7 +64,8 @@ abstract class RemapJar : BaseTask() {
             Constants.DEOBF_NAMESPACE,
             "--fixpackageaccess",
             "--renameinvalidlocals",
-            "--rebuildsourcefilenames"
+            "--rebuildsourcefilenames",
+            "--threads=1"
         )
         runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args)
     }
