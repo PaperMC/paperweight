@@ -16,4 +16,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - uses: gradle/wrapper-validation-action@v1
-      - run: './gradlew publish --no-daemon --stacktrace -PdemonwavUsername=paperweight -PdemonwavPassword="$PAPERWEIGHT_TOKEN"'
+      - run: ./gradlew publish --no-daemon --stacktrace -PdemonwavUsername=paperweight
+        env:
+          ORG_GRADLE_PROJECT_demonwavPassword: ${{ secrets.paperweightToken }}
