@@ -22,15 +22,17 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.runJar
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -41,6 +43,16 @@ abstract class RemapJar : BaseTask() {
 
     @get:InputFile
     abstract val mappingsFile: RegularFileProperty
+    @get:Input
+    abstract val fromNamespace: Property<String>
+    @get:Input
+    abstract val toNamespace: Property<String>
+    @get:Input
+    abstract val rebuildSourceFilenames: Property<Boolean>
+
+    @get:Internal
+    abstract val singleThreaded: Property<Boolean>
+
     @get:Classpath
     abstract val remapper: RegularFileProperty
 
@@ -49,6 +61,8 @@ abstract class RemapJar : BaseTask() {
 
     override fun init() {
         outputJar.convention(defaultOutput())
+        singleThreaded.convention(true)
+        rebuildSourceFilenames.convention(true)
     }
 
     @TaskAction
@@ -56,17 +70,21 @@ abstract class RemapJar : BaseTask() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
         logFile.delete()
 
-        val args = arrayOf(
+        val args = mutableListOf(
             inputJar.file.absolutePath,
             outputJar.file.absolutePath,
             mappingsFile.file.absolutePath,
-            Constants.OBF_NAMESPACE,
-            Constants.DEOBF_NAMESPACE,
+            fromNamespace.get(),
+            toNamespace.get(),
             "--fixpackageaccess",
-            "--renameinvalidlocals",
-            "--rebuildsourcefilenames",
-            "--threads=1"
+            "--renameinvalidlocals"
         )
-        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args)
+        if (singleThreaded.get()) {
+            args += "--threads=1"
+        }
+        if (rebuildSourceFilenames.get()) {
+            args += "--rebuildsourcefilenames"
+        }
+        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args.toTypedArray())
     }
 }

@@ -50,6 +50,8 @@ import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.jvm.tasks.Jar
+import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.registerIfAbsent
@@ -86,7 +88,7 @@ class Paperweight : Plugin<Project> {
             }
         }
 
-        target.createTasks()
+        val spigotTasks = target.createTasks()
 
         // Setup the server jar
         target.afterEvaluate {
@@ -113,10 +115,13 @@ class Paperweight : Plugin<Project> {
                     }
                 }
             }
+
+            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
+            serverProj.createBuildTasks(spigotTasks)
         }
     }
 
-    private fun Project.createTasks() {
+    private fun Project.createTasks(): SpigotTasks {
         val extension = ext
         val cache: File = layout.cache
 
@@ -192,6 +197,8 @@ class Paperweight : Plugin<Project> {
         }
 
         createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks, applyMergedAt)
+
+        return spigotTasks
     }
 
     // Shared task containers
@@ -310,6 +317,8 @@ class Paperweight : Plugin<Project> {
         val remapJar by tasks.registering<RemapJar> {
             inputJar.set(filterJar.flatMap { it.outputJar })
             mappingsFile.set(generateMappings.flatMap { it.outputMappings })
+            fromNamespace.set(Constants.OBF_NAMESPACE)
+            toNamespace.set(Constants.DEOBF_NAMESPACE)
             remapper.fileProvider(configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
         }
 
@@ -470,6 +479,23 @@ class Paperweight : Plugin<Project> {
             remapSpigotSources,
             mergeGeneratedAts
         )
+    }
+
+    private fun Project.createBuildTasks(spigotTasks: SpigotTasks) {
+        val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
+
+        val reobfJar by tasks.registering<RemapJar> {
+            dependsOn(shadowJar)
+            inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
+
+            mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappings })
+            fromNamespace.set(Constants.DEOBF_NAMESPACE)
+            toNamespace.set(Constants.SPIGOT_NAMESPACE)
+            singleThreaded.set(false) // not worried about param names
+            rebuildSourceFilenames.set(false)
+
+            remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
+        }
     }
 
     private fun Project.createPatchRemapTasks(
