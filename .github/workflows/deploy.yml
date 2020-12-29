@@ -1,7 +1,7 @@
-name: Build
-on: [push, pull_request]
+name: Deploy
+on: push
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-20.04
     container:
       image: adoptopenjdk:11-jdk-hotspot-focal
@@ -16,4 +16,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - uses: gradle/wrapper-validation-action@v1
-      - run: ./gradlew build --no-daemon --stacktrace
+      - run: './gradlew publish --no-daemon --stacktrace -DdemonwavUsername=paperweight -DdemonwavPassword="$PAPERWEIGHT_TOKEN"'
