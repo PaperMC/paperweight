@@ -70,6 +70,9 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
             println("   Resetting $target to ${upstream.file.name}...")
         }
         Git(outputDir.file).let { git ->
+            // disable gpg for this repo, not needed & slows things down
+            git("config", "commit.gpgsign", "false").executeSilently()
+
             git("remote", "rm", "upstream").runSilently(silenceErr = true)
             git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
             if (git("checkout", "master").setupOut(showError = false).run() != 0) {

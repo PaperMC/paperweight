@@ -74,6 +74,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         Git(outputFile.parentFile)("clone", spigotServerDir.file.absolutePath, outputFile.absolutePath).executeSilently()
 
         Git(outputFile).let { git ->
+            // disable gpg for this repo, not needed & slows things down
+            git("config", "commit.gpgsign", "false").executeSilently()
+
             val sourceDir = remapTargetDir.file
             if (sourceDir.exists()) {
                 sourceDir.deleteRecursively()
