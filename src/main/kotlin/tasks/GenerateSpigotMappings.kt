@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.parentClass
@@ -369,7 +370,7 @@ class SpigotMappingsMergerHandler(
         context: MergeContext
     ): MergeResult<MethodMapping?> {
         // Check if Spigot maps this from a synthetic method name
-        var obfName = left.obfuscatedName
+        var obfName: String? = null
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
         if (synthMethods != null) {
             // This is a reverse lookup
@@ -381,9 +382,18 @@ class SpigotMappingsMergerHandler(
             }
         }
 
+        if (obfName == null) {
+            return emptyMergeResult()
+        }
+
         val newMapping = target.getOrCreateMethodMapping(obfName, left.descriptor)
         newMapping.deobfuscatedName = left.deobfuscatedName
         return MergeResult(newMapping)
+    }
+
+    override fun addLeftFieldMapping(left: FieldMapping, target: ClassMapping<*, *>, context: MergeContext): FieldMapping? {
+        // We don't want mappings Spigot thinks exist but don't
+        return null
     }
 
     // Disable non-spigot mappings
@@ -402,7 +412,7 @@ class SpigotMappingsMergerHandler(
     ): MergeResult<MethodMapping?> {
         // Check if spigot changes this method automatically
         val synthMethods = synths[right.parentClass.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
-        val newName = synthMethods?.get(right.obfuscatedName) ?: return MergeResult(null)
+        val newName = synthMethods?.get(right.obfuscatedName) ?: return emptyMergeResult()
 
         val newClassMapping = context.left.getClassMapping(right.parentClass.fullObfuscatedName).orNull
         val newMethodMapping = newClassMapping?.getMethodMapping(MethodSignature(newName, right.descriptor))?.orNull

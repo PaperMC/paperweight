@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -376,6 +376,7 @@ class Paperweight : Plugin<Project> {
             patchMappings.set(extension.paper.mappingsPatch)
 
             outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
+            outputMappingsReversed.set(cache.resolve(Constants.PATCHED_MOJANG_YARN_SPIGOT_MAPPINGS))
         }
 
         val spigotRemapJar by tasks.registering<SpigotRemapJar> {
@@ -484,17 +485,17 @@ class Paperweight : Plugin<Project> {
     private fun Project.createBuildTasks(spigotTasks: SpigotTasks) {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
-        val reobfJar by tasks.registering<RemapJar> {
+        val reobfJar by tasks.registering<RemapJarAtlas> {
             dependsOn(shadowJar)
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
-            mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappings })
+            mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappingsReversed })
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
-            singleThreaded.set(false) // not worried about param names
-            rebuildSourceFilenames.set(false)
+            // singleThreaded.set(false) // not worried about param names
+            // rebuildSourceFilenames.set(false)
 
-            remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
+            // remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
         }
     }
 

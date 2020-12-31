@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,6 +49,7 @@ object Constants {
     const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
     const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
     const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patch.tiny"
+    const val PATCHED_MOJANG_YARN_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-patch.tiny"
 
     const val OBF_NAMESPACE = "official"
     const val SPIGOT_NAMESPACE = "spigot"

@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,6 +29,7 @@ import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
+import javax.inject.Inject
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -42,6 +43,10 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.submit
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -60,6 +65,9 @@ abstract class ApplyAccessTransform : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
     override fun init() {
         outputJar.convention(defaultOutput())
     }
@@ -69,14 +77,34 @@ abstract class ApplyAccessTransform : BaseTask() {
         ensureParentExists(outputJar.file)
         ensureDeleted(outputJar.file)
 
-        val at = AccessTransformFormats.FML.read(atFile.path)
-
-        Atlas().apply {
-            install {
-                AtJarEntryTransformer(at)
-            }
-            run(inputJar.path, outputJar.path)
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs("-Xmx1G")
         }
+
+        queue.submit(AtlasAction::class) {
+            inputJar.set(this@ApplyAccessTransform.inputJar.file)
+            atFile.set(this@ApplyAccessTransform.atFile.file)
+            outputJar.set(this@ApplyAccessTransform.outputJar.file)
+        }
+    }
+
+    abstract class AtlasAction : WorkAction<AtlasParameters> {
+        override fun execute() {
+            val at = AccessTransformFormats.FML.read(parameters.atFile.path)
+
+            Atlas().apply {
+                install {
+                    AtJarEntryTransformer(at)
+                }
+                run(parameters.inputJar.path, parameters.outputJar.path)
+            }
+        }
+    }
+
+    interface AtlasParameters : WorkParameters {
+        val inputJar: RegularFileProperty
+        val atFile: RegularFileProperty
+        val outputJar: RegularFileProperty
     }
 }
 
@@ -94,7 +122,7 @@ class AccessTransformerVisitor(
     writer: ClassWriter
 ) : ClassVisitor(Opcodes.ASM7, writer) {
 
-    var classTransform: AccessTransformSet.Class? = null
+    private var classTransform: AccessTransformSet.Class? = null
 
     override fun visit(
         version: Int,

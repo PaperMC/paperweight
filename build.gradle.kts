@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.publish.maven.MavenPom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -21,9 +22,16 @@ java {
     withSourcesJar()
 }
 
+val sourcesJar by tasks.existing
+
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.freeCompilerArgs = listOf("-Xjvm-default=enable")
+}
+
+gradlePlugin {
+    // we handle publications ourselves
+    isAutomatedPublishing = false
 }
 
 repositories {
@@ -83,12 +91,18 @@ idea {
     }
 }
 
-tasks.shadowJar {
+fun ShadowJar.configureStandard() {
     configurations = listOf(shade)
 
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
     }
+
+    mergeServiceFiles()
+}
+
+tasks.shadowJar {
+    configureStandard()
 
     val prefix = "paper.libs"
     listOf(
@@ -109,18 +123,32 @@ tasks.shadowJar {
     }
 }
 
+val devShadowJar by tasks.registering(ShadowJar::class) {
+    configureStandard()
+
+    from(project.sourceSets.main.get().output)
+
+    archiveClassifier.set("dev")
+}
+
 val isSnapshot = version().endsWith("-SNAPSHOT")
 
 publishing {
     publications {
         register<MavenPublication>("shadow") {
             pluginConfig(version())
+            artifact(tasks.shadowJar) {
+                classifier = null
+            }
         }
         register<MavenPublication>("maven") {
             standardConfig(version())
         }
         register<MavenPublication>("shadowLocal") {
             pluginConfig(localVersion())
+            artifact(devShadowJar) {
+                classifier = null
+            }
         }
         register<MavenPublication>("mavenLocal") {
             standardConfig(localVersion())
@@ -157,6 +185,9 @@ fun MavenPublication.standardConfig(versionName: String) {
     version = versionName
 
     from(components["java"])
+    artifact(devShadowJar) {
+        classifier = "dev"
+    }
 
     withoutBuildIdentifier()
     pom {
@@ -169,8 +200,7 @@ fun MavenPublication.pluginConfig(versionName: String) {
     artifactId = "io.papermc.paperweight.gradle.plugin"
     version = versionName
 
-    project.shadow.component(this)
-    artifact(project.tasks.named("sourcesJar"))
+    artifact(sourcesJar)
 
     for (artifact in artifacts) {
         if (artifact.classifier == "all") {
@@ -185,7 +215,8 @@ fun MavenPublication.pluginConfig(versionName: String) {
 }
 
 fun MavenPom.pomConfig() {
-    val repoUrl = "https://github.com/DemonWav/paperweight"
+    val repoPath = "PaperMC/paperweight"
+    val repoUrl = "https://github.com/$repoPath"
 
     name.set("paperweight")
     description.set("Gradle plugin for the PaperMC project")
@@ -218,7 +249,7 @@ fun MavenPom.pomConfig() {
     scm {
         url.set(repoUrl)
         connection.set("scm:git:$repoUrl.git")
-        developerConnection.set(connection)
+        developerConnection.set("scm:git:git@github.com:$repoPath.git")
     }
 }
 

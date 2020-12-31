@@ -22,39 +22,53 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.AtlasHelper
+import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
-import org.cadixdev.at.AccessTransformSet
-import org.cadixdev.at.io.AccessTransformFormats
-import org.gradle.api.file.RegularFile
+import java.nio.file.Files
+import javax.inject.Inject
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.InputFiles
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.workers.WorkerExecutor
 
-abstract class MergeAccessTransforms : BaseTask() {
+abstract class RemapJarAtlas : BaseTask() {
 
-    @get:InputFiles
-    abstract val inputFiles: ListProperty<RegularFile>
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+
+    @get:InputFile
+    abstract val mappingsFile: RegularFileProperty
+
+    @get:Input
+    abstract val fromNamespace: Property<String>
+    @get:Input
+    abstract val toNamespace: Property<String>
 
     @get:OutputFile
-    abstract val outputFile: RegularFileProperty
+    abstract val outputJar: RegularFileProperty
+
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
-        outputFile.convention(defaultOutput("at"))
+        outputJar.convention(defaultOutput())
     }
 
     @TaskAction
     fun run() {
-        val ats = inputFiles.get()
-            .map { AccessTransformFormats.FML.read(it.asFile.toPath()) }
+        ensureParentExists(outputJar)
+        ensureDeleted(outputJar)
 
-        val outputAt = AccessTransformSet.create()
-        for (at in ats) {
-            outputAt.merge(at)
-        }
+        val mappings = MappingFormats.TINY.read(mappingsFile.path, fromNamespace.get(), toNamespace.get())
 
-        AccessTransformFormats.FML.write(outputFile.path, outputAt)
+        val result = AtlasHelper.using(workerExecutor).remap(mappings, inputJar)
+        Files.move(result, outputJar.path)
     }
 }

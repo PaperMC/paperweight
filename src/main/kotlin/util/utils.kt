@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +37,7 @@ import java.nio.file.Path
 import java.util.Optional
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import org.cadixdev.lorenz.merge.MergeResult
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
@@ -156,6 +157,12 @@ inline fun <reified T : Any> Project.contents(contentFile: Any, crossinline conv
 
 val MemberMapping<*, *>.parentClass: ClassMapping<*, *>
     get() = parent as ClassMapping<*, *>
+
+private val emptyMergeResult = MergeResult(null)
+fun <T> emptyMergeResult(): MergeResult<T?> {
+    @Suppress("UNCHECKED_CAST")
+    return emptyMergeResult as MergeResult<T?>
+}
 
 // We have to create our own task delegate because the ones Gradle provides don't work in plugin dev environments
 inline fun <reified T : Task> TaskContainer.registering(noinline configure: T.() -> Unit): TaskDelegateProvider<T> {

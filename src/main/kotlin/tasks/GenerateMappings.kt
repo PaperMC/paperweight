@@ -1,13 +1,13 @@
 /*
- * paperweight is a Gradle plugin for the PaperMC project. It uses
- * some code and systems originally from ForgeGradle.
+ * paperweight is a Gradle plugin for the PaperMC project.
  *
- * Copyright (C) 2020 Kyle Wood
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,16 +22,15 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.AtlasHelper
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
 import java.nio.file.FileSystems
-import java.nio.file.Files
-import org.cadixdev.atlas.Atlas
-import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
+import javax.inject.Inject
 import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -49,6 +48,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.workers.WorkerExecutor
 
 abstract class GenerateMappings : DefaultTask() {
 
@@ -62,6 +62,9 @@ abstract class GenerateMappings : DefaultTask() {
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
+
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
 
     @TaskAction
     fun run() {
@@ -82,18 +85,10 @@ abstract class GenerateMappings : DefaultTask() {
         ).merge()
 
         // Fill out any missing inheritance info in the mappings
-        val atlasOut = Files.createTempFile("paperweight", "jar")
-        try {
-            Atlas().use { atlas ->
-                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(merged, ctx.inheritanceProvider())) }
-                atlas.run(vanillaJar.path, atlasOut)
-            }
-        } finally {
-            Files.deleteIfExists(atlasOut)
-        }
+        val filledMerged = AtlasHelper.using(workerExecutor).fillInheritance(merged, vanillaJar.path)
 
         ensureParentExists(outputMappings)
-        MappingFormats.TINY.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 }
 
@@ -208,14 +203,14 @@ class ParamsMergeHandler : MappingSetMergerHandler {
         target: MappingSet?,
         context: MergeContext?
     ): MergeResult<TopLevelClassMapping?> {
-        return MergeResult(null)
+        return emptyMergeResult()
     }
     override fun addRightInnerClassMapping(
         right: InnerClassMapping?,
         target: ClassMapping<*, *>?,
         context: MergeContext?
     ): MergeResult<InnerClassMapping?> {
-        return MergeResult(null)
+        return emptyMergeResult()
     }
     override fun addRightFieldMapping(
         right: FieldMapping?,
@@ -229,6 +224,6 @@ class ParamsMergeHandler : MappingSetMergerHandler {
         target: ClassMapping<*, *>?,
         context: MergeContext?
     ): MergeResult<MethodMapping?> {
-        return MergeResult(null)
+        return emptyMergeResult()
     }
 }
