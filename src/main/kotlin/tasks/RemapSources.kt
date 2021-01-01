@@ -26,6 +26,7 @@ import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
 import java.io.File
 import javax.inject.Inject
@@ -85,9 +86,7 @@ abstract class RemapSources : ZippedTask() {
             classpath.add(vanillaRemappedSpigotJar.file)
             classpath.add(vanillaJar.file)
             classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-            classpath.addAll(
-                spigotDeps.get().asFileTree.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.files
-            )
+            classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
 
             mappings.set(this@RemapSources.mappings.file)
             inputDir.set(srcDir)

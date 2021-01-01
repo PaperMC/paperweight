@@ -66,15 +66,19 @@ data class MavenArtifact(
 
     fun downloadToDir(downloadService: DownloadService, targetDir: File, repos: List<String>): File {
         val out = targetDir.resolve(file)
-        downloadToFile(downloadService, targetDir.resolve(file), repos)
+        downloadToFile(downloadService, out, repos)
         return out
     }
 
     override fun toString(): String {
-        return if (classifier == null) {
-            "$group:$artifact:$version"
-        } else {
-            "$group:$artifact:$version:$classifier"
+        return buildString {
+            append(group).append(':').append(artifact).append(':').append(version)
+            if (classifier != null) {
+                append(':').append(classifier)
+            }
+            if (extension != null) {
+                append('@').append(extension)
+            }
         }
     }
 

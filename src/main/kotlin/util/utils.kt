@@ -102,6 +102,9 @@ fun Any.convertToUrl(): URL {
     }
 }
 
+val File.isLibraryJar: Boolean
+    get() = name.endsWith(".jar") && !name.endsWith("-sources.jar")
+
 fun ensureParentExists(vararg files: Any) {
     for (file in files) {
         val parent = file.convertToFile().parentFile

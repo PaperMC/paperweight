@@ -42,6 +42,7 @@ object Constants {
 
     private const val JARS_PATH = "$PAPER_PATH/jars"
     const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
+    const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
     const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
 
     private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
@@ -59,6 +60,7 @@ object Constants {
     const val MC_MANIFEST = "$DATA_PATH/McManifest.json"
     const val VERSION_JSON = "$DATA_PATH/McVersion.json"
     const val MC_LIBRARIES = "$DATA_PATH/McLibraries.txt"
+    const val SERVER_LIBRARIES = "$DATA_PATH/ServerLibraries.txt"
 
     private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 

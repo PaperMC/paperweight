@@ -106,12 +106,10 @@ class Paperweight : Plugin<Project> {
                     add("implementation", target.files(remappedJar))
                 }
 
-                val libsFile = cache.resolve(Constants.MC_LIBRARIES)
+                val libsFile = cache.resolve(Constants.SERVER_LIBRARIES)
                 if (libsFile.exists()) {
                     libsFile.forEachLine { line ->
-                        if (!line.startsWith("org.lwjgl")) { // lwjgl is definitely client only
-                            add("implementation", line)
-                        }
+                        add("implementation", line)
                     }
                 }
             }
@@ -128,7 +126,7 @@ class Paperweight : Plugin<Project> {
         val initialTasks = createInitialTasks()
         val generalTasks = createGeneralTasks()
         val vanillaTasks = createVanillaTasks(initialTasks, generalTasks)
-        val spigotTasks = createSpigotTasks(generalTasks, vanillaTasks)
+        val spigotTasks = createSpigotTasks(initialTasks, generalTasks, vanillaTasks)
 
         val applyMergedAt by tasks.registering<ApplyAccessTransform> {
             inputJar.set(vanillaTasks.fixJar.flatMap { it.outputJar })
@@ -165,7 +163,7 @@ class Paperweight : Plugin<Project> {
             remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
             spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir })
             sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-            mcLibrariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir })
+            mcLibrariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
             libraryImports.set(extension.paper.libraryClassImports)
 
             outputDir.set(extension.paper.paperServerDir)
@@ -258,7 +256,7 @@ class Paperweight : Plugin<Project> {
                 versionManifest.map { version ->
                     version["libraries"].array.map { library ->
                         library["name"].string
-                    }.filter { !it.contains("lwjgl") } // we don't need these on the server
+                    }
                 }
             )
             outputFile.set(cache.resolve(Constants.MC_LIBRARIES))
@@ -331,6 +329,7 @@ class Paperweight : Plugin<Project> {
             mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
             mcRepo.set(Constants.MC_LIBRARY_URL)
             outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
+            sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
 
             downloader.set(downloadService)
         }
@@ -338,7 +337,7 @@ class Paperweight : Plugin<Project> {
         return VanillaTasks(generateMappings, fixJar, downloadMcLibraries)
     }
 
-    private fun Project.createSpigotTasks(generalTasks: GeneralTasks, vanillaTasks: VanillaTasks): SpigotTasks {
+    private fun Project.createSpigotTasks(initialTasks: InitialTasks, generalTasks: GeneralTasks, vanillaTasks: VanillaTasks): SpigotTasks {
         val cache: File = layout.cache
         val extension: PaperweightExtension = ext
         val downloadService = download
@@ -355,6 +354,10 @@ class Paperweight : Plugin<Project> {
 
         val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
             inputJar.set(downloadServerJar.flatMap { it.outputJar })
+            librariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir })
+            mcLibraries.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
+
+            serverLibraries.set(cache.resolve(Constants.SERVER_LIBRARIES))
         }
 
         val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {

@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.MavenArtifact
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
 import java.io.File
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
@@ -70,6 +71,8 @@ abstract class DownloadMcLibraries : DefaultTask() {
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+    @get:OutputDirectory
+    abstract val sourcesOutputDir: DirectoryProperty
 
     @get:Internal
     abstract val downloader: Property<DownloadService>
@@ -81,6 +84,8 @@ abstract class DownloadMcLibraries : DefaultTask() {
     fun run() {
         val out = outputDir.file
         out.deleteRecursively()
+        val sourcesOut = sourcesOutputDir.file
+        sourcesOut.deleteRecursively()
 
         val mcRepos = listOf(mcRepo.get())
 
@@ -91,6 +96,7 @@ abstract class DownloadMcLibraries : DefaultTask() {
                     repos.set(mcRepos)
                     artifact.set(line)
                     target.set(out)
+                    sourcesTarget.set(sourcesOut)
                     downloadToDir.set(true)
                     downloader.set(this@DownloadMcLibraries.downloader)
                 }
@@ -223,6 +229,7 @@ interface DownloadParams : WorkParameters {
     val repos: ListProperty<String>
     val artifact: Property<String>
     val target: RegularFileProperty
+    val sourcesTarget: RegularFileProperty
     val downloadToDir: Property<Boolean>
     val downloader: Property<DownloadService>
 }
@@ -233,13 +240,15 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
     override fun execute() {
         val target = parameters.target.file
         val artifact = MavenArtifact.parse(parameters.artifact.get())
-        val source = artifact.copy(classifier = "sources")
 
         if (parameters.downloadToDir.get()) {
             artifact.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
-            try {
-                source.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
-            } catch (ignored: Exception) {}
+            parameters.sourcesTarget.fileOrNull?.let { sourceDir ->
+                try {
+                    val sourceArtifact = artifact.copy(classifier = "sources")
+                    sourceArtifact.downloadToDir(parameters.downloader.get(), sourceDir, parameters.repos.get())
+                } catch (ignored: Exception) {}
+            }
         } else {
             artifact.downloadToFile(parameters.downloader.get(), target, parameters.repos.get())
         }

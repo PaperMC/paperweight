@@ -26,6 +26,7 @@ import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.runJar
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -67,7 +68,7 @@ abstract class RunForgeFlower : BaseTask() {
         try {
             tempFile.bufferedWriter().use { writer ->
                 for (lib in libs) {
-                    if (lib.name.endsWith(".jar") && !lib.name.endsWith("-sources.jar")) {
+                    if (lib.isLibraryJar) {
                         writer.appendln("-e=${lib.absolutePath}")
                     }
                 }

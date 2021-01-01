@@ -115,3 +115,9 @@ object SyntheticUtil : AsmUtil {
 }
 
 data class MethodDesc(val name: String, val desc: String)
+
+interface AsmUtil {
+    operator fun Int.contains(value: Int): Boolean {
+        return value and this != 0
+    }
+}
