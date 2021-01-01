@@ -36,6 +36,7 @@ open class PaperweightExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
     val minecraftVersion: Property<String> = objects.property()
+    val versionPackage: Property<String> = objects.property()
     val serverProject: Property<Project> = objects.property()
 
     val craftBukkit = CraftBukkitExtension(objects, workDir)

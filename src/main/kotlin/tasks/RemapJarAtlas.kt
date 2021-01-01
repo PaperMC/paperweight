@@ -22,21 +22,27 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.AtlasHelper
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
-import java.nio.file.Files
 import javax.inject.Inject
+import org.cadixdev.atlas.Atlas
+import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
+import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.submit
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
+import org.objectweb.asm.commons.Remapper
 
 abstract class RemapJarAtlas : BaseTask() {
 
@@ -45,6 +51,8 @@ abstract class RemapJarAtlas : BaseTask() {
 
     @get:InputFile
     abstract val mappingsFile: RegularFileProperty
+    @get:Input
+    abstract val packageVersion: Property<String>
 
     @get:Input
     abstract val fromNamespace: Property<String>
@@ -66,9 +74,51 @@ abstract class RemapJarAtlas : BaseTask() {
         ensureParentExists(outputJar)
         ensureDeleted(outputJar)
 
-        val mappings = MappingFormats.TINY.read(mappingsFile.path, fromNamespace.get(), toNamespace.get())
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs("-Xmx1G")
+        }
 
-        val result = AtlasHelper.using(workerExecutor).remap(mappings, inputJar)
-        Files.move(result, outputJar.path)
+        queue.submit(AtlasAction::class) {
+            inputJar.set(this@RemapJarAtlas.inputJar.file)
+            outputJar.set(this@RemapJarAtlas.outputJar.file)
+            mappingsFile.set(this@RemapJarAtlas.mappingsFile.file)
+            packageVersion.set(this@RemapJarAtlas.packageVersion.get())
+            toNamespace.set(this@RemapJarAtlas.toNamespace.get())
+            fromNamespace.set(this@RemapJarAtlas.fromNamespace.get())
+        }
+    }
+
+    abstract class AtlasAction : WorkAction<AtlasParameters> {
+        override fun execute() {
+            val mappings = MappingFormats.TINY.read(parameters.mappingsFile.path, parameters.fromNamespace.get(), parameters.toNamespace.get())
+
+            val oldPack = "net/minecraft/server"
+            val newPack = "$oldPack/v${parameters.packageVersion.get()}"
+            Atlas().let { atlas ->
+                atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider())) }
+                atlas.install { JarEntryRemappingTransformer(PackageRemapper(oldPack, newPack)) }
+                atlas.run(parameters.inputJar.path, parameters.outputJar.path)
+            }
+        }
+    }
+
+    interface AtlasParameters : WorkParameters {
+        val inputJar: RegularFileProperty
+        val outputJar: RegularFileProperty
+        val mappingsFile: RegularFileProperty
+        val fromNamespace: Property<String>
+        val toNamespace: Property<String>
+        val packageVersion: Property<String>
+    }
+}
+
+class PackageRemapper(private val oldPackage: String, private val newPackage: String) : Remapper() {
+
+    override fun map(internalName: String): String {
+        return if (internalName.startsWith(oldPackage)) {
+            internalName.replaceFirst(oldPackage, newPackage)
+        } else {
+            internalName
+        }
     }
 }

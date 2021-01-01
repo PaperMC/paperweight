@@ -117,7 +117,7 @@ class Paperweight : Plugin<Project> {
             }
 
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            serverProj.createBuildTasks(spigotTasks)
+            serverProj.createBuildTasks(target.ext, spigotTasks)
         }
     }
 
@@ -482,7 +482,7 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(spigotTasks: SpigotTasks) {
+    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks) {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
         val reobfJar by tasks.registering<RemapJarAtlas> {
@@ -490,12 +490,11 @@ class Paperweight : Plugin<Project> {
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
             mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappingsReversed })
+            packageVersion.set(ext.versionPackage)
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
-            // singleThreaded.set(false) // not worried about param names
-            // rebuildSourceFilenames.set(false)
 
-            // remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
+            outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
         }
     }
 

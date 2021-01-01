@@ -34,17 +34,28 @@ gradlePlugin {
     isAutomatedPublishing = false
 }
 
-repositories {
-    mavenCentral()
-    maven("https://oss.sonatype.org/content/repositories/snapshots/")
-    maven("https://files.minecraftforge.net/maven/")
-    maven("https://maven.fabricmc.net/")
-    maven("https://repo.demonwav.com/snapshots/")
-}
-
 val shade: Configuration by configurations.creating
 configurations.implementation {
     extendsFrom(shade)
+}
+
+repositories {
+    mavenCentral()
+    maven("https://oss.sonatype.org/content/repositories/snapshots/") {
+        mavenContent {
+            includeGroup("org.cadixdev")
+        }
+    }
+    maven("https://repo.demonwav.com/snapshots/") {
+        mavenContent {
+            includeGroup("org.cadixdev")
+        }
+    }
+    maven("https://maven.fabricmc.net/") {
+        mavenContent {
+            includeGroup("net.fabricmc")
+        }
+    }
 }
 
 dependencies {

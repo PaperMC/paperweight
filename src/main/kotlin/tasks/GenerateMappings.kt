@@ -22,15 +22,19 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.AtlasHelper
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.ensureParentExists
+import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import javax.inject.Inject
+import org.cadixdev.atlas.Atlas
+import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.MappingSet
+import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -48,6 +52,9 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.submit
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 abstract class GenerateMappings : DefaultTask() {
@@ -85,10 +92,56 @@ abstract class GenerateMappings : DefaultTask() {
         ).merge()
 
         // Fill out any missing inheritance info in the mappings
-        val filledMerged = AtlasHelper.using(workerExecutor).fillInheritance(merged, vanillaJar.path)
+        val tempMappingsFile = Files.createTempFile("mappings", "tiny")
+        val tempMappingsOutputFile = Files.createTempFile("mappings-out", "tiny")
+
+        val filledMerged = try {
+            MappingFormats.TINY.write(merged, tempMappingsFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+
+            val queue = workerExecutor.processIsolation {
+                forkOptions.jvmArgs("-Xmx1G")
+            }
+
+            queue.submit(AtlasAction::class) {
+                inputJar.set(vanillaJar.file)
+                mappingsFile.set(tempMappingsFile.toFile())
+                outputMappingsFile.set(tempMappingsOutputFile.toFile())
+            }
+
+            queue.await()
+
+            MappingFormats.TINY.read(tempMappingsOutputFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        } finally {
+            Files.deleteIfExists(tempMappingsFile)
+            Files.deleteIfExists(tempMappingsOutputFile)
+        }
 
         ensureParentExists(outputMappings)
         MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+    }
+
+    abstract class AtlasAction : WorkAction<AtlasParameters> {
+        override fun execute() {
+            val mappings = MappingFormats.TINY.read(parameters.mappingsFile.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+
+            val tempOut = Files.createTempFile("remapped", "jar")
+            try {
+                Atlas().let { atlas ->
+                    atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider())) }
+                    atlas.run(parameters.inputJar.path, tempOut)
+                }
+
+                MappingFormats.TINY.write(mappings, parameters.outputMappingsFile.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+            } finally {
+                Files.deleteIfExists(tempOut)
+            }
+        }
+    }
+
+    interface AtlasParameters : WorkParameters {
+        val inputJar: RegularFileProperty
+        val mappingsFile: RegularFileProperty
+        val outputMappingsFile: RegularFileProperty
     }
 }
 

@@ -22,7 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.Constants.DEOBF_NAMESPACE
+import io.papermc.paperweight.util.Constants.SPIGOT_NAMESPACE
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.commentRegex
 import io.papermc.paperweight.util.path
@@ -52,8 +53,8 @@ abstract class PatchMappings : DefaultTask() {
     fun run() {
         val mappings = MappingFormats.TINY.read(
             inputMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
+            SPIGOT_NAMESPACE,
+            DEOBF_NAMESPACE
         )
         patchMappings.pathOrNull?.let { patchFile ->
             val temp = Files.createTempFile("patch", "tiny")
@@ -71,13 +72,31 @@ abstract class PatchMappings : DefaultTask() {
                         }
                     }
                 }
-                MappingFormats.TINY.read(mappings, temp, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+                MappingFormats.TINY.read(mappings, temp, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
             } finally {
                 Files.deleteIfExists(temp)
             }
         }
 
-        MappingFormats.TINY.write(mappings, outputMappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
-        MappingFormats.TINY.write(mappings.reverse(), outputMappingsReversed.path, Constants.DEOBF_NAMESPACE, Constants.SPIGOT_NAMESPACE)
+        MappingFormats.TINY.write(mappings, outputMappings.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(mappings.reverse(), outputMappingsReversed.path, DEOBF_NAMESPACE, SPIGOT_NAMESPACE)
     }
+    //
+    // private fun appendServerVersion(mappings: MappingSet): MappingSet {
+    //     val ver = versionPackage.get()
+    //
+    //     val result = MappingSet.create()
+    //     for (topLevelClassMapping in mappings.topLevelClassMappings) {
+    //         val newMapping = if (topLevelClassMapping.deobfuscatedPackage == "net/minecraft/server") {
+    //             val newName = topLevelClassMapping.deobfuscatedPackage + "/v$ver/" + topLevelClassMapping.simpleDeobfuscatedName
+    //             result.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, newName)
+    //         } else {
+    //             result.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
+    //         }
+    //         topLevelClassMapping.fieldMappings.forEach { it.copy(newMapping) }
+    //         topLevelClassMapping.methodMappings.forEach { it.copy(newMapping) }
+    //         topLevelClassMapping.innerClassMappings.forEach { it.copy(newMapping) }
+    //     }
+    //     return result
+    // }
 }
