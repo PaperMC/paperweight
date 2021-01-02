@@ -53,6 +53,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.maven
+import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.registerIfAbsent
 
@@ -94,11 +95,23 @@ class Paperweight : Plugin<Project> {
         // Setup the server jar
         target.afterEvaluate {
             target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks.spigotTasks)?.let { reobfJar ->
-                val generatePaperclipPatch by target.tasks.registering<CreatePaperclipPatch> {
-                    paperclipJar.fileProvider(target.configurations.named(Constants.PAPERCLIP_CONFIG).map { it.singleFile })
+                val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                     originalJar.set(tasks.generalTasks.downloadServerJar.flatMap { it.outputJar })
                     patchedJar.set(reobfJar.flatMap { it.outputJar })
                     mcVersion.set(target.ext.minecraftVersion)
+                }
+
+                target.tasks.named("jar", Jar::class) {
+                    val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
+                    dependsOn(paperclipConfig)
+
+                    val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
+                    from(paperclipZip) {
+                        exclude("META-INF/MANIFEST.MF")
+                    }
+                    from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
+
+                    manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
                 }
             }
         }

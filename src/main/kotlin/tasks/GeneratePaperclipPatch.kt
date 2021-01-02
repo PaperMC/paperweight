@@ -25,7 +25,6 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.unzip
 import io.sigpipe.jbsdiff.Diff
 import java.io.File
 import java.io.IOException
@@ -43,10 +42,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 
-abstract class CreatePaperclipPatch : ZippedTask() {
+abstract class GeneratePaperclipPatch : ZippedTask() {
 
-    @get:InputFile
-    abstract val paperclipJar: RegularFileProperty
     @get:InputFile
     abstract val originalJar: RegularFileProperty
     @get:InputFile
@@ -54,20 +51,10 @@ abstract class CreatePaperclipPatch : ZippedTask() {
     @get:Input
     abstract val mcVersion: Property<String>
 
-    override fun init() {
-        outputZip.set(
-            mcVersion.zip(layout.buildDirectory) { version, dir ->
-                dir.file("libs/Paper-$version.jar")
-            }
-        )
-    }
-
     override fun run(rootDir: File) {
         val patchFile = rootDir.resolve("paperMC.patch").toPath()
         val propFile = rootDir.resolve("patch.properties").toPath()
         val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE").toPath()
-
-        unzip(paperclipJar, rootDir)
 
         val zipUri = try {
             val jarUri = patchedJar.file.toURI()

@@ -60,6 +60,8 @@ abstract class ZippedTask : BaseTask() {
             val input = inputZip.fileOrNull
             if (input != null) {
                 unzip(input, outputDir)
+            } else {
+                outputDir.mkdirs()
             }
 
             run(outputDir)
