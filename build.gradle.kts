@@ -121,16 +121,19 @@ tasks.shadowJar {
     listOf(
         "com.github.salomonbrys.kotson",
         "com.google.gson",
+        "io.sigpipe",
         "me.jamiemansfield",
         "net.fabricmc",
         "org.apache.commons.codec",
+        "org.apache.commons.compress",
         "org.apache.commons.logging",
         "org.apache.felix",
         "org.apache.http",
         "org.cadixdev",
         "org.eclipse",
         "org.objectweb",
-        "org.osgi"
+        "org.osgi",
+        "org.tukaani"
     ).forEach { pack ->
         relocate(pack, "$prefix.$pack")
     }
@@ -198,9 +201,7 @@ fun MavenPublication.standardConfig(versionName: String) {
     version = versionName
 
     from(components["java"])
-    artifact(devShadowJar) {
-        classifier = "dev"
-    }
+    artifact(devShadowJar)
 
     withoutBuildIdentifier()
     pom {
@@ -214,12 +215,6 @@ fun MavenPublication.pluginConfig(versionName: String) {
     version = versionName
 
     artifact(sourcesJar)
-
-    for (artifact in artifacts) {
-        if (artifact.classifier == "all") {
-            artifact.classifier = null
-        }
-    }
 
     withoutBuildIdentifier()
     pom {
