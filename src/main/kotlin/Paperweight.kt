@@ -74,6 +74,7 @@ class Paperweight : Plugin<Project> {
         target.configurations.create(Constants.PARAM_MAPPINGS_CONFIG)
         target.configurations.create(Constants.REMAPPER_CONFIG)
         target.configurations.create(Constants.DECOMPILER_CONFIG)
+        target.configurations.create(Constants.PAPERCLIP_CONFIG)
 
         target.repositories.apply {
             maven(Constants.FABRIC_MAVEN_URL) {
@@ -88,38 +89,48 @@ class Paperweight : Plugin<Project> {
             }
         }
 
-        val spigotTasks = target.createTasks()
+        val tasks = target.createTasks()
 
         // Setup the server jar
         target.afterEvaluate {
-            val serverProj = target.ext.serverProject.orNull ?: return@afterEvaluate
-            if (!serverProj.projectDir.exists()) {
-                return@afterEvaluate
-            }
-
-            val cache = target.layout.cache
-
-            serverProj.plugins.apply("java")
-            serverProj.dependencies.apply {
-                val remappedJar = cache.resolve(Constants.FINAL_REMAPPED_JAR)
-                if (remappedJar.exists()) {
-                    add("implementation", target.files(remappedJar))
-                }
-
-                val libsFile = cache.resolve(Constants.SERVER_LIBRARIES)
-                if (libsFile.exists()) {
-                    libsFile.forEachLine { line ->
-                        add("implementation", line)
-                    }
+            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks.spigotTasks)?.let { reobfJar ->
+                val generatePaperclipPatch by target.tasks.registering<CreatePaperclipPatch> {
+                    paperclipJar.fileProvider(target.configurations.named(Constants.PAPERCLIP_CONFIG).map { it.singleFile })
+                    originalJar.set(tasks.generalTasks.downloadServerJar.flatMap { it.outputJar })
+                    patchedJar.set(reobfJar.flatMap { it.outputJar })
+                    mcVersion.set(target.ext.minecraftVersion)
                 }
             }
-
-            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            serverProj.createBuildTasks(target.ext, spigotTasks)
         }
     }
 
-    private fun Project.createTasks(): SpigotTasks {
+    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas>? {
+        if (!projectDir.exists()) {
+            return null
+        }
+
+        val cache = parent.layout.cache
+
+        plugins.apply("java")
+        dependencies.apply {
+            val remappedJar = cache.resolve(Constants.FINAL_REMAPPED_JAR)
+            if (remappedJar.exists()) {
+                add("implementation", parent.files(remappedJar))
+            }
+
+            val libsFile = cache.resolve(Constants.SERVER_LIBRARIES)
+            if (libsFile.exists()) {
+                libsFile.forEachLine { line ->
+                    add("implementation", line)
+                }
+            }
+        }
+
+        apply(plugin = "com.github.johnrengelman.shadow")
+        return createBuildTasks(parent.ext, spigotTasks)
+    }
+
+    private fun Project.createTasks(): TaskContainers {
         val extension = ext
         val cache: File = layout.cache
 
@@ -196,7 +207,7 @@ class Paperweight : Plugin<Project> {
 
         createPatchRemapTasks(generalTasks, vanillaTasks, spigotTasks, applyMergedAt)
 
-        return spigotTasks
+        return TaskContainers(initialTasks, generalTasks, vanillaTasks, spigotTasks)
     }
 
     // Shared task containers
@@ -224,6 +235,13 @@ class Paperweight : Plugin<Project> {
         val patchSpigotServer: TaskProvider<ApplyGitPatches>,
         val remapSpigotSources: TaskProvider<RemapSources>,
         val mergeGeneratedAts: TaskProvider<MergeAccessTransforms>
+    )
+
+    data class TaskContainers(
+        val initialTasks: InitialTasks,
+        val generalTasks: GeneralTasks,
+        val vanillaTasks: VanillaTasks,
+        val spigotTasks: SpigotTasks
     )
 
     private fun Project.createInitialTasks(): InitialTasks {
@@ -485,7 +503,7 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks) {
+    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
         val reobfJar by tasks.registering<RemapJarAtlas> {
@@ -499,6 +517,8 @@ class Paperweight : Plugin<Project> {
 
             outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
         }
+
+        return reobfJar
     }
 
     private fun Project.createPatchRemapTasks(

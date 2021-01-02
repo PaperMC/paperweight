@@ -36,6 +36,7 @@ object Constants {
     const val PARAM_MAPPINGS_CONFIG = "paramMappings"
     const val REMAPPER_CONFIG = "remapper"
     const val DECOMPILER_CONFIG = "decompiler"
+    const val PAPERCLIP_CONFIG = "paperclip"
 
     const val CACHE_PATH = "caches"
     private const val PAPER_PATH = "paperweight"

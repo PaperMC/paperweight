@@ -77,6 +77,8 @@ dependencies {
     shade("org.cadixdev:mercury:0.1.0-rc2-PW-SNAPSHOT")
 
     shade("net.fabricmc:lorenz-tiny:3.0.0")
+
+    shade("io.sigpipe:jbsdiff:1.0")
 }
 
 ktlint {
