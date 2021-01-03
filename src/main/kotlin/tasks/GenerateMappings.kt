@@ -41,6 +41,7 @@ import org.cadixdev.lorenz.merge.MappingSetMergerHandler
 import org.cadixdev.lorenz.merge.MergeConfig
 import org.cadixdev.lorenz.merge.MergeContext
 import org.cadixdev.lorenz.merge.MergeResult
+import org.cadixdev.lorenz.merge.MethodMergeStrategy
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.FieldMapping
 import org.cadixdev.lorenz.model.InnerClassMapping
@@ -70,8 +71,8 @@ abstract class GenerateMappings : DefaultTask() {
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
+//    @get:Inject
+//    abstract val workerExecutor: WorkerExecutor
 
     @TaskAction
     fun run() {
@@ -86,12 +87,14 @@ abstract class GenerateMappings : DefaultTask() {
             vanillaMappings,
             paramMappings,
             MergeConfig.builder()
+                .withMethodMergeStrategy(MethodMergeStrategy.STRICT)
                 .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
                 .withMergeHandler(ParamsMergeHandler())
                 .build()
         ).merge()
 
         // Fill out any missing inheritance info in the mappings
+        /*
         val tempMappingsFile = Files.createTempFile("mappings", "tiny")
         val tempMappingsOutputFile = Files.createTempFile("mappings-out", "tiny")
 
@@ -115,9 +118,10 @@ abstract class GenerateMappings : DefaultTask() {
             Files.deleteIfExists(tempMappingsFile)
             Files.deleteIfExists(tempMappingsOutputFile)
         }
+         */
 
         ensureParentExists(outputMappings)
-        MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 
     abstract class AtlasAction : WorkAction<AtlasParameters> {
@@ -237,7 +241,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<MethodMapping?> {
         return MergeResult(
             target.createMethodMapping(left.signature, left.deobfuscatedName),
-            listOfNotNull(standardRightDuplicate, wiggledRightDuplicate)
+            listOfNotNull(standardRightDuplicate)
         )
     }
 

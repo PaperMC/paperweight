@@ -22,7 +22,9 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.Constants.DEOBF_NAMESPACE
+import io.papermc.paperweight.util.Constants.OBF_NAMESPACE
+import io.papermc.paperweight.util.Constants.SPIGOT_NAMESPACE
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.file
@@ -84,13 +86,9 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         // Get the new package name
         val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
 
-        val sourceMappings = MappingFormats.TINY.read(
-            sourceMappings.path,
-            Constants.OBF_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
-        )
+        val sourceMappings = MappingFormats.TINY.read(sourceMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
 
-        val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+        val synths = newSynths()
         syntheticMethods.file.useLines { lines ->
             for (line in lines) {
                 val (className, desc, synthName, baseName) = line.split(" ")
@@ -111,12 +109,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         val cleanedSourceMappings = removeLambdaMappings(adjustedSourceMappings)
         val spigotToNamedSet = notchToSpigotSet.reverse().merge(cleanedSourceMappings)
 
-        MappingFormats.TINY.write(
-            spigotToNamedSet,
-            outputMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
-        )
+        MappingFormats.TINY.write(spigotToNamedSet, outputMappings.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
     }
 
     private fun adjustParamIndexes(mappings: MappingSet): MappingSet {
@@ -211,6 +204,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 }
 
 typealias Synths = Map<String, Map<String, Map<String, String>>>
+fun newSynths() = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
 
 class SpigotMappingsMergerHandler(
     private val newPackage: String,
@@ -298,7 +292,7 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<InnerClassMapping?> {
-        // We want to get all of the inner classes from SRG, but not the SRG names
+        // We want to get all of the members from mojmap, but not the mojmap names
         return MergeResult(target.createInnerClassMapping(right.obfuscatedName, right.obfuscatedName), right)
     }
 
@@ -320,6 +314,8 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): FieldMapping {
+        // Spigot mappings don't include signature, so see if we can pull the signature out of the mojmap
+        // Regardless, still keep Spigot's name
         val right = strictRightDuplicate ?: looseRightDuplicate ?: strictRightContinuation ?: looseRightContinuation ?: left
         return target.createFieldMapping(right.signature, left.deobfuscatedName)
     }
@@ -346,18 +342,22 @@ class SpigotMappingsMergerHandler(
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
         val newName = synthMethods?.get(left.obfuscatedName)
         return if (newName != null) {
+            // Spigot does call this mapping something else, we need to find it first
             val newLeftMapping = left.parentClass.getMethodMapping(MethodSignature(newName, left.descriptor)).orNull
             val newMapping = if (newLeftMapping != null) {
+                // We found it, use it for the left side instead
                 target.getOrCreateMethodMapping(newLeftMapping.signature).also {
                     it.deobfuscatedName = left.deobfuscatedName
                 }
             } else {
+                // Can't find the name spigot uses, just use the original mapping
                 target.getOrCreateMethodMapping(left.signature).also {
                     it.deobfuscatedName = newName
                 }
             }
             MergeResult(newMapping)
         } else {
+            // normal mapping
             val newMapping = target.getOrCreateMethodMapping(left.signature).also {
                 it.deobfuscatedName = left.deobfuscatedName
             }
@@ -383,6 +383,7 @@ class SpigotMappingsMergerHandler(
         }
 
         if (obfName == null) {
+            // This mapping doesn't actually exist, drop it
             return emptyMergeResult()
         }
 
