@@ -92,10 +92,12 @@ class Paperweight : Plugin<Project> {
 
         val tasks = target.createTasks()
 
+        val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch>()
+
         // Setup the server jar
         target.afterEvaluate {
             target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks.spigotTasks)?.let { reobfJar ->
-                val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
+                generatePaperclipPatch.configure {
                     originalJar.set(tasks.generalTasks.downloadServerJar.flatMap { it.outputJar })
                     patchedJar.set(reobfJar.flatMap { it.outputJar })
                     mcVersion.set(target.ext.minecraftVersion)
@@ -103,13 +105,13 @@ class Paperweight : Plugin<Project> {
 
                 target.tasks.named("jar", Jar::class) {
                     val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
-                    dependsOn(paperclipConfig)
+                    dependsOn(paperclipConfig, generatePaperclipPatch)
 
                     val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
                     from(paperclipZip) {
                         exclude("META-INF/MANIFEST.MF")
                     }
-                    from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
+                    from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }))
 
                     manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
                 }

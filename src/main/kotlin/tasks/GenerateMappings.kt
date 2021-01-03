@@ -71,8 +71,8 @@ abstract class GenerateMappings : DefaultTask() {
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
-//    @get:Inject
-//    abstract val workerExecutor: WorkerExecutor
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
 
     @TaskAction
     fun run() {
@@ -94,7 +94,6 @@ abstract class GenerateMappings : DefaultTask() {
         ).merge()
 
         // Fill out any missing inheritance info in the mappings
-        /*
         val tempMappingsFile = Files.createTempFile("mappings", "tiny")
         val tempMappingsOutputFile = Files.createTempFile("mappings-out", "tiny")
 
@@ -118,10 +117,9 @@ abstract class GenerateMappings : DefaultTask() {
             Files.deleteIfExists(tempMappingsFile)
             Files.deleteIfExists(tempMappingsOutputFile)
         }
-         */
 
         ensureParentExists(outputMappings)
-        MappingFormats.TINY.write(merged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
     }
 
     abstract class AtlasAction : WorkAction<AtlasParameters> {

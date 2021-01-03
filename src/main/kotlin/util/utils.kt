@@ -168,16 +168,21 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 }
 
 // We have to create our own task delegate because the ones Gradle provides don't work in plugin dev environments
-inline fun <reified T : Task> TaskContainer.registering(noinline configure: T.() -> Unit): TaskDelegateProvider<T> {
+inline fun <reified T : Task> TaskContainer.registering(noinline configure: (T.() -> Unit)? = null): TaskDelegateProvider<T> {
     return TaskDelegateProvider(this, T::class, configure)
 }
 class TaskDelegateProvider<T : Task>(
     private val container: TaskContainer,
     private val type: KClass<T>,
-    private val configure: T.() -> Unit
+    private val configure: (T.() -> Unit)?
 ) {
     operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): TaskDelegate<T> {
-        val provider = container.register(property.name, type.java, configure)
+        val provider = if (configure != null) {
+            container.register(property.name, type.java, configure)
+        } else {
+            container.register(property.name, type.java) {
+            }
+        }
         return TaskDelegate(provider)
     }
 }
