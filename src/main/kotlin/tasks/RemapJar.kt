@@ -25,6 +25,8 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.runJar
 import org.gradle.api.file.RegularFileProperty
@@ -68,7 +70,7 @@ abstract class RemapJar : BaseTask() {
     @TaskAction
     fun run() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        logFile.delete()
+        ensureDeleted(logFile)
 
         val args = mutableListOf(
             inputJar.file.absolutePath,
@@ -85,6 +87,8 @@ abstract class RemapJar : BaseTask() {
         if (rebuildSourceFilenames.get()) {
             args += "--rebuildsourcefilenames"
         }
+
+        ensureParentExists(logFile)
         runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args.toTypedArray())
     }
 }

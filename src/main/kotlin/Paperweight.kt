@@ -117,7 +117,7 @@ class Paperweight : Plugin<Project> {
         }
     }
 
-    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas>? {
+    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar>? {
         if (!projectDir.exists()) {
             return null
         }
@@ -140,7 +140,7 @@ class Paperweight : Plugin<Project> {
         }
 
         apply(plugin = "com.github.johnrengelman.shadow")
-        return createBuildTasks(parent.ext, spigotTasks)
+        return createBuildTasks(parent, spigotTasks)
     }
 
     private fun Project.createTasks(): TaskContainers {
@@ -516,15 +516,16 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas> {
+    private fun Project.createBuildTasks(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
-        val reobfJar by tasks.registering<RemapJarAtlas> {
+        val reobfJar by tasks.registering<RemapJar> {
             dependsOn(shadowJar)
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
+            remapper.fileProvider(parent.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
+
             mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappingsReversed })
-            packageVersion.set(ext.versionPackage)
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
 
