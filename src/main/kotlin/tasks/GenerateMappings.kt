@@ -30,6 +30,7 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.util.zip.ZipFile
 import javax.inject.Inject
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
@@ -67,6 +68,8 @@ abstract class GenerateMappings : DefaultTask() {
     abstract val vanillaMappings: RegularFileProperty
     @get:InputFile
     abstract val paramMappings: RegularFileProperty
+    @get:InputFile
+    abstract val methodOverrides: RegularFileProperty
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
@@ -93,11 +96,11 @@ abstract class GenerateMappings : DefaultTask() {
                 .build()
         ).merge()
 
+        ensureParentExists(outputMappings)
+
         // Fill out any missing inheritance info in the mappings
         val tempMappingsFile = Files.createTempFile("mappings", "tiny")
-        val tempMappingsOutputFile = Files.createTempFile("mappings-out", "tiny")
-
-        val filledMerged = try {
+        try {
             MappingFormats.TINY.write(merged, tempMappingsFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
 
             val queue = workerExecutor.processIsolation {
@@ -107,20 +110,64 @@ abstract class GenerateMappings : DefaultTask() {
             queue.submit(AtlasAction::class) {
                 inputJar.set(vanillaJar.file)
                 mappingsFile.set(tempMappingsFile.toFile())
-                outputMappingsFile.set(tempMappingsOutputFile.toFile())
+                outputMappingsFile.set(outputMappings.file)
             }
 
             queue.await()
-
-            MappingFormats.TINY.read(tempMappingsOutputFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
         } finally {
             Files.deleteIfExists(tempMappingsFile)
-            Files.deleteIfExists(tempMappingsOutputFile)
+        }
+    }
+
+    /*
+    private fun copyOverridenParamMappings(mappings: MappingSet) {
+        val methods = hashMapOf<String, String>()
+        methodOverrides.file.reader(Charsets.UTF_8).useLines { lines ->
+            lines.map { line ->
+                val (method, superMethod) = line.split("|")
+                methods[method] = superMethod
+            }
         }
 
-        ensureParentExists(outputMappings)
-        MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        for (classMapping in mappings.topLevelClassMappings) {
+            copyOverridenParamMappings(mappings, classMapping, methods)
+        }
     }
+
+    private fun copyOverridenParamMappings(mappingSet: MappingSet, classMapping: ClassMapping<*, *>, methods: Map<String, String>) {
+        methodLoop@for (mapping in classMapping.methodMappings) {
+            if (mapping.parameterMappings.isNotEmpty()) {
+                continue
+            }
+
+            var baseClassName = classMapping.obfuscatedName
+            var baseMethod = mapping.obfuscatedName
+            var baseDesc = mapping.obfuscatedDescriptor
+
+            while (true) {
+                val superMethod = methods["$baseClassName,$baseMethod,$baseDesc"] ?: continue@methodLoop
+                val (className, methodName, methodDesc) = superMethod.split(",")
+
+                val superMethodMapping = mappingSet.getClassMapping(className).orNull?.getMethodMapping(methodName, methodDesc)?.orNull
+                if (superMethodMapping != null) {
+                    superMethodMapping.parameterMappings.forEach { it.copy(mapping) }
+                    break
+                }
+
+                // prevent possible infinite loops
+                if (baseClassName == className) {
+                    break
+                }
+
+                baseClassName = className
+                baseMethod = methodName
+                baseDesc = methodDesc
+            }
+        }
+
+        classMapping.innerClassMappings.forEach { copyOverridenParamMappings(mappingSet, it, methods) }
+    }
+     */
 
     abstract class AtlasAction : WorkAction<AtlasParameters> {
         override fun execute() {

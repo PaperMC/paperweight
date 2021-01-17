@@ -30,7 +30,7 @@ tasks.withType<KotlinCompile> {
 }
 
 gradlePlugin {
-    // we handle publications ourselves
+    // we handle publications manually
     isAutomatedPublishing = false
 }
 
@@ -79,6 +79,10 @@ dependencies {
     shade("net.fabricmc:lorenz-tiny:3.0.0")
 
     shade("io.sigpipe:jbsdiff:1.0")
+
+    val jgraphtVersion = "1.5.0"
+    shade("org.jgrapht:jgrapht-core:$jgraphtVersion")
+    shade("org.jgrapht:jgrapht-io:$jgraphtVersion")
 }
 
 ktlint {
@@ -124,13 +128,17 @@ tasks.shadowJar {
         "io.sigpipe",
         "me.jamiemansfield",
         "net.fabricmc",
+        "org.antlr",
         "org.apache.commons.codec",
         "org.apache.commons.compress",
         "org.apache.commons.logging",
+        "org.apache.commons.text",
         "org.apache.felix",
         "org.apache.http",
         "org.cadixdev",
         "org.eclipse",
+        "org.jgrapht",
+        "org.jheaps",
         "org.objectweb",
         "org.osgi",
         "org.tukaani"

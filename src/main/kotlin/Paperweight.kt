@@ -152,7 +152,7 @@ class Paperweight : Plugin<Project> {
         val initialTasks = createInitialTasks()
         val generalTasks = createGeneralTasks()
         val vanillaTasks = createVanillaTasks(initialTasks, generalTasks)
-        val spigotTasks = createSpigotTasks(initialTasks, generalTasks, vanillaTasks)
+        val spigotTasks = createSpigotTasks(generalTasks, vanillaTasks)
 
         val applyMergedAt by tasks.registering<ApplyAccessTransform> {
             inputJar.set(vanillaTasks.fixJar.flatMap { it.outputJar })
@@ -238,6 +238,7 @@ class Paperweight : Plugin<Project> {
     )
 
     data class VanillaTasks(
+        val inspectVanillaJar: TaskProvider<InspectVanillaJar>,
         val generateMappings: TaskProvider<GenerateMappings>,
         val fixJar: TaskProvider<FixJar>,
         val downloadMcLibraries: TaskProvider<DownloadMcLibraries>
@@ -336,11 +337,29 @@ class Paperweight : Plugin<Project> {
         val cache: File = layout.cache
         val downloadService = download
 
+        val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
+            mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
+            mcRepo.set(Constants.MC_LIBRARY_URL)
+            outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
+            sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
+
+            downloader.set(downloadService)
+        }
+
+        val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
+            inputJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
+            librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
+            mcLibraries.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
+
+            serverLibraries.set(cache.resolve(Constants.SERVER_LIBRARIES))
+        }
+
         val generateMappings by tasks.registering<GenerateMappings> {
             vanillaJar.set(generalTasks.filterVanillaJar.flatMap { it.outputJar })
 
             vanillaMappings.set(initialTasks.downloadMappings.flatMap { it.outputFile })
             paramMappings.fileProvider(configurations.named(Constants.PARAM_MAPPINGS_CONFIG).map { it.singleFile })
+            methodOverrides.set(inspectVanillaJar.flatMap { it.methodOverrides })
 
             outputMappings.set(cache.resolve(Constants.MOJANG_YARN_MAPPINGS))
         }
@@ -358,39 +377,22 @@ class Paperweight : Plugin<Project> {
             vanillaJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
         }
 
-        val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
-            mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
-            mcRepo.set(Constants.MC_LIBRARY_URL)
-            outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
-            sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
-
-            downloader.set(downloadService)
-        }
-
-        return VanillaTasks(generateMappings, fixJar, downloadMcLibraries)
+        return VanillaTasks(inspectVanillaJar, generateMappings, fixJar, downloadMcLibraries)
     }
 
-    private fun Project.createSpigotTasks(initialTasks: InitialTasks, generalTasks: GeneralTasks, vanillaTasks: VanillaTasks): SpigotTasks {
+    private fun Project.createSpigotTasks(generalTasks: GeneralTasks, vanillaTasks: VanillaTasks): SpigotTasks {
         val cache: File = layout.cache
         val extension: PaperweightExtension = ext
         val downloadService = download
 
         val (buildDataInfo, downloadServerJar, filterVanillaJar) = generalTasks
-        val (generateMappings, _, _) = vanillaTasks
+        val (inspectVanillaJar, generateMappings, _, _) = vanillaTasks
 
         val addAdditionalSpigotMappings by tasks.registering<AddAdditionalSpigotMappings> {
             classSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
             memberSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
             additionalClassEntriesSrg.set(extension.paper.additionalSpigotClassMappings)
             additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings)
-        }
-
-        val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
-            inputJar.set(downloadServerJar.flatMap { it.outputJar })
-            librariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir })
-            mcLibraries.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
-
-            serverLibraries.set(cache.resolve(Constants.SERVER_LIBRARIES))
         }
 
         val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
@@ -401,6 +403,7 @@ class Paperweight : Plugin<Project> {
             loggerFields.set(inspectVanillaJar.flatMap { it.loggerFile })
             paramIndexes.set(inspectVanillaJar.flatMap { it.paramIndexes })
             syntheticMethods.set(inspectVanillaJar.flatMap { it.syntheticMethods })
+            methodOverrides.set(inspectVanillaJar.flatMap { it.methodOverrides })
 
             sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 

@@ -26,12 +26,12 @@ import io.papermc.paperweight.util.Constants.DEOBF_NAMESPACE
 import io.papermc.paperweight.util.Constants.OBF_NAMESPACE
 import io.papermc.paperweight.util.Constants.SPIGOT_NAMESPACE
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.MethodRef
 import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
-import io.papermc.paperweight.util.parentClass
+import io.papermc.paperweight.util.readOverrides
 import io.papermc.paperweight.util.path
-import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -48,6 +48,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.traverse.DepthFirstIterator
 
 abstract class GenerateSpigotMappings : DefaultTask() {
 
@@ -64,6 +66,8 @@ abstract class GenerateSpigotMappings : DefaultTask() {
     abstract val paramIndexes: RegularFileProperty
     @get:InputFile
     abstract val syntheticMethods: RegularFileProperty
+    @get:InputFile
+    abstract val methodOverrides: RegularFileProperty
 
     @get:InputFile
     abstract val sourceMappings: RegularFileProperty
@@ -88,6 +92,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
         val sourceMappings = MappingFormats.TINY.read(sourceMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
 
+        /*
         val synths = newSynths()
         syntheticMethods.file.useLines { lines ->
             for (line in lines) {
@@ -96,12 +101,15 @@ abstract class GenerateSpigotMappings : DefaultTask() {
                     .computeIfAbsent(desc) { hashMapOf() }[baseName] = synthName
             }
         }
+         */
+
+        val overrides = readOverrides(methodOverrides)
 
         val notchToSpigotSet = MappingSetMerger.create(
             mergedMappingSet,
             sourceMappings,
             MergeConfig.builder()
-                .withMergeHandler(SpigotMappingsMergerHandler(newPackage, synths))
+                .withMergeHandler(SpigotMappingsMergerHandler(newPackage, overrides))
                 .build()
         ).merge()
 
@@ -144,7 +152,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         params: Map<String, Map<String, Map<Int, Int>>>
     ) {
         for (mapping in from.fieldMappings) {
-            to.createFieldMapping(mapping.signature, mapping.deobfuscatedName)
+            mapping.copy(to)
         }
         for (mapping in from.innerClassMappings) {
             val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
@@ -162,7 +170,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
             val methodMap = classMap[mapping.signature.toJvmsIdentifier()] ?: continue
             for (paramMapping in paramMappings) {
-                val i = methodMap[paramMapping.index] ?: paramMapping.index
+                val i = methodMap[paramMapping.index] ?: continue
                 newMapping.createParameterMapping(i, paramMapping.deobfuscatedName)
             }
         }
@@ -203,12 +211,14 @@ abstract class GenerateSpigotMappings : DefaultTask() {
     }
 }
 
+/*
 typealias Synths = Map<String, Map<String, Map<String, String>>>
 fun newSynths() = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+ */
 
 class SpigotMappingsMergerHandler(
     private val newPackage: String,
-    private val synths: Synths
+    private val methodOverrides: SimpleDirectedGraph<MethodRef, *>
 ) : MappingSetMergerHandler {
 
     override fun mergeTopLevelClassMappings(
@@ -338,6 +348,24 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
+        val ref = MethodRef.from(left.parent.obfuscatedName, left.signature)
+        val newMapping = if (methodOverrides.containsVertex(ref)) {
+            val methodRef = DepthFirstIterator(methodOverrides, ref).asSequence().firstOrNull() ?: ref
+            target.getOrCreateMethodMapping(methodRef.methodName, methodRef.methodDesc).also {
+                it.deobfuscatedName = left.deobfuscatedName
+            }
+        } else {
+            target.getOrCreateMethodMapping(left.signature).also {
+                it.deobfuscatedName = left.deobfuscatedName
+            }
+        }
+
+        return MergeResult(newMapping)
+        /*
+        val newMapping = target.getOrCreateMethodMapping(left.signature).also {
+            it.deobfuscatedName = left.deobfuscatedName
+        }
+
         // Check if Spigot calls this mapping something else
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
         val newName = synthMethods?.get(left.obfuscatedName)
@@ -350,9 +378,19 @@ class SpigotMappingsMergerHandler(
                     it.deobfuscatedName = left.deobfuscatedName
                 }
             } else {
-                // Can't find the name spigot uses, just use the original mapping
+                // Can't find the name spigot uses, check the hierarchy
+
+                val methodRef = MethodRef(newMapping.parent.obfuscatedName, newMapping.obfuscatedName, newMapping.descriptor.toString())
+
                 target.getOrCreateMethodMapping(left.signature).also {
                     it.deobfuscatedName = newName
+                }
+            }
+
+            val methodRef = MethodRef(newMapping.parent.obfuscatedName, newMapping.obfuscatedName, newMapping.descriptor.toString())
+            if (methodOverrides.containsVertex(methodRef)) {
+                for ((superClass, superName, superDesc) in BreadthFirstIterator(methodOverrides, methodRef)) {
+
                 }
             }
             MergeResult(newMapping)
@@ -363,12 +401,28 @@ class SpigotMappingsMergerHandler(
             }
             return MergeResult(newMapping)
         }
+         */
     }
     override fun addLeftMethodMapping(
         left: MethodMapping,
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
+        val ref = MethodRef.from(left.parent.obfuscatedName, left.signature)
+        val newMapping = if (methodOverrides.containsVertex(ref)) {
+            val methodRef = DepthFirstIterator(methodOverrides, ref).asSequence().firstOrNull() ?: ref
+            target.getOrCreateMethodMapping(methodRef.methodName, methodRef.methodDesc).also {
+                it.deobfuscatedName = left.deobfuscatedName
+            }
+        } else {
+            target.getOrCreateMethodMapping(left.signature).also {
+                it.deobfuscatedName = left.deobfuscatedName
+            }
+        }
+
+        return MergeResult(newMapping)
+
+        /*
         // Check if Spigot maps this from a synthetic method name
         var obfName: String? = null
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
@@ -390,6 +444,7 @@ class SpigotMappingsMergerHandler(
         val newMapping = target.getOrCreateMethodMapping(obfName, left.descriptor)
         newMapping.deobfuscatedName = left.deobfuscatedName
         return MergeResult(newMapping)
+         */
     }
 
     override fun addLeftFieldMapping(left: FieldMapping, target: ClassMapping<*, *>, context: MergeContext): FieldMapping? {
@@ -411,6 +466,20 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
+        val ref = MethodRef.from(right.parent.obfuscatedName, right.signature)
+        if (methodOverrides.containsVertex(ref)) {
+            val methodRef = DepthFirstIterator(methodOverrides, ref).asSequence().firstOrNull() ?: ref
+            val originalMapping = context.left.getClassMapping(methodRef.className).orNull
+                ?.getMethodMapping(methodRef.methodName, methodRef.methodDesc)?.orNull ?: return emptyMergeResult()
+            val newMapping = target.getOrCreateMethodMapping(right.signature).also {
+                it.deobfuscatedName = originalMapping.deobfuscatedName
+            }
+            return MergeResult(newMapping)
+        } else {
+            return emptyMergeResult()
+        }
+
+        /*
         // Check if spigot changes this method automatically
         val synthMethods = synths[right.parentClass.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
         val newName = synthMethods?.get(right.obfuscatedName) ?: return emptyMergeResult()
@@ -424,6 +493,7 @@ class SpigotMappingsMergerHandler(
             newMapping.deobfuscatedName = newName
         }
         return MergeResult(newMapping)
+         */
     }
 
     private fun prependPackage(name: String): String {

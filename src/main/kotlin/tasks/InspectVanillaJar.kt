@@ -23,11 +23,16 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.AsmUtil
+import io.papermc.paperweight.util.ClassNodeCache
 import io.papermc.paperweight.util.MavenArtifact
+import io.papermc.paperweight.util.MethodRef
 import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.isLibraryJar
+import io.papermc.paperweight.util.writeOverrides
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.jar.JarFile
 import java.util.zip.ZipFile
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -35,13 +40,15 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.FieldVisitor
-import org.objectweb.asm.MethodVisitor
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.nio.Attribute
+import org.jgrapht.nio.DefaultAttribute
+import org.jgrapht.nio.dot.DOTExporter
+import org.jgrapht.nio.dot.DOTImporter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.ClassNode
 
 abstract class InspectVanillaJar : BaseTask() {
 
@@ -59,12 +66,15 @@ abstract class InspectVanillaJar : BaseTask() {
     @get:OutputFile
     abstract val syntheticMethods: RegularFileProperty
     @get:OutputFile
+    abstract val methodOverrides: RegularFileProperty
+    @get:OutputFile
     abstract val serverLibraries: RegularFileProperty
 
     override fun init() {
         loggerFile.convention(defaultOutput("$name-loggerFields", "txt"))
         paramIndexes.convention(defaultOutput("$name-paramIndexes", "txt"))
         syntheticMethods.convention(defaultOutput("$name-syntheticMethods", "txt"))
+        methodOverrides.convention(defaultOutput("$name-methodOverrides", "json"))
     }
 
     @TaskAction
@@ -72,28 +82,32 @@ abstract class InspectVanillaJar : BaseTask() {
         val loggers = mutableListOf<LoggerFields.Data>()
         val params = mutableListOf<ParamIndexes.Data>()
         val synthMethods = mutableListOf<SyntheticMethods.Data>()
+        val overrides = SimpleDirectedGraph<MethodRef, DefaultEdge>(DefaultEdge::class.java)
 
-        var visitor: ClassVisitor
-        visitor = LoggerFields.Visitor(null, loggers)
-        visitor = ParamIndexes.Visitor(visitor, params)
-        visitor = SyntheticMethods.Visitor(visitor, synthMethods)
+        JarFile(inputJar.file).use { jarFile ->
+            val classNodeCache = ClassNodeCache(jarFile)
 
-        archives.zipTree(inputJar.file).matching {
-            include("/*.class")
-            include("/net/minecraft/**/*.class")
-        }.forEach { file ->
-            if (file.isDirectory) {
-                return@forEach
+            for (entry in jarFile.entries()) {
+                if (!entry.name.endsWith(".class")) {
+                    continue
+                }
+                if (entry.name.count { it == '/' } > 0 && !entry.name.startsWith("net/minecraft/")) {
+                    continue
+                }
+
+                val node = classNodeCache.findClass(entry.name) ?: error("No ClassNode found for known entry")
+
+                LoggerFields.Visitor.visit(node, loggers)
+                ParamIndexes.Visitor.visit(node, params)
+                SyntheticMethods.Visitor.visit(node, synthMethods)
+                MethodOverrides.Visitor.visit(node, classNodeCache, overrides)
             }
-            val classData = file.readBytes()
-
-            ClassReader(classData).accept(visitor, 0)
         }
 
         val serverLibs = checkLibraries()
 
-        loggerFile.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            loggers.sort()
+        loggers.sort()
+        loggerFile.file.bufferedWriter().use { writer ->
             for (loggerField in loggers) {
                 writer.append(loggerField.className)
                 writer.append(' ')
@@ -102,8 +116,8 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        paramIndexes.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            params.sort()
+        params.sort()
+        paramIndexes.file.bufferedWriter().use { writer ->
             for (methodData in params) {
                 writer.append(methodData.className)
                 writer.append(' ')
@@ -120,8 +134,8 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        syntheticMethods.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            synthMethods.sort()
+        synthMethods.sort()
+        syntheticMethods.file.bufferedWriter().use { writer ->
             for ((className, desc, synthName, baseName) in synthMethods) {
                 writer.append(className)
                 writer.append(' ')
@@ -134,8 +148,11 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        serverLibraries.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            serverLibs.map { it.toString() }.sorted().forEach { artifact ->
+        writeOverrides(overrides, methodOverrides)
+
+        val libs = serverLibs.map { it.toString() }.sorted()
+        serverLibraries.file.bufferedWriter().use { writer ->
+            libs.forEach { artifact ->
                 writer.appendln(artifact)
             }
         }
@@ -173,50 +190,22 @@ abstract class InspectVanillaJar : BaseTask() {
     }
 }
 
-abstract class BaseClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM8, classVisitor), AsmUtil {
-    protected var currentClass: String? = null
-
-    override fun visit(
-        version: Int,
-        access: Int,
-        name: String,
-        signature: String?,
-        superName: String?,
-        interfaces: Array<out String>?
-    ) {
-        this.currentClass = name
-        super.visit(version, access, name, signature, superName, interfaces)
-    }
-}
-
 /*
  * SpecialSource2 automatically maps all Logger fields to the name LOGGER, without needing mappings defined, so we need
  * to make a note of all of those fields
  */
 object LoggerFields {
-    class Visitor(
-        classVisitor: ClassVisitor?,
-        private val fields: MutableList<Data>
-    ) : BaseClassVisitor(classVisitor) {
+    object Visitor : AsmUtil {
 
-        override fun visitField(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            value: Any?
-        ): FieldVisitor? {
-            val ret = super.visitField(access, name, descriptor, signature, value)
-            val className = currentClass ?: return ret
-
-            if (Opcodes.ACC_STATIC !in access || Opcodes.ACC_FINAL !in access) {
-                return ret
+        fun visit(node: ClassNode, fields: MutableList<Data>) {
+            for (field in node.fields) {
+                if (Opcodes.ACC_STATIC !in field.access || Opcodes.ACC_FINAL !in field.access) {
+                    continue
+                }
+                if (field.desc == "Lorg/apache/logging/log4j/Logger;") {
+                    fields += Data(node.name, field.name)
+                }
             }
-            if (descriptor != "Lorg/apache/logging/log4j/Logger;") {
-                return ret
-            }
-            fields += Data(className, name)
-            return ret
         }
     }
 
@@ -235,45 +224,33 @@ object LoggerFields {
  * actual bytecode to translate the LVT-based indexes back to 0-based param indexes.
  */
 object ParamIndexes {
-    class Visitor(
-        classVisitor: ClassVisitor?,
-        private val methods: MutableList<Data>
-    ) : BaseClassVisitor(classVisitor) {
+    object Visitor : AsmUtil {
 
-        override fun visitMethod(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            exceptions: Array<out String>?
-        ): MethodVisitor? {
-            val ret = super.visitMethod(access, name, descriptor, signature, exceptions)
-            val className = currentClass ?: return ret
+        fun visit(node: ClassNode, methods: MutableList<Data>) {
+            for (method in node.methods) {
+                val isStatic = Opcodes.ACC_STATIC in method.access
+                var currentIndex = if (isStatic) 0 else 1
 
-            val isStatic = access and Opcodes.ACC_STATIC != 0
-            var currentIndex = if (isStatic) 0 else 1
+                val types = Type.getArgumentTypes(method.desc)
+                if (types.isEmpty()) {
+                    continue
+                }
 
-            val types = Type.getArgumentTypes(descriptor)
-            if (types.isEmpty()) {
-                return ret
-            }
+                val params = ArrayList<ParamTarget>(types.size)
+                val data = Data(node.name, method.name, method.desc, params)
+                methods += data
 
-            val params = ArrayList<ParamTarget>(types.size)
-            val data = Data(className, name, descriptor, params)
-            methods += data
-
-            for (i in types.indices) {
-                params += ParamTarget(currentIndex, i)
-                currentIndex++
-
-                // Figure out if we should skip the next index
-                val type = types[i]
-                if (type === Type.LONG_TYPE || type === Type.DOUBLE_TYPE) {
+                for (i in types.indices) {
+                    params += ParamTarget(currentIndex, i)
                     currentIndex++
+
+                    // Figure out if we should skip the next index
+                    val type = types[i]
+                    if (type === Type.LONG_TYPE || type === Type.DOUBLE_TYPE) {
+                        currentIndex++
+                    }
                 }
             }
-
-            return ret
         }
     }
 
@@ -303,45 +280,20 @@ object ParamIndexes {
  * can handle it in our generated mappings.
  */
 object SyntheticMethods {
-    class Visitor(
-        classVisitor: ClassVisitor?,
-        private val methods: MutableList<Data>
-    ) : BaseClassVisitor(classVisitor) {
+    object Visitor : AsmUtil {
 
-        override fun visitMethod(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            exceptions: Array<out String>?
-        ): MethodVisitor? {
-            val ret = super.visitMethod(access, name, descriptor, signature, exceptions)
-            val className = currentClass ?: return ret
+        fun visit(node: ClassNode, methods: MutableList<Data>) {
+            for (method in node.methods) {
+                if (Opcodes.ACC_SYNTHETIC !in method.access || Opcodes.ACC_BRIDGE in method.access || method.name.contains('$')) {
+                    continue
+                }
 
-            if (Opcodes.ACC_SYNTHETIC !in access || Opcodes.ACC_BRIDGE in access || name.contains('$')) {
-                return ret
-            }
+                val (baseName, baseDesc) = SyntheticUtil.findBaseMethod(method, node.name)
 
-            return SynthMethodVisitor(access, name, descriptor, signature, exceptions, className, methods)
-        }
-    }
-
-    private class SynthMethodVisitor(
-        access: Int,
-        name: String,
-        descriptor: String,
-        signature: String?,
-        exceptions: Array<out String>?,
-        private val className: String,
-        private val methods: MutableList<Data>
-    ) : MethodNode(Opcodes.ASM9, access, name, descriptor, signature, exceptions) {
-
-        override fun visitEnd() {
-            val (baseName, baseDesc) = SyntheticUtil.findBaseMethod(this, className)
-
-            if (baseName != name || baseDesc != desc) {
-                // Add this method as a synthetic for baseName
-                methods += Data(className, baseDesc, name, baseName)
+                if (baseName != method.name || baseDesc != method.desc) {
+                    // Add this method as a synthetic for baseName
+                    methods += Data(node.name, baseDesc, method.name, baseName)
+                }
             }
         }
     }
@@ -360,5 +312,70 @@ object SyntheticMethods {
             { it.synthName },
             { it.baseName }
         )
+    }
+}
+
+/*
+ * There's no direct marker in bytecode to know if a
+ */
+object MethodOverrides {
+    object Visitor : AsmUtil {
+
+        fun visit(
+            node: ClassNode,
+            classNodeCache: ClassNodeCache,
+            methodOverrides: SimpleDirectedGraph<MethodRef, DefaultEdge>
+        ) {
+            val superMethods = collectSuperMethods(node, classNodeCache)
+
+            val disqualifiedMethods = Opcodes.ACC_STATIC or Opcodes.ACC_PRIVATE
+            for (method in node.methods) {
+                if (method.access in disqualifiedMethods) {
+                    continue
+                }
+
+                if (method.name == "<init>" || method.name == "<clinit>") {
+                    continue
+                }
+                val (name, desc) = SyntheticUtil.findBaseMethod(method, node.name)
+
+                superMethods[method.name + method.desc]?.let { className ->
+                    val targetMethod = node.methods.firstOrNull { it.name == name && it.desc == desc } ?: method
+
+                    val methodRef = MethodRef(node.name, method.name, method.desc)
+                    val targetMethodRef = MethodRef(className, targetMethod.name, targetMethod.desc)
+                    methodOverrides.addVertex(methodRef)
+                    methodOverrides.addVertex(targetMethodRef)
+                    methodOverrides.addEdge(methodRef, targetMethodRef)
+                }
+            }
+        }
+
+        private fun collectSuperMethods(node: ClassNode, classNodeCache: ClassNodeCache): Map<String, String> {
+            fun collectSuperMethods(node: ClassNode, superMethods: HashMap<String, String>) {
+                val supers = listOfNotNull(node.superName, *node.interfaces.toTypedArray())
+                if (supers.isEmpty()) {
+                    return
+                }
+
+                val disqualifiedMethods = Opcodes.ACC_STATIC or Opcodes.ACC_PRIVATE
+                val superNodes = supers.mapNotNull { classNodeCache.findClass(it) }
+                for (superNode in superNodes) {
+                    superNode.methods.asSequence()
+                        .filter { method -> method.access !in disqualifiedMethods }
+                        .filter { method -> method.name != "<init>" && method.name != "<clinit>" }
+                        .map { method -> method.name + method.desc to superNode.name }
+                        .toMap(superMethods)
+                }
+
+                for (superNode in superNodes) {
+                    collectSuperMethods(superNode, superMethods)
+                }
+            }
+
+            val result = hashMapOf<String, String>()
+            collectSuperMethods(node, result)
+            return result
+        }
     }
 }

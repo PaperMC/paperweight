@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.AsmUtil
+import io.papermc.paperweight.util.ClassNodeCache
 import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
@@ -33,7 +34,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -75,8 +75,7 @@ abstract class FixJar : BaseTask(), AsmUtil {
                         }
 
                         try {
-                            val node =
-                                classNodeCache.findClass(entry.name) ?: error("No ClassNode found for known entry")
+                            val node = classNodeCache.findClass(entry.name) ?: error("No ClassNode found for known entry")
 
                             ParameterAnnotationFixer(node).visitNode()
                             OverrideAnnotationAdder(node, classNodeCache).visitNode()
@@ -228,51 +227,5 @@ class OverrideAnnotationAdder(private val node: ClassNode, private val classNode
         val result = hashSetOf<String>()
         collectSuperMethods(node, result)
         return result
-    }
-}
-
-class ClassNodeCache(private val jarFile: JarFile, private val fallbackJar: JarFile) {
-
-    private val classNodeMap = hashMapOf<String, ClassNode?>()
-
-    fun findClass(name: String): ClassNode? {
-        return classNodeMap.computeIfAbsent(normalize(name)) { fileName ->
-            val classData = findClassData(fileName) ?: return@computeIfAbsent null
-            val classReader = ClassReader(classData)
-            val node = ClassNode(Opcodes.ASM9)
-            classReader.accept(node, 0)
-            return@computeIfAbsent node
-        }
-    }
-
-    private fun findClassData(className: String): ByteArray? {
-        val entry = ZipEntry(className)
-        return (
-            jarFile.getInputStream(entry) // remapped class
-                ?: fallbackJar.getInputStream(entry) // library class
-                ?: ClassLoader.getSystemResourceAsStream(className)
-            )?.use { it.readBytes() } // JDK class
-    }
-
-    private fun normalize(name: String): String {
-        var workingName = name
-        if (workingName.endsWith(".class")) {
-            workingName = workingName.substring(0, workingName.length - 6)
-        }
-
-        var startIndex = 0
-        var endIndex = workingName.length
-        if (workingName.startsWith('L')) {
-            startIndex = 1
-        }
-        if (workingName.endsWith(';')) {
-            endIndex--
-        }
-
-        return workingName.substring(startIndex, endIndex).replace('.', '/') + ".class"
-    }
-
-    fun clear() {
-        classNodeMap.clear()
     }
 }
