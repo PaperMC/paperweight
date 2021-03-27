@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.ext.listFilesRecursively
 import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.UselessOutputStream
@@ -68,9 +69,9 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
         val outputDirFile = basePatchDirFile.resolve(sourceBasePath.get())
         outputDirFile.deleteRecursively()
 
-        val patchList = patchDir.file.listFiles() ?: throw PaperweightException(
-            "Patch directory does not exist ${patchDir.file}"
-        )
+        val patchList = patchDir.file.listFilesRecursively()
+            ?.filter { it.isFile }
+            ?: throw PaperweightException("Patch directory does not exist ${patchDir.file}")
         if (patchList.isEmpty()) {
             throw PaperweightException("No patch files found in ${patchDir.file}")
         }
@@ -79,7 +80,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
         val uri = URI.create("jar:" + sourceJar.file.toURI())
         FileSystems.newFileSystem(uri, mapOf<String, Any>()).use { fs ->
             for (file in patchList) {
-                val javaName = file.name.replaceAfterLast('.', "java")
+                val javaName = file.toRelativeString(patchDir.file).replaceAfterLast('.', "java")
                 val out = outputDirFile.resolve(javaName)
                 val sourcePath = fs.getPath(sourceBasePath.get(), javaName)
 
@@ -97,7 +98,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
         // Apply patches
         for (file in patchList) {
-            val javaName = file.name.replaceAfterLast('.', "java")
+            val javaName = file.toRelativeString(patchDir.file).replaceAfterLast('.', "java")
 
             if (printOutput.get()) {
                 println("Patching ${javaName.removeSuffix(".java")}")

@@ -77,7 +77,7 @@ abstract class GenerateMappings : DefaultTask() {
     fun run() {
         val vanillaMappings = MappingFormats.PROGUARD.createReader(vanillaMappings.path).use { it.read() }.reverse()
 
-        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null).use { fs ->
+        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null as ClassLoader?).use { fs ->
             val path = fs.getPath("mappings", "mappings.tiny")
             MappingFormats.TINY.read(path, "official", "named")
         }

@@ -323,7 +323,7 @@ class Paperweight : Plugin<Project> {
 
         val filterVanillaJar by tasks.registering<FilterJar> {
             inputJar.set(downloadServerJar.flatMap { it.outputJar })
-            includes.set(listOf("/*.class", "/net/minecraft/**"))
+            includes.set(listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**"))
         }
 
         return GeneralTasks(buildDataInfo, downloadServerJar, filterVanillaJar)
@@ -443,7 +443,7 @@ class Paperweight : Plugin<Project> {
 
         val patchCraftBukkit by tasks.registering<ApplyDiffPatches> {
             sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
-            sourceBasePath.set("net/minecraft/server")
+            sourceBasePath.set(".")
             branch.set("patched")
             patchDir.set(extension.craftBukkit.patchDir)
 
