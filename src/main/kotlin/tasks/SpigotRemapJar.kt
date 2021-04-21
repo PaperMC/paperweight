@@ -38,24 +38,34 @@ abstract class SpigotRemapJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:InputFile
     abstract val classMappings: RegularFileProperty
+
     @get:InputFile
     abstract val memberMappings: RegularFileProperty
+
     @get:InputFile
     abstract val packageMappings: RegularFileProperty
+
     @get:InputFile
     abstract val accessTransformers: RegularFileProperty
+
     @get:Input
     abstract val workDirName: Property<String>
+
     @get:InputFile
     abstract val specialSourceJar: RegularFileProperty
+
     @get:InputFile
     abstract val specialSource2Jar: RegularFileProperty
+
     @get:Input
     abstract val classMapCommand: Property<String>
+
     @get:Input
     abstract val memberMapCommand: Property<String>
+
     @get:Input
     abstract val finalMapCommand: Property<String>
 

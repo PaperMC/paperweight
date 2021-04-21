@@ -46,8 +46,10 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
 
     @get:InputFile
     abstract val originalJar: RegularFileProperty
+
     @get:InputFile
     abstract val patchedJar: RegularFileProperty
+
     @get:Input
     abstract val mcVersion: Property<String>
 

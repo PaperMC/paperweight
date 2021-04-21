@@ -38,10 +38,13 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
     @get:Input
     abstract val branch: Property<String>
+
     @get:Input
     abstract val upstreamBranch: Property<String>
+
     @get:InputDirectory
     abstract val upstream: DirectoryProperty
+
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 

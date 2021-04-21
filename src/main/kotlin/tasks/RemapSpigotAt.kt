@@ -44,8 +44,10 @@ abstract class RemapSpigotAt : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:InputFile
     abstract val spigotAt: RegularFileProperty
+
     @get:InputFile
     abstract val mapping: RegularFileProperty
 

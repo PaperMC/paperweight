@@ -36,19 +36,25 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
+
     @get:InputFile
     abstract val remappedSource: RegularFileProperty
+
     @get:InputDirectory
     abstract val spigotServerDir: DirectoryProperty
+
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
+
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
+
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
     @get:OutputDirectory
     abstract val remapTargetDir: DirectoryProperty
 

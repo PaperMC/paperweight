@@ -36,17 +36,21 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
 
     @get:InputFile
     abstract val classSrg: RegularFileProperty
+
     @get:InputFile
     abstract val memberSrg: RegularFileProperty
+
     @get:Optional
     @get:InputFile
     abstract val additionalClassEntriesSrg: RegularFileProperty
+
     @get:Optional
     @get:InputFile
     abstract val additionalMemberEntriesSrg: RegularFileProperty
 
     @get:OutputFile
     abstract val outputClassSrg: RegularFileProperty
+
     @get:OutputFile
     abstract val outputMemberSrg: RegularFileProperty
 
@@ -63,10 +67,7 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
 
     private fun addLines(inFile: File, appendFile: File?, outputFile: File) {
         val lines = mutableListOf<String>()
-        inFile.useLines { seq ->
-            seq.filter { it.startsWith("") }
-        }
-        inFile.forEachLine { line -> lines += line }
+        inFile.useLines { seq -> seq.forEach { line -> lines += line } }
         appendFile?.useLines { seq -> seq.forEach { lines.add(it) } }
         lines.sort()
         outputFile.bufferedWriter().use { writer ->

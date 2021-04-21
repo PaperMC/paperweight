@@ -41,6 +41,7 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty
+
     @get:Console
     abstract val server: Property<Boolean>
 

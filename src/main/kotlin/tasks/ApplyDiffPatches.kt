@@ -45,10 +45,13 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
     @get:InputFile
     abstract val sourceJar: RegularFileProperty
+
     @get:Input
     abstract val sourceBasePath: Property<String>
+
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
+
     @get:Input
     abstract val branch: Property<String>
 

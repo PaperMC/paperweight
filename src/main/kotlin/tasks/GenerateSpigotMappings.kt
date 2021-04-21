@@ -51,15 +51,16 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
     @get:InputFile
     abstract val classMappings: RegularFileProperty
+
     @get:InputFile
     abstract val memberMappings: RegularFileProperty
+
     @get:InputFile
     abstract val packageMappings: RegularFileProperty
 
     @get:InputFile
     abstract val loggerFields: RegularFileProperty
-    @get:InputFile
-    abstract val paramIndexes: RegularFileProperty
+
     @get:InputFile
     abstract val syntheticMethods: RegularFileProperty
 
@@ -107,9 +108,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
                 .build()
         ).merge()
 
-        val adjustedSourceMappings = adjustParamIndexes(sourceMappings)
-        val cleanedSourceMappings = removeLambdaMappings(adjustedSourceMappings)
-        val spigotToNamedSet = notchToSpigotSet.reverse().merge(cleanedSourceMappings)
+        val spigotToNamedSet = notchToSpigotSet.reverse().merge(sourceMappings)
 
         MappingFormats.TINY.write(
             spigotToNamedSet,
@@ -117,96 +116,6 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             Constants.SPIGOT_NAMESPACE,
             Constants.DEOBF_NAMESPACE
         )
-    }
-
-    private fun adjustParamIndexes(mappings: MappingSet): MappingSet {
-        val indexes = hashMapOf<String, HashMap<String, HashMap<Int, Int>>>()
-
-        paramIndexes.file.useLines { lines ->
-            lines.forEach { line ->
-                val parts = line.split(" ")
-                val (className, methodName, descriptor) = parts
-
-                val paramMap = indexes.computeIfAbsent(className) { hashMapOf() }
-                    .computeIfAbsent(methodName + descriptor) { hashMapOf() }
-
-                for (i in 3 until parts.size step 2) {
-                    paramMap[parts[i].toInt()] = parts[i + 1].toInt()
-                }
-            }
-        }
-
-        val result = MappingSet.create()
-        for (old in mappings.topLevelClassMappings) {
-            val new = result.createTopLevelClassMapping(old.obfuscatedName, old.deobfuscatedName)
-            copyClassParam(old, new, indexes)
-        }
-
-        return result
-    }
-
-    private fun copyClassParam(
-        from: ClassMapping<*, *>,
-        to: ClassMapping<*, *>,
-        params: Map<String, Map<String, Map<Int, Int>>>
-    ) {
-        for (mapping in from.fieldMappings) {
-            to.createFieldMapping(mapping.signature, mapping.deobfuscatedName)
-        }
-        for (mapping in from.innerClassMappings) {
-            val newMapping = to.createInnerClassMapping(mapping.obfuscatedName, mapping.deobfuscatedName)
-            copyClassParam(mapping, newMapping, params)
-        }
-
-        val classMap = params[from.fullObfuscatedName]
-        for (mapping in from.methodMappings) {
-            val newMapping = to.createMethodMapping(mapping.signature, mapping.deobfuscatedName)
-
-            val paramMappings = mapping.parameterMappings
-            if (paramMappings.isEmpty() || classMap == null) {
-                continue
-            }
-
-            val methodMap = classMap[mapping.signature.toJvmsIdentifier()] ?: continue
-            for (paramMapping in paramMappings) {
-                val i = methodMap[paramMapping.index] ?: paramMapping.index
-                newMapping.createParameterMapping(i, paramMapping.deobfuscatedName)
-            }
-        }
-    }
-
-    private fun removeLambdaMappings(mappings: MappingSet): MappingSet {
-        val result = MappingSet.create()
-
-        for (classMapping in mappings.topLevelClassMappings) {
-            val newClassMapping = result.createTopLevelClassMapping(
-                classMapping.obfuscatedName,
-                classMapping.deobfuscatedName
-            )
-            removeLambdaMappings(classMapping, newClassMapping)
-        }
-
-        return result
-    }
-    private fun removeLambdaMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *>) {
-        for (inner in old.innerClassMappings) {
-            val newInner = new.createInnerClassMapping(inner.obfuscatedName, inner.deobfuscatedName)
-            removeLambdaMappings(inner, newInner)
-        }
-
-        for (field in old.fieldMappings) {
-            new.createFieldMapping(field.signature, field.deobfuscatedName)
-        }
-
-        for (method in old.methodMappings) {
-            if (method.deobfuscatedName.startsWith("lambda$")) {
-                continue
-            }
-            val newMethod = new.createMethodMapping(method.signature, method.deobfuscatedName)
-            for (param in method.parameterMappings) {
-                newMethod.createParameterMapping(param.index, param.deobfuscatedName)
-            }
-        }
     }
 }
 
@@ -369,7 +278,18 @@ class SpigotMappingsMergerHandler(
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
-        // Check if Spigot maps this from a synthetic method name
+        /*
+         * Check if Spigot maps this from a synthetic method name
+         * What this means is:
+         * Spigot has a mapping for
+         *     a b()V -> something
+         * But in Mojang's mapping there's only
+         *     a a()V -> somethingElse
+         * The original method is named a, but spigot calls it b, because
+         * b is a synthetic method for a. In this case we should create the mapping as
+         *     a a()V -> something
+         */
+
         var obfName: String? = null
         val synthMethods = synths[left.parent.fullObfuscatedName]?.get(left.obfuscatedDescriptor)
         if (synthMethods != null) {

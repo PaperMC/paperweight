@@ -36,6 +36,7 @@ abstract class RemapAccessTransform : BaseTask() {
 
     @get:InputFile
     abstract val inputFile: RegularFileProperty
+
     @get:InputFile
     abstract val mappings: RegularFileProperty
 

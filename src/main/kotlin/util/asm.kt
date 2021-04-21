@@ -55,7 +55,7 @@ object SyntheticUtil : AsmUtil {
 
         var invokeInsn: MethodInsnNode? = null
 
-        loop@for (insn in node.instructions) {
+        for (insn in node.instructions) {
             if (insn is LabelNode || insn is LineNumberNode || insn is TypeInsnNode) {
                 continue
             }

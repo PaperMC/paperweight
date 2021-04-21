@@ -33,10 +33,13 @@ abstract class BaseTask : DefaultTask() {
 
     @get:Inject
     abstract val objects: ObjectFactory
+
     @get:Inject
     abstract val layout: ProjectLayout
+
     @get:Inject
     abstract val fs: FileSystemOperations
+
     @get:Inject
     abstract val archives: ArchiveOperations
 

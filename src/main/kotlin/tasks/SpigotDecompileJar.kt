@@ -40,8 +40,10 @@ abstract class SpigotDecompileJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:InputFile
     abstract val fernFlowerJar: RegularFileProperty
+
     @get:Input
     abstract val decompileCommand: Property<String>
 

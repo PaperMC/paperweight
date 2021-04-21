@@ -50,11 +50,13 @@ abstract class RemapPatches : BaseTask() {
 
     @get:InputDirectory
     abstract val inputPatchDir: DirectoryProperty
+
     @get:InputDirectory
     abstract val apiPatchDir: DirectoryProperty
 
     @get:InputFile
     abstract val mappingsFile: RegularFileProperty
+
     @get:InputFile
     abstract val ats: RegularFileProperty
 
@@ -63,13 +65,16 @@ abstract class RemapPatches : BaseTask() {
 
     @get:InputDirectory
     abstract val spigotApiDir: DirectoryProperty
+
     @get:InputDirectory
     abstract val spigotServerDir: DirectoryProperty
+
     @get:InputFile
     abstract val spigotDecompJar: RegularFileProperty
 
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
+
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
 

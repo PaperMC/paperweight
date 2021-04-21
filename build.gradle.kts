@@ -7,9 +7,9 @@ plugins {
     eclipse
     `kotlin-dsl`
     `maven-publish`
-    id("net.minecrell.licenser") version "0.4.1"
-    id("com.github.johnrengelman.shadow") version "6.0.0"
-    id("org.jlleitschuh.gradle.ktlint") version "9.4.1"
+    id("org.cadixdev.licenser") version "0.5.1"
+    id("com.github.johnrengelman.shadow") version "6.1.0"
+    id("org.jlleitschuh.gradle.ktlint") version "10.0.0"
 }
 
 group = "io.papermc.paperweight"
@@ -26,7 +26,6 @@ val sourcesJar by tasks.existing
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.freeCompilerArgs = listOf("-Xjvm-default=enable")
 }
 
 gradlePlugin {
@@ -46,7 +45,7 @@ repositories {
             includeGroup("org.cadixdev")
         }
     }
-    maven("https://repo.demonwav.com/snapshots/") {
+    maven("https://wav.jfrog.io/artifactory/repo/") {
         mavenContent {
             includeGroup("org.cadixdev")
         }
@@ -56,6 +55,19 @@ repositories {
             includeGroup("net.fabricmc")
         }
     }
+    mavenLocal {
+        mavenContent {
+            includeGroup("com.demonwav.hypo")
+        }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        val asmVersion = "9.1"
+        force("org.ow2.asm:asm:$asmVersion")
+        force("org.ow2.asm:asm-tree:$asmVersion")
+    }
 }
 
 dependencies {
@@ -63,9 +75,16 @@ dependencies {
     shade("com.github.salomonbrys.kotson:kotson:2.5.0")
 
     // ASM for inspection
-    val asmVersion = "9.0"
-    shade("org.ow2.asm:asm:$asmVersion")
-    shade("org.ow2.asm:asm-tree:$asmVersion")
+    shade("org.ow2.asm:asm")
+    shade("org.ow2.asm:asm-tree")
+
+    shade(platform("com.demonwav.hypo:hypo-bom:0.1.0-SNAPSHOT"))
+    shade("com.demonwav.hypo:hypo-model")
+    shade("com.demonwav.hypo:hypo-core")
+    shade("com.demonwav.hypo:hypo-hydrate")
+    shade("com.demonwav.hypo:hypo-asm")
+    shade("com.demonwav.hypo:hypo-asm-hydrator")
+    shade("com.demonwav.hypo:hypo-mappings")
 
     // Cadix
     val lorenzVersion = "0.5.6"
@@ -111,6 +130,8 @@ fun ShadowJar.configureStandard() {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
     }
 
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+
     mergeServiceFiles()
 }
 
@@ -119,6 +140,7 @@ tasks.shadowJar {
 
     val prefix = "paper.libs"
     listOf(
+        "com.demonwav.hypo",
         "com.github.salomonbrys.kotson",
         "com.google.gson",
         "io.sigpipe",
@@ -171,11 +193,7 @@ publishing {
         }
 
         repositories {
-            val url = if (isSnapshot) {
-                "https://repo.demonwav.com/snapshots"
-            } else {
-                "https://repo.demonwav.com/releases"
-            }
+            val url = "https://wav.jfrog.io/artifactory/repo/"
             maven(url) {
                 credentials(PasswordCredentials::class)
                 name = "demonwav"

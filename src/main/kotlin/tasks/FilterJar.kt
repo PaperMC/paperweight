@@ -36,6 +36,7 @@ abstract class FilterJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:Input
     abstract val includes: ListProperty<String>
 

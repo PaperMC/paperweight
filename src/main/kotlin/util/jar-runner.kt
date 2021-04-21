@@ -34,6 +34,7 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
         logFile is OutputStream -> logFile
         logFile != null -> {
             val log = logFile.convertToFile()
+            log.parentFile.mkdirs()
             log.outputStream().buffered()
         }
         else -> UselessOutputStream

@@ -39,6 +39,7 @@ abstract class DownloadServerJar : BaseTask() {
 
     @get:Input
     abstract val downloadUrl: Property<String>
+
     @get:Input
     abstract val hash: Property<String>
 

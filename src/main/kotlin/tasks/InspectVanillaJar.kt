@@ -40,43 +40,41 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.MethodNode
 
 abstract class InspectVanillaJar : BaseTask() {
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:InputDirectory
     abstract val librariesDir: DirectoryProperty
+
     @get:InputFile
     abstract val mcLibraries: RegularFileProperty
 
     @get:OutputFile
     abstract val loggerFile: RegularFileProperty
-    @get:OutputFile
-    abstract val paramIndexes: RegularFileProperty
+
     @get:OutputFile
     abstract val syntheticMethods: RegularFileProperty
+
     @get:OutputFile
     abstract val serverLibraries: RegularFileProperty
 
     override fun init() {
         loggerFile.convention(defaultOutput("$name-loggerFields", "txt"))
-        paramIndexes.convention(defaultOutput("$name-paramIndexes", "txt"))
         syntheticMethods.convention(defaultOutput("$name-syntheticMethods", "txt"))
     }
 
     @TaskAction
     fun run() {
         val loggers = mutableListOf<LoggerFields.Data>()
-        val params = mutableListOf<ParamIndexes.Data>()
         val synthMethods = mutableListOf<SyntheticMethods.Data>()
 
         var visitor: ClassVisitor
         visitor = LoggerFields.Visitor(null, loggers)
-        visitor = ParamIndexes.Visitor(visitor, params)
-        visitor = SyntheticMethods.Visitor(visitor, synthMethods)
+        visitor = SyntheticMethods.Visitor(null, synthMethods)
 
         archives.zipTree(inputJar.file).matching {
             include("/*.class")
@@ -98,24 +96,6 @@ abstract class InspectVanillaJar : BaseTask() {
                 writer.append(loggerField.className)
                 writer.append(' ')
                 writer.append(loggerField.fieldName)
-                writer.newLine()
-            }
-        }
-
-        paramIndexes.file.bufferedWriter(Charsets.UTF_8).use { writer ->
-            params.sort()
-            for (methodData in params) {
-                writer.append(methodData.className)
-                writer.append(' ')
-                writer.append(methodData.methodName)
-                writer.append(' ')
-                writer.append(methodData.methodDescriptor)
-                for (target in methodData.params) {
-                    writer.append(' ')
-                    writer.append(target.binaryIndex.toString())
-                    writer.append(' ')
-                    writer.append(target.sourceIndex.toString())
-                }
                 writer.newLine()
             }
         }
@@ -227,73 +207,6 @@ object LoggerFields {
             { it.className },
             { it.fieldName }
         )
-    }
-}
-
-/*
- * Source-remapping uses 0-based param indexes, but the param indexes we have are LVT-based. We have to look at the
- * actual bytecode to translate the LVT-based indexes back to 0-based param indexes.
- */
-object ParamIndexes {
-    class Visitor(
-        classVisitor: ClassVisitor?,
-        private val methods: MutableList<Data>
-    ) : BaseClassVisitor(classVisitor) {
-
-        override fun visitMethod(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            exceptions: Array<out String>?
-        ): MethodVisitor? {
-            val ret = super.visitMethod(access, name, descriptor, signature, exceptions)
-            val className = currentClass ?: return ret
-
-            val isStatic = access and Opcodes.ACC_STATIC != 0
-            var currentIndex = if (isStatic) 0 else 1
-
-            val types = Type.getArgumentTypes(descriptor)
-            if (types.isEmpty()) {
-                return ret
-            }
-
-            val params = ArrayList<ParamTarget>(types.size)
-            val data = Data(className, name, descriptor, params)
-            methods += data
-
-            for (i in types.indices) {
-                params += ParamTarget(currentIndex, i)
-                currentIndex++
-
-                // Figure out if we should skip the next index
-                val type = types[i]
-                if (type === Type.LONG_TYPE || type === Type.DOUBLE_TYPE) {
-                    currentIndex++
-                }
-            }
-
-            return ret
-        }
-    }
-
-    data class Data(
-        val className: String,
-        val methodName: String,
-        val methodDescriptor: String,
-        val params: List<ParamTarget>
-    ) : Comparable<Data> {
-        override fun compareTo(other: Data) = compareValuesBy(
-            this,
-            other,
-            { it.className },
-            { it.methodName },
-            { it.methodDescriptor }
-        )
-    }
-
-    data class ParamTarget(val binaryIndex: Int, val sourceIndex: Int) : Comparable<ParamTarget> {
-        override fun compareTo(other: ParamTarget) = compareValuesBy(this, other) { it.binaryIndex }
     }
 }
 

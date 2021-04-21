@@ -66,11 +66,13 @@ abstract class DownloadMcLibraries : DefaultTask() {
 
     @get:InputFile
     abstract val mcLibrariesFile: RegularFileProperty
+
     @get:Input
     abstract val mcRepo: Property<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
     @get:OutputDirectory
     abstract val sourcesOutputDir: DirectoryProperty
 
@@ -109,6 +111,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
     @get:InputFile
     abstract val apiPom: RegularFileProperty
+
     @get:InputFile
     abstract val serverPom: RegularFileProperty
 

@@ -34,8 +34,10 @@ import org.gradle.api.tasks.TaskAction
 abstract class CopyResources : BaseTask() {
     @get:InputFile
     abstract val inputJar: RegularFileProperty
+
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
+
     @get:Input
     abstract val includes: ListProperty<String>
 

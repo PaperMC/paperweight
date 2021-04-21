@@ -40,23 +40,26 @@ abstract class PatchMappings : DefaultTask() {
 
     @get:InputFile
     abstract val inputMappings: RegularFileProperty
+
     @get:InputFile
     @get:Optional
-    abstract val patchMappings: RegularFileProperty
+    abstract val patch: RegularFileProperty
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
-    @get:OutputFile
-    abstract val outputMappingsReversed: RegularFileProperty
 
     @TaskAction
     fun run() {
+        appendPatch(inputMappings, outputMappings)
+    }
+
+    private fun appendPatch(input: RegularFileProperty, output: RegularFileProperty) {
         val mappings = MappingFormats.TINY.read(
-            inputMappings.path,
+            input.path,
             SPIGOT_NAMESPACE,
             DEOBF_NAMESPACE
         )
-        patchMappings.pathOrNull?.let { patchFile ->
+        patch.pathOrNull?.let { patchFile ->
             val temp = Files.createTempFile("patch", "tiny")
             try {
                 val comment = commentRegex()
@@ -78,25 +81,6 @@ abstract class PatchMappings : DefaultTask() {
             }
         }
 
-        MappingFormats.TINY.write(mappings, outputMappings.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
-        MappingFormats.TINY.write(mappings.reverse(), outputMappingsReversed.path, DEOBF_NAMESPACE, SPIGOT_NAMESPACE)
+        MappingFormats.TINY.write(mappings, output.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
     }
-    //
-    // private fun appendServerVersion(mappings: MappingSet): MappingSet {
-    //     val ver = versionPackage.get()
-    //
-    //     val result = MappingSet.create()
-    //     for (topLevelClassMapping in mappings.topLevelClassMappings) {
-    //         val newMapping = if (topLevelClassMapping.deobfuscatedPackage == "net/minecraft/server") {
-    //             val newName = topLevelClassMapping.deobfuscatedPackage + "/v$ver/" + topLevelClassMapping.simpleDeobfuscatedName
-    //             result.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, newName)
-    //         } else {
-    //             result.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
-    //         }
-    //         topLevelClassMapping.fieldMappings.forEach { it.copy(newMapping) }
-    //         topLevelClassMapping.methodMappings.forEach { it.copy(newMapping) }
-    //         topLevelClassMapping.innerClassMappings.forEach { it.copy(newMapping) }
-    //     }
-    //     return result
-    // }
 }

@@ -117,7 +117,7 @@ class Paperweight : Plugin<Project> {
         }
     }
 
-    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas>? {
+    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar>? {
         if (!projectDir.exists()) {
             return null
         }
@@ -334,8 +334,18 @@ class Paperweight : Plugin<Project> {
         val cache: File = layout.cache
         val downloadService = download
 
+        val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
+            mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
+            mcRepo.set(Constants.MC_LIBRARY_URL)
+            outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
+            sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
+
+            downloader.set(downloadService)
+        }
+
         val generateMappings by tasks.registering<GenerateMappings> {
             vanillaJar.set(generalTasks.filterVanillaJar.flatMap { it.outputJar })
+            librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
 
             vanillaMappings.set(initialTasks.downloadMappings.flatMap { it.outputFile })
             paramMappings.fileProvider(configurations.named(Constants.PARAM_MAPPINGS_CONFIG).map { it.singleFile })
@@ -354,15 +364,6 @@ class Paperweight : Plugin<Project> {
         val fixJar by tasks.registering<FixJar> {
             inputJar.set(remapJar.flatMap { it.outputJar })
             vanillaJar.set(generalTasks.downloadServerJar.flatMap { it.outputJar })
-        }
-
-        val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
-            mcLibrariesFile.set(initialTasks.setupMcLibraries.flatMap { it.outputFile })
-            mcRepo.set(Constants.MC_LIBRARY_URL)
-            outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
-            sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
-
-            downloader.set(downloadService)
         }
 
         return VanillaTasks(generateMappings, fixJar, downloadMcLibraries)
@@ -397,7 +398,6 @@ class Paperweight : Plugin<Project> {
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
 
             loggerFields.set(inspectVanillaJar.flatMap { it.loggerFile })
-            paramIndexes.set(inspectVanillaJar.flatMap { it.paramIndexes })
             syntheticMethods.set(inspectVanillaJar.flatMap { it.syntheticMethods })
 
             sourceMappings.set(generateMappings.flatMap { it.outputMappings })
@@ -405,18 +405,10 @@ class Paperweight : Plugin<Project> {
             outputMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_MAPPINGS))
         }
 
-        val patchMappings by tasks.registering<PatchMappings> {
-            inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
-            patchMappings.set(extension.paper.mappingsPatch)
-
-            outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
-            outputMappingsReversed.set(cache.resolve(Constants.PATCHED_MOJANG_YARN_SPIGOT_MAPPINGS))
-        }
-
         val spigotRemapJar by tasks.registering<SpigotRemapJar> {
             inputJar.set(filterVanillaJar.flatMap { it.outputJar })
-            classMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
-            memberMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
+            classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
+            memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
             packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
             accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
@@ -428,6 +420,21 @@ class Paperweight : Plugin<Project> {
             classMapCommand.set(buildDataInfo.map { it.classMapCommand })
             memberMapCommand.set(buildDataInfo.map { it.memberMapCommand })
             finalMapCommand.set(buildDataInfo.map { it.finalMapCommand })
+        }
+
+        val cleanupMappings by tasks.registering<CleanupMappings> {
+            sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
+            librariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir })
+            inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
+
+            outputMappings.set(cache.resolve(Constants.CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
+        }
+
+        val patchMappings by tasks.registering<PatchMappings> {
+            inputMappings.set(cleanupMappings.flatMap { it.outputMappings })
+            patch.set(extension.paper.mappingsPatch)
+
+            outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
         }
 
         val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
@@ -516,17 +523,18 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas> {
+    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks): TaskProvider<RemapJar> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
-        val reobfJar by tasks.registering<RemapJarAtlas> {
+        val reobfJar by tasks.registering<RemapJar> {
             dependsOn(shadowJar)
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
-            mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappingsReversed })
-            packageVersion.set(ext.versionPackage)
+            mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappings })
+            // packageVersion.set(ext.versionPackage)
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
+            remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
 
             outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
         }

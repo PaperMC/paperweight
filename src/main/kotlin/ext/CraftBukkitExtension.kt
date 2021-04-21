@@ -52,7 +52,6 @@ open class CraftBukkitExtension(objects: ObjectFactory, workDir: DirectoryProper
                 if (file != null) {
                     mappingsDir.file(file.name)
                 } else {
-// empty
                     fileProperty()
                 }
             }

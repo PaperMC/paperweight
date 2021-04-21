@@ -51,11 +51,13 @@ abstract class RemapJarAtlas : BaseTask() {
 
     @get:InputFile
     abstract val mappingsFile: RegularFileProperty
+
     @get:Input
     abstract val packageVersion: Property<String>
 
     @get:Input
     abstract val fromNamespace: Property<String>
+
     @get:Input
     abstract val toNamespace: Property<String>
 

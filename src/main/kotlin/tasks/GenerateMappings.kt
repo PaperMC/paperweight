@@ -22,19 +22,26 @@
 
 package io.papermc.paperweight.tasks
 
+import com.demonwav.hypo.asm.AsmClassDataProvider
+import com.demonwav.hypo.asm.hydrate.BridgeMethodHydrator
+import com.demonwav.hypo.asm.hydrate.SuperConstructorHydrator
+import com.demonwav.hypo.core.HypoContext
+import com.demonwav.hypo.hydrate.HydrationManager
+import com.demonwav.hypo.mappings.ChangeChain
+import com.demonwav.hypo.mappings.MappingsCompletionManager
+import com.demonwav.hypo.mappings.contributors.CopyMappingsDown
+import com.demonwav.hypo.mappings.contributors.PropagateMappingsUp
+import com.demonwav.hypo.mappings.contributors.RemoveUnusedMappings
+import com.demonwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
 import java.nio.file.FileSystems
-import java.nio.file.Files
-import javax.inject.Inject
-import org.cadixdev.atlas.Atlas
-import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.asm.LorenzRemapper
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.cadixdev.lorenz.merge.MappingSetMergerHandler
@@ -48,36 +55,35 @@ import org.cadixdev.lorenz.model.MethodMapping
 import org.cadixdev.lorenz.model.MethodParameterMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
-import org.gradle.workers.WorkAction
-import org.gradle.workers.WorkParameters
-import org.gradle.workers.WorkerExecutor
 
 abstract class GenerateMappings : DefaultTask() {
 
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
 
+    @get:InputFiles
+    abstract val librariesDir: DirectoryProperty
+
     @get:InputFile
     abstract val vanillaMappings: RegularFileProperty
+
     @get:InputFile
     abstract val paramMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
     @TaskAction
     fun run() {
         val vanillaMappings = MappingFormats.PROGUARD.createReader(vanillaMappings.path).use { it.read() }.reverse()
 
-        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null).use { fs ->
+        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null as ClassLoader?).use { fs ->
             val path = fs.getPath("mappings", "mappings.tiny")
             MappingFormats.TINY.read(path, "official", "named")
         }
@@ -91,57 +97,26 @@ abstract class GenerateMappings : DefaultTask() {
                 .build()
         ).merge()
 
-        // Fill out any missing inheritance info in the mappings
-        val tempMappingsFile = Files.createTempFile("mappings", "tiny")
-        val tempMappingsOutputFile = Files.createTempFile("mappings-out", "tiny")
+        val libs = librariesDir.file.listFiles()?.filter { it.isLibraryJar } ?: emptyList()
+        val filledMerged = HypoContext.builder()
+            .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(vanillaJar.path)))
+            .withContextProviders(AsmClassDataProvider.of(ClassProviderRoot.fromJars(*libs.map { it.toPath() }.toTypedArray())))
+            .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
+            .build().use { hypoContext ->
+                HydrationManager.createDefault()
+                    .register(BridgeMethodHydrator.create())
+                    .register(SuperConstructorHydrator.create())
+                    .hydrate(hypoContext)
 
-        val filledMerged = try {
-            MappingFormats.TINY.write(merged, tempMappingsFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
-
-            val queue = workerExecutor.processIsolation {
-                forkOptions.jvmArgs("-Xmx1G")
+                ChangeChain.create()
+                    .addLink(RemoveUnusedMappings.create())
+                    .addLink(PropagateMappingsUp.create())
+                    .addLink(CopyMappingsDown.create())
+                    .applyChain(merged, MappingsCompletionManager.create(hypoContext))
             }
-
-            queue.submit(AtlasAction::class) {
-                inputJar.set(vanillaJar.file)
-                mappingsFile.set(tempMappingsFile.toFile())
-                outputMappingsFile.set(tempMappingsOutputFile.toFile())
-            }
-
-            queue.await()
-
-            MappingFormats.TINY.read(tempMappingsOutputFile, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
-        } finally {
-            Files.deleteIfExists(tempMappingsFile)
-            Files.deleteIfExists(tempMappingsOutputFile)
-        }
 
         ensureParentExists(outputMappings)
         MappingFormats.TINY.write(filledMerged, outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
-    }
-
-    abstract class AtlasAction : WorkAction<AtlasParameters> {
-        override fun execute() {
-            val mappings = MappingFormats.TINY.read(parameters.mappingsFile.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
-
-            val tempOut = Files.createTempFile("remapped", "jar")
-            try {
-                Atlas().let { atlas ->
-                    atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider())) }
-                    atlas.run(parameters.inputJar.path, tempOut)
-                }
-
-                MappingFormats.TINY.write(mappings, parameters.outputMappingsFile.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
-            } finally {
-                Files.deleteIfExists(tempOut)
-            }
-        }
-    }
-
-    interface AtlasParameters : WorkParameters {
-        val inputJar: RegularFileProperty
-        val mappingsFile: RegularFileProperty
-        val outputMappingsFile: RegularFileProperty
     }
 }
 

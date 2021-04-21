@@ -49,9 +49,10 @@ object Constants {
     private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
     const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
     const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
+
     const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
+    const val CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-cleaned.tiny"
     const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patch.tiny"
-    const val PATCHED_MOJANG_YARN_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-patch.tiny"
 
     const val OBF_NAMESPACE = "official"
     const val SPIGOT_NAMESPACE = "spigot"
