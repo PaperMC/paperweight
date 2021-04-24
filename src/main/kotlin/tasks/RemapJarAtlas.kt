@@ -94,8 +94,8 @@ abstract class RemapJarAtlas : BaseTask() {
         override fun execute() {
             val mappings = MappingFormats.TINY.read(parameters.mappingsFile.path, parameters.fromNamespace.get(), parameters.toNamespace.get())
 
-            val oldPack = "net/minecraft/server"
-            val newPack = "$oldPack/v${parameters.packageVersion.get()}"
+            val oldPack = "net/minecraft"
+            val newPack = "$oldPack/server/v${parameters.packageVersion.get()}"
             Atlas().let { atlas ->
                 atlas.install { ctx -> JarEntryRemappingTransformer(LorenzRemapper(mappings, ctx.inheritanceProvider())) }
                 atlas.install { JarEntryRemappingTransformer(PackageRemapper(oldPack, newPack)) }

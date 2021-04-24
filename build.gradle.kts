@@ -93,7 +93,7 @@ dependencies {
     shade("org.cadixdev:lorenz-io-proguard:$lorenzVersion")
     shade("org.cadixdev:atlas:0.2.0")
     shade("org.cadixdev:at:0.1.0-rc1")
-    shade("org.cadixdev:mercury:0.1.0-rc2-PW-SNAPSHOT")
+    shade("org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT")
 
     shade("net.fabricmc:lorenz-tiny:3.0.0")
 

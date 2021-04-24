@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.ext
 
+import java.io.File
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -35,3 +36,6 @@ fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryPrope
 
 fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
     fileProperty().convention(base.file(name))
+
+fun File.listFilesRecursively(): Set<File>? =
+    listFiles()?.flatMapTo(mutableSetOf()) { setOf(it) + (it.listFilesRecursively() ?: emptySet()) }

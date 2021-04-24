@@ -140,7 +140,7 @@ class Paperweight : Plugin<Project> {
         }
 
         apply(plugin = "com.github.johnrengelman.shadow")
-        return createBuildTasks(parent.ext, spigotTasks)
+        return createBuildTasks(parent, spigotTasks)
     }
 
     private fun Project.createTasks(): TaskContainers {
@@ -323,7 +323,7 @@ class Paperweight : Plugin<Project> {
 
         val filterVanillaJar by tasks.registering<FilterJar> {
             inputJar.set(downloadServerJar.flatMap { it.outputJar })
-            includes.set(listOf("/*.class", "/net/minecraft/**"))
+            includes.set(listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**"))
         }
 
         return GeneralTasks(buildDataInfo, downloadServerJar, filterVanillaJar)
@@ -450,7 +450,7 @@ class Paperweight : Plugin<Project> {
 
         val patchCraftBukkit by tasks.registering<ApplyDiffPatches> {
             sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
-            sourceBasePath.set("net/minecraft/server")
+            sourceBasePath.set(".")
             branch.set("patched")
             patchDir.set(extension.craftBukkit.patchDir)
 
@@ -523,7 +523,7 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(ext: PaperweightExtension, spigotTasks: SpigotTasks): TaskProvider<RemapJar> {
+    private fun Project.createBuildTasks(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
         val reobfJar by tasks.registering<RemapJar> {
@@ -531,7 +531,6 @@ class Paperweight : Plugin<Project> {
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
             mappingsFile.set(spigotTasks.patchMappings.flatMap { it.outputMappings })
-            // packageVersion.set(ext.versionPackage)
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
             remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
