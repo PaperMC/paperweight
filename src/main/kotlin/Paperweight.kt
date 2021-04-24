@@ -78,7 +78,7 @@ class Paperweight : Plugin<Project> {
         target.configurations.create(Constants.PAPERCLIP_CONFIG)
 
         target.repositories.apply {
-            maven(Constants.FABRIC_MAVEN_URL) {
+            maven(Constants.QUILT_MAVEN_URL) {
                 content {
                     onlyForConfigurations(Constants.PARAM_MAPPINGS_CONFIG, Constants.REMAPPER_CONFIG)
                 }

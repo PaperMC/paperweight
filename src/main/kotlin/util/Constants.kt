@@ -28,7 +28,7 @@ object Constants {
     const val EXTENSION = "paperweight"
 
     const val FORGE_MAVEN_URL = "https://files.minecraftforge.net/maven/"
-    const val FABRIC_MAVEN_URL = "https://maven.fabricmc.net/"
+    const val QUILT_MAVEN_URL = "https://https://maven.quiltmc.org//"
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
 
     const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
