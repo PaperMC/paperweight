@@ -94,10 +94,10 @@ class Paperweight : Plugin<Project> {
 
         // Setup the server jar
         target.afterEvaluate {
-            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks.spigotTasks)?.let { reobfJar ->
+            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks.spigotTasks)?.let { repackageJar ->
                 val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                     originalJar.set(tasks.generalTasks.downloadServerJar.flatMap { it.outputJar })
-                    patchedJar.set(reobfJar.flatMap { it.outputJar })
+                    patchedJar.set(repackageJar.flatMap { it.outputJar })
                     mcVersion.set(target.ext.minecraftVersion)
                 }
 
@@ -117,7 +117,7 @@ class Paperweight : Plugin<Project> {
         }
     }
 
-    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar>? {
+    private fun Project.setupServerProject(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas>? {
         if (!projectDir.exists()) {
             return null
         }
@@ -523,7 +523,7 @@ class Paperweight : Plugin<Project> {
         )
     }
 
-    private fun Project.createBuildTasks(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJar> {
+    private fun Project.createBuildTasks(parent: Project, spigotTasks: SpigotTasks): TaskProvider<RemapJarAtlas> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
         val reobfJar by tasks.registering<RemapJar> {
@@ -538,7 +538,14 @@ class Paperweight : Plugin<Project> {
             outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
         }
 
-        return reobfJar
+        val repackageJar by tasks.registering<RemapJarAtlas> {
+            inputJar.set(reobfJar.flatMap { it.outputJar })
+
+            packageVersion.set(parent.ext.versionPackage)
+            outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-repackage.jar"))
+        }
+
+        return repackageJar
     }
 
     private fun Project.createPatchRemapTasks(
