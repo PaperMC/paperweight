@@ -73,7 +73,7 @@ abstract class RemapPatches : BaseTask() {
     abstract val spigotDecompJar: RegularFileProperty
 
     @get:InputDirectory
-    abstract val mcLibrariesDir: DirectoryProperty
+    abstract val mcLibrarySourcesDir: DirectoryProperty
 
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
@@ -154,7 +154,7 @@ abstract class RemapPatches : BaseTask() {
                     patches,
                     spigotDecompJar.file,
                     libraryImports.file,
-                    mcLibrariesDir.file,
+                    mcLibrarySourcesDir.file,
                     tempInputDir.resolve("src/main/java")
                 )
 

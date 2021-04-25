@@ -590,7 +590,7 @@ class Paperweight : Plugin<Project> {
             spigotDecompJar.set(spigotTasks.spigotDecompileJar.flatMap { it.outputJar }.get())
 
             // library class imports
-            mcLibrariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.outputDir }.get())
+            mcLibrarySourcesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.sourcesOutputDir }.get())
             libraryImports.set(extension.paper.libraryClassImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
