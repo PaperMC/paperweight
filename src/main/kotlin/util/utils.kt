@@ -35,6 +35,7 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.util.Optional
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import org.cadixdev.lorenz.merge.MergeResult
@@ -148,6 +149,8 @@ val RegularFileProperty.pathOrNull: Path?
     get() = fileOrNull?.toPath()
 val DirectoryProperty.file: File
     get() = get().asFile
+val DirectoryProperty.fileOrNull: File?
+    get() = orNull?.asFile
 val DirectoryProperty.path: Path
     get() = file.toPath()
 
@@ -156,6 +159,14 @@ inline fun <reified T : Any> Project.contents(contentFile: Any, crossinline conv
         .asText
         .forUseAtConfigurationTime()
         .map { convert(it) }
+}
+
+fun findOutputDir(baseFile: File): File {
+    var dir: File
+    do {
+        dir = baseFile.resolveSibling("${baseFile.name}-" + ThreadLocalRandom.current().nextInt())
+    } while (dir.exists())
+    return dir
 }
 
 val MemberMapping<*, *>.parentClass: ClassMapping<*, *>

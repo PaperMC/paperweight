@@ -26,8 +26,11 @@ import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.findOutputDir
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.zip
 import java.io.File
 import javax.inject.Inject
 import org.cadixdev.at.AccessTransformSet
@@ -68,12 +71,13 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
-abstract class RemapSources : ZippedTask() {
+abstract class RemapSources : BaseTask() {
 
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
@@ -96,35 +100,71 @@ abstract class RemapSources : ZippedTask() {
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
 
+    @get:OutputFile
+    abstract val sourcesOutputZip: RegularFileProperty
+
+    @get:OutputFile
+    abstract val testsOutputZip: RegularFileProperty
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
-        super.init()
+        sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
+        testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
         generatedAt.convention(defaultOutput("at"))
     }
 
-    override fun run(rootDir: File) {
-        val srcDir = spigotServerDir.file.resolve("src/main/java")
+    @TaskAction
+    fun run() {
+        val srcOut = findOutputDir(sourcesOutputZip.file).apply { mkdirs() }
+        val testOut = findOutputDir(testsOutputZip.file).apply { mkdirs() }
 
-        val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs("-Xmx2G")
+        try {
+            val queue = workerExecutor.processIsolation {
+                forkOptions.jvmArgs("-Xmx2G")
+            }
+
+            val srcDir = spigotServerDir.file.resolve("src/main/java")
+
+            // Remap sources
+            queue.submit(RemapAction::class) {
+                classpath.add(vanillaRemappedSpigotJar.file)
+                classpath.add(vanillaJar.file)
+                classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
+                classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
+
+                mappings.set(this@RemapSources.mappings.file)
+                inputDir.set(srcDir)
+
+                outputDir.set(srcOut)
+                generatedAtOutput.set(generatedAt.file)
+            }
+
+            val testSrc = spigotServerDir.file.resolve("src/test/java")
+
+            // Remap tests
+            queue.submit(RemapAction::class) {
+                classpath.add(vanillaRemappedSpigotJar.file)
+                classpath.add(vanillaJar.file)
+                classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
+                classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
+                classpath.add(srcDir)
+
+                mappings.set(this@RemapSources.mappings.file)
+                inputDir.set(testSrc)
+
+                outputDir.set(testOut)
+            }
+
+            queue.await()
+
+            zip(srcOut, sourcesOutputZip)
+            zip(testOut, testsOutputZip)
+        } finally {
+            srcOut.deleteRecursively()
+            testOut.deleteRecursively()
         }
-
-        queue.submit(RemapAction::class) {
-            classpath.add(vanillaRemappedSpigotJar.file)
-            classpath.add(vanillaJar.file)
-            classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-            classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
-
-            mappings.set(this@RemapSources.mappings.file)
-            inputDir.set(srcDir)
-
-            outputDir.set(rootDir)
-            generatedAtOutput.set(generatedAt.file)
-        }
-
-        queue.await()
     }
 
     abstract class RemapAction : WorkAction<RemapParams> {
@@ -136,11 +176,17 @@ abstract class RemapSources : ZippedTask() {
             )
             val processAt = AccessTransformSet.create()
 
+            val generatedAtOutPath = parameters.generatedAtOutput.pathOrNull
+
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
                 merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
 
-                merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
+                if (generatedAtOutPath != null) {
+                    merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
+                } else {
+                    merc.isGracefulClasspathChecks = true
+                }
 
                 merc.process(parameters.inputDir.path)
 
@@ -153,10 +199,16 @@ abstract class RemapSources : ZippedTask() {
                     )
                 )
 
+                if (generatedAtOutPath != null) {
+                    merc.processors.add(AccessTransformerRewriter.create(processAt))
+                }
+
                 merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
             }
 
-            AccessTransformFormats.FML.write(parameters.generatedAtOutput.path, processAt)
+            if (generatedAtOutPath != null) {
+                AccessTransformFormats.FML.write(generatedAtOutPath, processAt)
+            }
         }
     }
 
@@ -259,6 +311,12 @@ abstract class RemapSources : ZippedTask() {
                     val methodDec = parentNode as? MethodDeclaration ?: return@also
 
                     var methodClass = methodDec.resolveBinding().declaringClass
+                    if (methodClass.isAnonymous) {
+                        val name = getNameNode(referringClass) ?: return
+                        thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
+                        return@also
+                    }
+
                     if (referringClass.erasure != methodClass.erasure && methodClass.isNested && !Modifier.isStatic(methodClass.modifiers)) {
                         while (true) {
                             methodClass = methodClass.declaringClass ?: break

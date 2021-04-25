@@ -49,4 +49,8 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val additionalSpigotMemberMappings: RegularFileProperty = objects.fileProperty()
     val libraryClassImports: RegularFileProperty = objects.fileFrom(buildDataDir, "library-imports.txt")
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
+
+    val craftBukkitPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
+    val spigotServerPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
+    val spigotApiPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
 }

@@ -56,6 +56,10 @@ class Command(private val process: Process, private val command: String) {
     private var errStream: OutputStream = UselessOutputStream
 
     fun run(): Int {
+        if (System.getProperty("paperweight.debug", "false") == "true") {
+            // Override all settings for debug
+            setup(System.out, System.err)
+        }
         try {
             val input = process.inputStream
             val error = process.errorStream

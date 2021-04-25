@@ -52,7 +52,6 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.apply
-import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.registerIfAbsent
@@ -70,25 +69,12 @@ class Paperweight : Plugin<Project> {
         }
 
         // Make sure the submodules are initialized
-        Git(target.projectDir)("submodule", "update", "--init").execute()
+        Git(target.projectDir)("submodule", "update", "--init").executeOut()
 
         target.configurations.create(Constants.PARAM_MAPPINGS_CONFIG)
         target.configurations.create(Constants.REMAPPER_CONFIG)
         target.configurations.create(Constants.DECOMPILER_CONFIG)
         target.configurations.create(Constants.PAPERCLIP_CONFIG)
-
-        target.repositories.apply {
-            maven(Constants.QUILT_MAVEN_URL) {
-                content {
-                    onlyForConfigurations(Constants.PARAM_MAPPINGS_CONFIG, Constants.REMAPPER_CONFIG)
-                }
-            }
-            maven(Constants.FORGE_MAVEN_URL) {
-                content {
-                    onlyForConfigurations(Constants.DECOMPILER_CONFIG)
-                }
-            }
-        }
 
         val tasks = target.createTasks()
 
@@ -103,7 +89,7 @@ class Paperweight : Plugin<Project> {
 
                 target.tasks.named("jar", Jar::class) {
                     val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
-                    dependsOn(paperclipConfig)
+                    dependsOn(paperclipConfig, generatePaperclipPatch)
 
                     val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
                     from(paperclipZip) {
@@ -184,7 +170,8 @@ class Paperweight : Plugin<Project> {
 
         val patchPaperServer by tasks.registering<ApplyPaperPatches> {
             patchDir.set(extension.paper.spigotServerPatchDir)
-            remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.outputZip })
+            remappedSource.set(spigotTasks.remapSpigotSources.flatMap { it.sourcesOutputZip })
+            remappedTests.set(spigotTasks.remapSpigotSources.flatMap { it.testsOutputZip })
             spigotServerDir.set(spigotTasks.patchSpigotServer.flatMap { it.outputDir })
             sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
             mcLibrariesDir.set(vanillaTasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
@@ -448,20 +435,35 @@ class Paperweight : Plugin<Project> {
             decompileCommand.set(buildDataInfo.map { it.decompileCommand })
         }
 
+        val patchCraftBukkitPatches by tasks.registering<ApplyRawDiffPatches> {
+            inputDir.set(extension.craftBukkit.patchDir)
+            patchDir.set(extension.paper.craftBukkitPatchPatchesDir)
+        }
+
         val patchCraftBukkit by tasks.registering<ApplyDiffPatches> {
             sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
-            sourceBasePath.set(".")
+            cleanDirPath.set("net/minecraft")
             branch.set("patched")
-            patchDir.set(extension.craftBukkit.patchDir)
+            patchZip.set(patchCraftBukkitPatches.flatMap { it.outputZip })
 
             outputDir.set(extension.craftBukkit.craftBukkitDir)
+        }
+
+        val patchSpigotApiPatches by tasks.registering<ApplyRawDiffPatches> {
+            inputDir.set(extension.spigot.bukkitPatchDir)
+            patchDir.set(extension.paper.spigotApiPatchPatchesDir)
+        }
+
+        val patchSpigotServerPatches by tasks.registering<ApplyRawDiffPatches> {
+            inputDir.set(extension.spigot.craftBukkitPatchDir)
+            patchDir.set(extension.paper.spigotServerPatchPatchesDir)
         }
 
         val patchSpigotApi by tasks.registering<ApplyGitPatches> {
             branch.set("HEAD")
             upstreamBranch.set("upstream")
             upstream.set(extension.craftBukkit.bukkitDir)
-            patchDir.set(extension.spigot.bukkitPatchDir)
+            patchZip.set(patchSpigotApiPatches.flatMap { it.outputZip })
 
             outputDir.set(extension.spigot.spigotApiDir)
         }
@@ -470,7 +472,7 @@ class Paperweight : Plugin<Project> {
             branch.set(patchCraftBukkit.flatMap { it.branch })
             upstreamBranch.set("upstream")
             upstream.set(patchCraftBukkit.flatMap { it.outputDir })
-            patchDir.set(extension.spigot.craftBukkitPatchDir)
+            patchZip.set(patchSpigotServerPatches.flatMap { it.outputZip })
 
             outputDir.set(extension.spigot.spigotServerDir)
         }

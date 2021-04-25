@@ -56,6 +56,8 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
         printOutput.convention(true)
         filterPatches.convention(true)
         server.convention(false)
+
+        outputs.upToDateWhen { false }
     }
 
     @TaskAction

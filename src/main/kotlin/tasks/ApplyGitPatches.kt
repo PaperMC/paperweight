@@ -25,11 +25,17 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.unzip
 import java.io.File
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.os.OperatingSystem
@@ -45,8 +51,13 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val upstream: DirectoryProperty
 
+    @get:Optional
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val patchZip: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -72,19 +83,28 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
         if (printOutput.get()) {
             println("   Resetting $target to ${upstream.file.name}...")
         }
-        Git(outputDir.file).let { git ->
-            // disable gpg for this repo, not needed & slows things down
-            git("config", "commit.gpgsign", "false").executeSilently()
 
-            git("remote", "rm", "upstream").runSilently(silenceErr = true)
-            git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
-            if (git("checkout", "master").setupOut(showError = false).run() != 0) {
-                git("checkout", "-b", "master").setupOut().run()
+        val rootPatchDir = patchDir.fileOrNull ?: patchZip.file.let { unzip(it, findOutputDir(it)) }
+
+        try {
+            Git(outputDir.file).let { git ->
+                // disable gpg for this repo, not needed & slows things down
+                git("config", "commit.gpgsign", "false").executeSilently()
+
+                git("remote", "rm", "upstream").runSilently(silenceErr = true)
+                git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
+                if (git("checkout", "master").setupOut(showError = false).run() != 0) {
+                    git("checkout", "-b", "master").setupOut().run()
+                }
+                git("fetch", "upstream").runSilently(silenceErr = true)
+                git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
+
+                applyGitPatches(git, target, outputDir.file, rootPatchDir, printOutput.get())
             }
-            git("fetch", "upstream").runSilently(silenceErr = true)
-            git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
-
-            applyGitPatches(git, target, outputDir.file, patchDir.file, printOutput.get())
+        } finally {
+            if (rootPatchDir != patchDir.fileOrNull) {
+                rootPatchDir.deleteRecursively()
+            }
         }
     }
 }

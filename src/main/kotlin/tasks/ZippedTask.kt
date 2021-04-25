@@ -26,10 +26,10 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.findOutputDir
 import io.papermc.paperweight.util.unzip
 import io.papermc.paperweight.util.zip
 import java.io.File
-import java.util.concurrent.ThreadLocalRandom
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -72,13 +72,5 @@ abstract class ZippedTask : BaseTask() {
         } finally {
             outputDir.deleteRecursively()
         }
-    }
-
-    private fun findOutputDir(baseFile: File): File {
-        var dir: File
-        do {
-            dir = baseFile.resolveSibling("${baseFile.name}-" + ThreadLocalRandom.current().nextInt())
-        } while (dir.exists())
-        return dir
     }
 }

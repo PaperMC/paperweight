@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.file
+import java.io.File
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
@@ -39,6 +40,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @get:InputFile
     abstract val remappedSource: RegularFileProperty
+
+    @get:InputFile
+    abstract val remappedTests: RegularFileProperty
 
     @get:InputDirectory
     abstract val spigotServerDir: DirectoryProperty
@@ -55,12 +59,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
-    @get:OutputDirectory
-    abstract val remapTargetDir: DirectoryProperty
-
     override fun init() {
         printOutput.convention(true)
-        remapTargetDir.convention(outputDir.dir("src/main/java"))
     }
 
     @TaskAction
@@ -83,15 +83,16 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             // disable gpg for this repo, not needed & slows things down
             git("config", "commit.gpgsign", "false").executeSilently()
 
-            val sourceDir = remapTargetDir.file
-            if (sourceDir.exists()) {
-                sourceDir.deleteRecursively()
-            }
-            sourceDir.mkdirs()
+            val sourceDir = createDir(outputDir.file.resolve("src/main/java"))
+            val testDir = createDir(outputDir.file.resolve("src/test/java"))
 
             fs.copy {
                 from(archives.zipTree(remappedSource.file))
                 into(sourceDir)
+            }
+            fs.copy {
+                from(archives.zipTree(remappedTests.file))
+                into(testDir)
             }
 
             val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
@@ -103,5 +104,13 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             applyGitPatches(git, target, outputFile, patchDir.file, printOutput.get())
         }
+    }
+
+    private fun createDir(dir: File): File {
+        if (dir.exists()) {
+            dir.deleteRecursively()
+        }
+        dir.mkdirs()
+        return dir
     }
 }
