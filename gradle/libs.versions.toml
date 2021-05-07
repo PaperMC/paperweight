@@ -1,0 +1,33 @@
+[versions]
+asm = "9.1"
+lorenz = "0.5.6"
+
+[libraries]
+asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
+
+httpclient = "org.apache.httpcomponents:httpclient:4.5.13"
+kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
+
+cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
+cadix-lorenz-asm = { module = "org.cadixdev:lorenz-asm", version.ref = "lorenz" }
+cadix-lorenz-proguard = { module = "org.cadixdev:lorenz-io-proguard", version.ref = "lorenz" }
+cadix-atlas = "org.cadixdev:atlas:0.2.0"
+cadix-at = "org.cadixdev:at:0.1.0-rc1"
+cadix-mercury = "org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT"
+
+hypo-platform = "com.demonwav.hypo:hypo-platform:1.0.0"
+hypo-model = { module = "com.demonwav.hypo:hypo-model" }
+hypo-core = { module = "com.demonwav.hypo:hypo-core" }
+hypo-hydrate = { module = "com.demonwav.hypo:hypo-hydrate" }
+hypo-asm-core = { module = "com.demonwav.hypo:hypo-asm" }
+hypo-asm-hydrate = { module = "com.demonwav.hypo:hypo-asm-hydrate" }
+hypo-mappings = { module = "com.demonwav.hypo:hypo-mappings" }
+
+lorenzTiny = "org.quiltmc:lorenz-tiny:3.0.0"
+jbsdiff = "io.sigpipe:jbsdiff:1.0"
+
+[bundles]
+asm = ["asm-core", "asm-tree"]
+cadix = ["cadix-lorenz-core", "cadix-lorenz-asm", "cadix-lorenz-proguard", "cadix-atlas", "cadix-at", "cadix-mercury"]
+hypo = ["hypo-model", "hypo-core", "hypo-hydrate", "hypo-asm-core", "hypo-asm-hydrate", "hypo-mappings"]

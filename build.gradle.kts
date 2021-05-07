@@ -52,42 +52,21 @@ repositories {
     }
 }
 
-configurations.all {
-    resolutionStrategy {
-        val asmVersion = "9.1"
-        force("org.ow2.asm:asm:$asmVersion")
-        force("org.ow2.asm:asm-tree:$asmVersion")
-    }
-}
-
 dependencies {
-    shade("org.apache.httpcomponents:httpclient:4.5.13")
-    shade("com.github.salomonbrys.kotson:kotson:2.5.0")
+    shade(libs.httpclient)
+    shade(libs.kotson)
 
     // ASM for inspection
-    shade("org.ow2.asm:asm")
-    shade("org.ow2.asm:asm-tree")
+    shade(libs.bundles.asm)
 
-    shade(platform("com.demonwav.hypo:hypo-platform:1.0.0"))
-    shade("com.demonwav.hypo:hypo-model")
-    shade("com.demonwav.hypo:hypo-core")
-    shade("com.demonwav.hypo:hypo-hydrate")
-    shade("com.demonwav.hypo:hypo-asm")
-    shade("com.demonwav.hypo:hypo-asm-hydrate")
-    shade("com.demonwav.hypo:hypo-mappings")
+    shade(platform(libs.hypo.platform))
+    shade(libs.bundles.hypo)
 
-    // Cadix
-    val lorenzVersion = "0.5.6"
-    shade("org.cadixdev:lorenz:$lorenzVersion")
-    shade("org.cadixdev:lorenz-asm:$lorenzVersion")
-    shade("org.cadixdev:lorenz-io-proguard:$lorenzVersion")
-    shade("org.cadixdev:atlas:0.2.0")
-    shade("org.cadixdev:at:0.1.0-rc1")
-    shade("org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT")
+    shade(libs.bundles.cadix)
 
-    shade("org.quiltmc:lorenz-tiny:3.0.0")
+    shade(libs.lorenzTiny)
 
-    shade("io.sigpipe:jbsdiff:1.0")
+    shade(libs.jbsdiff)
 }
 
 ktlint {
