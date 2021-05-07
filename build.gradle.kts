@@ -7,8 +7,8 @@ plugins {
     eclipse
     `kotlin-dsl`
     `maven-publish`
-    id("org.cadixdev.licenser") version "0.5.1"
-    id("com.github.johnrengelman.shadow") version "6.1.0"
+    id("org.cadixdev.licenser") version "0.6.0"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
     id("org.jlleitschuh.gradle.ktlint") version "10.0.0"
 }
 
@@ -42,22 +42,12 @@ repositories {
     mavenCentral()
     maven("https://oss.sonatype.org/content/repositories/snapshots/") {
         mavenContent {
-            includeGroup("org.cadixdev")
+            includeModule("org.cadixdev", "mercury")
         }
     }
-    maven("https://wav.jfrog.io/artifactory/repo/") {
+    maven("https://maven.quiltmc.org/repository/release/") {
         mavenContent {
-            includeGroup("org.cadixdev")
-        }
-    }
-    maven("https://maven.fabricmc.net/") {
-        mavenContent {
-            includeGroup("net.fabricmc")
-        }
-    }
-    mavenLocal {
-        mavenContent {
-            includeGroup("com.demonwav.hypo")
+            includeGroup("org.quiltmc")
         }
     }
 }
@@ -78,12 +68,12 @@ dependencies {
     shade("org.ow2.asm:asm")
     shade("org.ow2.asm:asm-tree")
 
-    shade(platform("com.demonwav.hypo:hypo-bom:0.1.0-SNAPSHOT"))
+    shade(platform("com.demonwav.hypo:hypo-platform:1.0.0"))
     shade("com.demonwav.hypo:hypo-model")
     shade("com.demonwav.hypo:hypo-core")
     shade("com.demonwav.hypo:hypo-hydrate")
     shade("com.demonwav.hypo:hypo-asm")
-    shade("com.demonwav.hypo:hypo-asm-hydrator")
+    shade("com.demonwav.hypo:hypo-asm-hydrate")
     shade("com.demonwav.hypo:hypo-mappings")
 
     // Cadix
@@ -95,7 +85,7 @@ dependencies {
     shade("org.cadixdev:at:0.1.0-rc1")
     shade("org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT")
 
-    shade("net.fabricmc:lorenz-tiny:3.0.0")
+    shade("org.quiltmc:lorenz-tiny:3.0.0")
 
     shade("io.sigpipe:jbsdiff:1.0")
 }
@@ -113,7 +103,7 @@ tasks.register("format") {
 }
 
 license {
-    header = file("license/copyright.txt")
+    header.set(resources.text.fromFile(file("license/copyright.txt")))
     include("**/*.kt")
 }
 

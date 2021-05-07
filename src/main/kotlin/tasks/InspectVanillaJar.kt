@@ -116,7 +116,7 @@ abstract class InspectVanillaJar : BaseTask() {
 
         serverLibraries.file.bufferedWriter(Charsets.UTF_8).use { writer ->
             serverLibs.map { it.toString() }.sorted().forEach { artifact ->
-                writer.appendln(artifact)
+                writer.appendLine(artifact)
             }
         }
     }

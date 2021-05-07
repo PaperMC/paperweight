@@ -92,6 +92,6 @@ abstract class RemapJar : BaseTask() {
         }
 
         ensureParentExists(logFile)
-        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = *args.toTypedArray())
+        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = args.toTypedArray())
     }
 }

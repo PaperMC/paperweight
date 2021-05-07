@@ -44,7 +44,7 @@ abstract class SetupMcLibraries : DefaultTask() {
 
         outputFile.file.bufferedWriter().use { writer ->
             for (line in list) {
-                writer.appendln(line)
+                writer.appendLine(line)
             }
         }
     }

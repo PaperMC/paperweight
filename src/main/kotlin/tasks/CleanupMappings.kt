@@ -1,3 +1,25 @@
+/*
+ * paperweight is a Gradle plugin for the PaperMC project.
+ *
+ * Copyright (c) 2020 Kyle Wood (DemonWav)
+ *                    Contributors
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
+
 package io.papermc.paperweight.tasks
 
 import com.demonwav.hypo.asm.AsmClassDataProvider
@@ -7,12 +29,11 @@ import com.demonwav.hypo.core.HypoContext
 import com.demonwav.hypo.hydrate.HydrationManager
 import com.demonwav.hypo.mappings.ChangeChain
 import com.demonwav.hypo.mappings.ChangeRegistry
+import com.demonwav.hypo.mappings.LorenzUtil
 import com.demonwav.hypo.mappings.MappingsCompletionManager
-import com.demonwav.hypo.mappings.MappingsUtil
+import com.demonwav.hypo.mappings.MergeResult
 import com.demonwav.hypo.mappings.MergeableMappingsChange
-import com.demonwav.hypo.mappings.UnableToMergeException
 import com.demonwav.hypo.mappings.changes.AbstractMappingsChange
-import com.demonwav.hypo.mappings.changes.LorenzUtil
 import com.demonwav.hypo.mappings.changes.MemberReference
 import com.demonwav.hypo.mappings.changes.RemoveMappingChange
 import com.demonwav.hypo.mappings.contributors.ChangeContributor
@@ -21,7 +42,7 @@ import com.demonwav.hypo.mappings.contributors.PropagateMappingsUp
 import com.demonwav.hypo.mappings.contributors.RemoveUnusedMappings
 import com.demonwav.hypo.model.ClassProviderRoot
 import com.demonwav.hypo.model.data.ClassData
-import com.demonwav.hypo.model.data.types.PrimitiveTypes
+import com.demonwav.hypo.model.data.types.PrimitiveType
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.file
@@ -95,7 +116,7 @@ abstract class CleanupMappings : DefaultTask() {
             }
 
             for (methodMapping in classMapping.methodMappings) {
-                val method = MappingsUtil.findMethod(currentClass, methodMapping) ?: continue
+                val method = LorenzUtil.findMethod(currentClass, methodMapping) ?: continue
 
                 var methodRef: MemberReference? = null
 
@@ -108,7 +129,7 @@ abstract class CleanupMappings : DefaultTask() {
                         registry.submitChange(ParamIndexChange(methodRef, lvtIndex, sourceIndex))
                     }
                     lvtIndex++
-                    if (param === PrimitiveTypes.LONG || param === PrimitiveTypes.DOUBLE) {
+                    if (param === PrimitiveType.LONG || param === PrimitiveType.DOUBLE) {
                         lvtIndex++
                     }
                 }
@@ -129,9 +150,9 @@ abstract class CleanupMappings : DefaultTask() {
                 indexMap[fromIndex] = toIndex
             }
 
-            override fun applyChange(input: MappingSet, className: String, name: String, desc: String?) {
-                val classMapping = input.getOrCreateClassMapping(className)
-                val methodMapping = classMapping.getOrCreateMethodMapping(name, desc)
+            override fun applyChange(input: MappingSet, ref: MemberReference) {
+                val classMapping = input.getOrCreateClassMapping(ref.className())
+                val methodMapping = classMapping.getOrCreateMethodMapping(ref.name(), ref.desc())
 
                 val paramsMap = LorenzUtil.getParamsMap(methodMapping)
                 val params = paramsMap.values.toList()
@@ -142,20 +163,20 @@ abstract class CleanupMappings : DefaultTask() {
                 }
             }
 
-            override fun mergeWith(that: ParamIndexChange): ParamIndexChange {
+            override fun mergeWith(that: ParamIndexChange): MergeResult<ParamIndexChange> {
                 for (fromIndex in this.indexMap.keys) {
                     if (that.indexMap.containsKey(fromIndex)) {
-                        throw UnableToMergeException("Cannot merge 2 param mappings changes with matching fromIndexes")
+                        return MergeResult.failure("Cannot merge 2 param mappings changes with matching fromIndexes")
                     }
                 }
                 for (toIndex in this.indexMap.values) {
                     if (that.indexMap.containsValue(toIndex)) {
-                        throw UnableToMergeException("Cannot merge 2 param mappings changes with matching toIndex")
+                        return MergeResult.failure("Cannot merge 2 param mappings changes with matching toIndex")
                     }
                 }
 
                 this.indexMap += that.indexMap
-                return this
+                return MergeResult.success(this)
             }
 
             override fun toString(): String {

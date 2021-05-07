@@ -70,7 +70,7 @@ abstract class PatchMappings : DefaultTask() {
                         for (line in lines) {
                             val newLine = comment.replace(line, "")
                             if (newLine.isNotBlank()) {
-                                writer.appendln(newLine)
+                                writer.appendLine(newLine)
                             }
                         }
                     }

@@ -103,7 +103,7 @@ abstract class SpigotRemapJar : BaseTask() {
                     specialSource2Jar,
                     workingDir = work,
                     logFile = logFile,
-                    args = *doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
+                    args = doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
                         // ignore excludes, we actually want to map every class
                         it != "-e"
                     }
@@ -119,7 +119,7 @@ abstract class SpigotRemapJar : BaseTask() {
                     specialSource2Jar,
                     workingDir = work,
                     logFile = logFile,
-                    args = *doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
+                    args = doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
                 )
             } catch (e: Exception) {
                 throw PaperweightException("Failed to apply member mappings", e)
@@ -132,7 +132,7 @@ abstract class SpigotRemapJar : BaseTask() {
                     specialSourceJar,
                     workingDir = work,
                     logFile = logFile,
-                    args = *doReplacements(
+                    args = doReplacements(
                         finalMapCommand.get(),
                         membersJarPath,
                         accessTransformersPath,

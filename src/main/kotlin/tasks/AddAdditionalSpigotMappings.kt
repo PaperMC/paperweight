@@ -71,7 +71,7 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
         appendFile?.useLines { seq -> seq.forEach { lines.add(it) } }
         lines.sort()
         outputFile.bufferedWriter().use { writer ->
-            lines.forEach { writer.appendln(it) }
+            lines.forEach { writer.appendLine(it) }
         }
     }
 }

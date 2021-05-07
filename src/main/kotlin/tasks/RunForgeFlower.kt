@@ -28,6 +28,11 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.runJar
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.createTempFile
+import kotlin.io.path.deleteIfExists
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Classpath
@@ -54,6 +59,7 @@ abstract class RunForgeFlower : BaseTask() {
     }
 
     @TaskAction
+    @ExperimentalPathApi
     fun run() {
         val out = outputJar.file
         val target = out.resolveSibling("${out.name}.dir")
@@ -69,7 +75,7 @@ abstract class RunForgeFlower : BaseTask() {
             tempFile.bufferedWriter().use { writer ->
                 for (lib in libs) {
                     if (lib.isLibraryJar) {
-                        writer.appendln("-e=${lib.absolutePath}")
+                        writer.appendLine("-e=${lib.absolutePath}")
                     }
                 }
             }
@@ -87,7 +93,7 @@ abstract class RunForgeFlower : BaseTask() {
                 "-iib=1",
                 "-log=TRACE",
                 "-cfg",
-                tempFile.absolutePath,
+                tempFile.absolutePathString(),
                 inputJar.file.absolutePath,
                 target.absolutePath
             )
@@ -97,13 +103,13 @@ abstract class RunForgeFlower : BaseTask() {
 
             val jvmArgs = listOf("-Xmx4G")
 
-            runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = *argList.toTypedArray())
+            runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
 
             // FernFlower is weird with how it does directory output
             target.resolve(inputJar.file.name).renameTo(out)
             target.deleteRecursively()
         } finally {
-            tempFile.delete()
+            tempFile.deleteIfExists()
         }
     }
 }

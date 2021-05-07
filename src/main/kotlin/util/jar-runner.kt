@@ -49,7 +49,7 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
     ).directory(dir)
 
     output.writer().let {
-        it.appendln("Command: ${processBuilder.command().joinToString(" ")}")
+        it.appendLine("Command: ${processBuilder.command().joinToString(" ")}")
         it.flush()
     }
 
