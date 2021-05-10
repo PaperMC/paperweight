@@ -78,14 +78,18 @@ class PatchApplier(
         commitTime = git("log", "--format=%aD", "-n", "1", "HEAD").getText()
     }
 
+    fun clearCommit() {
+        commitMessage = null
+        commitAuthor = null
+        commitTime = null
+    }
+
     fun commitChanges() {
         println("Committing remapped changes to $remappedBranch")
         val message = commitMessage ?: throw PaperweightException("commitMessage not set")
         val author = commitAuthor ?: throw PaperweightException("commitAuthor not set")
         val time = commitTime ?: throw PaperweightException("commitTime not set")
-        commitMessage = null
-        commitAuthor = null
-        commitTime = null
+        clearCommit()
 
         git("add", ".").executeSilently()
         git("commit", "-m", message, "--author=$author", "--date=$time").execute()

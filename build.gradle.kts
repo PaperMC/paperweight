@@ -163,7 +163,7 @@ publishing {
             val url = "https://wav.jfrog.io/artifactory/repo/"
             maven(url) {
                 credentials(PasswordCredentials::class)
-                name = "demonwav"
+                name = "wavJfrog"
             }
         }
     }
