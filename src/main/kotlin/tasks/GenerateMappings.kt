@@ -22,17 +22,17 @@
 
 package io.papermc.paperweight.tasks
 
-import com.demonwav.hypo.asm.AsmClassDataProvider
-import com.demonwav.hypo.asm.hydrate.BridgeMethodHydrator
-import com.demonwav.hypo.asm.hydrate.SuperConstructorHydrator
-import com.demonwav.hypo.core.HypoContext
-import com.demonwav.hypo.hydrate.HydrationManager
-import com.demonwav.hypo.mappings.ChangeChain
-import com.demonwav.hypo.mappings.MappingsCompletionManager
-import com.demonwav.hypo.mappings.contributors.CopyMappingsDown
-import com.demonwav.hypo.mappings.contributors.PropagateMappingsUp
-import com.demonwav.hypo.mappings.contributors.RemoveUnusedMappings
-import com.demonwav.hypo.model.ClassProviderRoot
+import dev.denwav.hypo.asm.AsmClassDataProvider
+import dev.denwav.hypo.asm.hydrate.BridgeMethodHydrator
+import dev.denwav.hypo.asm.hydrate.SuperConstructorHydrator
+import dev.denwav.hypo.core.HypoContext
+import dev.denwav.hypo.hydrate.HydrationManager
+import dev.denwav.hypo.mappings.ChangeChain
+import dev.denwav.hypo.mappings.MappingsCompletionManager
+import dev.denwav.hypo.mappings.contributors.CopyMappingsDown
+import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
+import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
+import dev.denwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult

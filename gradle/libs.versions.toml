@@ -1,6 +1,7 @@
 [versions]
 asm = "9.1"
 lorenz = "0.5.6"
+hypo = "1.0.0"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -16,13 +17,12 @@ cadix-atlas = "org.cadixdev:atlas:0.2.0"
 cadix-at = "org.cadixdev:at:0.1.0-rc1"
 cadix-mercury = "org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT"
 
-hypo-platform = "com.demonwav.hypo:hypo-platform:1.0.0"
-hypo-model = { module = "com.demonwav.hypo:hypo-model" }
-hypo-core = { module = "com.demonwav.hypo:hypo-core" }
-hypo-hydrate = { module = "com.demonwav.hypo:hypo-hydrate" }
-hypo-asm-core = { module = "com.demonwav.hypo:hypo-asm" }
-hypo-asm-hydrate = { module = "com.demonwav.hypo:hypo-asm-hydrate" }
-hypo-mappings = { module = "com.demonwav.hypo:hypo-mappings" }
+hypo-model = { module = "dev.denwav.hypo:hypo-model", version.ref = "hypo" }
+hypo-core = { module = "dev.denwav.hypo:hypo-core", version.ref = "hypo" }
+hypo-hydrate = { module = "dev.denwav.hypo:hypo-hydrate", version.ref = "hypo" }
+hypo-asm-core = { module = "dev.denwav.hypo:hypo-asm", version.ref = "hypo" }
+hypo-asm-hydrate = { module = "dev.denwav.hypo:hypo-asm-hydrate", version.ref = "hypo" }
+hypo-mappings = { module = "dev.denwav.hypo:hypo-mappings", version.ref = "hypo" }
 
 lorenzTiny = "org.quiltmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"

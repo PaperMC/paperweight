@@ -59,9 +59,7 @@ dependencies {
     // ASM for inspection
     shade(libs.bundles.asm)
 
-    shade(platform(libs.hypo.platform))
     shade(libs.bundles.hypo)
-
     shade(libs.bundles.cadix)
 
     shade(libs.lorenzTiny)

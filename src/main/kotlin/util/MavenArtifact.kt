@@ -71,7 +71,7 @@ data class MavenArtifact(
     }
 
     override fun toString(): String {
-        return buildString {
+        return buildString(50) {
             append(group).append(':').append(artifact).append(':').append(version)
             if (classifier != null) {
                 append(':').append(classifier)

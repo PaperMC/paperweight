@@ -44,8 +44,8 @@ import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
-import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
@@ -87,7 +87,7 @@ fun Any.convertToFile(): File {
     return when (this) {
         is File -> this
         is Path -> this.toFile()
-        is RegularFile -> this.asFile
+        is FileSystemLocation -> this.asFile
         is Provider<*> -> this.get().convertToFile()
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }

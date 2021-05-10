@@ -59,7 +59,12 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
     private fun download(source: URL, target: File) {
         target.parentFile.mkdirs()
 
-        val etagFile = target.resolveSibling(target.name + ".etag")
+        val etagDir = target.resolveSibling("etags")
+        if (!etagDir.exists() || !etagDir.isDirectory) {
+            etagDir.delete()
+            etagDir.mkdirs()
+        }
+        val etagFile = etagDir.resolve(target.name + ".etag")
         val etag = if (etagFile.exists()) etagFile.readText() else null
 
         val host = HttpHost(source.host, source.port, source.protocol)
@@ -86,7 +91,7 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
 
         httpClient.execute(host, httpGet).use { response ->
             val code = response.statusLine.statusCode
-            if ((code < 200 || code > 299) && code != HttpStatus.SC_NOT_MODIFIED) {
+            if (code !in 200..299 && code != HttpStatus.SC_NOT_MODIFIED) {
                 val reason = response.statusLine.reasonPhrase
                 throw PaperweightException("Download failed, HTTP code: $code; URL: $source; Reason: $reason")
             }
