@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.Gson
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.ext.PaperweightExtension
 import io.papermc.paperweight.tasks.BaseTask
@@ -60,6 +61,10 @@ val Project.ext: PaperweightExtension
     get() = extensions.getByName(Constants.EXTENSION) as PaperweightExtension
 val ProjectLayout.cache: File
     get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").asFile
+
+@Suppress("UNCHECKED_CAST")
+val Project.download: Provider<DownloadService>
+    get() = gradle.sharedServices.registrations.getByName("download").service as Provider<DownloadService>
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")
