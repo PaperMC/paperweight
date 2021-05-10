@@ -107,7 +107,7 @@ tasks.shadowJar {
 
     val prefix = "paper.libs"
     listOf(
-        "com.demonwav.hypo",
+        "dev.denwav.hypo",
         "com.github.salomonbrys.kotson",
         "com.google.gson",
         "io.sigpipe",
