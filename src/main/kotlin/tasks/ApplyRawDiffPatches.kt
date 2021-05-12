@@ -29,8 +29,6 @@ import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.fileOrNull
 import java.io.File
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 
@@ -42,10 +40,6 @@ abstract class ApplyRawDiffPatches : ZippedTask() {
     @get:Optional
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
-
-    @get:Optional
-    @get:Input
-    abstract val keepDir: Property<String>
 
     override fun init() {
         outputZip.convention(defaultOutput("zip"))

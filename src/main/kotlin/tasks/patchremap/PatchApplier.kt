@@ -63,22 +63,13 @@ class PatchApplier(
         git("tag", remappedBaseTag)
     }
 
-//    fun commitRemappingDifferences(remapper: PatchSourceRemapWorker) {
-//        checkoutRemapped() // Switch to remapped branch without checkout out files
-//        remapper.remap() // Remap to new mappings
-//        println("Committing remap")
-//        git("add", ".").executeSilently()
-//        git("commit", "-m", "Remap", "--author=Initial <auto@mated.null>").executeSilently()
-//        checkoutOld()
-//    }
-
     fun recordCommit() {
         commitMessage = git("log", "--format=%B", "-n", "1", "HEAD").getText()
         commitAuthor = git("log", "--format=%an <%ae>", "-n", "1", "HEAD").getText()
         commitTime = git("log", "--format=%aD", "-n", "1", "HEAD").getText()
     }
 
-    fun clearCommit() {
+    private fun clearCommit() {
         commitMessage = null
         commitAuthor = null
         commitTime = null
@@ -112,5 +103,19 @@ class PatchApplier(
             "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
             target.absolutePath, remappedBaseTag
         ).runOut()
+    }
+
+    fun isUnfinishedPatch(): Boolean {
+        if (git("branch", "--show-current").getText().trim() != unmappedBranch) {
+            return false
+        }
+
+        git("update-index", "--refresh").executeSilently()
+        if (git("diff-index", "--quiet", "HEAD", "--").runSilently() == 0) {
+            return git("log", unmappedBranch, "-1", "--pretty=%B").getText().trim() !=
+                git("log", remappedBranch, "-1", "--pretty=%B").getText().trim()
+        }
+
+        throw PaperweightException("Unknown state: repo has uncommitted changes")
     }
 }

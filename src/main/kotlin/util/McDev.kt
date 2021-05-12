@@ -41,7 +41,8 @@ object McDev {
                 if (!file.parentFile.exists()) {
                     file.parentFile.mkdirs()
                 }
-                val zipEntry = zipFile.getEntry(file.relativeTo(targetDir).path) ?: continue
+                val vanillaFile = file.relativeTo(targetDir).path
+                val zipEntry = zipFile.getEntry(vanillaFile) ?: throw PaperweightException("Vanilla class not found: $vanillaFile")
                 zipFile.getInputStream(zipEntry).use { input ->
                     file.outputStream().buffered().use { output ->
                         input.copyTo(output)

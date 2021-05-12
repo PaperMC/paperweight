@@ -164,14 +164,22 @@ abstract class RemapPatches : BaseTask() {
                 remapper.remap() // Remap to new mappings
                 patchApplier.commitInitialRemappedSource() // Initial commit of Spigot sources mapped to new mappings
                 patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+            } else if (patchApplier.isUnfinishedPatch()) {
+                println("===========================")
+                println("Finishing current patch")
+                println("===========================")
+                patchApplier.recordCommit()
+                patchApplier.checkoutRemapped()
+                remapper.remap()
+                patchApplier.commitChanges()
+                patchApplier.checkoutOld()
+                println("===========================")
+                println("done with current patch")
+                println("===========================")
             }
 
-            // remapping renames params, we don't want to leak these changes into the patches below
-//            println("setting up remap commit")
-//            patchApplier.commitRemappingDifferences(remapper)
-
             // Repo setup is done, we can begin the patch loop now
-            patches.asSequence().drop(skip).take(limit).forEach { patch ->
+            patches.asSequence().dropWhile { it.name.substringBefore('-').toInt() <= skip }.take(limit).forEach { patch ->
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")
