@@ -23,40 +23,43 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.tasks.BaseTask
-import java.io.File
-import java.net.URI
-import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.io.path.*
 
-fun BaseTask.unzip(zip: Any, target: Any? = null): File {
-    val input = zip.convertToFile()
-    val outputDir = target?.convertToFile()
+fun unzip(zip: Any, target: Any? = null): Path {
+    val input = zip.convertToPath()
+    val outputDir = target?.convertToPath()
         ?: input.resolveSibling("${input.name}-" + ThreadLocalRandom.current().nextInt())
 
-    fs.copy {
-        from(archives.zipTree(zip))
-        into(outputDir)
+    input.openZip().use { fs ->
+        fs.walk().use { stream ->
+            stream.forEach { p ->
+                val targetFile = outputDir.resolve(p.absolutePathString().substring(1))
+                targetFile.parent.createDirectories()
+                p.copyTo(targetFile)
+            }
+        }
     }
 
     return outputDir
 }
 
 fun zip(inputDir: Any, zip: Any) {
-    val outputZipFile = zip.convertToFile()
-    if (outputZipFile.exists() && !outputZipFile.delete()) {
-        throw PaperweightException("Could not delete $outputZipFile")
+    val outputZipFile = zip.convertToPath()
+    try {
+        outputZipFile.deleteIfExists()
+    } catch (e: Exception) {
+        throw PaperweightException("Could not delete $outputZipFile", e)
     }
 
-    val dirPath = inputDir.convertToFile().toPath()
+    val dirPath = inputDir.convertToPath()
 
-    val outUri = URI.create("jar:${outputZipFile.toURI()}")
-    FileSystems.newFileSystem(outUri, mapOf("create" to "true")).use { fs ->
+    outputZipFile.writeZip().use { fs ->
         Files.walkFileTree(
             dirPath,
             object : SimpleFileVisitor<Path>() {

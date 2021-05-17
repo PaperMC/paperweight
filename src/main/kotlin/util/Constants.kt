@@ -42,6 +42,7 @@ object Constants {
     private const val JARS_PATH = "$PAPER_PATH/jars"
     const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
     const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
+
     const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
 
     private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"

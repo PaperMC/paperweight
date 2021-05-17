@@ -25,10 +25,13 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.AsmUtil
 import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
-import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
-import java.util.zip.ZipEntry
+import io.papermc.paperweight.util.openZip
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.walk
+import io.papermc.paperweight.util.writeZip
+import java.nio.file.FileSystem
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -58,44 +61,51 @@ abstract class FixJar : BaseTask(), AsmUtil {
 
     @TaskAction
     fun run() {
-        JarFile(vanillaJar.file).use { vanillaJar ->
-            JarOutputStream(outputJar.file.outputStream()).use { out ->
-                JarFile(inputJar.file).use { jarFile ->
-                    val classNodeCache = ClassNodeCache(jarFile, vanillaJar)
-
-                    for (entry in jarFile.entries()) {
-                        if (!entry.name.endsWith(".class")) {
-                            out.putNextEntry(entry)
-                            try {
-                                jarFile.getInputStream(entry).copyTo(out)
-                            } finally {
-                                out.closeEntry()
-                            }
-                            continue
-                        }
-
-                        try {
-                            val node =
-                                classNodeCache.findClass(entry.name) ?: error("No ClassNode found for known entry")
-
-                            ParameterAnnotationFixer(node).visitNode()
-                            OverrideAnnotationAdder(node, classNodeCache).visitNode()
-
-                            val writer = ClassWriter(0)
-                            node.accept(writer)
-
-                            out.putNextEntry(ZipEntry(entry.name))
-                            out.write(writer.toByteArray())
-                            out.flush()
-                        } finally {
-                            out.closeEntry()
-                        }
-                    }
-
-                    classNodeCache.clear()
+        vanillaJar.path.openZip().use { vanillaJar ->
+            outputJar.path.writeZip().use { out ->
+                inputJar.path.openZip().use { jarFile ->
+                    processJars(jarFile, vanillaJar, out)
                 }
             }
         }
+    }
+
+    private fun processJars(jarFile: FileSystem, fallbackJar: FileSystem, output: FileSystem) {
+        val classNodeCache = ClassNodeCache(jarFile, fallbackJar)
+
+        jarFile.walk().use { stream ->
+            stream.forEach { file ->
+                processFile(file, output, classNodeCache)
+            }
+        }
+    }
+
+    private fun processFile(file: Path, output: FileSystem, classNodeCache: ClassNodeCache) {
+        val outFile = output.getPath(file.absolutePathString())
+
+        if (file.isDirectory()) {
+            outFile.createDirectories()
+            return
+        }
+
+        if (!file.name.endsWith(".class")) {
+            file.copyTo(outFile)
+            return
+        }
+
+        processClassFile(file, outFile, classNodeCache)
+    }
+
+    private fun processClassFile(file: Path, outFile: Path, classNodeCache: ClassNodeCache) {
+        val node = classNodeCache.findClass(file.toString()) ?: error("No ClassNode found for known entry: ${file.name}")
+
+        ParameterAnnotationFixer(node).visitNode()
+        OverrideAnnotationAdder(node, classNodeCache).visitNode()
+
+        val writer = ClassWriter(0)
+        node.accept(writer)
+
+        outFile.writeBytes(writer.toByteArray())
     }
 }
 
@@ -231,7 +241,7 @@ class OverrideAnnotationAdder(private val node: ClassNode, private val classNode
     }
 }
 
-class ClassNodeCache(private val jarFile: JarFile, private val fallbackJar: JarFile) {
+class ClassNodeCache(private val jarFile: FileSystem, private val fallbackJar: FileSystem) {
 
     private val classNodeMap = hashMapOf<String, ClassNode?>()
 
@@ -246,12 +256,17 @@ class ClassNodeCache(private val jarFile: JarFile, private val fallbackJar: JarF
     }
 
     private fun findClassData(className: String): ByteArray? {
-        val entry = ZipEntry(className)
-        return (
-            jarFile.getInputStream(entry) // remapped class
-                ?: fallbackJar.getInputStream(entry) // library class
-                ?: ClassLoader.getSystemResourceAsStream(className)
-            )?.use { it.readBytes() } // JDK class
+        jarFile.getPath(className).let { remappedClass ->
+            if (remappedClass.exists()) {
+                return remappedClass.readBytes()
+            }
+        }
+        fallbackJar.getPath(className).let { libraryClass ->
+            if (libraryClass.exists()) {
+                return libraryClass.readBytes()
+            }
+        }
+        return ClassLoader.getSystemResourceAsStream(className)?.readBytes() // JDK class
     }
 
     private fun normalize(name: String): String {
@@ -270,9 +285,5 @@ class ClassNodeCache(private val jarFile: JarFile, private val fallbackJar: JarF
         }
 
         return workingName.substring(startIndex, endIndex).replace('.', '/') + ".class"
-    }
-
-    fun clear() {
-        classNodeMap.clear()
     }
 }

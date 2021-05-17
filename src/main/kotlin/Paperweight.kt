@@ -29,10 +29,11 @@ import io.papermc.paperweight.tasks.RemapJar
 import io.papermc.paperweight.tasks.RemapJarAtlas
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.ext
+import io.papermc.paperweight.util.initSubmodules
 import io.papermc.paperweight.util.registering
+import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
@@ -52,8 +53,9 @@ class Paperweight : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        // Make sure the submodules are initialized
-        Git(target.projectDir)("submodule", "update", "--init").executeOut()
+        // Make sure the submodules are initialized, since there are files there
+        // which are required for configuration
+        target.layout.initSubmodules()
 
         target.configurations.create(Constants.PARAM_MAPPINGS_CONFIG)
         target.configurations.create(Constants.REMAPPER_CONFIG)
@@ -154,7 +156,7 @@ class Paperweight : Plugin<Project> {
          * Then you should be able to run `./gradlew remapPatches` without having to worry about all of the other tasks
          * running whenever you make changes to paperweight.
          */
-        val remapPatches by tasks.registering<RemapPatches> {
+        val remapPatches: TaskProvider<RemapPatches> by tasks.registering<RemapPatches> {
             group = "Paper"
             description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."
 
@@ -165,9 +167,9 @@ class Paperweight : Plugin<Project> {
             ats.set(allTasks.remapSpigotSources.flatMap { it.generatedAt }.get())
 
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
-            classpathJars.add(allTasks.applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
-            classpathJars.add(allTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
-            classpathJars.add(allTasks.downloadServerJar.flatMap { it.outputJar }.get()) // pure vanilla jar
+            classpathJars.from(allTasks.applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
+            classpathJars.from(allTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
+            classpathJars.from(allTasks.downloadServerJar.flatMap { it.outputJar }.get()) // pure vanilla jar
 
             spigotApiDir.set(allTasks.patchSpigotApi.flatMap { it.outputDir }.get())
             spigotServerDir.set(allTasks.patchSpigotServer.flatMap { it.outputDir }.get())

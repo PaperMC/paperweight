@@ -26,7 +26,10 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -78,27 +81,27 @@ abstract class SpigotRemapJar : BaseTask() {
 
     @TaskAction
     fun run() {
-        val inputJarPath = inputJar.asFile.get().canonicalPath
+        val inputJarPath = inputJar.path.absolutePathString()
 
-        val outputJarFile = outputJar.asFile.get()
-        val outputJarPath = outputJarFile.canonicalPath
+        val outputJarFile = outputJar.path
+        val outputJarPath = outputJarFile.absolutePathString()
 
         val classJarFile = outputJarFile.resolveSibling(outputJarFile.name + ".classes")
         val membersJarFile = outputJarFile.resolveSibling(outputJarFile.name + ".members")
-        val classJarPath = classJarFile.canonicalPath
-        val membersJarPath = membersJarFile.canonicalPath
+        val classJarPath = classJarFile.absolutePathString()
+        val membersJarPath = membersJarFile.absolutePathString()
 
-        val classMappingPath = classMappings.asFile.get().canonicalPath
-        val memberMappingsPath = memberMappings.asFile.get().canonicalPath
-        val packageMappingsPath = packageMappings.asFile.get().canonicalPath
-        val accessTransformersPath = accessTransformers.asFile.get().canonicalPath
+        val classMappingPath = classMappings.path.absolutePathString()
+        val memberMappingsPath = memberMappings.path.absolutePathString()
+        val packageMappingsPath = packageMappings.path.absolutePathString()
+        val accessTransformersPath = accessTransformers.path.absolutePathString()
 
         val work = layout.projectDirectory.file(workDirName.get())
 
         try {
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("class.log"))
-                logFile.delete()
+                logFile.deleteForcefully()
                 runJar(
                     specialSource2Jar,
                     workingDir = work,
@@ -114,7 +117,7 @@ abstract class SpigotRemapJar : BaseTask() {
 
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
-                logFile.delete()
+                logFile.deleteForcefully()
                 runJar(
                     specialSource2Jar,
                     workingDir = work,
@@ -127,7 +130,7 @@ abstract class SpigotRemapJar : BaseTask() {
 
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("final.log"))
-                logFile.delete()
+                logFile.deleteForcefully()
                 runJar(
                     specialSourceJar,
                     workingDir = work,
@@ -144,8 +147,8 @@ abstract class SpigotRemapJar : BaseTask() {
                 throw PaperweightException("Failed to create remapped jar", e)
             }
         } finally {
-            classJarFile.delete()
-            membersJarFile.delete()
+            classJarFile.deleteForcefully()
+            membersJarFile.deleteForcefully()
         }
     }
 

@@ -26,9 +26,10 @@ import io.papermc.paperweight.util.Constants.DEOBF_NAMESPACE
 import io.papermc.paperweight.util.Constants.SPIGOT_NAMESPACE
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.commentRegex
+import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
-import java.nio.file.Files
+import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -60,13 +61,13 @@ abstract class PatchMappings : DefaultTask() {
             DEOBF_NAMESPACE
         )
         patch.pathOrNull?.let { patchFile ->
-            val temp = Files.createTempFile("patch", "tiny")
+            val temp = createTempFile("patch", "tiny")
             try {
                 val comment = commentRegex()
                 // tiny format doesn't allow comments, so we manually remove them
                 // The tiny mappings reader also doesn't have a InputStream or Reader input...
-                Files.newBufferedReader(patchFile).useLines { lines ->
-                    Files.newBufferedWriter(temp).use { writer ->
+                patchFile.useLines { lines ->
+                    temp.bufferedWriter().use { writer ->
                         for (line in lines) {
                             val newLine = comment.replace(line, "")
                             if (newLine.isNotBlank()) {
@@ -77,7 +78,7 @@ abstract class PatchMappings : DefaultTask() {
                 }
                 MappingFormats.TINY.read(mappings, temp, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
             } finally {
-                Files.deleteIfExists(temp)
+                temp.deleteForcefully()
             }
         }
 

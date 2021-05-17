@@ -22,8 +22,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.file
-import java.io.File
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.path
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 
@@ -36,8 +38,8 @@ abstract class FilterSpigotExcludes : ZippedTask() {
     @get:InputFile
     abstract val excludesFile: RegularFileProperty
 
-    override fun run(rootDir: File) {
-        excludesFile.file.useLines { lines ->
+    override fun run(rootDir: Path) {
+        excludesFile.path.useLines { lines ->
             for (line in lines) {
                 if (line.startsWith('#') || line.isBlank()) {
                     continue
@@ -47,7 +49,7 @@ abstract class FilterSpigotExcludes : ZippedTask() {
                 } else {
                     rootDir.resolve("net/minecraft/server/$line.class")
                 }
-                file.delete()
+                file.deleteForcefully()
             }
         }
     }

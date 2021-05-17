@@ -37,10 +37,10 @@ import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.isLibraryJar
+import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
-import java.nio.file.FileSystems
+import kotlin.io.path.useDirectoryEntries
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -83,7 +83,7 @@ abstract class GenerateMappings : DefaultTask() {
     fun run() {
         val vanillaMappings = MappingFormats.PROGUARD.createReader(vanillaMappings.path).use { it.read() }.reverse()
 
-        val paramMappings = FileSystems.newFileSystem(paramMappings.path, null as ClassLoader?).use { fs ->
+        val paramMappings = paramMappings.path.openZip().use { fs ->
             val path = fs.getPath("mappings", "mappings.tiny")
             MappingFormats.TINY.read(path, "official", "named")
         }
@@ -97,10 +97,15 @@ abstract class GenerateMappings : DefaultTask() {
                 .build()
         ).merge()
 
-        val libs = librariesDir.file.listFiles()?.filter { it.isLibraryJar } ?: emptyList()
+        val libs = librariesDir.path.useDirectoryEntries {
+            it.filter { p -> p.isLibraryJar }
+                .map { p -> ClassProviderRoot.fromJar(p) }
+                .toList()
+        }
+
         val filledMerged = HypoContext.builder()
             .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(vanillaJar.path)))
-            .withContextProviders(AsmClassDataProvider.of(ClassProviderRoot.fromJars(*libs.map { it.toPath() }.toTypedArray())))
+            .withContextProviders(AsmClassDataProvider.of(libs))
             .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
             .build().use { hypoContext ->
                 HydrationManager.createDefault()

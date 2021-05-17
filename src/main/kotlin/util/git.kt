@@ -24,11 +24,16 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.nio.charset.Charset
+import java.nio.file.Path
+import kotlin.io.path.exists
 
-class Git(private var repo: File) {
+class Git(private var repo: Path) {
+
+    @Suppress("unused")
+    constructor(repo: Any) : this(repo.convertToPath())
 
     init {
         if (!repo.exists()) {
@@ -130,12 +135,13 @@ class Command(private val process: Process, private val command: String) {
         val out = ByteArrayOutputStream()
         setup(out, System.err)
         execute()
-        return String(out.toByteArray(), Charsets.UTF_8)
+        return String(out.toByteArray(), Charset.defaultCharset())
     }
 
+    @Suppress("unused")
     fun readText(): String? {
         val out = ByteArrayOutputStream()
         setup(out, System.err)
-        return if (run() == 0) String(out.toByteArray(), Charsets.UTF_8) else null
+        return if (run() == 0) String(out.toByteArray(), Charset.defaultCharset()) else null
     }
 }

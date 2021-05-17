@@ -22,6 +22,9 @@
 
 package io.papermc.paperweight.ext
 
+import io.papermc.paperweight.util.path
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
@@ -48,7 +51,7 @@ open class CraftBukkitExtension(objects: ObjectFactory, workDir: DirectoryProper
     private fun ObjectFactory.bukkitFileFrom(base: DirectoryProperty, extension: String): RegularFileProperty =
         fileProperty().convention(
             base.flatMap { dir ->
-                val file = dir.asFile.listFiles()?.firstOrNull { it.name.endsWith(extension) }
+                val file = dir.path.useDirectoryEntries { it.filter { f -> f.name.endsWith(extension) }.singleOrNull() }
                 if (file != null) {
                     mappingsDir.file(file.name)
                 } else {

@@ -27,8 +27,9 @@ import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
+import kotlin.io.path.absolutePathString
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
@@ -76,9 +77,9 @@ abstract class RemapJar : BaseTask() {
         ensureDeleted(logFile)
 
         val args = mutableListOf(
-            inputJar.file.absolutePath,
-            outputJar.file.absolutePath,
-            mappingsFile.file.absolutePath,
+            inputJar.path.absolutePathString(),
+            outputJar.path.absolutePathString(),
+            mappingsFile.path.absolutePathString(),
             fromNamespace.get(),
             toNamespace.get(),
             "--fixpackageaccess",

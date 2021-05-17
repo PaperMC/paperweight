@@ -23,19 +23,20 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.ext.listFilesRecursively
 import io.papermc.paperweight.util.Command
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.UselessOutputStream
-import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.openZip
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
 import io.papermc.paperweight.util.unzip
-import java.net.URI
-import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Date
+import kotlin.io.path.*
+import kotlin.streams.asSequence
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -74,37 +75,34 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        val git = Git(outputDir.file)
+        val git = Git(outputDir.path)
         git("checkout", "-B", branch.get(), "HEAD").executeSilently(silenceErr = true)
 
-        val basePatchDirFile = outputDir.file.resolve("src/main/java")
+        val basePatchDirFile = outputDir.path.resolve("src/main/java")
         basePatchDirFile.resolve(cleanDirPath.get()).deleteRecursively()
 
-        val patchSource = patchDir.fileOrNull ?: patchZip.file // used for error messages
-        val rootPatchDir = patchDir.fileOrNull ?: patchZip.file.let { unzip(it, findOutputDir(it)) }
+        val patchSource = patchDir.pathOrNull ?: patchZip.path // used for error messages
+        val rootPatchDir = patchDir.pathOrNull ?: patchZip.path.let { unzip(it, findOutputDir(it)) }
 
         try {
-            val patchList = rootPatchDir.listFilesRecursively()
-                ?.filter { it.isFile }
-                ?: throw PaperweightException("Patch directory does not exist $patchSource")
+            if (!rootPatchDir.isDirectory()) {
+                throw PaperweightException("Patch directory does not exist $patchSource")
+            }
+
+            val patchList = Files.walk(rootPatchDir).use { it.asSequence().filter { file -> file.isRegularFile() }.toSet() }
             if (patchList.isEmpty()) {
                 throw PaperweightException("No patch files found in $patchSource")
             }
 
             // Copy in patch targets
-            val uri = URI.create("jar:" + sourceJar.file.toURI())
-            FileSystems.newFileSystem(uri, mapOf<String, Any>()).use { fs ->
+            sourceJar.path.openZip().use { fs ->
                 for (file in patchList) {
-                    val javaName = file.toRelativeString(rootPatchDir).replaceAfterLast('.', "java")
+                    val javaName = javaFileName(rootPatchDir, file)
                     val out = basePatchDirFile.resolve(javaName)
                     val sourcePath = fs.getPath(javaName)
 
-                    Files.newInputStream(sourcePath).use { input ->
-                        ensureParentExists(out)
-                        out.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
+                    out.parent.createDirectories()
+                    sourcePath.copyTo(out)
                 }
             }
 
@@ -113,22 +111,28 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
             // Apply patches
             for (file in patchList) {
-                val javaName = file.toRelativeString(rootPatchDir).replaceAfterLast('.', "java")
+                val javaName = javaFileName(rootPatchDir, file)
 
                 if (printOutput.get()) {
                     println("Patching ${javaName.removeSuffix(".java")}")
                 }
-                git("apply", "--directory=${basePatchDirFile.relativeTo(outputDir.file).path}", file.absolutePath).setupOut().execute()
+
+                val dirPrefix = basePatchDirFile.relativeTo(outputDir.path).invariantSeparatorsPathString
+                git("apply", "--ignore-whitespace", "--directory=$dirPrefix", file.absolutePathString()).setupOut().execute()
             }
 
             git("add", "src").setupOut().execute()
             git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
             git("checkout", "-f", "HEAD~2").setupOut().execute()
         } finally {
-            if (rootPatchDir != patchDir.fileOrNull) {
+            if (rootPatchDir != patchDir.pathOrNull) {
                 rootPatchDir.deleteRecursively()
             }
         }
+    }
+
+    private fun javaFileName(rootDir: Path, file: Path): String {
+        return file.relativeTo(rootDir).toString().replaceAfterLast('.', "java")
     }
 
     private fun Command.setupOut() = apply {

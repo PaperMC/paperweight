@@ -37,30 +37,34 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.name
 import org.cadixdev.lorenz.merge.MergeResult
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskProvider
+import org.gradle.kotlin.dsl.*
 
 val gson: Gson = Gson()
 
 inline fun <reified T> Gson.fromJson(file: Any): T =
-    file.convertToFile().bufferedReader().use { fromJson(it) }
+    file.convertToPath().bufferedReader().use { fromJson(it) }
 
 val Project.ext: PaperweightExtension
     get() = extensions.getByName(Constants.EXTENSION) as PaperweightExtension
-val ProjectLayout.cache: File
-    get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").asFile
+val ProjectLayout.cache: Path
+    get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").path
+fun ProjectLayout.initSubmodules() {
+    Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+}
 
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
@@ -88,12 +92,12 @@ object UselessOutputStream : OutputStream() {
     }
 }
 
-fun Any.convertToFile(): File {
+fun Any.convertToPath(): Path {
     return when (this) {
-        is File -> this
-        is Path -> this.toFile()
-        is FileSystemLocation -> this.asFile
-        is Provider<*> -> this.get().convertToFile()
+        is Path -> this
+        is File -> this.toPath()
+        is FileSystemLocation -> this.path
+        is Provider<*> -> this.get().convertToPath()
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }
 }
@@ -108,30 +112,31 @@ fun Any.convertToUrl(): URL {
     }
 }
 
-val File.isLibraryJar: Boolean
-    get() = name.endsWith(".jar") && !name.endsWith("-sources.jar")
-
 fun ensureParentExists(vararg files: Any) {
     for (file in files) {
-        val parent = file.convertToFile().parentFile
-        if (!parent.exists() && !parent.mkdirs()) {
-            throw PaperweightException("Failed to create directory $parent")
+        val parent = file.convertToPath().parent
+        try {
+            parent.createDirectories()
+        } catch (e: Exception) {
+            throw PaperweightException("Failed to create directory $parent", e)
         }
     }
 }
 
 fun ensureDeleted(vararg files: Any) {
     for (file in files) {
-        val f = file.convertToFile()
-        if (f.exists() && !f.deleteRecursively()) {
-            throw PaperweightException("Failed to delete file $f")
+        val f = file.convertToPath()
+        try {
+            f.deleteRecursively()
+        } catch (e: Exception) {
+            throw PaperweightException("Failed to delete file $f", e)
         }
     }
 }
 
 fun BaseTask.defaultOutput(name: String, ext: String): RegularFileProperty {
     return objects.fileProperty().convention {
-        layout.cache.resolve(paperTaskOutput(name, ext))
+        layout.cache.resolve(paperTaskOutput(name, ext)).toFile()
     }
 }
 fun BaseTask.defaultOutput(ext: String): RegularFileProperty {
@@ -144,30 +149,15 @@ fun BaseTask.defaultOutput(): RegularFileProperty {
 val <T> Optional<T>.orNull: T?
     get() = orElse(null)
 
-val RegularFileProperty.file: File
-    get() = get().asFile
-val RegularFileProperty.fileOrNull: File?
-    get() = orNull?.asFile
-val RegularFileProperty.path: Path
-    get() = file.toPath()
-val RegularFileProperty.pathOrNull: Path?
-    get() = fileOrNull?.toPath()
-val DirectoryProperty.file: File
-    get() = get().asFile
-val DirectoryProperty.fileOrNull: File?
-    get() = orNull?.asFile
-val DirectoryProperty.path: Path
-    get() = file.toPath()
-
-inline fun <reified T : Any> Project.contents(contentFile: Any, crossinline convert: (String) -> T): Provider<T> {
-    return providers.fileContents(layout.projectDirectory.file(contentFile.convertToFile().absolutePath))
+inline fun <reified T : Any> Project.contents(contentFile: RegularFileProperty, crossinline convert: (String) -> T): Provider<T> {
+    return providers.fileContents(contentFile)
         .asText
         .forUseAtConfigurationTime()
         .map { convert(it) }
 }
 
-fun findOutputDir(baseFile: File): File {
-    var dir: File
+fun findOutputDir(baseFile: Path): Path {
+    var dir: Path
     do {
         dir = baseFile.resolveSibling("${baseFile.name}-" + ThreadLocalRandom.current().nextInt())
     } while (dir.exists())
@@ -183,20 +173,5 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
     return emptyMergeResult as MergeResult<T?>
 }
 
-// We have to create our own task delegate because the ones Gradle provides don't work in plugin dev environments
-inline fun <reified T : Task> TaskContainer.registering(noinline configure: T.() -> Unit): TaskDelegateProvider<T> {
-    return TaskDelegateProvider(this, T::class, configure)
-}
-class TaskDelegateProvider<T : Task>(
-    private val container: TaskContainer,
-    private val type: KClass<T>,
-    private val configure: T.() -> Unit
-) {
-    operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): TaskDelegate<T> {
-        val provider = container.register(property.name, type.java, configure)
-        return TaskDelegate(provider)
-    }
-}
-class TaskDelegate<T : Task>(private val provider: TaskProvider<T>) {
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): TaskProvider<T> = provider
-}
+inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
+inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)

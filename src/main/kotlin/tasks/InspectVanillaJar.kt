@@ -26,9 +26,11 @@ import io.papermc.paperweight.util.AsmUtil
 import io.papermc.paperweight.util.MavenArtifact
 import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.isLibraryJar
-import java.util.zip.ZipFile
+import io.papermc.paperweight.util.openZip
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.walk
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
@@ -76,21 +78,23 @@ abstract class InspectVanillaJar : BaseTask() {
         visitor = LoggerFields.Visitor(null, loggers)
         visitor = SyntheticMethods.Visitor(null, synthMethods)
 
-        archives.zipTree(inputJar.file).matching {
-            include("/*.class")
-            include("/net/minecraft/**/*.class")
-        }.forEach { file ->
-            if (file.isDirectory) {
-                return@forEach
-            }
-            val classData = file.readBytes()
+        inputJar.path.openZip().use { inJar ->
+            val rootMatcher = inJar.getPathMatcher("glob:/*.class")
+            val nmsMatcher = inJar.getPathMatcher("glob:/net/minecraft/**/*.class")
 
-            ClassReader(classData).accept(visitor, 0)
+            inJar.walk().use { stream ->
+                stream.filter { p -> !p.isDirectory() }
+                    .filter { p -> rootMatcher.matches(p) || nmsMatcher.matches(p) }
+                    .map { p -> p.readBytes() }
+                    .forEach { data ->
+                        ClassReader(data).accept(visitor, 0)
+                    }
+            }
         }
 
         val serverLibs = checkLibraries()
 
-        loggerFile.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+        loggerFile.path.bufferedWriter(Charsets.UTF_8).use { writer ->
             loggers.sort()
             for (loggerField in loggers) {
                 writer.append(loggerField.className)
@@ -100,7 +104,7 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        syntheticMethods.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+        syntheticMethods.path.bufferedWriter(Charsets.UTF_8).use { writer ->
             synthMethods.sort()
             for ((className, desc, synthName, baseName) in synthMethods) {
                 writer.append(className)
@@ -114,7 +118,7 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        serverLibraries.file.bufferedWriter(Charsets.UTF_8).use { writer ->
+        serverLibraries.path.bufferedWriter(Charsets.UTF_8).use { writer ->
             serverLibs.map { it.toString() }.sorted().forEach { artifact ->
                 writer.appendLine(artifact)
             }
@@ -122,7 +126,7 @@ abstract class InspectVanillaJar : BaseTask() {
     }
 
     private fun checkLibraries(): Set<MavenArtifact> {
-        val mcLibs = mcLibraries.file.useLines { lines ->
+        val mcLibs = mcLibraries.path.useLines { lines ->
             lines.map { MavenArtifact.parse(it) }
                 .map { it.file to it }
                 .toMap()
@@ -130,20 +134,21 @@ abstract class InspectVanillaJar : BaseTask() {
 
         val serverLibs = mutableSetOf<MavenArtifact>()
 
-        val libs = librariesDir.file.listFiles()?.filter { it.isLibraryJar } ?: emptyList()
-        ZipFile(inputJar.file).use { jar ->
+        val libs = librariesDir.path.useDirectoryEntries { it.filter { p -> p.isLibraryJar }.toList() }
+
+        inputJar.path.openZip().use { jar ->
             for (libFile in libs) {
                 val artifact = mcLibs[libFile.name] ?: continue
 
-                ZipFile(libFile).use { lib ->
-                    for (entry in lib.entries()) {
-                        if (!entry.name.endsWith(".class")) {
-                            continue
-                        }
-                        if (jar.getEntry(entry.name) != null) {
-                            serverLibs += artifact
-                        }
-                        break
+                libFile.openZip().use lib@{ libFs ->
+                    val containsClass = libFs.walk().use { stream ->
+                        stream.filter { p -> p.name.endsWith(".class") }
+                            .anyMatch { p -> jar.getPath(p.absolutePathString()).exists() }
+                    }
+
+                    if (containsClass) {
+                        serverLibs += artifact
+                        return@lib
                     }
                 }
             }

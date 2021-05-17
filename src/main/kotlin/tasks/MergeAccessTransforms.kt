@@ -48,7 +48,7 @@ abstract class MergeAccessTransforms : BaseTask() {
     @TaskAction
     fun run() {
         val ats = inputFiles.get()
-            .map { AccessTransformFormats.FML.read(it.asFile.toPath()) }
+            .map { AccessTransformFormats.FML.read(it.path) }
 
         val outputAt = AccessTransformSet.create()
         for (at in ats) {

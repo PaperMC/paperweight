@@ -20,18 +20,25 @@
  * USA
  */
 
-package io.papermc.paperweight.ext
+package io.papermc.paperweight.tasks
 
-import org.gradle.api.file.DirectoryProperty
+import io.papermc.paperweight.util.initSubmodules
+import javax.inject.Inject
+import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.model.ObjectFactory
+import org.gradle.api.tasks.TaskAction
 
-fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
-    directoryProperty().convention(layout.projectDirectory.dir(path))
+abstract class InitSubmodules : DefaultTask() {
 
-fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
-    directoryProperty().convention(base.dir(name))
+    @get:Inject
+    abstract val layout: ProjectLayout
 
-fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
-    fileProperty().convention(base.file(name))
+    init {
+        outputs.upToDateWhen { false }
+    }
+
+    @TaskAction
+    fun run() {
+        layout.initSubmodules()
+    }
+}

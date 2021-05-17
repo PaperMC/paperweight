@@ -23,9 +23,10 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
-import java.io.File
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -61,11 +62,11 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
 
     @TaskAction
     fun run() {
-        addLines(classSrg.file, additionalClassEntriesSrg.fileOrNull, outputClassSrg.file)
-        addLines(memberSrg.file, additionalMemberEntriesSrg.fileOrNull, outputMemberSrg.file)
+        addLines(classSrg.path, additionalClassEntriesSrg.pathOrNull, outputClassSrg.path)
+        addLines(memberSrg.path, additionalMemberEntriesSrg.pathOrNull, outputMemberSrg.path)
     }
 
-    private fun addLines(inFile: File, appendFile: File?, outputFile: File) {
+    private fun addLines(inFile: Path, appendFile: Path?, outputFile: Path) {
         val lines = mutableListOf<String>()
         inFile.useLines { seq -> seq.forEach { line -> lines += line } }
         appendFile?.useLines { seq -> seq.forEach { lines.add(it) } }

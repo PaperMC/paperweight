@@ -23,20 +23,17 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
 import io.sigpipe.jbsdiff.Diff
-import java.io.File
 import java.io.IOException
-import java.net.URI
-import java.net.URISyntaxException
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Properties
 import kotlin.experimental.and
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -53,28 +50,21 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
     @get:Input
     abstract val mcVersion: Property<String>
 
-    override fun run(rootDir: File) {
-        val patchFile = rootDir.resolve("paperMC.patch").toPath()
-        val propFile = rootDir.resolve("patch.properties").toPath()
-        val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE").toPath()
-
-        val zipUri = try {
-            val jarUri = patchedJar.file.toURI()
-            URI("jar:${jarUri.scheme}", jarUri.path, null)
-        } catch (e: URISyntaxException) {
-            throw PaperweightException("Failed to create jar URI for $patchedJar", e)
-        }
+    override fun run(rootDir: Path) {
+        val patchFile = rootDir.resolve("paperMC.patch")
+        val propFile = rootDir.resolve("patch.properties")
+        val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE")
 
         try {
-            FileSystems.newFileSystem(zipUri, mapOf<String, Any>()).use { zipFs ->
+            patchedJar.path.openZip().use { zipFs ->
                 val protocolPath = zipFs.getPath("META-INF", PROTOCOL_FILE)
-                if (Files.notExists(protocolPath)) {
-                    Files.deleteIfExists(protocol)
+                if (protocolPath.notExists()) {
+                    protocol.deleteForcefully()
                     return@use
                 }
 
-                Files.createDirectories(protocol.parent)
-                Files.copy(protocolPath, protocol, StandardCopyOption.REPLACE_EXISTING)
+                protocol.parent.createDirectories()
+                protocolPath.copyTo(protocol, overwrite = true)
             }
         } catch (e: IOException) {
             throw PaperweightException("Failed to read $patchedJar contents", e)
@@ -82,12 +72,12 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
 
         // Read the files into memory
         println("Reading jars into memory")
-        val originalBytes = Files.readAllBytes(originalJar.path)
-        val patchedBytes = Files.readAllBytes(patchedJar.path)
+        val originalBytes = originalJar.path.readBytes()
+        val patchedBytes = patchedJar.path.readBytes()
 
         println("Creating Paperclip patch")
         try {
-            Files.newOutputStream(patchFile).use { patchOutput ->
+            patchFile.outputStream().use { patchOutput ->
                 Diff.diff(originalBytes, patchedBytes, patchOutput)
             }
         } catch (e: Exception) {
@@ -121,7 +111,7 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
         prop["version"] = mcVersion.get()
 
         println("Writing properties file")
-        Files.newBufferedWriter(propFile).use { writer ->
+        propFile.bufferedWriter().use { writer ->
             prop.store(writer, "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory.")
         }
     }

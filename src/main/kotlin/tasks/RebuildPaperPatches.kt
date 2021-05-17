@@ -23,11 +23,14 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.file
-import java.io.File
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.path
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
@@ -62,40 +65,40 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        val what = inputDir.file.name
-        val patchFolder = patchDir.file
+        val what = inputDir.path.name
+        val patchFolder = patchDir.path
         if (!patchFolder.exists()) {
-            patchFolder.mkdirs()
+            patchFolder.createDirectories()
         }
 
         if (printOutput.get()) {
             println("Formatting patches for $what...")
         }
 
-        if (inputDir.file.resolve(".git/rebase-apply").exists()) {
+        if (inputDir.path.resolve(".git/rebase-apply").exists()) {
             // in middle of a rebase, be smarter
             if (printOutput.get()) {
                 println("REBASE DETECTED - PARTIAL SAVE")
-                val last = inputDir.file.resolve(".git/rebase-apply/last").readText().trim().toInt()
-                val next = inputDir.file.resolve(".git/rebase-apply/next").readText().trim().toInt()
-                val orderedFiles = patchFolder.listFiles { f -> f.name.endsWith(".patch") }!!
+                val last = inputDir.path.resolve(".git/rebase-apply/last").readText().trim().toInt()
+                val next = inputDir.path.resolve(".git/rebase-apply/next").readText().trim().toInt()
+                val orderedFiles = patchFolder.useDirectoryEntries("*.patch") { it.toMutableList() }
                 orderedFiles.sort()
 
                 for (i in 1..last) {
                     if (i < next) {
-                        orderedFiles[i].delete()
+                        orderedFiles[i].deleteForcefully()
                     }
                 }
             }
         } else {
             patchFolder.deleteRecursively()
-            patchFolder.mkdirs()
+            patchFolder.createDirectories()
         }
 
-        Git(inputDir.file)(
+        Git(inputDir.path)(
             "format-patch",
             "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
-            "-o", patchFolder.absolutePath,
+            "-o", patchFolder.absolutePathString(),
             if (server.get()) "base" else "upstream/upstream"
         ).executeSilently()
         val patchDirGit = Git(patchFolder)
@@ -111,13 +114,13 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
     }
 
     private fun cleanupPatches(git: Git) {
-        val patchFiles = patchDir.file.listFiles { f -> f.name.endsWith(".patch") } ?: emptyArray()
+        val patchFiles = patchDir.path.useDirectoryEntries("*.patch") { it.toMutableList() }
         if (patchFiles.isEmpty()) {
             return
         }
-        patchFiles.sortBy { it.name }
+        patchFiles.sort()
 
-        val noChangesPatches = ConcurrentLinkedQueue<File>()
+        val noChangesPatches = ConcurrentLinkedQueue<Path>()
         val futures = mutableListOf<Future<*>>()
 
         // Calling out to git over and over again for each `git diff --staged` command is really slow from the JVM
@@ -132,7 +135,7 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
                         .all { it.startsWith("+index") || it.startsWith("-index") }
 
                     if (hasNoChanges) {
-                        noChangesPatches += patch
+                        noChangesPatches.add(patch)
                     }
                 }
             }

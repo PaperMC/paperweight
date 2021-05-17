@@ -23,13 +23,15 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
 import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
 import io.papermc.paperweight.util.unzip
 import io.papermc.paperweight.util.zip
-import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -45,7 +47,7 @@ abstract class ZippedTask : BaseTask() {
     @get:OutputFile
     abstract val outputZip: RegularFileProperty
 
-    abstract fun run(rootDir: File)
+    abstract fun run(rootDir: Path)
 
     override fun init() {
         outputZip.convention(defaultOutput("zip"))
@@ -53,15 +55,15 @@ abstract class ZippedTask : BaseTask() {
 
     @TaskAction
     fun exec() {
-        val outputZipFile = outputZip.file
+        val outputZipFile = outputZip.path
         val outputDir = findOutputDir(outputZipFile)
 
         try {
-            val input = inputZip.fileOrNull
+            val input = inputZip.pathOrNull
             if (input != null) {
                 unzip(input, outputDir)
             } else {
-                outputDir.mkdirs()
+                outputDir.createDirectories()
             }
 
             run(outputDir)

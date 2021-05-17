@@ -24,7 +24,6 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
 import org.cadixdev.atlas.Atlas
@@ -65,8 +64,8 @@ abstract class RemapJarAtlas : BaseTask() {
         }
 
         queue.submit(AtlasAction::class) {
-            inputJar.set(this@RemapJarAtlas.inputJar.file)
-            outputJar.set(this@RemapJarAtlas.outputJar.file)
+            inputJar.set(this@RemapJarAtlas.inputJar.get())
+            outputJar.set(this@RemapJarAtlas.outputJar.get())
             packageVersion.set(this@RemapJarAtlas.packageVersion.get())
         }
     }

@@ -24,8 +24,10 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.file
-import java.io.File
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.path
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
@@ -65,11 +67,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        val outputFile = outputDir.file
-        if (outputFile.exists()) {
-            outputFile.deleteRecursively()
-        }
-        outputFile.parentFile.mkdirs()
+        val outputFile = outputDir.path
+        outputFile.deleteRecursively()
+        outputFile.parent.createDirectories()
 
         val target = outputFile.name
 
@@ -77,40 +77,38 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             println("   Creating $target from remapped source...")
         }
 
-        Git(outputFile.parentFile)("clone", spigotServerDir.file.absolutePath, outputFile.absolutePath).executeSilently()
+        Git(outputFile.parent)("clone", spigotServerDir.path.absolutePathString(), outputFile.absolutePathString()).executeSilently()
 
         Git(outputFile).let { git ->
             // disable gpg for this repo, not needed & slows things down
             git("config", "commit.gpgsign", "false").executeSilently()
 
-            val sourceDir = createDir(outputDir.file.resolve("src/main/java"))
-            val testDir = createDir(outputDir.file.resolve("src/test/java"))
+            val sourceDir = createDir(outputDir.path.resolve("src/main/java"))
+            val testDir = createDir(outputDir.path.resolve("src/test/java"))
 
             fs.copy {
-                from(archives.zipTree(remappedSource.file))
+                from(archives.zipTree(remappedSource.path))
                 into(sourceDir)
             }
             fs.copy {
-                from(archives.zipTree(remappedTests.file))
+                from(archives.zipTree(remappedTests.path))
                 into(testDir)
             }
 
-            val patches = patchDir.file.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
-            McDev.importMcDev(patches, sourceMcDevJar.file, libraryImports.file, mcLibrariesDir.file, sourceDir)
+            val patches = patchDir.path.listDirectoryEntries("*.patch")
+            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.path, mcLibrariesDir.path, sourceDir)
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             git("tag", "base").executeSilently()
 
-            applyGitPatches(git, target, outputFile, patchDir.file, printOutput.get())
+            applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
         }
     }
 
-    private fun createDir(dir: File): File {
-        if (dir.exists()) {
-            dir.deleteRecursively()
-        }
-        dir.mkdirs()
+    private fun createDir(dir: Path): Path {
+        dir.deleteRecursively()
+        dir.createDirectories()
         return dir
     }
 }

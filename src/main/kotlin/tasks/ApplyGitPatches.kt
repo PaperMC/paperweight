@@ -24,11 +24,14 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
 import io.papermc.paperweight.util.unzip
-import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -68,41 +71,41 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        Git(upstream.file).let { git ->
+        Git(upstream.path).let { git ->
             git("fetch").setupOut().run()
             git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
         }
 
-        if (!outputDir.file.exists() || !outputDir.file.resolve(".git").exists()) {
-            outputDir.file.deleteRecursively()
-            Git(outputDir.file.parentFile)("clone", upstream.file.absolutePath, outputDir.file.name).setupOut().run()
+        if (!outputDir.path.exists() || !outputDir.path.resolve(".git").exists()) {
+            outputDir.path.deleteRecursively()
+            Git(outputDir.path.parent)("clone", upstream.path.absolutePathString(), outputDir.path.name).setupOut().run()
         }
 
-        val target = outputDir.file.name
+        val target = outputDir.path.name
 
         if (printOutput.get()) {
-            println("   Resetting $target to ${upstream.file.name}...")
+            println("   Resetting $target to ${upstream.path.name}...")
         }
 
-        val rootPatchDir = patchDir.fileOrNull ?: patchZip.file.let { unzip(it, findOutputDir(it)) }
+        val rootPatchDir = patchDir.pathOrNull ?: patchZip.path.let { unzip(it, findOutputDir(it)) }
 
         try {
-            Git(outputDir.file).let { git ->
+            Git(outputDir.path).let { git ->
                 // disable gpg for this repo, not needed & slows things down
                 git("config", "commit.gpgsign", "false").executeSilently()
 
                 git("remote", "rm", "upstream").runSilently(silenceErr = true)
-                git("remote", "add", "upstream", upstream.file.absolutePath).runSilently(silenceErr = true)
+                git("remote", "add", "upstream", upstream.path.absolutePathString()).runSilently(silenceErr = true)
                 if (git("checkout", "master").setupOut(showError = false).run() != 0) {
                     git("checkout", "-b", "master").setupOut().run()
                 }
                 git("fetch", "upstream").runSilently(silenceErr = true)
                 git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
 
-                applyGitPatches(git, target, outputDir.file, rootPatchDir, printOutput.get())
+                applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
             }
         } finally {
-            if (rootPatchDir != patchDir.fileOrNull) {
+            if (rootPatchDir != patchDir.pathOrNull) {
                 rootPatchDir.deleteRecursively()
             }
         }
@@ -112,8 +115,8 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 fun ControllableOutputTask.applyGitPatches(
     git: Git,
     target: String,
-    outputDir: File,
-    patchDir: File,
+    outputDir: Path,
+    patchDir: Path,
     printOutput: Boolean
 ) {
     if (printOutput) {
@@ -121,12 +124,11 @@ fun ControllableOutputTask.applyGitPatches(
     }
 
     val statusFile = outputDir.resolve(".git/patch-apply-failed")
-    if (statusFile.exists()) {
-        statusFile.delete()
-    }
+    statusFile.deleteForcefully()
+
     git("am", "--abort").runSilently(silenceErr = true)
 
-    val patches = patchDir.listFiles { _, name -> name.endsWith(".patch") } ?: emptyArray()
+    val patches = patchDir.useDirectoryEntries("*.patch") { it.toMutableList() }
     if (patches.isEmpty()) {
         if (printOutput) {
             println("No patches found")
@@ -136,7 +138,7 @@ fun ControllableOutputTask.applyGitPatches(
 
     patches.sort()
 
-    if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePath }.toTypedArray()).showErrors().run() != 0) {
+    if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePathString() }.toTypedArray()).showErrors().run() != 0) {
         statusFile.writeText("1")
         logger.error("***   Please review above details and finish the apply then")
         logger.error("***   save the changes with `./gradlew rebuildPaperPatches`")
@@ -150,7 +152,7 @@ fun ControllableOutputTask.applyGitPatches(
 
         throw PaperweightException("Failed to apply patches")
     } else {
-        statusFile.delete()
+        statusFile.deleteForcefully()
         if (printOutput) {
             println("   Patches applied cleanly to $target")
         }

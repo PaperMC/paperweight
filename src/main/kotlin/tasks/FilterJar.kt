@@ -23,8 +23,12 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.openZip
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.walk
 import io.papermc.paperweight.util.zip
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
@@ -49,17 +53,21 @@ abstract class FilterJar : BaseTask() {
 
     @TaskAction
     fun run() {
-        val out = outputJar.file
+        val out = outputJar.path
         val target = out.resolveSibling("${out.name}.dir")
-        target.mkdirs()
+        target.createDirectories()
 
-        fs.copy {
-            from(archives.zipTree(inputJar)) {
-                for (inc in this@FilterJar.includes.get()) {
-                    include(inc)
-                }
+        inputJar.path.openZip().use { zip ->
+            val matchers = includes.get().map { zip.getPathMatcher("glob:$it") }
+
+            zip.walk().use { stream ->
+                stream.filter { p -> matchers.any { matcher -> matcher.matches(p) } }
+                    .forEach { p ->
+                        val targetFile = target.resolve(p.absolutePathString().substring(1))
+                        targetFile.parent.createDirectories()
+                        p.copyTo(targetFile)
+                    }
             }
-            into(target)
         }
 
         zip(target, outputJar)

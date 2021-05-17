@@ -25,14 +25,15 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.findOutputDir
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.set
 import io.papermc.paperweight.util.zip
-import java.io.File
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
@@ -65,9 +66,9 @@ import org.eclipse.jdt.core.dom.SuperMethodInvocation
 import org.eclipse.jdt.core.dom.ThisExpression
 import org.eclipse.jdt.core.dom.TypeDeclaration
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -117,41 +118,41 @@ abstract class RemapSources : BaseTask() {
 
     @TaskAction
     fun run() {
-        val srcOut = findOutputDir(sourcesOutputZip.file).apply { mkdirs() }
-        val testOut = findOutputDir(testsOutputZip.file).apply { mkdirs() }
+        val srcOut = findOutputDir(sourcesOutputZip.path).apply { createDirectories() }
+        val testOut = findOutputDir(testsOutputZip.path).apply { createDirectories() }
 
         try {
             val queue = workerExecutor.processIsolation {
                 forkOptions.jvmArgs("-Xmx2G")
             }
 
-            val srcDir = spigotServerDir.file.resolve("src/main/java")
+            val srcDir = spigotServerDir.path.resolve("src/main/java")
 
             // Remap sources
             queue.submit(RemapAction::class) {
-                classpath.add(vanillaRemappedSpigotJar.file)
-                classpath.add(vanillaJar.file)
-                classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-                classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
+                classpath.from(vanillaRemappedSpigotJar.path)
+                classpath.from(vanillaJar.path)
+                classpath.from(spigotApiDir.dir("src/main/java").path)
+                classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
 
-                mappings.set(this@RemapSources.mappings.file)
+                mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(srcDir)
 
                 outputDir.set(srcOut)
-                generatedAtOutput.set(generatedAt.file)
+                generatedAtOutput.set(generatedAt.path)
             }
 
-            val testSrc = spigotServerDir.file.resolve("src/test/java")
+            val testSrc = spigotServerDir.path.resolve("src/test/java")
 
             // Remap tests
             queue.submit(RemapAction::class) {
-                classpath.add(vanillaRemappedSpigotJar.file)
-                classpath.add(vanillaJar.file)
-                classpath.add(spigotApiDir.dir("src/main/java").get().asFile)
-                classpath.addAll(spigotDeps.get().asFileTree.filter { it.isLibraryJar }.files)
-                classpath.add(srcDir)
+                classpath.from(vanillaRemappedSpigotJar.path)
+                classpath.from(vanillaJar.path)
+                classpath.from(spigotApiDir.dir("src/main/java").path)
+                classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
+                classpath.from(srcDir)
 
-                mappings.set(this@RemapSources.mappings.file)
+                mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(testSrc)
 
                 outputDir.set(testOut)
@@ -180,7 +181,7 @@ abstract class RemapSources : BaseTask() {
 
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
-                merc.classPath.addAll(parameters.classpath.get().map { it.toPath() })
+                merc.classPath.addAll(parameters.classpath.map { it.toPath() })
 
                 if (generatedAtOutPath != null) {
                     merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
@@ -213,7 +214,7 @@ abstract class RemapSources : BaseTask() {
     }
 
     interface RemapParams : WorkParameters {
-        val classpath: ListProperty<File>
+        val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
         val inputDir: RegularFileProperty
 

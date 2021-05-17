@@ -22,7 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.path
+import kotlin.io.path.bufferedWriter
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -42,7 +43,7 @@ abstract class SetupMcLibraries : DefaultTask() {
     fun run() {
         val list = dependencies.get().sorted()
 
-        outputFile.file.bufferedWriter().use { writer ->
+        outputFile.path.bufferedWriter().use { writer ->
             for (line in list) {
                 writer.appendLine(line)
             }

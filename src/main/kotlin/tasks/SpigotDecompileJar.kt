@@ -26,9 +26,13 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -56,28 +60,30 @@ abstract class SpigotDecompileJar : BaseTask() {
 
     @TaskAction
     fun run() {
-        val inputJarFile = inputJar.asFile.get()
-        val inputJarPath = inputJarFile.canonicalPath
+        val inputJarFile = inputJar.path
+        val inputJarPath = inputJarFile.absolutePathString()
 
-        val outputJarFile = outputJar.asFile.get()
+        val outputJarFile = outputJar.path
         val decomp = outputJarFile.resolveSibling("decomp" + ThreadLocalRandom.current().nextInt())
 
         try {
-            if (!decomp.exists() && !decomp.mkdirs()) {
-                throw PaperweightException("Failed to create output directory: $decomp")
+            try {
+                decomp.createDirectories()
+            } catch (e: Exception) {
+                throw PaperweightException("Failed to create output directory: $decomp", e)
             }
 
             val cmd = decompileCommand.get().split(" ").let { it.subList(3, it.size - 2) }.toMutableList()
             cmd += inputJarPath
-            cmd += decomp.canonicalPath
+            cmd += decomp.absolutePathString()
 
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
-            logFile.delete()
+            logFile.deleteForcefully()
 
             runJar(fernFlowerJar, workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
 
             ensureDeleted(outputJarFile)
-            decomp.resolve(inputJarFile.name).renameTo(outputJarFile)
+            decomp.resolve(inputJarFile.name).moveTo(outputJarFile)
         } finally {
             decomp.deleteRecursively()
         }

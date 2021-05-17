@@ -22,14 +22,16 @@
 
 package io.papermc.paperweight
 
-import io.papermc.paperweight.util.convertToFile
+import io.papermc.paperweight.util.convertToPath
 import io.papermc.paperweight.util.convertToUrl
-import java.io.File
 import java.net.URL
+import java.nio.file.Path
+import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.*
 import org.apache.http.HttpHost
 import org.apache.http.HttpStatus
 import org.apache.http.client.config.CookieSpecs
@@ -52,26 +54,24 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
 
     fun download(source: Any, target: Any) {
         val url = source.convertToUrl()
-        val file = target.convertToFile()
+        val file = target.convertToPath()
         download(url, file)
     }
 
-    private fun download(source: URL, target: File) {
-        target.parentFile.mkdirs()
+    private fun download(source: URL, target: Path) {
+        target.parent.createDirectories()
 
         val etagDir = target.resolveSibling("etags")
-        if (!etagDir.exists() || !etagDir.isDirectory) {
-            etagDir.delete()
-            etagDir.mkdirs()
-        }
+        etagDir.createDirectories()
+
         val etagFile = etagDir.resolve(target.name + ".etag")
         val etag = if (etagFile.exists()) etagFile.readText() else null
 
         val host = HttpHost(source.host, source.port, source.protocol)
-        val time = if (target.exists()) target.lastModified() else 0
+        val time = if (target.exists()) target.getLastModifiedTime().toInstant() else Instant.EPOCH
 
         val httpGet = HttpGet(source.file)
-        // Super high timeout, reduce chances of weird things going wrong
+        // high timeout, reduce chances of weird things going wrong
         val timeouts = TimeUnit.MINUTES.toMillis(5).toInt()
 
         httpGet.config = RequestConfig.custom()
@@ -81,8 +81,8 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
             .setCookieSpec(CookieSpecs.STANDARD)
             .build()
 
-        if (time > 0) {
-            val value = DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(time).atZone(ZoneOffset.UTC))
+        if (time != Instant.EPOCH) {
+            val value = DateTimeFormatter.RFC_1123_DATE_TIME.format(time.atZone(ZoneOffset.UTC))
             httpGet.setHeader("If-Modified-Since", value)
         }
         if (etag != null) {
@@ -101,19 +101,18 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
         }
     }
 
-    private fun handleResponse(response: CloseableHttpResponse, time: Long, target: File): Long {
+    private fun handleResponse(response: CloseableHttpResponse, time: Instant, target: Path): Instant {
         val lastModified = with(response.getLastHeader("Last-Modified")) {
             if (this == null) {
-                return@with 0
+                return@with Instant.EPOCH
             }
             if (value.isNullOrBlank()) {
-                return@with 0
+                return@with Instant.EPOCH
             }
-            val date = DateUtils.parseDate(value) ?: return@with 0
-            return@with date.time
+            return@with DateUtils.parseDate(value).toInstant() ?: Instant.EPOCH
         }
         if (response.statusLine.statusCode == HttpStatus.SC_NOT_MODIFIED) {
-            if (lastModified != 0L && time >= lastModified) {
+            if (lastModified != Instant.EPOCH && time >= lastModified) {
                 return lastModified
             }
         }
@@ -128,9 +127,9 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
         return lastModified
     }
 
-    private fun saveEtag(response: CloseableHttpResponse, lastModified: Long, target: File, etagFile: File) {
-        if (lastModified > 0) {
-            target.setLastModified(lastModified)
+    private fun saveEtag(response: CloseableHttpResponse, lastModified: Instant, target: Path, etagFile: Path) {
+        if (lastModified != Instant.EPOCH) {
+            target.setLastModifiedTime(FileTime.from(lastModified))
         }
 
         val header = response.getFirstHeader("ETag") ?: return

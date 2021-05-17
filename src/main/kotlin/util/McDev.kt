@@ -23,12 +23,12 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import java.io.File
-import java.util.zip.ZipFile
+import java.nio.file.Path
+import kotlin.io.path.*
 
 object McDev {
 
-    fun importMcDev(patches: Array<File>, decompJar: File, libraryImports: File, libraryDir: File, targetDir: File) {
+    fun importMcDev(patches: Iterable<Path>, decompJar: Path, libraryImports: Path, libraryDir: Path, targetDir: Path) {
         val importMcDev = readMcDevNames(patches).asSequence()
             .map { targetDir.resolve("net/minecraft/$it.java") }
             .filter { !it.exists() }
@@ -36,18 +36,18 @@ object McDev {
 
         println("Importing ${importMcDev.size} classes from vanilla...")
 
-        ZipFile(decompJar).use { zipFile ->
+        decompJar.openZip().use { zipFile ->
             for (file in importMcDev) {
-                if (!file.parentFile.exists()) {
-                    file.parentFile.mkdirs()
+                if (!file.parent.exists()) {
+                    file.parent.createDirectories()
                 }
-                val vanillaFile = file.relativeTo(targetDir).path
-                val zipEntry = zipFile.getEntry(vanillaFile) ?: throw PaperweightException("Vanilla class not found: $vanillaFile")
-                zipFile.getInputStream(zipEntry).use { input ->
-                    file.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
+                val vanillaFile = file.relativeTo(targetDir).toString()
+
+                val zipPath = zipFile.getPath(vanillaFile)
+                if (zipPath.notExists()) {
+                    throw PaperweightException("Vanilla class not found: $vanillaFile")
                 }
+                zipPath.copyTo(file)
             }
         }
 
@@ -57,7 +57,7 @@ object McDev {
             return
         }
 
-        val libFiles = (libraryDir.listFiles() ?: emptyArray()).filter { it.name.endsWith("-sources.jar") }
+        val libFiles = libraryDir.listDirectoryEntries("*-sources.jar")
         if (libFiles.isEmpty()) {
             throw PaperweightException("No library files found")
         }
@@ -71,19 +71,16 @@ object McDev {
             if (outputFile.exists()) {
                 continue
             }
-            outputFile.parentFile.mkdirs()
-            ZipFile(libFile).use { zipFile ->
-                val zipEntry = zipFile.getEntry(filePath)
-                zipFile.getInputStream(zipEntry).use { input ->
-                    outputFile.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
-                }
+            outputFile.parent.createDirectories()
+
+            libFile.openZip().use { zipFile ->
+                val libEntry = zipFile.getPath(filePath)
+                libEntry.copyTo(outputFile)
             }
         }
     }
 
-    private fun readMcDevNames(patches: Array<File>): Set<String> {
+    private fun readMcDevNames(patches: Iterable<Path>): Set<String> {
         val result = hashSetOf<String>()
 
         val prefix = "+++ b/src/main/java/net/minecraft/"

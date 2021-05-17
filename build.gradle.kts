@@ -25,7 +25,11 @@ java {
 val sourcesJar by tasks.existing
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions {
+        jvmTarget = "1.8"
+        useIR = true
+        freeCompilerArgs = listOf("-Xopt-in=kotlin.io.path.ExperimentalPathApi")
+    }
 }
 
 gradlePlugin {

@@ -24,17 +24,20 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.OutputStream
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
+import kotlin.io.path.outputStream
 import org.gradle.internal.jvm.Jvm
 
 fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = listOf(), vararg args: String) {
-    val jarFile = jar.convertToFile()
-    val dir = workingDir.convertToFile()
+    val jarFile = jar.convertToPath()
+    val dir = workingDir.convertToPath()
 
     val output = when {
         logFile is OutputStream -> logFile
         logFile != null -> {
-            val log = logFile.convertToFile()
-            log.parentFile.mkdirs()
+            val log = logFile.convertToPath()
+            log.parent.createDirectories()
             log.outputStream().buffered()
         }
         else -> UselessOutputStream
@@ -44,7 +47,7 @@ fun runJar(jar: Any, workingDir: Any, logFile: Any?, jvmArgs: List<String> = lis
         Jvm.current().javaExecutable.canonicalPath,
         *jvmArgs.toTypedArray(),
         "-jar",
-        jarFile.canonicalPath,
+        jarFile.absolutePathString(),
         *args
     ).directory(dir)
 

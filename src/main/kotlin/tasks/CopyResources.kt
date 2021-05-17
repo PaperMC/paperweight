@@ -22,8 +22,10 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.zip
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
@@ -46,9 +48,9 @@ abstract class CopyResources : BaseTask() {
 
     @TaskAction
     fun run() {
-        val out = outputJar.file
+        val out = outputJar.path
         val target = out.resolveSibling("${out.name}.dir")
-        target.mkdirs()
+        target.createDirectories()
 
         fs.copy {
             from(archives.zipTree(vanillaJar)) {

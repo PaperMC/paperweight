@@ -24,11 +24,14 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.MavenArtifact
-import io.papermc.paperweight.util.file
-import io.papermc.paperweight.util.fileOrNull
-import java.io.File
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.set
+import java.nio.file.Path
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
@@ -84,15 +87,15 @@ abstract class DownloadMcLibraries : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val out = outputDir.file
+        val out = outputDir.path
         out.deleteRecursively()
-        val sourcesOut = sourcesOutputDir.file
+        val sourcesOut = sourcesOutputDir.path
         sourcesOut.deleteRecursively()
 
         val mcRepos = listOf(mcRepo.get())
 
         val queue = workerExecutor.noIsolation()
-        mcLibrariesFile.file.useLines { lines ->
+        mcLibrariesFile.path.useLines { lines ->
             lines.forEach { line ->
                 queue.submit(DownloadWorker::class) {
                     repos.set(mcRepos)
@@ -126,10 +129,10 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
     @TaskAction
     fun run() {
-        val apiSetup = parsePom(apiPom.file)
-        val serverSetup = parsePom(serverPom.file)
+        val apiSetup = parsePom(apiPom.path)
+        val serverSetup = parsePom(serverPom.path)
 
-        val out = outputDir.file
+        val out = outputDir.path
         out.deleteRecursively()
 
         val spigotRepos = mutableSetOf<String>()
@@ -152,7 +155,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         }
     }
 
-    private fun parsePom(pomFile: File): MavenSetup {
+    private fun parsePom(pomFile: Path): MavenSetup {
         val depList = arrayListOf<MavenArtifact>()
         val repoList = arrayListOf<String>()
         // Maven Central is implicit
@@ -241,12 +244,12 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
     abstract val layout: ProjectLayout
 
     override fun execute() {
-        val target = parameters.target.file
+        val target = parameters.target.path
         val artifact = MavenArtifact.parse(parameters.artifact.get())
 
         if (parameters.downloadToDir.get()) {
             artifact.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
-            parameters.sourcesTarget.fileOrNull?.let { sourceDir ->
+            parameters.sourcesTarget.pathOrNull?.let { sourceDir ->
                 try {
                     val sourceArtifact = artifact.copy(classifier = "sources")
                     sourceArtifact.downloadToDir(parameters.downloader.get(), sourceDir, parameters.repos.get())

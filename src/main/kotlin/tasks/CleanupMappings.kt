@@ -45,9 +45,9 @@ import dev.denwav.hypo.model.data.ClassData
 import dev.denwav.hypo.model.data.types.PrimitiveType
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
+import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.DefaultTask
@@ -74,7 +74,11 @@ abstract class CleanupMappings : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val libs = librariesDir.file.listFiles()?.filter { it.isLibraryJar } ?: emptyList()
+        val libs = librariesDir.path.useDirectoryEntries {
+            it.filter { p -> p.isLibraryJar }
+                .map { p -> ClassProviderRoot.fromJar(p) }
+                .toList()
+        }
 
         val mappings = MappingFormats.TINY.read(
             inputMappings.path,
@@ -84,7 +88,7 @@ abstract class CleanupMappings : DefaultTask() {
 
         val cleanedMappings = HypoContext.builder()
             .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(sourceJar.path)))
-            .withContextProviders(AsmClassDataProvider.of(ClassProviderRoot.fromJars(*libs.map { it.toPath() }.toTypedArray())))
+            .withContextProviders(AsmClassDataProvider.of(libs))
             .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
             .build().use { hypoContext ->
                 HydrationManager.createDefault()

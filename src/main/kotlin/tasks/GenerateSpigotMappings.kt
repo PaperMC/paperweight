@@ -25,10 +25,10 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.emptyMergeResult
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.parentClass
 import io.papermc.paperweight.util.path
+import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -76,14 +76,14 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.path).use { it.read() }
         val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
 
-        for (line in loggerFields.file.readLines(Charsets.UTF_8)) {
+        for (line in loggerFields.path.readLines(Charsets.UTF_8)) {
             val (className, fieldName) = line.split(' ')
             val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
             classMapping.getOrCreateFieldMapping(fieldName, "Lorg/apache/logging/log4j/Logger;").deobfuscatedName = "LOGGER"
         }
 
         // Get the new package name
-        val newPackage = packageMappings.asFile.get().readLines()[0].split(Regex("\\s+"))[1]
+        val newPackage = packageMappings.path.readLines()[0].split(Regex("\\s+"))[1]
 
         val sourceMappings = MappingFormats.TINY.read(
             sourceMappings.path,
@@ -92,7 +92,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         )
 
         val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
-        syntheticMethods.file.useLines { lines ->
+        syntheticMethods.path.useLines { lines ->
             for (line in lines) {
                 val (className, desc, synthName, baseName) = line.split(" ")
                 synths.computeIfAbsent(className) { hashMapOf() }

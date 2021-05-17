@@ -23,8 +23,10 @@
 package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.util.Constants
-import java.nio.file.Files
+import io.papermc.paperweight.util.deleteRecursively
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.moveTo
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.mercury.Mercury
@@ -66,19 +68,12 @@ class PatchSourceRemapWorker(
 
     private fun setup() {
         outputDir.deleteRecursively()
-        Files.createDirectories(outputDir)
+        outputDir.createDirectories()
     }
 
     private fun cleanup() {
         inputDir.deleteRecursively()
-        Files.move(outputDir, inputDir)
+        outputDir.moveTo(inputDir)
         outputDir.deleteRecursively()
-    }
-
-    private fun Path.deleteRecursively() {
-        if (Files.notExists(this)) {
-            return
-        }
-        Files.walk(this).use { stream -> stream.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
     }
 }

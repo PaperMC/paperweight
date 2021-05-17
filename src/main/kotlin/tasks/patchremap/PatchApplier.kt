@@ -24,12 +24,14 @@ package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.Git
-import java.io.File
+import io.papermc.paperweight.util.deleteRecursively
+import java.nio.file.Path
+import kotlin.io.path.*
 
 class PatchApplier(
     private val remappedBranch: String,
     private val unmappedBranch: String,
-    targetDir: File
+    targetDir: Path
 ) {
 
     private val git = Git(targetDir)
@@ -86,22 +88,22 @@ class PatchApplier(
         git("commit", "-m", message, "--author=$author", "--date=$time").execute()
     }
 
-    fun applyPatch(patch: File) {
+    fun applyPatch(patch: Path) {
         println("Applying patch ${patch.name}")
-        val result = git("am", "--3way", "--ignore-whitespace", patch.absolutePath).runOut()
+        val result = git("am", "--3way", "--ignore-whitespace", patch.absolutePathString()).runOut()
         if (result != 0) {
             System.err.println("Patch failed to apply: $patch")
             throw RuntimeException("Patch failed to apply: $patch")
         }
     }
 
-    fun generatePatches(target: File) {
+    fun generatePatches(target: Path) {
         target.deleteRecursively()
-        target.mkdirs()
+        target.createDirectories()
         git("checkout", remappedBranch).executeSilently()
         git(
             "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
-            target.absolutePath, remappedBaseTag
+            target.absolutePathString(), remappedBaseTag
         ).runOut()
     }
 

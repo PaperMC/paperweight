@@ -26,9 +26,9 @@ import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.file
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.set
 import javax.inject.Inject
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
@@ -74,17 +74,17 @@ abstract class ApplyAccessTransform : BaseTask() {
 
     @TaskAction
     fun run() {
-        ensureParentExists(outputJar.file)
-        ensureDeleted(outputJar.file)
+        ensureParentExists(outputJar.path)
+        ensureDeleted(outputJar.path)
 
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs("-Xmx1G")
         }
 
         queue.submit(AtlasAction::class) {
-            inputJar.set(this@ApplyAccessTransform.inputJar.file)
-            atFile.set(this@ApplyAccessTransform.atFile.file)
-            outputJar.set(this@ApplyAccessTransform.outputJar.file)
+            inputJar.set(this@ApplyAccessTransform.inputJar.path)
+            atFile.set(this@ApplyAccessTransform.atFile.path)
+            outputJar.set(this@ApplyAccessTransform.outputJar.path)
         }
     }
 

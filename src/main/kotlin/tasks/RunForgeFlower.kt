@@ -25,14 +25,12 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants.paperTaskOutput
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.isLibraryJar
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.bufferedWriter
-import kotlin.io.path.createTempFile
-import kotlin.io.path.deleteIfExists
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Classpath
@@ -59,23 +57,23 @@ abstract class RunForgeFlower : BaseTask() {
     }
 
     @TaskAction
-    @ExperimentalPathApi
     fun run() {
-        val out = outputJar.file
+        val out = outputJar.path
         val target = out.resolveSibling("${out.name}.dir")
         if (target.exists()) {
             target.deleteRecursively()
         }
-        target.mkdirs()
+        target.createDirectories()
 
-        val libs = libraries.file.listFiles()?.sorted() ?: emptyList()
+        val libs = libraries.path.useDirectoryEntries { it.toMutableList() }
+        libs.sort()
         val tempFile = createTempFile("paperweight", "txt")
 
         try {
             tempFile.bufferedWriter().use { writer ->
                 for (lib in libs) {
                     if (lib.isLibraryJar) {
-                        writer.appendLine("-e=${lib.absolutePath}")
+                        writer.appendLine("-e=${lib.absolutePathString()}")
                     }
                 }
             }
@@ -94,22 +92,22 @@ abstract class RunForgeFlower : BaseTask() {
                 "-log=TRACE",
                 "-cfg",
                 tempFile.absolutePathString(),
-                inputJar.file.absolutePath,
-                target.absolutePath
+                inputJar.path.absolutePathString(),
+                target.absolutePathString()
             )
 
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
-            logFile.delete()
+            logFile.deleteForcefully()
 
             val jvmArgs = listOf("-Xmx4G")
 
-            runJar(executable.file, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
+            runJar(executable.path, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
 
             // FernFlower is weird with how it does directory output
-            target.resolve(inputJar.file.name).renameTo(out)
+            target.resolve(inputJar.path.name).moveTo(out, overwrite = true)
             target.deleteRecursively()
         } finally {
-            tempFile.deleteIfExists()
+            tempFile.deleteForcefully()
         }
     }
 }

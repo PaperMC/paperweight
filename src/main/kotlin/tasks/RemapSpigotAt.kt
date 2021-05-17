@@ -25,9 +25,9 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
-import java.util.jar.JarFile
+import kotlin.io.path.*
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -62,8 +62,8 @@ abstract class RemapSpigotAt : BaseTask() {
     fun run() {
         val outputAt = AccessTransformSet.create()
 
-        spigotAt.file.useLines { lines ->
-            JarFile(inputJar.file).use { jarFile ->
+        spigotAt.path.useLines { lines ->
+            inputJar.path.openZip().use { jarFile ->
                 for (line in lines) {
                     if (line.isBlank() || line.startsWith('#')) {
                         continue
@@ -86,7 +86,7 @@ abstract class RemapSpigotAt : BaseTask() {
                         )
                     } else {
                         // either field or class
-                        if (jarFile.getJarEntry("$desc.class") == null) {
+                        if (jarFile.getPath("$desc.class").notExists()) {
                             // field
                             val index = desc.lastIndexOf('/')
                             val className = desc.substring(0, index)

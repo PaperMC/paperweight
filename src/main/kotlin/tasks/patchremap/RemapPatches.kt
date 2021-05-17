@@ -28,14 +28,15 @@ import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.file
+import io.papermc.paperweight.util.copyRecursively
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
-import java.io.File
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.cadixdev.at.io.AccessTransformFormats
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputDirectory
@@ -61,7 +62,7 @@ abstract class RemapPatches : BaseTask() {
     abstract val ats: RegularFileProperty
 
     @get:Classpath
-    abstract val classpathJars: ListProperty<RegularFile>
+    abstract val classpathJars: ConfigurableFileCollection
 
     @get:InputDirectory
     abstract val spigotApiDir: DirectoryProperty
@@ -106,8 +107,10 @@ abstract class RemapPatches : BaseTask() {
         var limit = limitPatches.get().toInt()
 
         // Check patches
-        val patches = inputPatchDir.file.listFiles() ?: return run {
+        val patches = inputPatchDir.path.useDirectoryEntries("*.patch") { it.toMutableList() }
+        if (patches.isEmpty()) {
             println("No input patches found")
+            return
         }
 
         if (limit == -1) {
@@ -123,16 +126,16 @@ abstract class RemapPatches : BaseTask() {
         )
 
         // This should pull in any libraries needed for type bindings
-        val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve()
-        val classpathFiles = classpathJars.get().map { it.asFile } + configFiles
+        val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve().map { it.toPath() }
+        val classpathFiles = classpathJars.map { it.toPath() } + configFiles
 
         // Remap output directory, after each output this directory will be re-named to the input directory below for
         // the next remap operation
         println("setting up repo")
-        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.file, recreate = skip == 0)
+        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.path, recreate = skip == 0)
         val tempInputDir = createWorkDirByCloning(
             "patch-remap-input",
-            source = spigotServerDir.file,
+            source = spigotServerDir.path,
             recreate = skip == 0
         )
         val tempOutputDir = createWorkDir("patch-remap-output")
@@ -142,9 +145,9 @@ abstract class RemapPatches : BaseTask() {
         PatchSourceRemapWorker(
             mappings,
             AccessTransformFormats.FML.read(ats.path),
-            listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")).map { it.toPath() },
-            sourceInputDir.toPath(),
-            tempOutputDir.toPath()
+            listOf(*classpathFiles.toTypedArray(), tempApiDir.resolve("src/main/java")),
+            sourceInputDir,
+            tempOutputDir
         ).let { remapper ->
             val patchApplier = PatchApplier("remapped", "old", tempInputDir)
 
@@ -152,9 +155,9 @@ abstract class RemapPatches : BaseTask() {
                 // We need to include any missing classes for the patches later on
                 McDev.importMcDev(
                     patches,
-                    spigotDecompJar.file,
-                    libraryImports.file,
-                    mcLibrarySourcesDir.file,
+                    spigotDecompJar.path,
+                    libraryImports.path,
+                    mcLibrarySourcesDir.path,
                     tempInputDir.resolve("src/main/java")
                 )
 
@@ -194,27 +197,27 @@ abstract class RemapPatches : BaseTask() {
                 println("===========================")
             }
 
-            patchApplier.generatePatches(outputPatchDir.file)
+            patchApplier.generatePatches(outputPatchDir.path)
         }
     }
 
-    private fun createWorkDir(name: String, source: File? = null, recreate: Boolean = true): File {
+    private fun createWorkDir(name: String, source: Path? = null, recreate: Boolean = true): Path {
         return layout.cache.resolve("paperweight").resolve(name).apply {
             if (recreate) {
                 deleteRecursively()
-                mkdirs()
+                createDirectories()
                 source?.copyRecursively(this)
             }
         }
     }
 
-    private fun createWorkDirByCloning(name: String, source: File, recreate: Boolean = true): File {
+    private fun createWorkDirByCloning(name: String, source: Path, recreate: Boolean = true): Path {
         val workDir = layout.cache.resolve("paperweight")
         return workDir.resolve(name).apply {
             if (recreate) {
                 deleteRecursively()
-                mkdirs()
-                Git(workDir)("clone", source.absolutePath, this.absolutePath).executeSilently()
+                createDirectories()
+                Git(workDir)("clone", source.absolutePathString(), this.absolutePathString()).executeSilently()
             }
         }
     }

@@ -38,16 +38,18 @@ import io.papermc.paperweight.util.ext
 import io.papermc.paperweight.util.fromJson
 import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.registering
-import java.io.File
+import io.papermc.paperweight.util.set
+import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class InitialTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
-    cache: File = project.layout.cache,
+    cache: Path = project.layout.cache,
     extension: PaperweightExtension = project.ext,
     downloadService: Provider<DownloadService> = project.download
 ) {
@@ -55,6 +57,8 @@ open class InitialTasks(
     val downloadMcManifest by tasks.registering<DownloadTask> {
         url.set(Constants.MC_MANIFEST_URL)
         outputFile.set(cache.resolve(Constants.MC_MANIFEST))
+
+        outputs.upToDateWhen { false }
 
         downloader.set(downloadService)
     }

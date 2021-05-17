@@ -33,16 +33,18 @@ import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.ext
 import io.papermc.paperweight.util.registering
-import java.io.File
+import io.papermc.paperweight.util.set
+import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class AllTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
-    cache: File = project.layout.cache,
+    cache: Path = project.layout.cache,
     extension: PaperweightExtension = project.ext,
 ) : SpigotTasks(project) {
 
