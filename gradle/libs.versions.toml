@@ -27,6 +27,13 @@ hypo-mappings = { module = "dev.denwav.hypo:hypo-mappings", version.ref = "hypo"
 lorenzTiny = "org.quiltmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
+# Gradle
+gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.0"
+gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:7.0.0"
+gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:10.0.0"
+gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:2.1.4"
+gradle-kotlin-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
+
 [bundles]
 asm = ["asm-core", "asm-tree"]
 cadix = ["cadix-lorenz-core", "cadix-lorenz-asm", "cadix-lorenz-proguard", "cadix-atlas", "cadix-at", "cadix-mercury"]
