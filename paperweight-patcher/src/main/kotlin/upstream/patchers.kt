@@ -25,7 +25,6 @@ package io.papermc.paperweight.patcher.upstream
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
 import io.papermc.paperweight.util.providerFor
-import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
@@ -34,7 +33,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
-open class DefaultRepoPatcherUpstream @Inject constructor(
+open class DefaultRepoPatcherUpstream(
     private val name: String,
     protected val objects: ObjectFactory,
     private val tasks: TaskContainer
@@ -42,7 +41,7 @@ open class DefaultRepoPatcherUpstream @Inject constructor(
 
     override val url: Property<String> = objects.property()
     override val ref: Property<String> = objects.property()
-    override val sourceUpstreamData: Property<Boolean> = objects.property()
+    override val useForUpstreamData: Property<Boolean> = objects.property()
 
     override val patchTasks: NamedDomainObjectContainer<PatchTaskConfig> = objects.domainObjectContainer(PatchTaskConfig::class) { name ->
         objects.newInstance<DefaultPatchTaskConfig>(name, this.name)
@@ -81,7 +80,7 @@ open class DefaultRepoPatcherUpstream @Inject constructor(
     }
 }
 
-open class DefaultPaperRepoPatcherUpstream @Inject constructor(name: String, objects: ObjectFactory, taskContainer: TaskContainer) :
+open class DefaultPaperRepoPatcherUpstream(name: String, objects: ObjectFactory, taskContainer: TaskContainer) :
     DefaultRepoPatcherUpstream(name, objects, taskContainer), PaperRepoPatcherUpstream {
 
     override fun withPaperPatcher(action: Action<MinimalPatcherConfig>) {
