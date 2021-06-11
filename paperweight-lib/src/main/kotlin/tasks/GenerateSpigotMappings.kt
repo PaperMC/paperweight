@@ -206,7 +206,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<InnerClassMapping?> {
-        // We want to get all of the inner classes from SRG, but not the SRG names
+        // We want to get all of the inner classes from mojmap, but not the mojmap names
         return MergeResult(target.createInnerClassMapping(right.obfuscatedName, right.obfuscatedName), right)
     }
 

@@ -76,12 +76,10 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
             git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
         }
 
-        if (!outputDir.path.exists() || !outputDir.path.resolve(".git").exists()) {
-            outputDir.path.deleteRecursively()
-            Git(outputDir.path.parent)("clone", upstream.path.absolutePathString(), outputDir.path.name).setupOut().run()
-        }
+        val outputPath = outputDir.path
+        recreateCloneDirectory(outputPath)
 
-        val target = outputDir.path.name
+        val target = outputPath.name
 
         if (printOutput.get()) {
             println("   Resetting $target to ${upstream.path.name}...")
@@ -90,7 +88,9 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
         val rootPatchDir = patchDir.pathOrNull ?: patchZip.path.let { unzip(it, findOutputDir(it)) }
 
         try {
-            Git(outputDir.path).let { git ->
+            Git(outputPath).let { git ->
+                checkoutRepoFromUpstream(git, upstream.path)
+
                 // disable gpg for this repo, not needed & slows things down
                 git("config", "commit.gpgsign", "false").executeSilently()
 
@@ -157,4 +157,20 @@ fun ControllableOutputTask.applyGitPatches(
             println("   Patches applied cleanly to $target")
         }
     }
+}
+
+fun checkoutRepoFromUpstream(git: Git, upstream: Path) {
+    git("init", "--quiet").executeSilently()
+    git("remote", "add", "origin", upstream.absolutePathString()).executeSilently(silenceErr = true)
+    git("fetch", "origin").executeSilently(silenceErr = true)
+    git("checkout", "master").executeSilently(silenceErr = true)
+}
+
+fun recreateCloneDirectory(target: Path) {
+    if (target.exists()) {
+        for (entry in target.listDirectoryEntries()) {
+            entry.deleteRecursively()
+        }
+    }
+    target.createDirectories()
 }

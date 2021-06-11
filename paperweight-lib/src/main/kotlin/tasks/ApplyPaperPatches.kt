@@ -75,8 +75,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @TaskAction
     fun run() {
         val outputFile = outputDir.path
-        outputFile.deleteRecursively()
-        outputFile.parent.createDirectories()
+        recreateCloneDirectory(outputFile)
 
         val target = outputFile.name
 
@@ -84,9 +83,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             println("   Creating $target from remapped source...")
         }
 
-        Git(outputFile.parent)("clone", spigotServerDir.path.absolutePathString(), outputFile.absolutePathString()).executeSilently()
-
         Git(outputFile).let { git ->
+            checkoutRepoFromUpstream(git, spigotServerDir.path)
+
             // disable gpg for this repo, not needed & slows things down
             git("config", "commit.gpgsign", "false").executeSilently()
 
