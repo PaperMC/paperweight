@@ -98,7 +98,6 @@ open class SpigotTasks(
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
         librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
-        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
 
         outputMappings.set(cache.resolve(Constants.CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
