@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPublication
@@ -39,15 +38,31 @@ fun ShadowJar.configureStandard() {
 
 val sourcesJar by tasks.existing
 
-val relocateShadowJar by tasks.registering(ConfigureShadowRelocation::class) {
-    target = tasks.shadowJar.get()
-    prefix = "paper.libs"
-}
-
 val shadowJar by tasks.existing(ShadowJar::class) {
-    dependsOn(relocateShadowJar)
-
     configureStandard()
+
+    val prefix = "paper.libs"
+    listOf(
+        "com.github.salomonbrys.kotson",
+        "com.google.errorprone.annotations",
+        "com.google.gson",
+        "dev.denwav.hypo",
+        "io.sigpipe.jbsdiff",
+        "me.jamiemansfield",
+        "net.fabricmc",
+        "org.apache.commons",
+        "org.apache.felix",
+        "org.apache.http",
+        "org.cadixdev",
+        "org.eclipse",
+        "org.jgrapht",
+        "org.jheaps",
+        "org.objectweb.asm",
+        "org.osgi",
+        "org.tukaani.xz",
+    ).forEach { pack ->
+        relocate(pack, "$prefix.$pack")
+    }
 }
 
 val devShadowJar by tasks.registering(ShadowJar::class) {
