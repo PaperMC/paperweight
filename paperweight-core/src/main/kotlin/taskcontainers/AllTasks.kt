@@ -96,22 +96,22 @@ open class AllTasks(
         dependsOn(patchPaperApi, patchPaperServer)
     }
 
-    val rebuildPaperApi by tasks.registering<RebuildPaperPatches> {
+    val rebuildApiPatches by tasks.registering<RebuildPaperPatches> {
         inputDir.set(extension.paper.paperApiDir)
 
         patchDir.set(extension.paper.spigotApiPatchDir)
     }
 
-    val rebuildPaperServer by tasks.registering<RebuildPaperPatches> {
+    val rebuildServerPatches by tasks.registering<RebuildPaperPatches> {
         inputDir.set(extension.paper.paperServerDir)
         server.set(true)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
     }
 
-    val rebuildPaperPatches by tasks.registering<Task> {
+    val rebuildPatches by tasks.registering<Task> {
         group = "Paper"
         description = "Rebuilds patches to api and server"
-        dependsOn(rebuildPaperApi, rebuildPaperServer)
+        dependsOn(rebuildApiPatches, rebuildServerPatches)
     }
 }
