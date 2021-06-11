@@ -20,14 +20,11 @@
  * USA
  */
 
-package util
+package io.papermc.paperweight.util
 
-import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.path
+import com.github.salomonbrys.kotson.fromJson
 import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.notExists
-import kotlin.io.path.readLines
+import kotlin.io.path.bufferedReader
 import org.gradle.api.file.RegularFileProperty
 
 data class UpstreamData(
@@ -36,21 +33,7 @@ data class UpstreamData(
 )
 
 fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData {
-    val lines = inputFile.path.readLines(Charsets.UTF_8)
-    if (lines.size != 2) {
-        throw PaperweightException("File has invalid format: ${inputFile.path}")
+    return inputFile.path.bufferedReader(Charsets.UTF_8).use { reader ->
+        gson.fromJson(reader)
     }
-
-    val decompiledJar = checkFile(lines[0])
-    val libSourceDir = checkFile(lines[1])
-
-    return UpstreamData(decompiledJar, libSourceDir)
-}
-
-private fun checkFile(line: String): Path {
-    val file = Paths.get(line)
-    if (file.notExists()) {
-        throw PaperweightException("File does not exist: $file")
-    }
-    return file
 }

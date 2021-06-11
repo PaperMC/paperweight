@@ -32,6 +32,7 @@ import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.configureTask
+import io.papermc.paperweight.util.readUpstreamData
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
@@ -41,7 +42,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
-import util.readUpstreamData
 
 class PaperweightPatcher : Plugin<Project> {
 
@@ -111,7 +111,7 @@ class PaperweightPatcher : Plugin<Project> {
                 if (dataFileFromProp.isPresent) {
                     dataFile.set(dataFileFromProp)
                 } else {
-                    dataFile.set(workDirFromProp.map { it.file("upstreamData${repo.name.capitalize()}.txt") })
+                    dataFile.set(workDirFromProp.map { it.file("upstreamData${repo.name.capitalize()}.json") })
                 }
             }
 

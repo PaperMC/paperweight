@@ -22,9 +22,10 @@
 
 package io.papermc.paperweight.core.tasks
 
+import io.papermc.paperweight.util.UpstreamData
+import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.createDirectories
 import org.gradle.api.DefaultTask
@@ -55,9 +56,10 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
         val dataFilePath = dataFile.path
 
         dataFilePath.parent.createDirectories()
+
+        val data = UpstreamData(decompiledJar.path, mcLibrariesDir.path)
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
-            writer.appendLine(decompiledJar.path.absolutePathString())
-            writer.appendLine(mcLibrariesDir.path.absolutePathString())
+            gson.toJson(data, writer)
         }
     }
 }
