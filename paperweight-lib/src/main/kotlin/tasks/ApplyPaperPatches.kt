@@ -26,12 +26,14 @@ import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
@@ -55,8 +57,13 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
+    @get:Optional
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val mcdevImports: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -96,7 +103,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             }
 
             val patches = patchDir.path.listDirectoryEntries("*.patch")
-            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.path, mcLibrariesDir.path, sourceDir)
+            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.path, mcdevImports.pathOrNull, sourceDir)
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()

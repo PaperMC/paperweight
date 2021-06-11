@@ -28,10 +28,16 @@ import kotlin.io.path.*
 
 object McDev {
 
-    fun importMcDev(patches: Iterable<Path>, decompJar: Path, libraryImports: Path?, libraryDir: Path?, targetDir: Path) {
-        val importMcDev = readMcDevNames(patches).asSequence()
+    private val bannedClasses = setOf(
+        "KeyedObject",
+        "MCUtil"
+    )
+
+    fun importMcDev(patches: Iterable<Path>, decompJar: Path, libraryImports: Path?, libraryDir: Path?, additionalClasses: Path?, targetDir: Path) {
+        val importMcDev = readMcDevNames(patches, additionalClasses).asSequence()
             .map { targetDir.resolve("net/minecraft/$it.java") }
             .filter { !it.exists() }
+            .filterNot { file -> bannedClasses.any { file.toString().contains(it) } }
             .toSet()
 
         println("Importing ${importMcDev.size} classes from vanilla...")
@@ -80,7 +86,7 @@ object McDev {
         }
     }
 
-    private fun readMcDevNames(patches: Iterable<Path>): Set<String> {
+    private fun readMcDevNames(patches: Iterable<Path>, additionalClasses: Path?): Set<String> {
         val result = hashSetOf<String>()
 
         val prefix = "+++ b/src/main/java/net/minecraft/"
@@ -89,7 +95,14 @@ object McDev {
         for (patch in patches) {
             patch.useLines { lines ->
                 lines.filter { it.startsWith(prefix) }
+                    .filterNot { file -> bannedClasses.any { file.contains(it) } }
                     .mapTo(result) { it.substring(prefix.length, it.length - suffix.length) }
+            }
+        }
+
+        additionalClasses?.useLines { lines ->
+            for (line in lines) {
+                result += line.replace('.', '/').removePrefix("net/minecraft/").removeSuffix(".java")
             }
         }
 

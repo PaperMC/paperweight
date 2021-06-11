@@ -56,6 +56,10 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     abstract val libraryImports: RegularFileProperty
 
     @get:Optional
+    @get:InputFile
+    abstract val mcdevImports: RegularFileProperty
+
+    @get:Optional
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
@@ -88,7 +92,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         val patches = patchDir.path.listDirectoryEntries("*.patch")
 
         if (sourceMcDevJar.isPresent) {
-            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.pathOrNull, srcDir)
+            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.pathOrNull, mcdevImports.pathOrNull, srcDir)
         }
 
         git("add", ".").executeSilently()

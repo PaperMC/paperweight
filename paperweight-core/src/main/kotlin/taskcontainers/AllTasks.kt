@@ -28,9 +28,11 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.registering
 import io.papermc.paperweight.util.set
 import java.nio.file.Path
+import kotlin.io.path.exists
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.TaskContainer
@@ -83,6 +85,7 @@ open class AllTasks(
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryClassImports)
+        mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
 
         outputDir.set(extension.paper.paperServerDir)
     }

@@ -158,6 +158,7 @@ abstract class RemapPatches : BaseTask() {
                     spigotDecompJar.path,
                     libraryImports.path,
                     mcLibrarySourcesDir.path,
+                    null,
                     tempInputDir.resolve("src/main/java")
                 )
 
