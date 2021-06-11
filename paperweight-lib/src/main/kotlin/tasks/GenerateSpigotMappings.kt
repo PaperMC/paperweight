@@ -67,6 +67,9 @@ abstract class GenerateSpigotMappings : DefaultTask() {
     abstract val sourceMappings: RegularFileProperty
 
     @get:OutputFile
+    abstract val notchToSpigotMappings: RegularFileProperty
+
+    @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
     @get:OutputFile
@@ -108,6 +111,13 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         ).merge()
 
         val spigotToNamedSet = notchToSpigotSet.reverse().merge(sourceMappings)
+
+        MappingFormats.TINY.write(
+            notchToSpigotSet,
+            notchToSpigotMappings.path,
+            Constants.OBF_NAMESPACE,
+            Constants.SPIGOT_NAMESPACE
+        )
 
         MappingFormats.TINY.write(
             spigotToNamedSet,

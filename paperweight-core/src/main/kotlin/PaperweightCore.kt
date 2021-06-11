@@ -28,7 +28,6 @@ import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
 import io.papermc.paperweight.tasks.GeneratePaperclipPatch
 import io.papermc.paperweight.tasks.RemapJar
-import io.papermc.paperweight.tasks.RemapJarAtlas
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
@@ -77,10 +76,10 @@ class PaperweightCore : Plugin<Project> {
 
         // Setup the server jar
         target.afterEvaluate {
-            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks)?.let { repackageJar ->
+            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks)?.let { reobfJar ->
                 val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                     originalJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-                    patchedJar.set(repackageJar.flatMap { it.outputJar })
+                    patchedJar.set(reobfJar.flatMap { it.outputJar })
                     mcVersion.set(target.ext.minecraftVersion)
                 }
 
@@ -100,7 +99,7 @@ class PaperweightCore : Plugin<Project> {
         }
     }
 
-    private fun Project.setupServerProject(parent: Project, allTasks: AllTasks): TaskProvider<RemapJarAtlas>? {
+    private fun Project.setupServerProject(parent: Project, allTasks: AllTasks): TaskProvider<RemapJar>? {
         if (!projectDir.exists()) {
             return null
         }
@@ -126,14 +125,14 @@ class PaperweightCore : Plugin<Project> {
         return createBuildTasks(parent, allTasks)
     }
 
-    private fun Project.createBuildTasks(parent: Project, allTasks: AllTasks): TaskProvider<RemapJarAtlas> {
+    private fun Project.createBuildTasks(parent: Project, allTasks: AllTasks): TaskProvider<RemapJar> {
         val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
 
         val reobfJar by tasks.registering<RemapJar> {
             dependsOn(shadowJar)
             inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 
-            mappingsFile.set(allTasks.patchMappings.flatMap { it.outputMappings })
+            mappingsFile.set(allTasks.generateReobfMappings.flatMap { it.reobfMappings })
             fromNamespace.set(Constants.DEOBF_NAMESPACE)
             toNamespace.set(Constants.SPIGOT_NAMESPACE)
             remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
@@ -141,14 +140,7 @@ class PaperweightCore : Plugin<Project> {
             outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
         }
 
-        val repackageJar by tasks.registering<RemapJarAtlas> {
-            inputJar.set(reobfJar.flatMap { it.outputJar })
-
-            packageVersion.set(parent.ext.versionPackage)
-            outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-repackage.jar"))
-        }
-
-        return repackageJar
+        return reobfJar
     }
 
     private fun Project.createPatchRemapTask(allTasks: AllTasks) {

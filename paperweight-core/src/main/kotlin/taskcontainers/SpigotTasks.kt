@@ -73,6 +73,7 @@ open class SpigotTasks(
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_MAPPINGS))
+        notchToSpigotMappings.set(cache.resolve(Constants.OBF_SPIGOT_MAPPINGS))
         spigotFieldMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
     }
 
@@ -97,6 +98,7 @@ open class SpigotTasks(
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
         librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
+        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
 
         outputMappings.set(cache.resolve(Constants.CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
@@ -106,6 +108,14 @@ open class SpigotTasks(
         patch.set(extension.paper.mappingsPatch)
 
         outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
+    }
+
+    val generateReobfMappings by tasks.registering<GenerateReobfMappings> {
+        inputMappings.set(patchMappings.flatMap { it.outputMappings })
+        notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
+        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
+
+        reobfMappings.set(cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 
     val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
