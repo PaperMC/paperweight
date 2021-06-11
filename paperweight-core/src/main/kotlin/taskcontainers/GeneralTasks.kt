@@ -25,7 +25,7 @@ package io.papermc.paperweight.core.taskcontainers
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.BuildDataInfo
 import io.papermc.paperweight.util.contents
@@ -55,7 +55,6 @@ open class GeneralTasks(
     val downloadServerJar by tasks.registering<DownloadServerJar> {
         dependsOn(initSubmodules)
         downloadUrl.set(buildDataInfo.map { it.serverUrl })
-        hash.set(buildDataInfo.map { it.minecraftHash })
 
         downloader.set(downloadService)
     }

@@ -28,7 +28,7 @@ import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MinecraftManifest

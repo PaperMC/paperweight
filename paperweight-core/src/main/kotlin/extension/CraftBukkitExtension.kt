@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.core.ext
+package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.path
 import kotlin.io.path.name

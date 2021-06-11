@@ -23,7 +23,7 @@
 package io.papermc.paperweight.core
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
 import io.papermc.paperweight.tasks.GeneratePaperclipPatch

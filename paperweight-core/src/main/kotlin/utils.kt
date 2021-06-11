@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.core
 
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.util.Constants
 import org.gradle.api.Project
 

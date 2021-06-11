@@ -49,7 +49,7 @@ abstract class SpigotRemapJar : BaseTask() {
     abstract val memberMappings: RegularFileProperty
 
     @get:InputFile
-    abstract val packageMappings: RegularFileProperty
+    abstract val fieldMappings: RegularFileProperty
 
     @get:InputFile
     abstract val accessTransformers: RegularFileProperty
@@ -93,7 +93,7 @@ abstract class SpigotRemapJar : BaseTask() {
 
         val classMappingPath = classMappings.path.absolutePathString()
         val memberMappingsPath = memberMappings.path.absolutePathString()
-        val packageMappingsPath = packageMappings.path.absolutePathString()
+        val fieldMappingsPath = fieldMappings.path.absolutePathString()
         val accessTransformersPath = accessTransformers.path.absolutePathString()
 
         val work = layout.projectDirectory.file(workDirName.get())
@@ -139,7 +139,7 @@ abstract class SpigotRemapJar : BaseTask() {
                         finalMapCommand.get(),
                         membersJarPath,
                         accessTransformersPath,
-                        packageMappingsPath,
+                        fieldMappingsPath,
                         outputJarPath
                     )
                 )

@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.core.ext
+package io.papermc.paperweight.core.extension
 
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout

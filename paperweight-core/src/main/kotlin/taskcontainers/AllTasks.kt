@@ -23,7 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.ext
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants

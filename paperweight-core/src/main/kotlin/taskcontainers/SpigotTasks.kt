@@ -24,7 +24,7 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
-import io.papermc.paperweight.core.ext.PaperweightCoreExtension
+import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
@@ -66,7 +66,6 @@ open class SpigotTasks(
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
         memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
-        packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
 
         loggerFields.set(inspectVanillaJar.flatMap { it.loggerFile })
         syntheticMethods.set(inspectVanillaJar.flatMap { it.syntheticMethods })
@@ -74,13 +73,14 @@ open class SpigotTasks(
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_MAPPINGS))
+        spigotFieldMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
     }
 
     val spigotRemapJar by tasks.registering<SpigotRemapJar> {
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
         memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
-        packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.packageMappings }))
+        fieldMappings.set(generateSpigotMappings.flatMap { it.spigotFieldMappings })
         accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
         workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })

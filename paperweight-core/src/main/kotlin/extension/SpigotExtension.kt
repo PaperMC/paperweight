@@ -20,18 +20,17 @@
  * USA
  */
 
-package io.papermc.paperweight.core.ext
+package io.papermc.paperweight.core.extension
 
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 
-fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
-    directoryProperty().convention(layout.projectDirectory.dir(path))
+open class SpigotExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
 
-fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
-    directoryProperty().convention(base.dir(name))
-
-fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
-    fileProperty().convention(base.file(name))
+    @Suppress("MemberVisibilityCanBePrivate")
+    val spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
+    val spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
+    val spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
+    val bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
+    val craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
+}

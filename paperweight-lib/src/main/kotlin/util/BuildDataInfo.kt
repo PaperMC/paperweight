@@ -25,11 +25,9 @@ package io.papermc.paperweight.util
 data class BuildDataInfo(
     val minecraftVersion: String,
     val serverUrl: String,
-    val minecraftHash: String,
     val accessTransforms: String,
     val classMappings: String,
     val memberMappings: String,
-    val packageMappings: String,
     val classMapCommand: String,
     val memberMapCommand: String,
     val finalMapCommand: String,

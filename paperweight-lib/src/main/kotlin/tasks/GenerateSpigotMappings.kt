@@ -28,7 +28,9 @@ import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.parentClass
 import io.papermc.paperweight.util.path
-import kotlin.io.path.*
+import kotlin.io.path.readLines
+import kotlin.io.path.useLines
+import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -56,9 +58,6 @@ abstract class GenerateSpigotMappings : DefaultTask() {
     abstract val memberMappings: RegularFileProperty
 
     @get:InputFile
-    abstract val packageMappings: RegularFileProperty
-
-    @get:InputFile
     abstract val loggerFields: RegularFileProperty
 
     @get:InputFile
@@ -69,6 +68,9 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
+
+    @get:OutputFile
+    abstract val spigotFieldMappings: RegularFileProperty
 
     @TaskAction
     fun run() {
@@ -81,9 +83,6 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
             classMapping.getOrCreateFieldMapping(fieldName, "Lorg/apache/logging/log4j/Logger;").deobfuscatedName = "LOGGER"
         }
-
-        // Get the new package name
-        val newPackage = packageMappings.path.readLines()[0].split(Regex("\\s+"))[1]
 
         val sourceMappings = MappingFormats.TINY.read(
             sourceMappings.path,
@@ -104,7 +103,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             mergedMappingSet,
             sourceMappings,
             MergeConfig.builder()
-                .withMergeHandler(SpigotMappingsMergerHandler(newPackage, synths))
+                .withMergeHandler(SpigotMappingsMergerHandler(synths))
                 .build()
         ).merge()
 
@@ -116,15 +115,15 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             Constants.SPIGOT_NAMESPACE,
             Constants.DEOBF_NAMESPACE
         )
+
+        val fieldSourceMappings = extractFieldMappings(sourceMappings, classMappingSet)
+        MappingFormats.CSRG.write(fieldSourceMappings, spigotFieldMappings.path)
     }
 }
 
 typealias Synths = Map<String, Map<String, Map<String, String>>>
 
-class SpigotMappingsMergerHandler(
-    private val newPackage: String,
-    private val synths: Synths
-) : MappingSetMergerHandler {
+class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMergerHandler {
 
     override fun mergeTopLevelClassMappings(
         left: TopLevelClassMapping,
@@ -144,7 +143,7 @@ class SpigotMappingsMergerHandler(
     ): MergeResult<TopLevelClassMapping?> {
         // If both are provided, keep spigot
         return MergeResult(
-            target.createTopLevelClassMapping(left.obfuscatedName, prependPackage(left.deobfuscatedName)),
+            target.createTopLevelClassMapping(left.obfuscatedName, left.deobfuscatedName),
             right
         )
     }
@@ -167,7 +166,7 @@ class SpigotMappingsMergerHandler(
         // This is a mapping Spigot is totally missing, but Spigot maps all classes without a package to
         // /net/minecraft regardless if there are mappings for the classes or not
         return MergeResult(
-            target.createTopLevelClassMapping(right.obfuscatedName, prependPackage(right.obfuscatedName)),
+            target.createTopLevelClassMapping(right.obfuscatedName, right.obfuscatedName),
             right
         )
     }
@@ -316,15 +315,22 @@ class SpigotMappingsMergerHandler(
         return null
     }
 
-    // Disable non-spigot mappings
-    override fun addRightFieldMapping(
-        right: FieldMapping,
-        target: ClassMapping<*, *>,
-        context: MergeContext
-    ): FieldMapping? {
-        return null
-    }
+    // override fun addRightFieldMapping(
+    //     right: FieldMapping,
+    //     target: ClassMapping<*, *>,
+    //     context: MergeContext
+    // ): FieldMapping? {
+    //     val obfuscatedType = context.leftReversed.deobfuscate(right.type.orElse(null))
+    //
+    //     var obfName = right.obfuscatedName
+    //     // handle specialsource case
+    //     if (obfName in setOf("if", "do")) {
+    //         obfName += "_"
+    //     }
+    //     return target.createFieldMapping(FieldSignature(obfName, obfuscatedType), right.deobfuscatedName)
+    // }
 
+    // Disable non-spigot mappings
     override fun addRightMethodMapping(
         right: MethodMapping,
         target: ClassMapping<*, *>,
@@ -344,12 +350,34 @@ class SpigotMappingsMergerHandler(
         }
         return MergeResult(newMapping)
     }
+}
 
-    private fun prependPackage(name: String): String {
-        return if (name.contains('/')) {
-            name
-        } else {
-            newPackage + name
+private fun extractFieldMappings(mappings: MappingSet, spigotClassMappings: MappingSet): MappingSet {
+    val newMappings = MappingSet.create()
+
+    for (topLevelClassMapping in mappings.topLevelClassMappings) {
+        val name = spigotClassMappings.getTopLevelClassMapping(topLevelClassMapping.obfuscatedName).orElse(topLevelClassMapping).deobfuscatedName
+        val newClassMappings = newMappings.createTopLevelClassMapping(name, name)
+        extractFieldMappings(topLevelClassMapping, newClassMappings, spigotClassMappings)
+    }
+
+    return newMappings
+}
+
+private fun extractFieldMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *>, spigotClassMappings: MappingSet) {
+    for (innerClassMapping in old.innerClassMappings) {
+        val name = spigotClassMappings.getClassMapping(innerClassMapping.fullObfuscatedName)
+            .map { it.deobfuscatedName }
+            .orElse(innerClassMapping.obfuscatedName)
+        val newClassMappings = new.createInnerClassMapping(name, name)
+        extractFieldMappings(innerClassMapping, newClassMappings, spigotClassMappings)
+    }
+
+    for (fieldMapping in old.fieldMappings) {
+        var fieldName = fieldMapping.obfuscatedName
+        if (fieldName in setOf("if", "do")) {
+            fieldName += "_"
         }
+        new.createFieldMapping(FieldSignature(fieldName, fieldMapping.type.get()), fieldMapping.deobfuscatedName)
     }
 }
