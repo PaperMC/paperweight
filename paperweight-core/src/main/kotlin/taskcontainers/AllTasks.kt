@@ -67,7 +67,7 @@ open class AllTasks(
     }
 
     val patchPaperApi by tasks.registering<ApplyGitPatches> {
-        group = "Paper"
+        group = "paper"
         branch.set("HEAD")
         upstreamBranch.set("upstream")
         upstream.set(patchSpigotApi.flatMap { it.outputDir })
@@ -79,7 +79,7 @@ open class AllTasks(
 
     @Suppress("DuplicatedCode")
     val patchPaperServer by tasks.registering<ApplyPaperPatches> {
-        group = "Paper"
+        group = "paper"
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
@@ -93,20 +93,20 @@ open class AllTasks(
     }
 
     val patchPaper by tasks.registering<Task> {
-        group = "Paper"
+        group = "paper"
         description = "Set up the Paper development environment"
         dependsOn(patchPaperApi, patchPaperServer)
     }
 
     val rebuildApiPatches by tasks.registering<RebuildPaperPatches> {
-        group = "Paper"
+        group = "paper"
         inputDir.set(extension.paper.paperApiDir)
 
         patchDir.set(extension.paper.spigotApiPatchDir)
     }
 
     val rebuildServerPatches by tasks.registering<RebuildPaperPatches> {
-        group = "Paper"
+        group = "paper"
         inputDir.set(extension.paper.paperServerDir)
         server.set(true)
 
@@ -114,7 +114,7 @@ open class AllTasks(
     }
 
     val rebuildPatches by tasks.registering<Task> {
-        group = "Paper"
+        group = "paper"
         description = "Rebuilds patches to api and server"
         dependsOn(rebuildApiPatches, rebuildServerPatches)
     }

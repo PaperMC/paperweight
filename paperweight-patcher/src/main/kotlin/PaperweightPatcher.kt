@@ -51,7 +51,7 @@ class PaperweightPatcher : Plugin<Project> {
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
         target.tasks.register<Delete>("cleanCache") {
-            group = "Paper"
+            group = "paper"
             description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
