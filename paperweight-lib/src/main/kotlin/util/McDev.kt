@@ -101,9 +101,10 @@ object McDev {
         }
 
         additionalClasses?.useLines { lines ->
-            for (line in lines) {
-                result += line.replace('.', '/').removePrefix("net/minecraft/").removeSuffix(".java")
-            }
+            lines.filterNot { it.startsWith("#") }
+                .forEach { line ->
+                    result += line.removeSuffix(".java").replace('.', '/').removePrefix("net/minecraft/")
+                }
         }
 
         return result
