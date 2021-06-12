@@ -40,10 +40,13 @@ import org.gradle.api.tasks.TaskAction
 abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
     @get:InputFile
-    abstract val decompiledJar: RegularFileProperty
+    abstract val remappedJar: RegularFileProperty
 
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
+
+    @get:InputFile
+    abstract val mcLibrariesFile: RegularFileProperty
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
@@ -57,7 +60,7 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
         dataFilePath.parent.createDirectories()
 
-        val data = UpstreamData(decompiledJar.path, mcLibrariesDir.path)
+        val data = UpstreamData(remappedJar.path, mcLibrariesDir.path, mcLibrariesFile.path)
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)
         }

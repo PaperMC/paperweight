@@ -26,15 +26,16 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
 import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
+import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
 import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.configureTask
-import io.papermc.paperweight.util.readUpstreamData
+import io.papermc.paperweight.util.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.io.path.exists
+import kotlin.io.path.forEachLine
+import kotlin.io.path.isRegularFile
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -42,6 +43,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.registering
 
 class PaperweightPatcher : Plugin<Project> {
 
@@ -62,6 +64,7 @@ class PaperweightPatcher : Plugin<Project> {
         val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).forUseAtConfigurationTime()
 
         val applyPatches by target.tasks.registering { group = "paperweight"}
+        val rebuildPatches by target.tasks.registering { group = "paperweight"}
         val downstreamData = target.tasks.register(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
@@ -74,12 +77,40 @@ class PaperweightPatcher : Plugin<Project> {
                 downstreamData {
                     dependsOn(createdPatchTask)
                 }
+                target.rebuildPatchTask(this, rebuildPatches)
             }
         }
 
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
-            val upstreamData = upstreamDataTask.map { readUpstreamData(it.dataFile) }
+            if (!upstreamDataTask.isPresent || !upstreamDataTask.get().dataFile.path.isRegularFile()) {
+                println("Can't add dependencies, no upstream data")
+                return@afterEvaluate
+            }
+            val upstreamData = upstreamDataTask.map {readUpstreamData(it.dataFile) }
+
+            patcher.serverProject.apply {
+                plugins.apply("java")
+                dependencies.apply {
+                    val remappedJar = upstreamData.orNull?.remappedJar
+                    if (remappedJar != null && remappedJar.exists()) {
+                        println("adding remapped jar " + remappedJar)
+                        add("implementation", target.files(remappedJar))
+                    } else {
+                        println("Can't add remapped jar to the dependencies, file not found or not part of upstream data")
+                    }
+
+                    val libsFile = upstreamData.orNull?.libFile
+                    if (libsFile != null && libsFile.exists()) {
+                        libsFile.forEachLine { line ->
+                            add("implementation", line)
+                        }
+                    } else {
+                        println("Can't add libs to the dependencies, libs file not found or not part of upstream data")
+                    }
+                }
+                apply(plugin = "com.github.johnrengelman.shadow")
+            }
 
             // Create build tasks which requires upstream data
         }
@@ -149,5 +180,23 @@ class PaperweightPatcher : Plugin<Project> {
         }
 
         return patchTask
+    }
+
+    private fun Project.rebuildPatchTask(
+            config: PatchTaskConfig,
+            rebuildPatches: TaskProvider<Task>
+    ): TaskProvider<SimpleRebuildGitPatches> {
+        val rebuildTask = tasks.configureTask<SimpleRebuildGitPatches>(config.rebuildTaskName) {
+            group = "paperweight"
+
+            patchDir.set(config.patchDir)
+            inputDir.set(config.outputDir)
+        }
+
+        rebuildPatches {
+            dependsOn(rebuildTask)
+        }
+
+        return rebuildTask
     }
 }

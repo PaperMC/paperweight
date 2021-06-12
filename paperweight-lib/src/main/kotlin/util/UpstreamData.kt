@@ -28,8 +28,9 @@ import kotlin.io.path.bufferedReader
 import org.gradle.api.file.RegularFileProperty
 
 data class UpstreamData(
-    val decompiledJar: Path,
-    val libSourceDir: Path
+    val remappedJar: Path,
+    val libSourceDir: Path,
+    val libFile: Path
 )
 
 fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData {

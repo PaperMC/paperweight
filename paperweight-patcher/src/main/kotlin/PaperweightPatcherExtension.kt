@@ -31,6 +31,7 @@ import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cacheDir
 import org.gradle.api.Action
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
+import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
@@ -41,6 +42,8 @@ import org.gradle.kotlin.dsl.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 open class PaperweightPatcherExtension(private val objects: ObjectFactory, layout: ProjectLayout, tasks: TaskContainer) {
+
+    val serverProject: Property<Project> = objects.property()
 
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 

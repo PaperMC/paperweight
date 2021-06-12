@@ -68,7 +68,8 @@ class PaperweightCore : Plugin<Project> {
 
         target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.patchPaper)
-            decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
+            remappedJar.set(tasks.remapJar.flatMap { it.outputJar })
+            mcLibrariesFile.set(tasks.setupMcLibraries.flatMap { it.outputFile })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
 
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
