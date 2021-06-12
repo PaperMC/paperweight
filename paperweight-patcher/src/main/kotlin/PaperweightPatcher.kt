@@ -51,7 +51,7 @@ class PaperweightPatcher : Plugin<Project> {
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
         target.tasks.register<Delete>("cleanCache") {
-            group = "paper"
+            group = "paperweight"
             description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
@@ -61,7 +61,7 @@ class PaperweightPatcher : Plugin<Project> {
         val workDirProp = target.providers.gradleProperty(Constants.UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
         val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).forUseAtConfigurationTime()
 
-        val applyPatches by target.tasks.registering
+        val applyPatches by target.tasks.registering { group = "paperweight"}
         val downstreamData = target.tasks.register(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
@@ -115,7 +115,7 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
 
-            if (repo.useForUpstreamData.get()) {
+            if (repo.useForUpstreamData.getOrElse(false)) {
                 upstreamDataTaskRef.set(upstreamData)
             } else {
                 upstreamDataTaskRef.compareAndSet(null, upstreamData)
@@ -131,6 +131,7 @@ class PaperweightPatcher : Plugin<Project> {
         applyPatches: TaskProvider<Task>
     ): TaskProvider<SimpleApplyGitPatches> {
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
+            group = "paperweight"
             if (upstreamTaskPair != null) {
                 val (cloneTask, upstreamDataTask) = upstreamTaskPair
                 dependsOn(upstreamDataTask)

@@ -23,7 +23,7 @@
 package io.papermc.paperweight.util
 
 import com.github.salomonbrys.kotson.fromJson
-import com.google.gson.Gson
+import com.google.gson.*
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.BaseTask
@@ -31,9 +31,11 @@ import io.papermc.paperweight.util.Constants.paperTaskOutput
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.reflect.Type
 import java.net.URI
 import java.net.URL
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.bufferedReader
@@ -53,7 +55,17 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
-val gson: Gson = Gson()
+val gson: Gson = GsonBuilder().registerTypeAdapter(Path::class.java, PathJsonConverter()).create()
+
+class PathJsonConverter : JsonDeserializer<Path?>, JsonSerializer<Path?> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Path? {
+        return if (json != null) Paths.get(json.asString) else null
+    }
+
+    override fun serialize(src: Path?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
+        return JsonPrimitive(src.toString())
+    }
+}
 
 inline fun <reified T> Gson.fromJson(file: Any): T =
     file.convertToPath().bufferedReader().use { fromJson(it) }
