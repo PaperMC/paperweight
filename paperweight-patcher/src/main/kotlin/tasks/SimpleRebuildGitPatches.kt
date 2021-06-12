@@ -23,7 +23,6 @@
 package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.ControllableOutputTask
-import io.papermc.paperweight.tasks.applyGitPatches
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -32,7 +31,6 @@ import java.util.concurrent.Future
 import kotlin.io.path.*
 import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
@@ -89,10 +87,10 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
         }
 
         Git(inputDir.path)(
-                "format-patch",
-                "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
-                "-o", patchFolder.absolutePathString(),
-                "base"
+            "format-patch",
+            "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
+            "-o", patchFolder.absolutePathString(),
+            "base"
         ).executeSilently()
         val patchDirGit = Git(patchFolder)
         patchDirGit("add", "-A", ".").executeSilently()
@@ -123,9 +121,9 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
             for (patch in patchFiles) {
                 futures += executor.submit {
                     val hasNoChanges = git("diff", "--staged", patch.name).getText().lineSequence()
-                            .filter { it.startsWith('+') || it.startsWith('-') }
-                            .filterNot { it.startsWith("+++") || it.startsWith("---") }
-                            .all { it.startsWith("+index") || it.startsWith("-index") }
+                        .filter { it.startsWith('+') || it.startsWith('-') }
+                        .filterNot { it.startsWith("+++") || it.startsWith("---") }
+                        .all { it.startsWith("+index") || it.startsWith("-index") }
 
                     if (hasNoChanges) {
                         noChangesPatches.add(patch)

@@ -63,8 +63,8 @@ class PaperweightPatcher : Plugin<Project> {
         val workDirProp = target.providers.gradleProperty(Constants.UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
         val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).forUseAtConfigurationTime()
 
-        val applyPatches by target.tasks.registering { group = "paperweight"}
-        val rebuildPatches by target.tasks.registering { group = "paperweight"}
+        val applyPatches by target.tasks.registering { group = "paperweight" }
+        val rebuildPatches by target.tasks.registering { group = "paperweight" }
         val downstreamData = target.tasks.register(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
@@ -87,7 +87,7 @@ class PaperweightPatcher : Plugin<Project> {
                 println("Can't add dependencies, no upstream data (yet). This is most likely fine")
                 return@afterEvaluate
             }
-            val upstreamData = upstreamDataTask.map {readUpstreamData(it.dataFile) }
+            val upstreamData = upstreamDataTask.map { readUpstreamData(it.dataFile) }
 
             patcher.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, upstreamData)
 
@@ -180,8 +180,8 @@ class PaperweightPatcher : Plugin<Project> {
     }
 
     private fun Project.rebuildPatchTask(
-            config: PatchTaskConfig,
-            rebuildPatches: TaskProvider<Task>
+        config: PatchTaskConfig,
+        rebuildPatches: TaskProvider<Task>
     ): TaskProvider<SimpleRebuildGitPatches> {
         val rebuildTask = tasks.configureTask<SimpleRebuildGitPatches>(config.rebuildTaskName) {
             group = "paperweight"
