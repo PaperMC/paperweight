@@ -23,17 +23,32 @@
 package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
-import org.gradle.api.Named
+import io.papermc.paperweight.util.providerFor
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.kotlin.dsl.domainObjectContainer
+import org.gradle.kotlin.dsl.newInstance
+import org.gradle.kotlin.dsl.property
 
-interface PatcherUpstream : Named {
+open class DefaultPatcherUpstream(
+    private val name: String,
+    protected val objects: ObjectFactory,
+    protected val tasks: TaskContainer
+) : PatcherUpstream {
 
-    val upstreamDataTaskName: String
-    val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
+    override val patchTasks: NamedDomainObjectContainer<PatchTaskConfig> = objects.domainObjectContainer(PatchTaskConfig::class) { name ->
+        objects.newInstance<DefaultPatchTaskConfig>(name, this.name)
+    }
 
-    val useForUpstreamData: Property<Boolean>
+    override val upstreamDataTaskName: String
+        get() = "get${name.capitalize()}UpstreamData"
+    override val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
+        get() = tasks.providerFor(upstreamDataTaskName)
 
-    val patchTasks: NamedDomainObjectContainer<PatchTaskConfig>
+    override val useForUpstreamData: Property<Boolean> = objects.property()
+
+    override fun getName(): String = name
 }

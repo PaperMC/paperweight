@@ -44,6 +44,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val sourceDir: DirectoryProperty
 
+    @get:Optional
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 
@@ -89,7 +90,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         git("config", "commit.gpgsign", "false").executeSilently()
 
-        val patches = patchDir.path.listDirectoryEntries("*.patch")
+        val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
 
         if (sourceMcDevJar.isPresent) {
             McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.pathOrNull, mcdevImports.pathOrNull, srcDir)
@@ -100,6 +101,6 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         git("tag", "-d", "base").runSilently(silenceErr = true)
         git("tag", "base").executeSilently()
 
-        applyGitPatches(git, target, output, patchDir.path, printOutput.get())
+        applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
     }
 }

@@ -35,7 +35,6 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
 import kotlin.io.path.forEachLine
-import kotlin.io.path.isRegularFile
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -83,19 +82,13 @@ class PaperweightPatcher : Plugin<Project> {
 
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
-            if (!upstreamDataTask.isPresent || !upstreamDataTask.get().dataFile.path.isRegularFile()) {
-                println("Can't add dependencies, no upstream data (yet). This is most likely fine")
-                return@afterEvaluate
-            }
-            val upstreamData = upstreamDataTask.map { readUpstreamData(it.dataFile) }
+            val upstreamData = upstreamDataTask.flatMap { target.provider { readUpstreamData(it.dataFile) } }
 
             patcher.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, upstreamData)
-
-            // Create build tasks which requires upstream data
         }
     }
 
-    private fun Project.setupServerProject(parent: Project, upstreamData: Provider<UpstreamData>) {
+    private fun Project.setupServerProject(parent: Project, upstreamData: Provider<UpstreamData?>) {
         plugins.apply("java")
         dependencies.apply {
             val remappedJar = upstreamData.orNull?.remappedJar
@@ -110,6 +103,7 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
         }
+
         apply(plugin = "com.github.johnrengelman.shadow")
     }
 
@@ -119,11 +113,20 @@ class PaperweightPatcher : Plugin<Project> {
         workDirProp: Provider<String>,
         dataFileProp: Provider<String>,
         upstreamDataTaskRef: AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>
-    ): Pair<TaskProvider<CheckoutRepo>, TaskProvider<PaperweightPatcherUpstreamData>>? {
-        return (upstream as? RepoPatcherUpstream)?.let { repo ->
-            val workDirFromProp = layout.dir(workDirProp.map { File(it) }).orElse(ext.upstreamsDir)
-            val dataFileFromProp = layout.file(dataFileProp.map { File(it) })
+    ): Pair<TaskProvider<CheckoutRepo>?, TaskProvider<PaperweightPatcherUpstreamData>> {
+        val workDirFromProp = layout.dir(workDirProp.map { File(it) }).orElse(ext.upstreamsDir)
+        val dataFileFromProp = layout.file(dataFileProp.map { File(it) })
 
+        val upstreamData = tasks.configureTask<PaperweightPatcherUpstreamData>(upstream.upstreamDataTaskName) {
+            workDir.set(workDirFromProp)
+            if (dataFileFromProp.isPresent) {
+                dataFile.set(dataFileFromProp)
+            } else {
+                dataFile.set(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
+            }
+        }
+
+        val cloneTask = (upstream as? RepoPatcherUpstream)?.let { repo ->
             val cloneTask = tasks.configureTask<CheckoutRepo>(repo.cloneTaskName) {
                 repoName.set(repo.name)
                 url.set(repo.url)
@@ -132,43 +135,40 @@ class PaperweightPatcher : Plugin<Project> {
                 workDir.set(workDirFromProp)
             }
 
-            val upstreamData = tasks.configureTask<PaperweightPatcherUpstreamData>(repo.upstreamDataTaskName) {
+            upstreamData {
                 dependsOn(cloneTask)
                 projectDir.set(cloneTask.flatMap { it.outputDir })
-                workDir.set(workDirFromProp)
-                if (dataFileFromProp.isPresent) {
-                    dataFile.set(dataFileFromProp)
-                } else {
-                    dataFile.set(workDirFromProp.map { it.file("upstreamData${repo.name.capitalize()}.json") })
-                }
             }
 
-            if (repo.useForUpstreamData.getOrElse(false)) {
-                upstreamDataTaskRef.set(upstreamData)
-            } else {
-                upstreamDataTaskRef.compareAndSet(null, upstreamData)
-            }
-
-            return@let cloneTask to upstreamData
+            return@let cloneTask
         }
+
+        if (upstream.useForUpstreamData.getOrElse(false)) {
+            upstreamDataTaskRef.set(upstreamData)
+        } else {
+            upstreamDataTaskRef.compareAndSet(null, upstreamData)
+        }
+
+        return cloneTask to upstreamData
     }
 
     private fun Project.createPatchTask(
         config: PatchTaskConfig,
-        upstreamTaskPair: Pair<TaskProvider<CheckoutRepo>, TaskProvider<PaperweightPatcherUpstreamData>>?,
+        upstreamTaskPair: Pair<TaskProvider<CheckoutRepo>?, TaskProvider<PaperweightPatcherUpstreamData>>,
         applyPatches: TaskProvider<Task>
     ): TaskProvider<SimpleApplyGitPatches> {
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
-            if (upstreamTaskPair != null) {
-                val (cloneTask, upstreamDataTask) = upstreamTaskPair
-                dependsOn(upstreamDataTask)
+            val (cloneTask, upstreamDataTask) = upstreamTaskPair
+            dependsOn(upstreamDataTask)
+
+            if (cloneTask != null) {
                 sourceDir.set(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
             } else {
                 sourceDir.set(config.sourceDir)
             }
 
-            patchDir.set(config.patchDir)
+            patchDir.set(config.patchDir.flatMap { provider { if (it.path.exists()) it else null } })
             outputDir.set(config.outputDir)
         }
 

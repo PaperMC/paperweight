@@ -116,7 +116,7 @@ fun ControllableOutputTask.applyGitPatches(
     git: Git,
     target: String,
     outputDir: Path,
-    patchDir: Path,
+    patchDir: Path?,
     printOutput: Boolean
 ) {
     if (printOutput) {
@@ -128,7 +128,7 @@ fun ControllableOutputTask.applyGitPatches(
 
     git("am", "--abort").runSilently(silenceErr = true)
 
-    val patches = patchDir.useDirectoryEntries("*.patch") { it.toMutableList() }
+    val patches = patchDir?.useDirectoryEntries("*.patch") { it.toMutableList() } ?: mutableListOf()
     if (patches.isEmpty()) {
         if (printOutput) {
             println("No patches found")

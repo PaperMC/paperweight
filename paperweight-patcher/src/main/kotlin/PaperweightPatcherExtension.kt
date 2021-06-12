@@ -23,6 +23,7 @@
 package io.papermc.paperweight.patcher
 
 import io.papermc.paperweight.patcher.upstream.DefaultPaperRepoPatcherUpstream
+import io.papermc.paperweight.patcher.upstream.DefaultPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.DefaultRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.PaperRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
@@ -60,8 +61,9 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
     val upstreamsDir: Property<Directory> = objects.directoryProperty().convention(layout.cacheDir(Constants.UPSTREAMS))
 
     init {
-        upstreams.registerFactory(RepoPatcherUpstream::class.java) { name -> DefaultRepoPatcherUpstream(name, objects, tasks) }
-        upstreams.registerFactory(PaperRepoPatcherUpstream::class.java) { name -> DefaultPaperRepoPatcherUpstream(name, objects, tasks) }
+        upstreams.registerFactory(PatcherUpstream::class.java) { name -> DefaultPatcherUpstream(name, objects, tasks) }
+        upstreams.registerFactory(RepoPatcherUpstream::class.java) { name -> DefaultRepoPatcherUpstream(name, objects, tasks, layout) }
+        upstreams.registerFactory(PaperRepoPatcherUpstream::class.java) { name -> DefaultPaperRepoPatcherUpstream(name, objects, tasks, layout) }
     }
 
     fun usePaperUpstream(refProvider: Provider<String>, action: Action<PaperRepoPatcherUpstream>) {

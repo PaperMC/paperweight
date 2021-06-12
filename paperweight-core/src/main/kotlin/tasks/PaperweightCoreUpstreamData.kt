@@ -25,6 +25,7 @@ package io.papermc.paperweight.core.tasks
 import io.papermc.paperweight.util.UpstreamData
 import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
 import javax.inject.Inject
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.createDirectories
@@ -34,6 +35,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -45,8 +47,13 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
+    @get:Optional
     @get:InputFile
     abstract val mcLibrariesFile: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val mcdevFile: RegularFileProperty
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
@@ -60,7 +67,7 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
         dataFilePath.parent.createDirectories()
 
-        val data = UpstreamData(remappedJar.path, mcLibrariesDir.path, mcLibrariesFile.path)
+        val data = UpstreamData(remappedJar.path, mcLibrariesDir.path, mcLibrariesFile.pathOrNull, mcdevFile.pathOrNull)
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)
         }

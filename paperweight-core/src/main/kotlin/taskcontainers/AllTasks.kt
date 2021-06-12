@@ -66,8 +66,9 @@ open class AllTasks(
         libraries.set(downloadMcLibraries.flatMap { it.outputDir })
     }
 
-    val patchPaperApi by tasks.registering<ApplyGitPatches> {
+    val applyApiPatches by tasks.registering<ApplyGitPatches> {
         group = "paper"
+        description = "Setup the Paper-API project"
         branch.set("HEAD")
         upstreamBranch.set("upstream")
         upstream.set(patchSpigotApi.flatMap { it.outputDir })
@@ -78,8 +79,9 @@ open class AllTasks(
     }
 
     @Suppress("DuplicatedCode")
-    val patchPaperServer by tasks.registering<ApplyPaperPatches> {
+    val applyServerPatches by tasks.registering<ApplyPaperPatches> {
         group = "paper"
+        description = "Setup the Paper-Server project"
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
@@ -92,14 +94,15 @@ open class AllTasks(
         outputDir.set(extension.paper.paperServerDir)
     }
 
-    val patchPaper by tasks.registering<Task> {
+    val applyPatches by tasks.registering<Task> {
         group = "paper"
         description = "Set up the Paper development environment"
-        dependsOn(patchPaperApi, patchPaperServer)
+        dependsOn(applyApiPatches, applyServerPatches)
     }
 
     val rebuildApiPatches by tasks.registering<RebuildPaperPatches> {
         group = "paper"
+        description = "Rebuilds patches to api"
         inputDir.set(extension.paper.paperApiDir)
 
         patchDir.set(extension.paper.spigotApiPatchDir)
@@ -107,12 +110,14 @@ open class AllTasks(
 
     val rebuildServerPatches by tasks.registering<RebuildPaperPatches> {
         group = "paper"
+        description = "Rebuilds patches to server"
         inputDir.set(extension.paper.paperServerDir)
         server.set(true)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
     }
 
+    @Suppress("unused")
     val rebuildPatches by tasks.registering<Task> {
         group = "paper"
         description = "Rebuilds patches to api and server"

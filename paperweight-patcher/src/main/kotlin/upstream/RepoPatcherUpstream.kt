@@ -23,7 +23,6 @@
 package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
 import org.gradle.api.Action
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskProvider
@@ -34,11 +33,7 @@ interface RepoPatcherUpstream : PatcherUpstream {
     val ref: Property<String>
 
     val cloneTaskName: String
-    val upstreamDataTaskName: String
     val cloneTask: TaskProvider<CheckoutRepo>
-    val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
-
-    val useForUpstreamData: Property<Boolean>
 
     @JvmDefault
     fun github(owner: String, repo: String): String {

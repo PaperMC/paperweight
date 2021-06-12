@@ -25,16 +25,24 @@ package io.papermc.paperweight.util
 import com.github.salomonbrys.kotson.fromJson
 import java.nio.file.Path
 import kotlin.io.path.bufferedReader
+import kotlin.io.path.isRegularFile
 import org.gradle.api.file.RegularFileProperty
 
 data class UpstreamData(
     val remappedJar: Path,
     val libSourceDir: Path,
-    val libFile: Path
+    val libFile: Path?,
+    val mcdevFile: Path?
 )
 
-fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData {
-    return inputFile.path.bufferedReader(Charsets.UTF_8).use { reader ->
-        gson.fromJson(reader)
+fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData? {
+    return inputFile.pathOrNull?.let { file ->
+        if (file.isRegularFile()) {
+            file.bufferedReader(Charsets.UTF_8).use { reader ->
+                gson.fromJson(reader)
+            }
+        } else {
+            null
+        }
     }
 }

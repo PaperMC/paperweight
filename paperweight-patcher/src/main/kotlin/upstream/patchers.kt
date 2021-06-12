@@ -23,10 +23,9 @@
 package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
 import io.papermc.paperweight.util.providerFor
 import org.gradle.api.Action
-import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskContainer
@@ -34,34 +33,24 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
 open class DefaultRepoPatcherUpstream(
-    private val name: String,
-    protected val objects: ObjectFactory,
-    private val tasks: TaskContainer
-) : RepoPatcherUpstream {
+    name: String,
+    objects: ObjectFactory,
+    tasks: TaskContainer,
+    protected val layout: ProjectLayout
+) : DefaultPatcherUpstream(name, objects, tasks), RepoPatcherUpstream {
 
     override val url: Property<String> = objects.property()
     override val ref: Property<String> = objects.property()
-    override val useForUpstreamData: Property<Boolean> = objects.property()
-
-    override val patchTasks: NamedDomainObjectContainer<PatchTaskConfig> = objects.domainObjectContainer(PatchTaskConfig::class) { name ->
-        objects.newInstance<DefaultPatchTaskConfig>(name, this.name)
-    }
 
     override val cloneTaskName: String
         get() = "clone${name.capitalize()}Repo"
-    override val upstreamDataTaskName: String
-        get() = "get${name.capitalize()}UpstreamData"
     override val cloneTask: TaskProvider<CheckoutRepo>
         get() = tasks.providerFor(cloneTaskName)
-    override val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
-        get() = tasks.providerFor(upstreamDataTaskName)
-
-    override fun getName(): String {
-        return name
-    }
 
     override fun withStandardPatcher(action: Action<StandardPatcherConfig>) {
         val config = objects.newInstance(StandardPatcherConfig::class)
+        config.apiPatchDir.convention(layout.projectDirectory.dir("patches/api"))
+        config.serverPatchDir.convention(layout.projectDirectory.dir("patches/server"))
         action.execute(config)
 
         patchTasks {
@@ -80,11 +69,13 @@ open class DefaultRepoPatcherUpstream(
     }
 }
 
-open class DefaultPaperRepoPatcherUpstream(name: String, objects: ObjectFactory, taskContainer: TaskContainer) :
-    DefaultRepoPatcherUpstream(name, objects, taskContainer), PaperRepoPatcherUpstream {
+open class DefaultPaperRepoPatcherUpstream(name: String, objects: ObjectFactory, taskContainer: TaskContainer, layout: ProjectLayout) :
+    DefaultRepoPatcherUpstream(name, objects, taskContainer, layout), PaperRepoPatcherUpstream {
 
     override fun withPaperPatcher(action: Action<MinimalPatcherConfig>) {
         val minimalConfig = objects.newInstance(MinimalPatcherConfig::class)
+        minimalConfig.apiPatchDir.convention(layout.projectDirectory.dir("patches/api"))
+        minimalConfig.serverPatchDir.convention(layout.projectDirectory.dir("patches/server"))
         action.execute(minimalConfig)
 
         val paperAction = Action<StandardPatcherConfig> {
