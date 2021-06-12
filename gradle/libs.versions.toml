@@ -1,7 +1,7 @@
 [versions]
 asm = "9.1"
 lorenz = "0.5.6"
-hypo = "1.0.0"
+hypo = "1.0.1"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
