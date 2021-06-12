@@ -84,36 +84,33 @@ class PaperweightPatcher : Plugin<Project> {
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
             if (!upstreamDataTask.isPresent || !upstreamDataTask.get().dataFile.path.isRegularFile()) {
-                println("Can't add dependencies, no upstream data")
+                println("Can't add dependencies, no upstream data (yet). This is most likely fine")
                 return@afterEvaluate
             }
             val upstreamData = upstreamDataTask.map {readUpstreamData(it.dataFile) }
 
-            patcher.serverProject.apply {
-                plugins.apply("java")
-                dependencies.apply {
-                    val remappedJar = upstreamData.orNull?.remappedJar
-                    if (remappedJar != null && remappedJar.exists()) {
-                        println("adding remapped jar " + remappedJar)
-                        add("implementation", target.files(remappedJar))
-                    } else {
-                        println("Can't add remapped jar to the dependencies, file not found or not part of upstream data")
-                    }
-
-                    val libsFile = upstreamData.orNull?.libFile
-                    if (libsFile != null && libsFile.exists()) {
-                        libsFile.forEachLine { line ->
-                            add("implementation", line)
-                        }
-                    } else {
-                        println("Can't add libs to the dependencies, libs file not found or not part of upstream data")
-                    }
-                }
-                apply(plugin = "com.github.johnrengelman.shadow")
-            }
+            patcher.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, upstreamData)
 
             // Create build tasks which requires upstream data
         }
+    }
+
+    private fun Project.setupServerProject(parent: Project, upstreamData: Provider<UpstreamData>) {
+        plugins.apply("java")
+        dependencies.apply {
+            val remappedJar = upstreamData.orNull?.remappedJar
+            if (remappedJar != null && remappedJar.exists()) {
+                add("implementation", parent.files(remappedJar))
+            }
+
+            val libsFile = upstreamData.orNull?.libFile
+            if (libsFile != null && libsFile.exists()) {
+                libsFile.forEachLine { line ->
+                    add("implementation", line)
+                }
+            }
+        }
+        apply(plugin = "com.github.johnrengelman.shadow")
     }
 
     private fun Project.createUpstreamTask(

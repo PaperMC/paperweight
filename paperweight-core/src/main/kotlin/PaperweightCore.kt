@@ -68,7 +68,7 @@ class PaperweightCore : Plugin<Project> {
 
         target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.patchPaper)
-            remappedJar.set(tasks.remapJar.flatMap { it.outputJar })
+            remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
             mcLibrariesFile.set(tasks.setupMcLibraries.flatMap { it.outputFile })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
 
