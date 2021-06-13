@@ -26,18 +26,24 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.set
 import io.sigpipe.jbsdiff.Diff
 import java.io.IOException
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Properties
+import javax.inject.Inject
 import kotlin.experimental.and
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.kotlin.dsl.submit
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 
 abstract class GeneratePaperclipPatch : ZippedTask() {
 
@@ -50,78 +56,107 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
     @get:Input
     abstract val mcVersion: Property<String>
 
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
     override fun run(rootDir: Path) {
-        val patchFile = rootDir.resolve("paperMC.patch")
-        val propFile = rootDir.resolve("patch.properties")
-        val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE")
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs("-Xmx1G")
+        }
 
-        try {
-            patchedJar.path.openZip().use { zipFs ->
-                val protocolPath = zipFs.getPath("META-INF", PROTOCOL_FILE)
-                if (protocolPath.notExists()) {
-                    protocol.deleteForcefully()
-                    return@use
+        queue.submit(PaperclipAction::class) {
+            dir.set(rootDir.toAbsolutePath().toString())
+            patchedJar.set(this@GeneratePaperclipPatch.patchedJar.path)
+            originalJar.set(this@GeneratePaperclipPatch.originalJar.path)
+            mcVersion.set(this@GeneratePaperclipPatch.mcVersion)
+        }
+
+        queue.await()
+    }
+
+    abstract class PaperclipAction : WorkAction<PaperclipParameters> {
+        override fun execute() {
+            val rootDir = Path(parameters.dir.get())
+            println("root dir $rootDir")
+            val patchFile = rootDir.resolve("paperMC.patch")
+            val propFile = rootDir.resolve("patch.properties")
+            val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE")
+
+            try {
+                parameters.patchedJar.path.openZip().use { zipFs ->
+                    val protocolPath = zipFs.getPath("META-INF", PROTOCOL_FILE)
+                    if (protocolPath.notExists()) {
+                        protocol.deleteForcefully()
+                        return@use
+                    }
+
+                    protocol.parent.createDirectories()
+                    protocolPath.copyTo(protocol, overwrite = true)
                 }
-
-                protocol.parent.createDirectories()
-                protocolPath.copyTo(protocol, overwrite = true)
+            } catch (e: IOException) {
+                throw PaperweightException("Failed to read $parameters.patchedJar contents", e)
             }
-        } catch (e: IOException) {
-            throw PaperweightException("Failed to read $patchedJar contents", e)
-        }
 
-        // Read the files into memory
-        println("Reading jars into memory")
-        val originalBytes = originalJar.path.readBytes()
-        val patchedBytes = patchedJar.path.readBytes()
+            // Read the files into memory
+            println("Reading jars into memory")
+            val originalBytes = parameters.originalJar.path.readBytes()
+            val patchedBytes = parameters.patchedJar.path.readBytes()
 
-        println("Creating Paperclip patch")
-        try {
-            patchFile.outputStream().use { patchOutput ->
-                Diff.diff(originalBytes, patchedBytes, patchOutput)
+            println("Creating Paperclip patch")
+            try {
+                patchFile.outputStream().use { patchOutput ->
+                    Diff.diff(originalBytes, patchedBytes, patchOutput)
+                }
+            } catch (e: Exception) {
+                throw PaperweightException("Error creating patch between ${parameters.originalJar.path} and ${parameters.patchedJar.path}", e)
             }
-        } catch (e: Exception) {
-            throw PaperweightException("Error creating patch between ${originalJar.path} and ${patchedJar.path}", e)
+
+            // Add the SHA-256 hashes for the files
+            val digestSha256 = try {
+                MessageDigest.getInstance("SHA-256")
+            } catch (e: NoSuchAlgorithmException) {
+                throw PaperweightException("Could not create SHA-256 hasher", e)
+            }
+
+            // Vanilla's URL uses a SHA1 hash of the vanilla server jar
+            val digestSha1 = try {
+                MessageDigest.getInstance("SHA1")
+            } catch (e: NoSuchAlgorithmException) {
+                throw PaperweightException("Could not create SHA1 hasher", e)
+            }
+
+            println("Hashing files")
+            val originalSha1 = digestSha1.digest(originalBytes)
+            val originalSha256 = digestSha256.digest(originalBytes)
+            val patchedSha256 = digestSha256.digest(patchedBytes)
+
+            val prop = Properties()
+            prop["originalHash"] = toHex(originalSha256)
+            prop["patchedHash"] = toHex(patchedSha256)
+            prop["patch"] = "paperMC.patch"
+            prop["sourceUrl"] = "https://launcher.mojang.com/v1/objects/" + toHex(originalSha1).toLowerCase() + "/server.jar"
+            prop["version"] = parameters.mcVersion.get()
+
+            println("Writing properties file")
+            propFile.bufferedWriter().use { writer ->
+                prop.store(writer, "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory.")
+            }
         }
 
-        // Add the SHA-256 hashes for the files
-        val digestSha256 = try {
-            MessageDigest.getInstance("SHA-256")
-        } catch (e: NoSuchAlgorithmException) {
-            throw PaperweightException("Could not create SHA-256 hasher", e)
-        }
-
-        // Vanilla's URL uses a SHA1 hash of the vanilla server jar
-        val digestSha1 = try {
-            MessageDigest.getInstance("SHA1")
-        } catch (e: NoSuchAlgorithmException) {
-            throw PaperweightException("Could not create SHA1 hasher", e)
-        }
-
-        println("Hashing files")
-        val originalSha1 = digestSha1.digest(originalBytes)
-        val originalSha256 = digestSha256.digest(originalBytes)
-        val patchedSha256 = digestSha256.digest(patchedBytes)
-
-        val prop = Properties()
-        prop["originalHash"] = toHex(originalSha256)
-        prop["patchedHash"] = toHex(patchedSha256)
-        prop["patch"] = "paperMC.patch"
-        prop["sourceUrl"] = "https://launcher.mojang.com/v1/objects/" + toHex(originalSha1).toLowerCase() + "/server.jar"
-        prop["version"] = mcVersion.get()
-
-        println("Writing properties file")
-        propFile.bufferedWriter().use { writer ->
-            prop.store(writer, "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory.")
+        private fun toHex(hash: ByteArray): String {
+            val sb: StringBuilder = StringBuilder(hash.size * 2)
+            for (aHash in hash) {
+                sb.append("%02X".format(aHash and 0xFF.toByte()))
+            }
+            return sb.toString()
         }
     }
 
-    private fun toHex(hash: ByteArray): String {
-        val sb: StringBuilder = StringBuilder(hash.size * 2)
-        for (aHash in hash) {
-            sb.append("%02X".format(aHash and 0xFF.toByte()))
-        }
-        return sb.toString()
+    interface PaperclipParameters : WorkParameters {
+        val dir: Property<String>
+        val patchedJar: RegularFileProperty
+        val originalJar: RegularFileProperty
+        val mcVersion: Property<String>
     }
 
     companion object {
