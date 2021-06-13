@@ -37,9 +37,11 @@ import javax.inject.Inject
 import kotlin.experimental.and
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -56,12 +58,19 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
     @get:Input
     abstract val mcVersion: Property<String>
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    override fun init() {
+        jvmargs.convention(listOf("-Xmx1G"))
+    }
+
     override fun run(rootDir: Path) {
         val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs("-Xmx1G")
+            forkOptions.jvmArgs(jvmargs.get())
         }
 
         queue.submit(PaperclipAction::class) {

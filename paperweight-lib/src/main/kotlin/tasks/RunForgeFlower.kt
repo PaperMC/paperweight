@@ -34,8 +34,10 @@ import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -50,10 +52,14 @@ abstract class RunForgeFlower : BaseTask() {
     @get:Classpath
     abstract val libraries: DirectoryProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
     override fun init() {
+        jvmargs.convention(listOf("-Xmx4G"))
         outputJar.convention(defaultOutput())
     }
 
@@ -100,9 +106,7 @@ abstract class RunForgeFlower : BaseTask() {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.deleteForcefully()
 
-            val jvmArgs = listOf("-Xmx4G")
-
-            runJar(executable, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
+            runJar(executable, layout.cache, logFile, jvmArgs = jvmargs.get(), args = argList.toTypedArray())
 
             // FernFlower is weird with how it does directory output
             target.resolve(inputJar.path.name).moveTo(out, overwrite = true)
