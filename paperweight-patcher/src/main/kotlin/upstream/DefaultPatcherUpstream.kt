@@ -40,7 +40,7 @@ open class DefaultPatcherUpstream(
 ) : PatcherUpstream {
 
     override val patchTasks: NamedDomainObjectContainer<PatchTaskConfig> = objects.domainObjectContainer(PatchTaskConfig::class) { name ->
-        objects.newInstance<DefaultPatchTaskConfig>(name, this.name)
+        objects.newInstance<DefaultPatchTaskConfig>(name)
     }
 
     override val upstreamDataTaskName: String

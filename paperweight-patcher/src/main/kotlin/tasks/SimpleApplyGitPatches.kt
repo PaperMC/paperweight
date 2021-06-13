@@ -97,7 +97,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         }
 
         git("add", ".").executeSilently()
-        git("commit", "--allow-empty", "-m", "--author=Initial Source <auto@mated.null>").executeSilently()
+        git("commit", "--allow-empty", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
         git("tag", "-d", "base").runSilently(silenceErr = true)
         git("tag", "base").executeSilently()
 

@@ -35,7 +35,6 @@ import org.gradle.kotlin.dsl.*
 
 open class DefaultPatchTaskConfig @Inject constructor(
     private val name: String,
-    private val parentName: String,
     private val tasks: TaskContainer,
     objects: ObjectFactory,
 ) : PatchTaskConfig {
@@ -46,10 +45,10 @@ open class DefaultPatchTaskConfig @Inject constructor(
     override val outputDir: DirectoryProperty = objects.directoryProperty()
 
     override val patchTaskName: String
-        get() = "patch${parentName.capitalize()}${name.capitalize()}"
+        get() = "apply${name.capitalize()}Patches"
 
     override val rebuildTaskName: String
-        get() = "rebuild${parentName.capitalize()}${name.capitalize()}"
+        get() = "rebuild${name.capitalize()}Patches"
 
     override val patchTask: TaskProvider<SimpleApplyGitPatches>
         get() = tasks.providerFor(patchTaskName)
