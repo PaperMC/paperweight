@@ -84,6 +84,13 @@ abstract class RemapPatches : BaseTask() {
 
     @get:Internal
     @get:Option(
+        option = "skip-remapping-patches",
+        description = "For forks, skip remapping first # of patches, but still apply them (e.g. --skip-remapping-patches=300)"
+    )
+    abstract val skipRemappingPatches: Property<String>
+
+    @get:Internal
+    @get:Option(
         option = "skip-patches",
         description = "For resuming, skip first # of patches (e.g. --skip-patches=300)"
     )
@@ -98,12 +105,14 @@ abstract class RemapPatches : BaseTask() {
 
     override fun init() {
         skipPatches.convention("0")
+        skipRemappingPatches.convention("0")
         limitPatches.convention("-1")
     }
 
     @TaskAction
     fun run() {
         val skip = skipPatches.get().toInt()
+        val skipRemapping = skipRemappingPatches.get().toInt()
         var limit = limitPatches.get().toInt()
 
         // Check patches
@@ -184,6 +193,20 @@ abstract class RemapPatches : BaseTask() {
 
             // Repo setup is done, we can begin the patch loop now
             patches.asSequence().dropWhile { it.name.substringBefore('-').toInt() <= skip }.take(limit).forEach { patch ->
+                val patchNum = patch.name.substringBefore('-').toInt()
+                if (patchNum < skipRemapping) {
+                    println("Applying $patch (not remapping)")
+                    patchApplier.applyPatch(patch)
+                    return@forEach
+                } else if (patchNum == skipRemapping) {
+                    println("Applying $patch - using as base remapped commit")
+                    patchApplier.applyPatch(patch)
+                    patchApplier.checkoutRemapped()
+                    remapper.remap()
+                    patchApplier.commitInitialRemappedSource()
+                    return@forEach
+                }
+
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")
