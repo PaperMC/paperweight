@@ -30,7 +30,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 
-fun Project.setupServerProject(parent: Project, remappedJar: Any?, libsDir: Any?, reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar>? {
+fun Project.setupServerProject(parent: Project, remappedJar: Any?, libsFile: Any?, reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar>? {
     if (!projectDir.exists()) {
         return null
     }
@@ -42,7 +42,7 @@ fun Project.setupServerProject(parent: Project, remappedJar: Any?, libsDir: Any?
             add("implementation", parent.files(remapped))
         }
 
-        val libs = libsDir.convertToPathOrNull()
+        val libs = libsFile.convertToPathOrNull()
         if (libs != null && libs.exists()) {
             libs.forEachLine { line ->
                 add("implementation", line)

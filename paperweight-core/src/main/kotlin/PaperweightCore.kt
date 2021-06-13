@@ -70,7 +70,7 @@ class PaperweightCore : Plugin<Project> {
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
-            mcLibrariesFile.set(tasks.setupMcLibraries.flatMap { it.outputFile })
+            mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
             reobfMappings.set(tasks.generateReobfMappings.flatMap { it.reobfMappings })
 
