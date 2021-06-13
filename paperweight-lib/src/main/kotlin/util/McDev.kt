@@ -30,7 +30,8 @@ object McDev {
 
     private val bannedClasses = setOf(
         "KeyedObject",
-        "MCUtil"
+        "MCUtil",
+        "ServerWorkerThread",
     )
 
     fun importMcDev(patches: Iterable<Path>, decompJar: Path, libraryImports: Path?, libraryDir: Path?, additionalClasses: Path?, targetDir: Path) {
@@ -51,7 +52,9 @@ object McDev {
 
                 val zipPath = zipFile.getPath(vanillaFile)
                 if (zipPath.notExists()) {
-                    throw PaperweightException("Vanilla class not found: $vanillaFile")
+                    println("Vanilla class not found: $vanillaFile. Is it a paper-added class?")
+//                    throw PaperweightException("Vanilla class not found: $vanillaFile") // TODO re-enable harsh check once we moved all our classes out of vanilla packages
+                    continue
                 }
                 zipPath.copyTo(file)
             }
