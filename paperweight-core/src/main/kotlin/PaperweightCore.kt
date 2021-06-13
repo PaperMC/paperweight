@@ -27,14 +27,13 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
 import io.papermc.paperweight.tasks.GeneratePaperclipPatch
-import io.papermc.paperweight.tasks.RemapJar
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.initSubmodules
 import io.papermc.paperweight.util.registering
+import io.papermc.paperweight.util.setupServerProject
 import java.io.File
-import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
@@ -68,80 +67,48 @@ class PaperweightCore : Plugin<Project> {
 
         target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
+            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
+            mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.setupMcLibraries.flatMap { it.outputFile })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
+            reobfMappings.set(tasks.generateReobfMappings.flatMap { it.reobfMappings })
 
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
         }
 
         // Setup the server jar
         target.afterEvaluate {
-            target.ext.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, tasks)?.let { reobfJar ->
-                val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                    originalJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-                    patchedJar.set(reobfJar.flatMap { it.outputJar })
-                    mcVersion.set(target.ext.minecraftVersion)
-                }
+            val cache = target.layout.cache
 
-                target.tasks.named("jar", Jar::class) {
-                    val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
-                    dependsOn(paperclipConfig, generatePaperclipPatch)
+            val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
+            val reobfJar = serverProj.setupServerProject(
+                target,
+                cache.resolve(Constants.FINAL_REMAPPED_JAR),
+                cache.resolve(Constants.SERVER_LIBRARIES),
+            ) {
+                mappingsFile.set(tasks.generateReobfMappings.flatMap { it.reobfMappings })
+            } ?: return@afterEvaluate
 
-                    val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
-                    from(paperclipZip) {
-                        exclude("META-INF/MANIFEST.MF")
-                    }
-                    from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
-
-                    manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
-                }
-            }
-        }
-    }
-
-    private fun Project.setupServerProject(parent: Project, allTasks: AllTasks): TaskProvider<RemapJar>? {
-        if (!projectDir.exists()) {
-            return null
-        }
-
-        val cache = parent.layout.cache
-
-        plugins.apply("java")
-        dependencies.apply {
-            val remappedJar = cache.resolve(Constants.FINAL_REMAPPED_JAR)
-            if (remappedJar.exists()) {
-                add("implementation", parent.files(remappedJar))
+            val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
+                originalJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+                patchedJar.set(reobfJar.flatMap { it.outputJar })
+                mcVersion.set(target.ext.minecraftVersion)
             }
 
-            val libsFile = cache.resolve(Constants.SERVER_LIBRARIES)
-            if (libsFile.exists()) {
-                libsFile.forEachLine { line ->
-                    add("implementation", line)
+            target.tasks.named("jar", Jar::class) {
+                val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
+                dependsOn(paperclipConfig, generatePaperclipPatch)
+
+                val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
+                from(paperclipZip) {
+                    exclude("META-INF/MANIFEST.MF")
                 }
+                from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
+
+                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
             }
         }
-
-        apply(plugin = "com.github.johnrengelman.shadow")
-        return createBuildTasks(parent, allTasks)
-    }
-
-    private fun Project.createBuildTasks(parent: Project, allTasks: AllTasks): TaskProvider<RemapJar> {
-        val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
-
-        val reobfJar by tasks.registering<RemapJar> {
-            dependsOn(shadowJar)
-            inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
-
-            mappingsFile.set(allTasks.generateReobfMappings.flatMap { it.reobfMappings })
-            fromNamespace.set(Constants.DEOBF_NAMESPACE)
-            toNamespace.set(Constants.SPIGOT_NAMESPACE)
-            remapper.fileProvider(rootProject.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
-
-            outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
-        }
-
-        return reobfJar
     }
 
     private fun Project.createPatchRemapTask(allTasks: AllTasks) {
@@ -159,6 +126,8 @@ class PaperweightCore : Plugin<Project> {
          * Then you should be able to run `./gradlew remapPatches` without having to worry about all of the other tasks
          * running whenever you make changes to paperweight.
          */
+
+        @Suppress("UNUSED_VARIABLE")
         val remapPatches: TaskProvider<RemapPatches> by tasks.registering<RemapPatches> {
             group = "paper"
             description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."

@@ -103,7 +103,7 @@ abstract class SpigotRemapJar : BaseTask() {
                 val logFile = layout.cache.resolve(paperTaskOutput("class.log"))
                 logFile.deleteForcefully()
                 runJar(
-                    specialSource2Jar,
+                    objects.fileCollection().from(specialSource2Jar),
                     workingDir = work,
                     logFile = logFile,
                     args = doReplacements(classMapCommand.get(), inputJarPath, classMappingPath, classJarPath) {
@@ -119,7 +119,7 @@ abstract class SpigotRemapJar : BaseTask() {
                 val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
                 logFile.deleteForcefully()
                 runJar(
-                    specialSource2Jar,
+                    objects.fileCollection().from(specialSource2Jar),
                     workingDir = work,
                     logFile = logFile,
                     args = doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
@@ -132,7 +132,7 @@ abstract class SpigotRemapJar : BaseTask() {
                 val logFile = layout.cache.resolve(paperTaskOutput("final.log"))
                 logFile.deleteForcefully()
                 runJar(
-                    specialSourceJar,
+                    objects.fileCollection().from(specialSourceJar),
                     workingDir = work,
                     logFile = logFile,
                     args = doReplacements(

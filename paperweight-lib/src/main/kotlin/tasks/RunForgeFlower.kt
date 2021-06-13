@@ -31,6 +31,7 @@ import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
 import kotlin.io.path.*
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Classpath
@@ -40,8 +41,8 @@ import org.gradle.api.tasks.TaskAction
 
 abstract class RunForgeFlower : BaseTask() {
 
-    @get:InputFile
-    abstract val executable: RegularFileProperty
+    @get:Classpath
+    abstract val executable: ConfigurableFileCollection
 
     @get:InputFile
     abstract val inputJar: RegularFileProperty
@@ -101,7 +102,7 @@ abstract class RunForgeFlower : BaseTask() {
 
             val jvmArgs = listOf("-Xmx4G")
 
-            runJar(executable.path, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
+            runJar(executable, layout.cache, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
 
             // FernFlower is weird with how it does directory output
             target.resolve(inputJar.path.name).moveTo(out, overwrite = true)

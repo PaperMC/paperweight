@@ -68,7 +68,7 @@ open class VanillaTasks(
         mappingsFile.set(generateMappings.flatMap { it.outputMappings })
         fromNamespace.set(Constants.OBF_NAMESPACE)
         toNamespace.set(Constants.DEOBF_NAMESPACE)
-        remapper.fileProvider(project.configurations.named(Constants.REMAPPER_CONFIG).map { it.singleFile })
+        remapper.from(project.configurations.named(Constants.REMAPPER_CONFIG))
     }
 
     val fixJar by tasks.registering<FixJar> {

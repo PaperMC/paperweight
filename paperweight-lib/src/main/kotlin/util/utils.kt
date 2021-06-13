@@ -55,7 +55,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
-val gson: Gson = GsonBuilder().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
+val gson: Gson = GsonBuilder().setPrettyPrinting().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
 
 class PathJsonConverter : JsonDeserializer<Path?>, JsonSerializer<Path?> {
     override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Path? {
@@ -126,6 +126,13 @@ fun Any.convertToPath(): Path {
         is Provider<*> -> this.get().convertToPath()
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }
+}
+
+fun Any?.convertToPathOrNull(): Path? {
+    if (this == null) {
+        return null
+    }
+    return this.convertToPath()
 }
 
 fun Any.convertToUrl(): URL {

@@ -30,7 +30,9 @@ import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
 import kotlin.io.path.absolutePathString
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
@@ -57,10 +59,13 @@ abstract class RemapJar : BaseTask() {
     abstract val rebuildSourceFilenames: Property<Boolean>
 
     @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
+    @get:Internal
     abstract val singleThreaded: Property<Boolean>
 
     @get:Classpath
-    abstract val remapper: RegularFileProperty
+    abstract val remapper: ConfigurableFileCollection
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -68,6 +73,7 @@ abstract class RemapJar : BaseTask() {
     override fun init() {
         outputJar.convention(defaultOutput())
         singleThreaded.convention(true)
+        jvmargs.convention(listOf("-Xmx1G"))
         rebuildSourceFilenames.convention(true)
     }
 
@@ -93,6 +99,6 @@ abstract class RemapJar : BaseTask() {
         }
 
         ensureParentExists(logFile)
-        runJar(remapper, layout.cache, logFile, jvmArgs = listOf("-Xmx512m"), args = args.toTypedArray())
+        runJar(remapper, layout.cache, logFile, jvmArgs = jvmargs.get(), args = args.toTypedArray())
     }
 }

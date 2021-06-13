@@ -60,7 +60,7 @@ open class AllTasks(
     }
 
     val decompileJar by tasks.registering<RunForgeFlower> {
-        executable.fileProvider(project.configurations.named(Constants.DECOMPILER_CONFIG).map { it.singleFile })
+        executable.from(project.configurations.named(Constants.DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })
         libraries.set(downloadMcLibraries.flatMap { it.outputDir })

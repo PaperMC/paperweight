@@ -30,17 +30,18 @@ import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
 import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
+import io.papermc.paperweight.tasks.GeneratePaperclipPatch
 import io.papermc.paperweight.util.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
-import kotlin.io.path.forEachLine
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
 
@@ -57,6 +58,7 @@ class PaperweightPatcher : Plugin<Project> {
             delete(target.layout.cache)
         }
 
+        target.configurations.create(Constants.REMAPPER_CONFIG)
         target.configurations.create(Constants.PAPERCLIP_CONFIG)
 
         val workDirProp = target.providers.gradleProperty(Constants.UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
@@ -82,29 +84,39 @@ class PaperweightPatcher : Plugin<Project> {
 
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
-            val upstreamData = upstreamDataTask.flatMap { target.provider { readUpstreamData(it.dataFile) } }
+            val upstreamData = upstreamDataTask.flatMap {
+                target.provider { readUpstreamData(it.dataFile) }
+            }.orNull ?: return@afterEvaluate
 
-            patcher.serverProject.forUseAtConfigurationTime().orNull?.setupServerProject(target, upstreamData)
-        }
-    }
+            val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
 
-    private fun Project.setupServerProject(parent: Project, upstreamData: Provider<UpstreamData?>) {
-        plugins.apply("java")
-        dependencies.apply {
-            val remappedJar = upstreamData.orNull?.remappedJar
-            if (remappedJar != null && remappedJar.exists()) {
-                add("implementation", parent.files(remappedJar))
+            val reobfJar = serverProj.setupServerProject(
+                target,
+                upstreamData.remappedJar,
+                upstreamData.libFile
+            ) {
+                mappingsFile.set(upstreamData.reobfMappings)
+            } ?: return@afterEvaluate
+
+            val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
+                originalJar.set(upstreamData.vanillaJar)
+                patchedJar.set(reobfJar.flatMap { it.outputJar })
+                mcVersion.set(upstreamData.mcVersion)
             }
 
-            val libsFile = upstreamData.orNull?.libFile
-            if (libsFile != null && libsFile.exists()) {
-                libsFile.forEachLine { line ->
-                    add("implementation", line)
+            target.tasks.named("jar", Jar::class) {
+                val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
+                dependsOn(paperclipConfig, generatePaperclipPatch)
+
+                val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
+                from(paperclipZip) {
+                    exclude("META-INF/MANIFEST.MF")
                 }
+                from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
+
+                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
             }
         }
-
-        apply(plugin = "com.github.johnrengelman.shadow")
     }
 
     private fun Project.createUpstreamTask(

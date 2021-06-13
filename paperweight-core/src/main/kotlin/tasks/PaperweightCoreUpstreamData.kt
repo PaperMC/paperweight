@@ -32,7 +32,9 @@ import kotlin.io.path.createDirectories
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -42,7 +44,13 @@ import org.gradle.api.tasks.TaskAction
 abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
     @get:InputFile
+    abstract val vanillaJar: RegularFileProperty
+
+    @get:InputFile
     abstract val remappedJar: RegularFileProperty
+
+    @get:Input
+    abstract val mcVersion: Property<String>
 
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
@@ -54,6 +62,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:Optional
     @get:InputFile
     abstract val mcdevFile: RegularFileProperty
+
+    @get:InputFile
+    abstract val reobfMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
@@ -67,7 +78,15 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
         dataFilePath.parent.createDirectories()
 
-        val data = UpstreamData(remappedJar.path, mcLibrariesDir.path, mcLibrariesFile.pathOrNull, mcdevFile.pathOrNull)
+        val data = UpstreamData(
+            vanillaJar.path,
+            remappedJar.path,
+            mcVersion.get(),
+            mcLibrariesDir.path,
+            mcLibrariesFile.pathOrNull,
+            mcdevFile.pathOrNull,
+            reobfMappings.path
+        )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)
         }

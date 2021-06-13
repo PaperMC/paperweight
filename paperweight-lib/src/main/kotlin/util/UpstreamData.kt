@@ -29,10 +29,13 @@ import kotlin.io.path.isRegularFile
 import org.gradle.api.file.RegularFileProperty
 
 data class UpstreamData(
+    val vanillaJar: Path,
     val remappedJar: Path,
+    val mcVersion: String,
     val libSourceDir: Path,
     val libFile: Path?,
-    val mcdevFile: Path?
+    val mcdevFile: Path?,
+    val reobfMappings: Path
 )
 
 fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData? {

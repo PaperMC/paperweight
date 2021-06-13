@@ -80,7 +80,7 @@ abstract class SpigotDecompileJar : BaseTask() {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.deleteForcefully()
 
-            runJar(fernFlowerJar, workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
+            runJar(objects.fileCollection().from(fernFlowerJar), workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
 
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).moveTo(outputJarFile)
