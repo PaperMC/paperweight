@@ -96,7 +96,10 @@ class PaperweightCore : Plugin<Project> {
                 mcVersion.set(target.ext.minecraftVersion)
             }
 
-            target.tasks.named("jar", Jar::class) {
+            @Suppress("UNUSED_VARIABLE")
+            val paperclipJar by target.tasks.registering<Jar> {
+                with(target.tasks.named("jar", Jar::class).get())
+
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
                 dependsOn(paperclipConfig, generatePaperclipPatch)
 
