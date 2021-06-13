@@ -41,12 +41,8 @@ class Git(private var repo: Path) {
         }
     }
 
-    operator fun invoke(vararg args: String, disableGpg: Boolean = true): Command {
-        val cmd = if (disableGpg) {
-            arrayOf("git", "-c", "commit.gpgsign=false", *args)
-        } else {
-            arrayOf("git", *args)
-        }
+    operator fun invoke(vararg args: String): Command {
+        val cmd = arrayOf("git", "-c", "commit.gpgsign=false", "-c", "core.safecrlf=false", *args)
         return try {
             Command(ProcessBuilder(*cmd).directory(repo).start(), cmd.joinToString(separator = " "))
         } catch (e: IOException) {

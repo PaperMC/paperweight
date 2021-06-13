@@ -136,26 +136,38 @@ fun ControllableOutputTask.applyGitPatches(
         return
     }
 
-    patches.sort()
+    // This prevents the `git am` command line from getting too big with too many patches
+    // mostly an issue with Windows
+    val tempDir = createTempDirectory("paperweight")
+    try {
+        val mailDir = tempDir.resolve("new")
+        mailDir.createDirectories()
 
-    if (git("am", "--3way", "--ignore-whitespace", *patches.map { it.absolutePathString() }.toTypedArray()).showErrors().run() != 0) {
-        statusFile.writeText("1")
-        logger.error("***   Please review above details and finish the apply then")
-        logger.error("***   save the changes with `./gradlew rebuildPaperPatches`")
-
-        if (OperatingSystem.current().isWindows) {
-            logger.error("")
-            logger.error("***   Because you're on Windows you'll need to finish the AM,")
-            logger.error("***   rebuild all patches, and then re-run the patch apply again.")
-            logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
+        for (patch in patches) {
+            patch.copyTo(mailDir.resolve(patch.fileName))
         }
 
-        throw PaperweightException("Failed to apply patches")
-    } else {
-        statusFile.deleteForcefully()
-        if (printOutput) {
-            println("   Patches applied cleanly to $target")
+        if (git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).showErrors().run() != 0) {
+            statusFile.writeText("1")
+            logger.error("***   Please review above details and finish the apply then")
+            logger.error("***   save the changes with `./gradlew rebuildPaperPatches`")
+
+            if (OperatingSystem.current().isWindows) {
+                logger.error("")
+                logger.error("***   Because you're on Windows you'll need to finish the AM,")
+                logger.error("***   rebuild all patches, and then re-run the patch apply again.")
+                logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
+            }
+
+            throw PaperweightException("Failed to apply patches")
+        } else {
+            statusFile.deleteForcefully()
+            if (printOutput) {
+                println("   Patches applied cleanly to $target")
+            }
         }
+    } finally {
+        tempDir.deleteRecursively()
     }
 }
 

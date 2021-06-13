@@ -325,21 +325,6 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
         return null
     }
 
-    // override fun addRightFieldMapping(
-    //     right: FieldMapping,
-    //     target: ClassMapping<*, *>,
-    //     context: MergeContext
-    // ): FieldMapping? {
-    //     val obfuscatedType = context.leftReversed.deobfuscate(right.type.orElse(null))
-    //
-    //     var obfName = right.obfuscatedName
-    //     // handle specialsource case
-    //     if (obfName in setOf("if", "do")) {
-    //         obfName += "_"
-    //     }
-    //     return target.createFieldMapping(FieldSignature(obfName, obfuscatedType), right.deobfuscatedName)
-    // }
-
     // Disable non-spigot mappings
     override fun addRightMethodMapping(
         right: MethodMapping,

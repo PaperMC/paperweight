@@ -139,7 +139,10 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
 
             println("Writing properties file")
             propFile.bufferedWriter().use { writer ->
-                prop.store(writer, "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory.")
+                prop.store(
+                    writer,
+                    "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory."
+                )
             }
         }
 

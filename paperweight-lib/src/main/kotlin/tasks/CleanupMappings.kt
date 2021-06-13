@@ -43,14 +43,18 @@ import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
 import dev.denwav.hypo.model.data.types.PrimitiveType
+import io.papermc.paperweight.util.ClassNameChange
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
+import java.util.Collections
 import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
-import org.gradle.api.DefaultTask
+import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -58,7 +62,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class CleanupMappings : DefaultTask() {
+abstract class CleanupMappings : BaseTask() {
 
     @get:InputFile
     abstract val sourceJar: RegularFileProperty
@@ -71,6 +75,13 @@ abstract class CleanupMappings : DefaultTask() {
 
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
+
+    @get:OutputFile
+    abstract val caseOnlyNameChanges: RegularFileProperty
+
+    override fun init() {
+        caseOnlyNameChanges.convention(defaultOutput("caseOnlyClassNameChanges", "json"))
+    }
 
     @TaskAction
     fun run() {
@@ -86,6 +97,8 @@ abstract class CleanupMappings : DefaultTask() {
             Constants.DEOBF_NAMESPACE
         )
 
+        val caseOnlyChanges = Collections.synchronizedList(mutableListOf<ClassNameChange>())
+
         val cleanedMappings = HypoContext.builder()
             .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(sourceJar.path)))
             .withContextProviders(AsmClassDataProvider.of(libs))
@@ -100,7 +113,7 @@ abstract class CleanupMappings : DefaultTask() {
                     .addLink(RemoveUnusedMappings.create(), RemoveLambdaMappings)
                     .addLink(PropagateMappingsUp.create())
                     .addLink(CopyMappingsDown.create())
-                    .addLink(ParamIndexesForSource)
+                    .addLink(ParamIndexesForSource, FindCaseOnlyClassNameChanges(caseOnlyChanges))
                     .applyChain(mappings, MappingsCompletionManager.create(hypoContext))
             }
 
@@ -110,6 +123,10 @@ abstract class CleanupMappings : DefaultTask() {
             Constants.SPIGOT_NAMESPACE,
             Constants.DEOBF_NAMESPACE
         )
+
+        caseOnlyNameChanges.path.bufferedWriter(Charsets.UTF_8).use { writer ->
+            gson.toJson(caseOnlyChanges, writer)
+        }
     }
 
     object ParamIndexesForSource : ChangeContributor {
@@ -204,5 +221,21 @@ abstract class CleanupMappings : DefaultTask() {
         }
 
         override fun name(): String = "RemoveLambdaMappings"
+    }
+
+    class FindCaseOnlyClassNameChanges(private val changes: MutableList<ClassNameChange>) : ChangeContributor {
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (classMapping !is TopLevelClassMapping) {
+                return
+            }
+            val obfName = classMapping.obfuscatedName
+            val deobfName = classMapping.deobfuscatedName
+
+            if (obfName != deobfName && obfName.equals(deobfName, ignoreCase = true)) {
+                changes += ClassNameChange(obfName, deobfName)
+            }
+        }
+
+        override fun name(): String = "ParamIndexesForSource"
     }
 }

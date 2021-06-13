@@ -61,6 +61,8 @@ abstract class CheckoutRepo : DefaultTask() {
     abstract val outputDir: DirectoryProperty
 
     init {
+        outputs.upToDateWhen { false }
+
         @Suppress("LeakingThis")
         run {
             repoName.finalizeValueOnRead()

@@ -22,6 +22,14 @@
 
 package io.papermc.paperweight.tasks
 
+import dev.denwav.hypo.core.HypoContext
+import dev.denwav.hypo.mappings.ChangeChain
+import dev.denwav.hypo.mappings.ChangeRegistry
+import dev.denwav.hypo.mappings.MappingsCompletionManager
+import dev.denwav.hypo.mappings.changes.MemberReference
+import dev.denwav.hypo.mappings.changes.RemoveMappingChange
+import dev.denwav.hypo.mappings.contributors.ChangeContributor
+import dev.denwav.hypo.model.data.ClassData
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.path
@@ -75,24 +83,17 @@ abstract class GenerateReobfMappings : DefaultTask() {
     }
 
     private fun filterFieldMappings(mappings: MappingSet): MappingSet {
-        val output = MappingSet.create()
-
-        for (topLevelClassMapping in mappings.topLevelClassMappings) {
-            val newClassMapping = output.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
-            filterFieldMappings(topLevelClassMapping, newClassMapping)
+        class RemoveFieldMappings : ChangeContributor {
+            override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+                classMapping?.fieldMappings?.forEach { fieldMapping ->
+                    registry.submitChange(RemoveMappingChange.of(MemberReference.of(fieldMapping)))
+                }
+            }
+            override fun name(): String = "RemoveFieldMappings"
         }
 
-        return output
-    }
-
-    private fun filterFieldMappings(originalClassMapping: ClassMapping<*, *>, newClassMapping: ClassMapping<*, *>) {
-        for (innerClassMapping in originalClassMapping.innerClassMappings) {
-            val newInnerClassMapping = newClassMapping.createInnerClassMapping(innerClassMapping.obfuscatedName, innerClassMapping.deobfuscatedName)
-            filterFieldMappings(innerClassMapping, newInnerClassMapping)
-        }
-
-        for (methodMapping in originalClassMapping.methodMappings) {
-            methodMapping.copy(newClassMapping)
+        return HypoContext.builder().build().use { context ->
+            ChangeChain.create().addLink(RemoveFieldMappings()).applyChain(mappings, MappingsCompletionManager.create(context))
         }
     }
 

@@ -22,9 +22,12 @@
 
 package io.papermc.paperweight.tasks
 
+import com.github.salomonbrys.kotson.fromJson
+import io.papermc.paperweight.util.ClassNameChange
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
 import java.nio.file.Path
@@ -47,6 +50,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @get:InputFile
     abstract val remappedTests: RegularFileProperty
+
+    @get:InputFile
+    abstract val caseOnlyClassNameChanges: RegularFileProperty
 
     @get:InputDirectory
     abstract val spigotServerDir: DirectoryProperty
@@ -103,6 +109,16 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             val patches = patchDir.path.listDirectoryEntries("*.patch")
             McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.path, mcdevImports.pathOrNull, sourceDir)
+
+            val caseOnlyChanges = caseOnlyClassNameChanges.path.bufferedReader(Charsets.UTF_8).use { reader ->
+                gson.fromJson<List<ClassNameChange>>(reader)
+            }
+
+            for (caseOnlyChange in caseOnlyChanges) {
+                val obfFile = sourceDir.resolve(caseOnlyChange.obfName + ".java").relativeTo(outputFile)
+                val deobfFile = sourceDir.resolve(caseOnlyChange.deobfName + ".java").relativeTo(outputFile)
+                git("mv", "-f", obfFile.toString(), deobfFile.toString()).runSilently(silenceErr = true)
+            }
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
