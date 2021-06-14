@@ -75,6 +75,8 @@ object Constants {
 
     const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
 
+    const val MC_DEV_DIR = "mcdev-source"
+
     fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
     fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
 }

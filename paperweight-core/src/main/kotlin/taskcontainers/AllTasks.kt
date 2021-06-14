@@ -126,4 +126,12 @@ open class AllTasks(
         description = "Rebuilds patches to api and server"
         dependsOn(rebuildApiPatches, rebuildServerPatches)
     }
+
+    @Suppress("unused")
+    val makeMcDevSrc by tasks.registering<MakeMcDevSrc> {
+        group = "paper"
+        source.set(decompileJar.flatMap { it.outputJar })
+        paperServerDir.set(extension.paper.paperServerDir)
+        target.set(cache.resolve(Constants.MC_DEV_DIR))
+    }
 }
