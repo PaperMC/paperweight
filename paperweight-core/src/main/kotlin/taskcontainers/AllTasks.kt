@@ -91,7 +91,7 @@ open class AllTasks(
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryClassImports)
         mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
-        apiDir.set(applyApiPatches.flatMap { outputDir })
+        apiDir.set(extension.paper.paperApiDir)
         additionalAts.set(extension.paper.additionalAts.flatMap { project.provider { it.takeIf { f -> f.path.exists() } } })
 
         outputDir.set(extension.paper.paperServerDir)
