@@ -38,12 +38,12 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
-        target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
+        val extension = target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -77,8 +77,26 @@ class PaperweightCore : Plugin<Project> {
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
         }
 
-        // Setup the server jar
         target.afterEvaluate {
+            target.repositories {
+                maven(extension.paramMappingsRepo) {
+                    content {
+                        onlyForConfigurations(Constants.PARAM_MAPPINGS_CONFIG)
+                    }
+                }
+                maven(extension.remapRepo) {
+                    content {
+                        onlyForConfigurations(Constants.REMAPPER_CONFIG)
+                    }
+                }
+                maven(extension.decompileRepo) {
+                    content {
+                        onlyForConfigurations(Constants.DECOMPILER_CONFIG)
+                    }
+                }
+            }
+
+            // Setup the server jar
             val cache = target.layout.cache
 
             val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
