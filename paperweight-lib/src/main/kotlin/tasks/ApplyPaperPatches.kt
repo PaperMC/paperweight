@@ -23,14 +23,9 @@
 package io.papermc.paperweight.tasks
 
 import com.github.salomonbrys.kotson.fromJson
-import io.papermc.paperweight.util.ClassNameChange
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -39,6 +34,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.workers.WorkerExecutor
 
 abstract class ApplyPaperPatches : ControllableOutputTask() {
 
@@ -71,8 +67,18 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:InputFile
     abstract val mcdevImports: RegularFileProperty
 
+    @get:InputDirectory
+    abstract val apiDir: DirectoryProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val additionalAts: RegularFileProperty
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
         printOutput.convention(true)
@@ -122,6 +128,11 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+
+            PaperAt.apply(workerExecutor, apiDir, outputDir, additionalAts)
+            git("add", ".").executeSilently()
+            git("commit", "-m", "AT", "--author=AT <auto@mated.null>").executeSilently()
+
             git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())

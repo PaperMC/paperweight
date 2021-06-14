@@ -35,7 +35,7 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -91,6 +91,8 @@ open class AllTasks(
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryClassImports)
         mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
+        apiDir.set(extension.paper.paperApiDir)
+        additionalAts.set(extension.paper.additionalAts)
 
         outputDir.set(extension.paper.paperServerDir)
     }
