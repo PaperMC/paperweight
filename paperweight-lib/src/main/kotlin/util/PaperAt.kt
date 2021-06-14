@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.util
 
-import kotlin.io.path.isRegularFile
+import java.nio.file.Path
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.at.AccessTransformerRewriter
@@ -36,8 +36,8 @@ import org.gradle.workers.WorkerExecutor
 
 object PaperAt {
 
-    fun apply(workerExecutor: WorkerExecutor, apiDir: DirectoryProperty, serverDir: DirectoryProperty, atFile: RegularFileProperty) {
-        if (!atFile.isPresent && !atFile.path.isRegularFile()) {
+    fun apply(workerExecutor: WorkerExecutor, apiDir: Path, serverDir: Path, atFile: Path?) {
+        if (atFile == null) {
             return
         }
 
@@ -45,11 +45,11 @@ object PaperAt {
             forkOptions.jvmArgs("-Xmx2G")
         }
 
-        val srcDir = serverDir.path.resolve("src/main/java")
+        val srcDir = serverDir.resolve("src/main/java")
 
         // Remap sources
         queue.submit(AtAction::class) {
-            classpath.from(apiDir.dir("src/main/java").path)
+            classpath.from(apiDir.resolve("src/main/java"))
 
             inputDir.set(srcDir)
             outputDir.set(srcDir)

@@ -129,9 +129,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
 
-            PaperAt.apply(workerExecutor, apiDir, outputDir, additionalAts)
-            git("add", ".").executeSilently()
-            git("commit", "-m", "AT", "--author=AT <auto@mated.null>").executeSilently()
+            PaperAt.apply(workerExecutor, apiDir.path, outputDir.path, additionalAts.pathOrNull)
+            git("add", ".").runSilently()
+            git("commit", "-m", "AT", "--author=AT <auto@mated.null>").runSilently()
 
             git("tag", "base").executeSilently()
 
