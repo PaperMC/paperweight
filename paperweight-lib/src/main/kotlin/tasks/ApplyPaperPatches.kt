@@ -25,7 +25,6 @@ package io.papermc.paperweight.tasks
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
-import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -34,7 +33,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.workers.WorkerExecutor
 
 abstract class ApplyPaperPatches : ControllableOutputTask() {
 
