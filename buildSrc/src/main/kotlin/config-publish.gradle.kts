@@ -97,7 +97,11 @@ publishing {
         }
 
         repositories {
-            val url = "https://papermc.io/repo/repository/maven-public/"
+            val url = if (isSnapshot) {
+                "https://papermc.io/repo/repository/maven-snapshots/"
+            } else {
+                "https://papermc.io/repo/repository/maven-releases/"
+            }
             maven(url) {
                 credentials(PasswordCredentials::class)
                 name = "paper"
