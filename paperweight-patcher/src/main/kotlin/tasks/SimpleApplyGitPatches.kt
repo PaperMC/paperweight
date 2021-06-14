@@ -83,7 +83,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
             println("   Creating $target from patch source...")
         }
 
-        Git(output.parent)("clone", sourceDir.path.absolutePathString(), output.absolutePathString()).executeSilently()
+        Git(output.parent)("clone", "${sourceDir.path.absolutePathString()}", "${output.absolutePathString()}").executeSilently()
         val srcDir = output.resolve("src/main/java")
 
         val git = Git(output)

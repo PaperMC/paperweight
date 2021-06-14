@@ -95,7 +95,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
                 git("config", "commit.gpgsign", "false").executeSilently()
 
                 git("remote", "rm", "upstream").runSilently(silenceErr = true)
-                git("remote", "add", "upstream", upstream.path.absolutePathString()).runSilently(silenceErr = true)
+                git("remote", "add", "upstream", "${upstream.path.absolutePathString()}").runSilently(silenceErr = true)
                 if (git("checkout", "master").setupOut(showError = false).run() != 0) {
                     git("checkout", "-b", "master").setupOut().run()
                 }

@@ -118,7 +118,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
                 }
 
                 val dirPrefix = basePatchDirFile.relativeTo(outputDir.path).invariantSeparatorsPathString
-                git("apply", "--ignore-whitespace", "--directory=$dirPrefix", file.absolutePathString()).setupOut().execute()
+                git("apply", "--ignore-whitespace", "--directory=$dirPrefix", "${file.absolutePathString()}").setupOut().execute()
             }
 
             git("add", "src").setupOut().execute()

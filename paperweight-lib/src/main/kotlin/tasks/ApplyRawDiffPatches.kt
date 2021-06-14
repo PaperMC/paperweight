@@ -58,7 +58,7 @@ abstract class ApplyRawDiffPatches : ZippedTask() {
         val git = Git(rootDir)
 
         for (patch in patchSet) {
-            git("apply", patch.absolutePathString()).executeOut()
+            git("apply", "${patch.absolutePathString()}").executeOut()
         }
     }
 }
