@@ -126,4 +126,18 @@ open class AllTasks(
         description = "Rebuilds patches to api and server"
         dependsOn(rebuildApiPatches, rebuildServerPatches)
     }
+
+    @Suppress("unused")
+    val importMcDev by tasks.registering<ImportMcDev> {
+        group = "paper"
+        description = "Imports files from vanilla into the project"
+
+        patchDir.set(extension.paper.spigotServerPatchDir)
+        sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
+        mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
+        libraryImports.set(extension.paper.libraryClassImports)
+        mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
+
+        paperServerDir.set(extension.paper.paperServerDir)
+    }
 }
