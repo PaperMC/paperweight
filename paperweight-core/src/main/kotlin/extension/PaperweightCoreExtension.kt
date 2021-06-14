@@ -42,6 +42,10 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
 
     val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
 
+    val paramMappingsRepo: Property<String> = objects.property()
+    val decompileRepo: Property<String> = objects.property()
+    val remapRepo: Property<String> = objects.property()
+
     @Suppress("MemberVisibilityCanBePrivate")
     val craftBukkit = CraftBukkitExtension(objects, workDir)
     val spigot = SpigotExtension(objects, workDir)
