@@ -43,7 +43,7 @@ import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
-        val extension = target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
+        target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -78,24 +78,6 @@ class PaperweightCore : Plugin<Project> {
         }
 
         target.afterEvaluate {
-            target.repositories {
-                maven(extension.paramMappingsRepo) {
-                    content {
-                        onlyForConfigurations(Constants.PARAM_MAPPINGS_CONFIG)
-                    }
-                }
-                maven(extension.remapRepo) {
-                    content {
-                        onlyForConfigurations(Constants.REMAPPER_CONFIG)
-                    }
-                }
-                maven(extension.decompileRepo) {
-                    content {
-                        onlyForConfigurations(Constants.DECOMPILER_CONFIG)
-                    }
-                }
-            }
-
             // Setup the server jar
             val cache = target.layout.cache
 
