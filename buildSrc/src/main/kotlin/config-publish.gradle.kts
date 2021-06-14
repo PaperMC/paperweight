@@ -97,10 +97,10 @@ publishing {
         }
 
         repositories {
-            val url = "https://wav.jfrog.io/artifactory/repo/"
+            val url = "https://papermc.io/repo/repository/maven-public/"
             maven(url) {
                 credentials(PasswordCredentials::class)
-                name = "wavJfrog"
+                name = "paper"
             }
         }
     }
