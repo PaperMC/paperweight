@@ -46,9 +46,14 @@ open class AllTasks(
     extension: PaperweightCoreExtension = project.ext,
 ) : SpigotTasks(project) {
 
+    val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
+        inputFiles.add(mergeGeneratedAts.flatMap { it.outputFile })
+        inputFiles.add(extension.paper.additionalAts)
+    }
+
     val applyMergedAt by tasks.registering<ApplyAccessTransform> {
         inputJar.set(fixJar.flatMap { it.outputJar })
-        atFile.set(mergeGeneratedAts.flatMap { it.outputFile })
+        atFile.set(mergeAdditionalAts.flatMap { it.outputFile })
     }
 
     val copyResources by tasks.registering<CopyResources> {
@@ -91,8 +96,6 @@ open class AllTasks(
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryClassImports)
         mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
-        apiDir.set(extension.paper.paperApiDir)
-        additionalAts.set(extension.paper.additionalAts.flatMap { project.provider { it.takeIf { f -> f.path.exists() } } })
 
         outputDir.set(extension.paper.paperServerDir)
     }

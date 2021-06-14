@@ -67,18 +67,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:InputFile
     abstract val mcdevImports: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val apiDir: DirectoryProperty
-
-    @get:Optional
-    @get:InputFile
-    abstract val additionalAts: RegularFileProperty
-
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
         printOutput.convention(true)
@@ -128,11 +118,6 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
-
-            PaperAt.apply(workerExecutor, apiDir.path, outputDir.path, additionalAts.pathOrNull)
-            git("add", ".").runSilently()
-            git("commit", "-m", "AT", "--author=AT <auto@mated.null>").runSilently()
-
             git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
