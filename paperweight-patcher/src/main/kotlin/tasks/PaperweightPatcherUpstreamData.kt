@@ -28,6 +28,7 @@ import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -57,8 +58,6 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
         params.projectProperties[Constants.UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
         params.projectProperties[Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM] = dataFile.path.absolutePathString()
 
-        NestedRootBuildRunner.createNestedRootBuild(null, params, services).run {
-            it.run()
-        }
+        NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
     }
 }

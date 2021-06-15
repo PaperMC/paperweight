@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
-
 plugins {
     `kotlin-dsl`
     `kotlin-dsl-precompiled-script-plugins`
@@ -11,7 +9,7 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.gradle.licenser)
+    // implementation(libs.gradle.licenser)
     implementation(libs.gradle.ktlint)
     implementation(libs.gradle.shadow)
     implementation(libs.gradle.kotlin.dsl)

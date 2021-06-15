@@ -107,7 +107,7 @@ class PaperweightCore : Plugin<Project> {
                 from(paperclipZip) {
                     exclude("META-INF/MANIFEST.MF")
                 }
-                from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
+                from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }))
 
                 manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
             }

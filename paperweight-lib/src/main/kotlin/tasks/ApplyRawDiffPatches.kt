@@ -43,6 +43,7 @@ abstract class ApplyRawDiffPatches : ZippedTask() {
     abstract val patchDir: DirectoryProperty
 
     override fun init() {
+        super.init()
         outputZip.convention(defaultOutput("zip"))
     }
 

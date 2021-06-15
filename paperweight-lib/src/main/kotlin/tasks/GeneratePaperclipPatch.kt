@@ -65,6 +65,7 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        super.init()
         jvmargs.convention(listOf("-Xmx1G"))
     }
 
@@ -86,7 +87,6 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
     abstract class PaperclipAction : WorkAction<PaperclipParameters> {
         override fun execute() {
             val rootDir = Path(parameters.dir.get())
-            println("root dir $rootDir")
             val patchFile = rootDir.resolve("paperMC.patch")
             val propFile = rootDir.resolve("patch.properties")
             val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE")
