@@ -29,6 +29,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.download
+import io.papermc.paperweight.util.fileExists
 import io.papermc.paperweight.util.registering
 import io.papermc.paperweight.util.set
 import java.nio.file.Path
@@ -51,8 +52,8 @@ open class SpigotTasks(
         dependsOn(initSubmodules)
         classSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
         memberSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
-        additionalClassEntriesSrg.set(extension.paper.additionalSpigotClassMappings)
-        additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings)
+        additionalClassEntriesSrg.set(extension.paper.additionalSpigotClassMappings.fileExists(project))
+        additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings.fileExists(project))
     }
 
     val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
@@ -104,7 +105,7 @@ open class SpigotTasks(
 
     val patchMappings by tasks.registering<PatchMappings> {
         inputMappings.set(cleanupMappings.flatMap { it.outputMappings })
-        patch.set(extension.paper.mappingsPatch)
+        patch.set(extension.paper.mappingsPatch.fileExists(project))
 
         outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
@@ -131,7 +132,7 @@ open class SpigotTasks(
     val patchCraftBukkitPatches by tasks.registering<ApplyRawDiffPatches> {
         dependsOn(initSubmodules)
         inputDir.set(extension.craftBukkit.patchDir)
-        patchDir.set(extension.paper.craftBukkitPatchPatchesDir)
+        patchDir.set(extension.paper.craftBukkitPatchPatchesDir.fileExists(project))
     }
 
     val patchCraftBukkit by tasks.registering<ApplyDiffPatches> {
@@ -146,13 +147,13 @@ open class SpigotTasks(
     val patchSpigotApiPatches by tasks.registering<ApplyRawDiffPatches> {
         dependsOn(initSubmodules)
         inputDir.set(extension.spigot.bukkitPatchDir)
-        patchDir.set(extension.paper.spigotApiPatchPatchesDir)
+        patchDir.set(extension.paper.spigotApiPatchPatchesDir.fileExists(project))
     }
 
     val patchSpigotServerPatches by tasks.registering<ApplyRawDiffPatches> {
         dependsOn(initSubmodules)
         inputDir.set(extension.spigot.craftBukkitPatchDir)
-        patchDir.set(extension.paper.spigotServerPatchPatchesDir)
+        patchDir.set(extension.paper.spigotServerPatchPatchesDir.fileExists(project))
     }
 
     val patchSpigotApi by tasks.registering<ApplyGitPatches> {
