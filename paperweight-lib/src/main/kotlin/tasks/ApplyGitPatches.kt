@@ -23,13 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.deleteForcefully
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.findOutputDir
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
-import io.papermc.paperweight.util.unzip
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
@@ -138,7 +132,7 @@ fun ControllableOutputTask.applyGitPatches(
 
     // This prevents the `git am` command line from getting too big with too many patches
     // mostly an issue with Windows
-    val tempDir = createTempDirectory("paperweight")
+    val tempDir = createTempDirectory(layout.cache, "paperweight")
     try {
         val mailDir = tempDir.resolve("new")
         mailDir.createDirectories()
