@@ -22,17 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.copyRecursively
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.findOutputDir
-import io.papermc.paperweight.util.isLibraryJar
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
-import io.papermc.paperweight.util.set
-import io.papermc.paperweight.util.zip
+import io.papermc.paperweight.util.*
+import java.nio.file.Files
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
@@ -145,6 +136,8 @@ abstract class RemapSources : BaseTask() {
                 mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(srcDir)
 
+                cacheDir.set(this@RemapSources.layout.cache)
+
                 outputDir.set(srcOut)
                 generatedAtOutput.set(generatedAt.path)
             }
@@ -162,6 +155,8 @@ abstract class RemapSources : BaseTask() {
 
                 mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(testSrc)
+
+                cacheDir.set(this@RemapSources.layout.cache)
 
                 outputDir.set(testOut)
             }
@@ -201,7 +196,7 @@ abstract class RemapSources : BaseTask() {
 
                 merc.process(parameters.inputDir.path)
 
-                val tempOut = createTempDirectory("remap")
+                val tempOut = Files.createTempDirectory(parameters.cacheDir.path, "remap")
                 try {
                     merc.processors.clear()
                     merc.processors.addAll(
@@ -244,6 +239,7 @@ abstract class RemapSources : BaseTask() {
         val inputDir: RegularFileProperty
         val additionalAts: RegularFileProperty
 
+        val cacheDir: RegularFileProperty
         val generatedAtOutput: RegularFileProperty
         val outputDir: RegularFileProperty
     }
