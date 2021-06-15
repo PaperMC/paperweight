@@ -46,8 +46,8 @@ open class AllTasks(
 ) : SpigotTasks(project) {
 
     val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
-        inputFiles.add(mergeGeneratedAts.flatMap { it.outputFile })
-        inputFiles.add(extension.paper.additionalAts.fileExists(project))
+        firstFile.set(mergeGeneratedAts.flatMap { it.outputFile })
+        secondFile.set(extension.paper.additionalAts.fileExists(project))
     }
 
     val applyMergedAt by tasks.registering<ApplyAccessTransform> {

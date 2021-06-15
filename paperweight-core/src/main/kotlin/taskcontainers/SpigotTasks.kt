@@ -210,7 +210,7 @@ open class SpigotTasks(
     }
 
     val mergeGeneratedAts by tasks.registering<MergeAccessTransforms> {
-        inputFiles.add(remapGeneratedAt.flatMap { it.outputFile })
-        inputFiles.add(remapSpigotAt.flatMap { it.outputFile })
+        firstFile.set(remapGeneratedAt.flatMap { it.outputFile })
+        secondFile.set(remapSpigotAt.flatMap { it.outputFile })
     }
 }

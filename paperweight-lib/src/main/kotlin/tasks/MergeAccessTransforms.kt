@@ -24,19 +24,25 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import kotlin.io.path.exists
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
-import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class MergeAccessTransforms : BaseTask() {
 
-    @get:InputFiles
-    abstract val inputFiles: ListProperty<RegularFile>
+    @get:Optional
+    @get:InputFile
+    abstract val firstFile: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val secondFile: RegularFileProperty
 
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
@@ -47,8 +53,10 @@ abstract class MergeAccessTransforms : BaseTask() {
 
     @TaskAction
     fun run() {
-        val ats = inputFiles.get()
-            .map { AccessTransformFormats.FML.read(it.path) }
+        val ats = sequenceOf(firstFile.pathOrNull, secondFile.pathOrNull)
+            .filterNotNull()
+            .filter { it.exists() }
+            .map { AccessTransformFormats.FML.read(it) }
 
         val outputAt = AccessTransformSet.create()
         for (at in ats) {
