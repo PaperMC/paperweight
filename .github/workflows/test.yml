@@ -1,11 +1,13 @@
-name: Deploy
+name: Test
 on:
   push:
-    tags: ['v*']
+    branches: ['*']
+  pull_request:
+    branches: ['*']
 
 jobs:
-  deploy:
-    name: Deploy
+  test:
+    name: Test
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
@@ -24,7 +26,4 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      - run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace
-        env:
-          ORG_GRADLE_PROJECT_paperUsername: ${{ secrets.DEPLOY_USER }}
-          ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.DEPLOY_PASS }}
+      - run: ./gradlew -Dorg.gradle.parallel=true build --no-daemon --stacktrace
