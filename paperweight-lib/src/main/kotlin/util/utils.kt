@@ -48,6 +48,7 @@ import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.file.FileSystemLocationProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
@@ -75,6 +76,10 @@ val ProjectLayout.cache: Path
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/${Constants.CACHE_PATH}").dir(path)
 fun ProjectLayout.initSubmodules() {
     Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+}
+
+fun <T : FileSystemLocation> FileSystemLocationProperty<out T>.fileExists(project: Project): Provider<out T?> {
+    return flatMap { project.provider { it.takeIf { f -> f.path.exists() } } }
 }
 
 inline fun <reified T : Task> TaskContainer.providerFor(name: String): TaskProvider<T> {

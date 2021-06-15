@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.copyRecursively
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.findOutputDir
@@ -71,6 +72,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.submit
@@ -97,6 +99,10 @@ abstract class RemapSources : BaseTask() {
 
     @get:InputDirectory
     abstract val spigotApiDir: DirectoryProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val additionalAts: RegularFileProperty
 
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
@@ -134,6 +140,7 @@ abstract class RemapSources : BaseTask() {
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
+                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
 
                 mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(srcDir)
@@ -151,6 +158,7 @@ abstract class RemapSources : BaseTask() {
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
                 classpath.from(srcDir)
+                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
 
                 mappings.set(this@RemapSources.mappings.path)
                 inputDir.set(testSrc)
@@ -175,8 +183,10 @@ abstract class RemapSources : BaseTask() {
                 Constants.SPIGOT_NAMESPACE,
                 Constants.DEOBF_NAMESPACE
             )
-            val processAt = AccessTransformSet.create()
 
+            val additionalAt = parameters.additionalAts.pathOrNull?.let { AccessTransformFormats.FML.read(it) }
+
+            val processAt = AccessTransformSet.create()
             val generatedAtOutPath = parameters.generatedAtOutput.pathOrNull
 
             // Remap any references Spigot maps to mojmap+yarn
@@ -191,20 +201,35 @@ abstract class RemapSources : BaseTask() {
 
                 merc.process(parameters.inputDir.path)
 
-                merc.processors.clear()
-                merc.processors.addAll(
-                    listOf(
-                        ExplicitThisAdder,
-                        MercuryRemapper.create(mappingSet),
-                        AccessTransformerRewriter.create(processAt)
+                val tempOut = createTempDirectory("remap")
+                try {
+                    merc.processors.clear()
+                    merc.processors.addAll(
+                        listOf(
+                            ExplicitThisAdder,
+                            MercuryRemapper.create(mappingSet),
+                            AccessTransformerRewriter.create(processAt)
+                        )
                     )
-                )
 
-                if (generatedAtOutPath != null) {
-                    merc.processors.add(AccessTransformerRewriter.create(processAt))
+                    if (generatedAtOutPath != null) {
+                        merc.processors.add(AccessTransformerRewriter.create(processAt))
+                    }
+
+                    merc.rewrite(parameters.inputDir.path, tempOut)
+
+                    if (additionalAt != null) {
+                        merc.processors.clear()
+                        merc.processors += AccessTransformerRewriter.create(additionalAt)
+                        merc.isGracefulClasspathChecks = true
+
+                        merc.rewrite(tempOut, parameters.outputDir.path)
+                    } else {
+                        tempOut.copyRecursively(parameters.outputDir.path)
+                    }
+                } finally {
+                    tempOut.deleteRecursively()
                 }
-
-                merc.rewrite(parameters.inputDir.path, parameters.outputDir.path)
             }
 
             if (generatedAtOutPath != null) {
@@ -217,6 +242,7 @@ abstract class RemapSources : BaseTask() {
         val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
         val inputDir: RegularFileProperty
+        val additionalAts: RegularFileProperty
 
         val generatedAtOutput: RegularFileProperty
         val outputDir: RegularFileProperty

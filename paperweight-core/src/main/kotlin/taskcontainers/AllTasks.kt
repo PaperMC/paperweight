@@ -28,6 +28,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.fileExists
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.registering
 import io.papermc.paperweight.util.set
@@ -48,7 +49,7 @@ open class AllTasks(
 
     val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
         inputFiles.add(mergeGeneratedAts.flatMap { it.outputFile })
-        inputFiles.add(extension.paper.additionalAts)
+        inputFiles.add(extension.paper.additionalAts.fileExists(project))
     }
 
     val applyMergedAt by tasks.registering<ApplyAccessTransform> {

@@ -200,6 +200,7 @@ open class SpigotTasks(
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
         spigotDeps.set(downloadSpigotDependencies.flatMap { it.outputDir })
+        additionalAts.set(extension.paper.additionalAts)
     }
 
     val remapGeneratedAt by tasks.registering<RemapAccessTransform> {
