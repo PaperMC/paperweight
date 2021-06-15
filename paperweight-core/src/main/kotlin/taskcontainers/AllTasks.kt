@@ -29,11 +29,9 @@ import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.fileExists
-import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.registering
 import io.papermc.paperweight.util.set
 import java.nio.file.Path
-import kotlin.io.path.exists
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.*
@@ -95,8 +93,8 @@ open class AllTasks(
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
-        libraryImports.set(extension.paper.libraryClassImports)
-        mcdevImports.set(extension.paper.mcdevClassImports.flatMap { project.provider { if (it.path.exists()) it else null } })
+        libraryImports.set(extension.paper.libraryClassImports.fileExists(project))
+        mcdevImports.set(extension.paper.mcdevClassImports.fileExists(project))
 
         outputDir.set(extension.paper.paperServerDir)
     }

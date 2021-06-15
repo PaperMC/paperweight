@@ -137,7 +137,7 @@ object McDev {
                     val split = line.split(' ')
                     val libFileName = libFiles.firstOrNull { it.name.startsWith(split[0]) }?.name
                         ?: throw PaperweightException("Failed to read library line '$line', no library file was found.")
-                    LibraryImport(libFileName, split[1])
+                    LibraryImport(libFileName, split[1].removeSuffix(".java").replace('.', '/') + ".java")
                 }
         }
 

@@ -42,8 +42,8 @@ abstract class PatchMappings : DefaultTask() {
     @get:InputFile
     abstract val inputMappings: RegularFileProperty
 
-    @get:InputFile
     @get:Optional
+    @get:InputFile
     abstract val patch: RegularFileProperty
 
     @get:OutputFile
