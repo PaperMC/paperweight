@@ -30,6 +30,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.build.NestedRootBuildRunner
@@ -39,7 +40,7 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
     @get:InputDirectory
     abstract val projectDir: DirectoryProperty
 
-    @get:InputDirectory
+    @get:Internal
     abstract val workDir: DirectoryProperty
 
     @get:OutputFile

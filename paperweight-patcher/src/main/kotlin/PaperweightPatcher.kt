@@ -182,11 +182,7 @@ class PaperweightPatcher : Plugin<Project> {
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
             val (cloneTask, upstreamDataTask) = upstreamTaskPair
-            if (!config.isBareDirectory.get()) {
-                dependsOn(upstreamDataTask)
-            } else if (cloneTask != null) {
-                dependsOn(cloneTask)
-            }
+            dependsOn(upstreamDataTask)
 
             if (cloneTask != null) {
                 upstreamDir.convention(cloneTask.flatMap { it.outputDir.dir(config.upstreamDirPath) })
