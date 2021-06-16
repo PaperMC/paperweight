@@ -60,6 +60,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
+        outputs.upToDateWhen { false }
         printOutput.convention(false)
     }
 
@@ -83,19 +84,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
         try {
             Git(outputPath).let { git ->
-                checkoutRepoFromUpstream(git, upstream.path)
-
-                // disable gpg for this repo, not needed & slows things down
-                git("config", "commit.gpgsign", "false").executeSilently()
-
-                git("remote", "rm", "upstream").runSilently(silenceErr = true)
-                git("remote", "add", "upstream", upstream.path.absolutePathString()).runSilently(silenceErr = true)
-                if (git("checkout", "master").setupOut(showError = false).run() != 0) {
-                    git("checkout", "-b", "master").setupOut().run()
-                }
-                git("fetch", "upstream").runSilently(silenceErr = true)
-                git("reset", "--hard", "upstream/${upstreamBranch.get()}").setupOut().run()
-
+                checkoutRepoFromUpstream(git, upstream.path, upstreamBranch.get())
                 applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
             }
         } finally {
@@ -165,18 +154,32 @@ fun ControllableOutputTask.applyGitPatches(
     }
 }
 
-fun checkoutRepoFromUpstream(git: Git, upstream: Path) {
+fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String) {
     git("init", "--quiet").executeSilently()
-    git("remote", "add", "origin", upstream.absolutePathString()).executeSilently(silenceErr = true)
-    git("fetch", "origin").executeSilently(silenceErr = true)
-    git("checkout", "master").executeSilently(silenceErr = true)
+    git("config", "commit.gpgsign", "false").executeSilently()
+    git("remote", "remove", "upstream").runSilently(silenceErr = true)
+    git("remote", "add", "upstream", upstream.toUri().toString()).executeSilently(silenceErr = true)
+    git("fetch", "upstream", "--prune").executeSilently(silenceErr = true)
+    if (git("checkout", "master").runSilently(silenceErr = true) != 0) {
+        git("checkout", "-b", "master").runSilently(silenceErr = true)
+    }
+    git("reset", "--hard", "upstream/$upstreamBranch").executeSilently(silenceErr = true)
+    git("gc").runSilently(silenceErr = true)
 }
 
 fun recreateCloneDirectory(target: Path) {
     if (target.exists()) {
-        for (entry in target.listDirectoryEntries()) {
-            entry.deleteRecursively()
+        if (target.resolve(".git").isDirectory()) {
+            val git = Git(target)
+            git("clean", "-fxd").runSilently(silenceErr = true)
+            git("reset", "--hard", "HEAD").runSilently(silenceErr = true)
+        } else {
+            for (entry in target.listDirectoryEntries()) {
+                entry.deleteRecursively()
+            }
+            target.createDirectories()
         }
+    } else {
+        target.createDirectories()
     }
-    target.createDirectories()
 }

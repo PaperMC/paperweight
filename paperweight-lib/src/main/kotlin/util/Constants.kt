@@ -26,6 +26,7 @@ import org.gradle.api.Task
 
 object Constants {
     const val EXTENSION = "paperweight"
+    const val PAPERWEIGHT_DEBUG = "paperweight.debug"
 
     const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
 

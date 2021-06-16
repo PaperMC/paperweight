@@ -24,13 +24,13 @@ package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.ControllableOutputTask
 import io.papermc.paperweight.tasks.applyGitPatches
+import io.papermc.paperweight.tasks.checkoutRepoFromUpstream
+import io.papermc.paperweight.tasks.recreateCloneDirectory
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
 import kotlin.io.path.*
-import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -44,7 +44,10 @@ import org.gradle.api.tasks.TaskAction
 abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
     @get:InputDirectory
-    abstract val sourceDir: DirectoryProperty
+    abstract val upstreamDir: DirectoryProperty
+
+    @get:Input
+    abstract val upstreamBranch: Property<String>
 
     @get:Optional
     @get:InputDirectory
@@ -73,6 +76,8 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
+        outputs.upToDateWhen { false }
+        upstreamBranch.convention("master")
         importMcDev.convention(false)
         printOutput.convention(true)
     }
@@ -80,8 +85,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @TaskAction
     fun run() {
         val output = outputDir.path
-        output.deleteRecursively()
-        output.parent.createDirectories()
+        recreateCloneDirectory(output)
 
         val target = output.name
 
@@ -89,12 +93,12 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
             println("   Creating $target from patch source...")
         }
 
-        Git(output.parent)("clone", sourceDir.path.absolutePathString(), output.absolutePathString()).executeSilently()
-        val srcDir = output.resolve("src/main/java")
-
         val git = Git(output)
+        checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
 
         git("config", "commit.gpgsign", "false").executeSilently()
+
+        val srcDir = output.resolve("src/main/java")
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
 

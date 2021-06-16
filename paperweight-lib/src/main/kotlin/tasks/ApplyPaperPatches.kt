@@ -28,6 +28,8 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -49,7 +51,10 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     abstract val caseOnlyClassNameChanges: RegularFileProperty
 
     @get:InputDirectory
-    abstract val spigotServerDir: DirectoryProperty
+    abstract val upstreamDir: DirectoryProperty
+
+    @get:Input
+    abstract val upstreamBranch: Property<String>
 
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
@@ -69,6 +74,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
+        outputs.upToDateWhen { false }
+        upstreamBranch.convention("master")
         printOutput.convention(true)
     }
 
@@ -84,10 +91,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         }
 
         Git(outputFile).let { git ->
-            checkoutRepoFromUpstream(git, spigotServerDir.path)
-
-            // disable gpg for this repo, not needed & slows things down
-            git("config", "commit.gpgsign", "false").executeSilently()
+            checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
 
             val sourceDir = createDir(outputDir.path.resolve("src/main/java"))
             val testDir = createDir(outputDir.path.resolve("src/test/java"))
@@ -116,6 +120,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+            git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())

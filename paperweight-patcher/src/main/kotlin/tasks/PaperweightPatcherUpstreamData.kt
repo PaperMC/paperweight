@@ -57,6 +57,7 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
         params.setTaskNames(listOf(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
         params.projectProperties[Constants.UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
         params.projectProperties[Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM] = dataFile.path.absolutePathString()
+        params.systemPropertiesArgs[Constants.PAPERWEIGHT_DEBUG] = System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false")
 
         NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
     }

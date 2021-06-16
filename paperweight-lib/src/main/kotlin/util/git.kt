@@ -30,7 +30,7 @@ import java.nio.charset.Charset
 import java.nio.file.Path
 import kotlin.io.path.exists
 
-class Git(private var repo: Path) {
+class Git(val repo: Path, val env: Map<String, String> = emptyMap()) {
 
     @Suppress("unused")
     constructor(repo: Any) : this(repo.convertToPath())
@@ -41,27 +41,44 @@ class Git(private var repo: Path) {
         }
     }
 
+    fun withEnv(env: Map<String, String>): Git = Git(repo, env)
+
     operator fun invoke(vararg args: String): Command {
         val cmd = arrayOf("git", "-c", "commit.gpgsign=false", "-c", "core.safecrlf=false", *args)
         return try {
-            Command(ProcessBuilder(*cmd).directory(repo).start(), cmd.joinToString(separator = " "))
+            val builder = ProcessBuilder(*cmd).directory(repo)
+            builder.environment().putAll(env)
+
+            val commandText = builder.command().joinToString(" ") { arg ->
+                if (arg.codePoints().anyMatch { Character.isWhitespace(it) }) {
+                    "'$arg'"
+                } else {
+                    arg
+                }
+            }
+            Command(builder, commandText)
         } catch (e: IOException) {
             throw PaperweightException("Failed to execute command: ${cmd.joinToString(separator = " ")}", e)
         }
     }
 }
 
-class Command(private val process: Process, private val command: String) {
+class Command(private val processBuilder: ProcessBuilder, private val command: String) {
 
     private var outStream: OutputStream = UselessOutputStream
     private var errStream: OutputStream = UselessOutputStream
 
     fun run(): Int {
-        if (System.getProperty("paperweight.debug", "false") == "true") {
+        if (System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false") == "true") {
             // Override all settings for debug
             setup(System.out, System.err)
+            println()
+            println("$ (pwd) ${processBuilder.directory().absolutePath}")
+            println("$ $command")
         }
         try {
+            val process = processBuilder.start()
+
             val input = process.inputStream
             val error = process.errorStream
             val buffer = ByteArray(1000)

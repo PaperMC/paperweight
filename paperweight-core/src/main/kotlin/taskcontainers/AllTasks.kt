@@ -90,7 +90,7 @@ open class AllTasks(
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
         caseOnlyClassNameChanges.set(cleanupMappings.flatMap { it.caseOnlyNameChanges })
-        spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
+        upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryImports.fileExists(project))

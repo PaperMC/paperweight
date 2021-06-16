@@ -186,9 +186,9 @@ class PaperweightPatcher : Plugin<Project> {
             dependsOn(upstreamDataTask)
 
             if (cloneTask != null) {
-                sourceDir.convention(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
+                upstreamDir.convention(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
             } else {
-                sourceDir.convention(config.sourceDir)
+                upstreamDir.convention(config.sourceDir)
             }
 
             patchDir.convention(config.patchDir.flatMap { provider { if (it.path.exists()) it else null } })
