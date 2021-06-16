@@ -34,7 +34,6 @@ import io.papermc.paperweight.tasks.GeneratePaperclipPatch
 import io.papermc.paperweight.util.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.io.path.exists
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -183,17 +182,22 @@ class PaperweightPatcher : Plugin<Project> {
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
             val (cloneTask, upstreamDataTask) = upstreamTaskPair
-            dependsOn(upstreamDataTask)
-
-            if (cloneTask != null) {
-                upstreamDir.convention(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
-            } else {
-                upstreamDir.convention(config.sourceDir)
+            if (!config.isBareDirectory.get()) {
+                dependsOn(upstreamDataTask)
+            } else if (cloneTask != null) {
+                dependsOn(cloneTask)
             }
 
-            patchDir.convention(config.patchDir.flatMap { provider { if (it.path.exists()) it else null } })
+            if (cloneTask != null) {
+                upstreamDir.convention(cloneTask.flatMap { it.outputDir.dir(config.upstreamDirPath) })
+            } else {
+                upstreamDir.convention(config.upstreamDir)
+            }
+
+            patchDir.convention(config.patchDir.fileExists(project))
             outputDir.convention(config.outputDir)
 
+            bareDirectory.convention(config.isBareDirectory)
             importMcDev.convention(config.importMcDev)
             libraryImports.convention(ext.libraryImports.fileExists(project))
             mcdevImports.convention(ext.mcdevImports.fileExists(project))

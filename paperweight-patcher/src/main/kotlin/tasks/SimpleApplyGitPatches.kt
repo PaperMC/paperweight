@@ -28,6 +28,7 @@ import io.papermc.paperweight.tasks.checkoutRepoFromUpstream
 import io.papermc.paperweight.tasks.recreateCloneDirectory
 import io.papermc.paperweight.util.Git
 import io.papermc.paperweight.util.McDev
+import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
 import kotlin.io.path.*
@@ -52,6 +53,9 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
+
+    @get:Input
+    abstract val bareDirectory: Property<Boolean>
 
     @get:Input
     abstract val importMcDev: Property<Boolean>
@@ -91,6 +95,18 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         if (printOutput.get()) {
             println("   Creating $target from patch source...")
+        }
+
+        if (bareDirectory.get()) {
+            val up = upstreamDir.path
+            up.resolve(".git").deleteRecursively()
+            Git(up).let { upstreamGit ->
+                upstreamGit("init", "--quiet").executeSilently(silenceErr = true)
+                upstreamGit("checkout", "-b", upstreamBranch.get()).executeSilently(silenceErr = true)
+                upstreamGit("config", "commit.gpgsign", "false").executeSilently(silenceErr = true)
+                upstreamGit("add", ".").executeSilently(silenceErr = true)
+                upstreamGit("commit", "-m", "Initial Source", "--author=Initial <auto@mated.null>").executeSilently(silenceErr = true)
+            }
         }
 
         val git = Git(output)

@@ -39,10 +39,11 @@ open class DefaultPatchTaskConfig @Inject constructor(
     objects: ObjectFactory,
 ) : PatchTaskConfig {
 
-    override val sourceDirPath: Property<String> = objects.property()
-    override val sourceDir: DirectoryProperty = objects.directoryProperty()
+    override val upstreamDirPath: Property<String> = objects.property()
+    override val upstreamDir: DirectoryProperty = objects.directoryProperty()
     override val patchDir: DirectoryProperty = objects.directoryProperty()
     override val outputDir: DirectoryProperty = objects.directoryProperty()
+    override val isBareDirectory: Property<Boolean> = objects.property<Boolean>().convention(false)
     override val importMcDev: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     override val patchTaskName: String

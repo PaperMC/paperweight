@@ -31,12 +31,13 @@ import org.gradle.api.tasks.TaskProvider
 
 interface PatchTaskConfig : Named {
 
-    val sourceDirPath: Property<String>
-    val sourceDir: DirectoryProperty
+    val upstreamDirPath: Property<String>
+    val upstreamDir: DirectoryProperty
 
     val patchDir: DirectoryProperty
     val outputDir: DirectoryProperty
 
+    val isBareDirectory: Property<Boolean>
     val importMcDev: Property<Boolean>
 
     val patchTaskName: String
