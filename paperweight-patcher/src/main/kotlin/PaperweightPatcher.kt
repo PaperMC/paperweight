@@ -91,8 +91,8 @@ class PaperweightPatcher : Plugin<Project> {
             for (upstream in patcher.upstreams) {
                 for (patchTask in upstream.patchTasks) {
                     patchTask.patchTask {
-                        sourceMcDevJar.convention(upstreamData.decompiledJar)
-                        mcLibrariesDir.convention(upstreamData.libSourceDir)
+                        sourceMcDevJar.convention(target, upstreamData.decompiledJar)
+                        mcLibrariesDir.convention(target, upstreamData.libSourceDir)
                     }
                 }
             }

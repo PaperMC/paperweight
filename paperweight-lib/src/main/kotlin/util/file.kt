@@ -37,8 +37,11 @@ import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import kotlin.io.path.*
 import kotlin.streams.asSequence
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.FileSystemLocationProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 
 // utils for dealing with java.nio.file.Path and java.io.File
@@ -50,7 +53,8 @@ val Provider<out FileSystemLocation>.path: Path
 val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
-fun FileSystemLocationProperty<*>.convention(path: Path?) = convention(path?.toFile())
+fun DirectoryProperty.convention(project: Project, path: Path?) = convention(project.layout.dir(project.provider { path?.toFile() }))
+fun RegularFileProperty.convention(project: Project, path: Path?) = convention(project.layout.file(project.provider { path?.toFile() }))
 
 val Path.isLibraryJar: Boolean
     get() = name.endsWith(".jar") && !name.endsWith("-sources.jar")
