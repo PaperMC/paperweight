@@ -31,6 +31,7 @@ import org.gradle.api.file.RegularFileProperty
 data class UpstreamData(
     val vanillaJar: Path,
     val remappedJar: Path,
+    val decompiledJar: Path,
     val mcVersion: String,
     val libSourceDir: Path,
     val libFile: Path?,

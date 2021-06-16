@@ -93,8 +93,8 @@ open class AllTasks(
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
-        libraryImports.set(extension.paper.libraryClassImports.fileExists(project))
-        mcdevImports.set(extension.paper.mcdevClassImports.fileExists(project))
+        libraryImports.set(extension.paper.libraryImports.fileExists(project))
+        mcdevImports.set(extension.paper.mcdevImports.fileExists(project))
 
         outputDir.set(extension.paper.paperServerDir)
     }

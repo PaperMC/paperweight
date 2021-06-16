@@ -50,6 +50,7 @@ val Provider<out FileSystemLocation>.path: Path
 val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
+fun FileSystemLocationProperty<*>.convention(path: Path?) = convention(path?.toFile())
 
 val Path.isLibraryJar: Boolean
     get() = name.endsWith(".jar") && !name.endsWith("-sources.jar")

@@ -74,7 +74,7 @@ class PaperweightPatcher : Plugin<Project> {
             val taskPair = target.createUpstreamTask(this, patcher, workDirProp, dataFileProp, upstreamDataTaskRef)
 
             patchTasks.all {
-                val createdPatchTask = target.createPatchTask(this, taskPair, applyPatches)
+                val createdPatchTask = target.createPatchTask(this, patcher, taskPair, applyPatches)
                 downstreamData {
                     dependsOn(createdPatchTask)
                 }
@@ -87,6 +87,15 @@ class PaperweightPatcher : Plugin<Project> {
             val upstreamData = upstreamDataTask.flatMap {
                 target.provider { readUpstreamData(it.dataFile) }
             }.orNull ?: return@afterEvaluate
+
+            for (upstream in patcher.upstreams) {
+                for (patchTask in upstream.patchTasks) {
+                    patchTask.patchTask {
+                        sourceMcDevJar.convention(upstreamData.decompiledJar)
+                        mcLibrariesDir.convention(upstreamData.libSourceDir)
+                    }
+                }
+            }
 
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
 
@@ -130,26 +139,26 @@ class PaperweightPatcher : Plugin<Project> {
         val dataFileFromProp = layout.file(dataFileProp.map { File(it) })
 
         val upstreamData = tasks.configureTask<PaperweightPatcherUpstreamData>(upstream.upstreamDataTaskName) {
-            workDir.set(workDirFromProp)
+            workDir.convention(workDirFromProp)
             if (dataFileFromProp.isPresent) {
-                dataFile.set(dataFileFromProp)
+                dataFile.convention(dataFileFromProp)
             } else {
-                dataFile.set(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
+                dataFile.convention(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
             }
         }
 
         val cloneTask = (upstream as? RepoPatcherUpstream)?.let { repo ->
             val cloneTask = tasks.configureTask<CheckoutRepo>(repo.cloneTaskName) {
-                repoName.set(repo.name)
-                url.set(repo.url)
-                ref.set(repo.ref)
+                repoName.convention(repo.name)
+                url.convention(repo.url)
+                ref.convention(repo.ref)
 
-                workDir.set(workDirFromProp)
+                workDir.convention(workDirFromProp)
             }
 
             upstreamData {
                 dependsOn(cloneTask)
-                projectDir.set(cloneTask.flatMap { it.outputDir })
+                projectDir.convention(cloneTask.flatMap { it.outputDir })
             }
 
             return@let cloneTask
@@ -166,22 +175,28 @@ class PaperweightPatcher : Plugin<Project> {
 
     private fun Project.createPatchTask(
         config: PatchTaskConfig,
+        ext: PaperweightPatcherExtension,
         upstreamTaskPair: Pair<TaskProvider<CheckoutRepo>?, TaskProvider<PaperweightPatcherUpstreamData>>,
         applyPatches: TaskProvider<Task>
     ): TaskProvider<SimpleApplyGitPatches> {
+        val project = this
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
             val (cloneTask, upstreamDataTask) = upstreamTaskPair
             dependsOn(upstreamDataTask)
 
             if (cloneTask != null) {
-                sourceDir.set(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
+                sourceDir.convention(cloneTask.flatMap { it.outputDir.dir(config.sourceDirPath) })
             } else {
-                sourceDir.set(config.sourceDir)
+                sourceDir.convention(config.sourceDir)
             }
 
-            patchDir.set(config.patchDir.flatMap { provider { if (it.path.exists()) it else null } })
-            outputDir.set(config.outputDir)
+            patchDir.convention(config.patchDir.flatMap { provider { if (it.path.exists()) it else null } })
+            outputDir.convention(config.outputDir)
+
+            importMcDev.convention(config.importMcDev)
+            libraryImports.convention(ext.libraryImports.fileExists(project))
+            mcdevImports.convention(ext.mcdevImports.fileExists(project))
         }
 
         applyPatches {
@@ -198,8 +213,8 @@ class PaperweightPatcher : Plugin<Project> {
         val rebuildTask = tasks.configureTask<SimpleRebuildGitPatches>(config.rebuildTaskName) {
             group = "paperweight"
 
-            patchDir.set(config.patchDir)
-            inputDir.set(config.outputDir)
+            patchDir.convention(config.patchDir)
+            inputDir.convention(config.outputDir)
         }
 
         rebuildPatches {

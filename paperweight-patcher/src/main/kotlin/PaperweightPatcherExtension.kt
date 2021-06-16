@@ -30,11 +30,15 @@ import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cacheDir
+import io.papermc.paperweight.util.dirWithDefault
+import io.papermc.paperweight.util.fileFrom
 import org.gradle.api.Action
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -45,6 +49,10 @@ import org.gradle.kotlin.dsl.*
 open class PaperweightPatcherExtension(private val objects: ObjectFactory, layout: ProjectLayout, tasks: TaskContainer) {
 
     val serverProject: Property<Project> = objects.property()
+
+    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
+    val libraryImports: RegularFileProperty = objects.fileFrom(buildDataDir, "library-imports.txt")
+    val mcdevImports: RegularFileProperty = objects.fileFrom(buildDataDir, "mcdev-imports.txt")
 
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 

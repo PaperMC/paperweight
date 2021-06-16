@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.extension
 
+import io.papermc.paperweight.util.dirWithDefault
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -36,7 +37,6 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
     val minecraftVersion: Property<String> = objects.property()
-    val versionPackage: Property<String> = objects.property()
     val serverProject: Property<Project> = objects.property()
 
     @Suppress("MemberVisibilityCanBePrivate")

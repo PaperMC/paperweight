@@ -49,6 +49,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:InputFile
     abstract val remappedJar: RegularFileProperty
 
+    @get:InputFile
+    abstract val decompiledJar: RegularFileProperty
+
     @get:Input
     abstract val mcVersion: Property<String>
 
@@ -81,6 +84,7 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
         val data = UpstreamData(
             vanillaJar.path,
             remappedJar.path,
+            decompiledJar.path,
             mcVersion.get(),
             mcLibrariesDir.path,
             mcLibrariesFile.pathOrNull,

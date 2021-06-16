@@ -55,15 +55,16 @@ open class DefaultRepoPatcherUpstream(
 
         patchTasks {
             register("api") {
-                sourceDirPath.set(config.apiSourceDirPath)
-                patchDir.set(config.apiPatchDir)
-                outputDir.set(config.apiOutputDir)
+                sourceDirPath.convention(config.apiSourceDirPath)
+                patchDir.convention(config.apiPatchDir)
+                outputDir.convention(config.apiOutputDir)
             }
 
             register("server") {
-                sourceDirPath.set(config.serverSourceDirPath)
-                patchDir.set(config.serverPatchDir)
-                outputDir.set(config.serverOutputDir)
+                importMcDev.convention(true)
+                sourceDirPath.convention(config.serverSourceDirPath)
+                patchDir.convention(config.serverPatchDir)
+                outputDir.convention(config.serverOutputDir)
             }
         }
     }
@@ -81,11 +82,11 @@ open class DefaultPaperRepoPatcherUpstream(name: String, objects: ObjectFactory,
         val paperAction = Action<StandardPatcherConfig> {
             baseName("Paper")
 
-            apiPatchDir.set(minimalConfig.apiPatchDir)
-            apiOutputDir.set(minimalConfig.apiOutputDir)
+            apiPatchDir.convention(minimalConfig.apiPatchDir)
+            apiOutputDir.convention(minimalConfig.apiOutputDir)
 
-            serverPatchDir.set(minimalConfig.serverPatchDir)
-            serverOutputDir.set(minimalConfig.serverOutputDir)
+            serverPatchDir.convention(minimalConfig.serverPatchDir)
+            serverOutputDir.convention(minimalConfig.serverOutputDir)
         }
 
         withStandardPatcher(paperAction)

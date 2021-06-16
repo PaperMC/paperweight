@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.extension
 
+import io.papermc.paperweight.util.dirFrom
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 

@@ -33,6 +33,8 @@ import kotlin.io.path.*
 import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -47,6 +49,9 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
+
+    @get:Input
+    abstract val importMcDev: Property<Boolean>
 
     @get:Optional
     @get:InputFile
@@ -68,6 +73,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
+        importMcDev.convention(false)
         printOutput.convention(true)
     }
 
@@ -92,7 +98,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
 
-        if (sourceMcDevJar.isPresent) {
+        if (sourceMcDevJar.isPresent && importMcDev.get()) {
             McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.pathOrNull, mcdevImports.pathOrNull, srcDir)
         }
 

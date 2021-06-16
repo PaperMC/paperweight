@@ -37,6 +37,8 @@ interface PatchTaskConfig : Named {
     val patchDir: DirectoryProperty
     val outputDir: DirectoryProperty
 
+    val importMcDev: Property<Boolean>
+
     val patchTaskName: String
     val rebuildTaskName: String
     val patchTask: TaskProvider<SimpleApplyGitPatches>
