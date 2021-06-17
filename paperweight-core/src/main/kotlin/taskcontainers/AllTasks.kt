@@ -111,7 +111,7 @@ open class AllTasks(
         group = "paper"
         description = "Rebuilds patches to api"
         inputDir.set(extension.paper.paperApiDir)
-        baseRef.set("upstream/upstream")
+        baseRef.set("base")
 
         patchDir.set(extension.paper.spigotApiPatchDir)
     }

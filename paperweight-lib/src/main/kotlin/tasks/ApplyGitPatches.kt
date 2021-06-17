@@ -97,6 +97,9 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
                     git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").runOut()
                 }
 
+                git("tag", "-d", "base").runSilently(silenceErr = true)
+                git("tag", "base").executeSilently()
+
                 applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
             }
         } finally {
