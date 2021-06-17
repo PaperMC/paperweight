@@ -118,6 +118,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 git("mv", "-f", obfFile.toString(), deobfFile.toString()).runSilently(silenceErr = true)
             }
 
+            val craftBukkitNMSPatches = outputFile.resolve("nms-patches")
+            craftBukkitNMSPatches.deleteRecursively()
+
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             git("tag", "-d", "base").runSilently(silenceErr = true)
