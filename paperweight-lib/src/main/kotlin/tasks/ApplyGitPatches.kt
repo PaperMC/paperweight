@@ -28,6 +28,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -55,6 +56,10 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputFile
     abstract val patchZip: RegularFileProperty
+
+    @get:Optional
+    @get:Input
+    abstract val unneededFiles: ListProperty<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -85,6 +90,13 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
         try {
             Git(outputPath).let { git ->
                 checkoutRepoFromUpstream(git, upstream.path, upstreamBranch.get())
+
+                if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
+                    unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
+                    git("add", ".").runOut()
+                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").runOut()
+                }
+
                 applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
             }
         } finally {

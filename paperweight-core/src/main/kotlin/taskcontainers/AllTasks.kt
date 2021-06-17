@@ -78,6 +78,7 @@ open class AllTasks(
         upstream.set(patchSpigotApi.flatMap { it.outputDir })
         patchDir.set(extension.paper.spigotApiPatchDir)
         printOutput.set(true)
+        unneededFiles.value(listOf("README.md"))
 
         outputDir.set(extension.paper.paperApiDir)
     }
@@ -95,6 +96,7 @@ open class AllTasks(
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
         libraryImports.set(extension.paper.libraryImports.fileExists(project))
         mcdevImports.set(extension.paper.mcdevImports.fileExists(project))
+        unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 
         outputDir.set(extension.paper.paperServerDir)
     }

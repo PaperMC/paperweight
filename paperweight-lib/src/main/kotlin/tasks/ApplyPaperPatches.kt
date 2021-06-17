@@ -28,13 +28,9 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 abstract class ApplyPaperPatches : ControllableOutputTask() {
 
@@ -65,6 +61,10 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputFile
     abstract val libraryImports: RegularFileProperty
+
+    @get:Optional
+    @get:Input
+    abstract val unneededFiles: ListProperty<String>
 
     @get:Optional
     @get:InputFile
@@ -117,6 +117,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 val deobfFile = sourceDir.resolve(caseOnlyChange.deobfName + ".java").relativeTo(outputFile)
                 git("mv", "-f", obfFile.toString(), deobfFile.toString()).runSilently(silenceErr = true)
             }
+
+            unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursively() }
 
             git("add", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
