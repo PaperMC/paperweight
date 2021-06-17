@@ -67,6 +67,27 @@ class PaperweightCore : Plugin<Project> {
         val tasks = AllTasks(target)
         target.createPatchRemapTask(tasks)
 
+        val generateReobfMappings by target.tasks.registering<GenerateReobfMappings> {
+            inputMappings.set(tasks.patchMappings.flatMap { it.outputMappings })
+            notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
+            sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
+
+            reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+        }
+
+        target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
+            dependsOn(tasks.applyPatches)
+            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+            remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
+            decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
+            mcVersion.set(target.ext.minecraftVersion)
+            mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
+            mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
+            reobfMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+
+            dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
+        }
+
         target.afterEvaluate {
             // Setup the server jar
             val cache = target.layout.cache
@@ -74,13 +95,8 @@ class PaperweightCore : Plugin<Project> {
             val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
-            val generateReobfMappings by target.tasks.registering<GenerateReobfMappings> {
-                inputMappings.set(tasks.patchMappings.flatMap { it.outputMappings })
-                notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-                sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
+            generateReobfMappings {
                 inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
-
-                reobfMappings.set(cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
             }
 
             val reobfJar = serverProj.setupServerProject(
@@ -111,19 +127,6 @@ class PaperweightCore : Plugin<Project> {
                 from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }))
 
                 manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
-            }
-
-            target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-                dependsOn(tasks.applyPatches)
-                vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-                remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
-                decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
-                mcVersion.set(target.ext.minecraftVersion)
-                mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
-                mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
-                reobfMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
-
-                dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
             }
         }
     }
