@@ -127,6 +127,9 @@ abstract class CleanupMappings : BaseTask() {
                 var methodRef: MemberReference? = null
 
                 var lvtIndex = if (method.isStatic) 0 else 1
+                if (method.isConstructor && currentClass.outerClass() != null && !currentClass.isStaticInnerClass) {
+                    lvtIndex += 1
+                }
                 for ((sourceIndex, param) in method.params().withIndex()) {
                     if (methodMapping.hasParameterMapping(lvtIndex)) {
                         if (methodRef == null) {

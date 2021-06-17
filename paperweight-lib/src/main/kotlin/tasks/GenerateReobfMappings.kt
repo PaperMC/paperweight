@@ -30,6 +30,7 @@ import dev.denwav.hypo.core.HypoContext
 import dev.denwav.hypo.hydrate.HydrationManager
 import dev.denwav.hypo.mappings.ChangeChain
 import dev.denwav.hypo.mappings.ChangeRegistry
+import dev.denwav.hypo.mappings.ClassMappingsChange
 import dev.denwav.hypo.mappings.MappingsCompletionManager
 import dev.denwav.hypo.mappings.changes.MemberReference
 import dev.denwav.hypo.mappings.changes.RemoveClassMappingChange
@@ -43,6 +44,7 @@ import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
 import org.cadixdev.lorenz.MappingSet
@@ -85,7 +87,7 @@ abstract class GenerateReobfMappings : DefaultTask() {
     init {
         @Suppress("LeakingThis")
         run {
-            jvmargs.convention(listOf("-Xmx1G"))
+            jvmargs.convention(listOf("-Xmx2G"))
         }
     }
 
@@ -138,6 +140,35 @@ abstract class GenerateReobfMappings : DefaultTask() {
         override fun name() = "RemoveObfSpigotMappings"
     }
 
+    class PropagateOuterClassMappings(private val mappings: MappingSet) : ChangeContributor {
+
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (currentClass == null || classMapping != null) {
+                return
+            }
+
+            val name = currentClass.name().substringAfterLast("$")
+
+            val outer = currentClass.outerClass() ?: return
+            val outerMappings = mappings.getClassMapping(outer.name()).orNull ?: return
+            if (outerMappings.innerClassMappings.any { it.deobfuscatedName == name }) {
+                return
+            }
+
+            registry.submitChange(AddClassMappingChange(currentClass.name(), name))
+        }
+
+        override fun name(): String = "PropagateOuterClassMappings"
+    }
+
+    class AddClassMappingChange(private val target: String, private val deobfName: String) : ClassMappingsChange {
+        override fun targetClass(): String = target
+
+        override fun applyChange(input: MappingSet) {
+            input.getOrCreateClassMapping(target).deobfuscatedName = deobfName
+        }
+    }
+
     interface GenerateReobfMappingsParams : WorkParameters {
         val inputMappings: RegularFileProperty
         val notchToSpigotMappings: RegularFileProperty
@@ -180,6 +211,7 @@ abstract class GenerateReobfMappings : DefaultTask() {
                     ChangeChain.create()
                         .addLink(RemoveUnusedMappings.create())
                         .addLink(RemoveAllParameterMappings, RemoveObfSpigotMappings)
+                        .addLink(PropagateOuterClassMappings(outputMappings))
                         .addLink(PropagateMappingsUp.create())
                         .addLink(CopyMappingsDown.create())
                         .applyChain(outputMappings, MappingsCompletionManager.create(hypoContext))
