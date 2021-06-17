@@ -110,14 +110,6 @@ open class SpigotTasks(
         outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 
-    val generateReobfMappings by tasks.registering<GenerateReobfMappings> {
-        inputMappings.set(patchMappings.flatMap { it.outputMappings })
-        notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
-
-        reobfMappings.set(cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
-    }
-
     val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
         inputZip.set(spigotRemapJar.flatMap { it.outputJar })
         excludesFile.set(extension.craftBukkit.excludesFile)

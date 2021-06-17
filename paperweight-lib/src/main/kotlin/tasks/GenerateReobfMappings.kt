@@ -22,13 +22,24 @@
 
 package io.papermc.paperweight.tasks
 
+import dev.denwav.hypo.asm.AsmClassDataProvider
+import dev.denwav.hypo.asm.hydrate.BridgeMethodHydrator
+import dev.denwav.hypo.asm.hydrate.SuperConstructorHydrator
+import dev.denwav.hypo.core.HypoConfig
 import dev.denwav.hypo.core.HypoContext
+import dev.denwav.hypo.hydrate.HydrationManager
 import dev.denwav.hypo.mappings.ChangeChain
 import dev.denwav.hypo.mappings.ChangeRegistry
 import dev.denwav.hypo.mappings.MappingsCompletionManager
 import dev.denwav.hypo.mappings.changes.MemberReference
+import dev.denwav.hypo.mappings.changes.RemoveClassMappingChange
 import dev.denwav.hypo.mappings.changes.RemoveMappingChange
+import dev.denwav.hypo.mappings.changes.RemoveParameterMappingChange
 import dev.denwav.hypo.mappings.contributors.ChangeContributor
+import dev.denwav.hypo.mappings.contributors.CopyMappingsDown
+import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
+import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
+import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.MappingFormats
@@ -52,6 +63,9 @@ abstract class GenerateReobfMappings : DefaultTask() {
     @get:InputFile
     abstract val sourceMappings: RegularFileProperty
 
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+
     @get:OutputFile
     abstract val reobfMappings: RegularFileProperty
 
@@ -72,13 +86,31 @@ abstract class GenerateReobfMappings : DefaultTask() {
         val fieldMappings = MappingFormats.TINY.read(sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
         val spigotFieldMappings = filterFieldMappings(notchToSpigot).reverse().merge(fieldMappings)
 
-        val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings)
+        val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse()
+
+        val cleanedOutputMappings = HypoContext.builder()
+            .withConfig(HypoConfig.builder().setRequireFullClasspath(false).withParallelism(1).build())
+            .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(inputJar.path)))
+            .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
+            .build().use { hypoContext ->
+                HydrationManager.createDefault()
+                    .register(BridgeMethodHydrator.create())
+                    .register(SuperConstructorHydrator.create())
+                    .hydrate(hypoContext)
+
+                ChangeChain.create()
+                    .addLink(RemoveUnusedMappings.create())
+                    .addLink(RemoveAllParameterMappings, RemoveObfSpigotMappings)
+                    .addLink(PropagateMappingsUp.create())
+                    .addLink(CopyMappingsDown.create())
+                    .applyChain(outputMappings, MappingsCompletionManager.create(hypoContext))
+            }
 
         MappingFormats.TINY.write(
-            outputMappings,
+            cleanedOutputMappings,
             reobfMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
+            Constants.DEOBF_NAMESPACE,
+            Constants.SPIGOT_NAMESPACE
         )
     }
 
@@ -123,5 +155,38 @@ abstract class GenerateReobfMappings : DefaultTask() {
         for (fieldMapping in fieldClassMapping.fieldMappings) {
             fieldMapping.copy(targetMappings)
         }
+    }
+
+    object RemoveAllParameterMappings : ChangeContributor {
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (classMapping == null) {
+                return
+            }
+            for (methodMapping in classMapping.methodMappings) {
+                val params = methodMapping.parameterMappings
+                if (params.isEmpty()) {
+                    continue
+                }
+                val ref = MemberReference.of(methodMapping)
+                for (parameterMapping in params) {
+                    registry.submitChange(RemoveParameterMappingChange.of(ref, parameterMapping.index))
+                }
+            }
+        }
+
+        override fun name() = "RemoveAllParameterMappings"
+    }
+
+    object RemoveObfSpigotMappings : ChangeContributor {
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (classMapping == null) {
+                return
+            }
+            if (!classMapping.fullDeobfuscatedName.contains("/")) {
+                registry.submitChange(RemoveClassMappingChange.of(classMapping.fullObfuscatedName))
+            }
+        }
+
+        override fun name() = "RemoveObfSpigotMappings"
     }
 }

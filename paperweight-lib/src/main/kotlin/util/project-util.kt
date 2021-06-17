@@ -55,7 +55,7 @@ fun Project.setupServerProject(parent: Project, remappedJar: Any?, libsFile: Any
 }
 
 private fun Project.createBuildTasks(reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar>? {
-    val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class.java)
+    val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
 
     val reobfJar by tasks.registering<RemapJar> {
         dependsOn(shadowJar)
