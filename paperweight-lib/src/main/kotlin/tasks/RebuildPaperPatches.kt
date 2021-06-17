@@ -34,7 +34,7 @@ import java.util.concurrent.Future
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Console
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
@@ -46,8 +46,8 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty
 
-    @get:Console
-    abstract val server: Property<Boolean>
+    @get:Input
+    abstract val baseRef: Property<String>
 
     @get:OutputDirectory
     abstract val patchDir: DirectoryProperty
@@ -59,7 +59,6 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
     override fun init() {
         printOutput.convention(true)
         filterPatches.convention(true)
-        server.convention(false)
 
         outputs.upToDateWhen { false }
     }
@@ -96,11 +95,13 @@ abstract class RebuildPaperPatches : ControllableOutputTask() {
             patchFolder.createDirectories()
         }
 
-        Git(inputDir.path)(
+        val git = Git(inputDir.path)
+        git("fetch", "--all", "--prune").runSilently(silenceErr = true)
+        git(
             "format-patch",
             "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
             "-o", patchFolder.absolutePathString(),
-            if (server.get()) "base" else "upstream/upstream"
+            baseRef.get()
         ).executeSilently()
         val patchDirGit = Git(patchFolder)
         patchDirGit("add", "-A", ".").executeSilently()

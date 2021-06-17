@@ -40,6 +40,9 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty
 
+    @get:Input
+    abstract val baseRef: Property<String>
+
     @get:OutputDirectory
     abstract val patchDir: DirectoryProperty
 
@@ -86,11 +89,13 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
             patchFolder.createDirectories()
         }
 
-        Git(inputDir.path)(
+        val git = Git(inputDir.path)
+        git("fetch", "--all", "--prune").runSilently(silenceErr = true)
+        git(
             "format-patch",
             "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
             "-o", patchFolder.absolutePathString(),
-            "base"
+            baseRef.get()
         ).executeSilently()
         val patchDirGit = Git(patchFolder)
         patchDirGit("add", "-A", ".").executeSilently()

@@ -109,6 +109,7 @@ open class AllTasks(
         group = "paper"
         description = "Rebuilds patches to api"
         inputDir.set(extension.paper.paperApiDir)
+        baseRef.set("upstream/upstream")
 
         patchDir.set(extension.paper.spigotApiPatchDir)
     }
@@ -117,7 +118,7 @@ open class AllTasks(
         group = "paper"
         description = "Rebuilds patches to server"
         inputDir.set(extension.paper.paperServerDir)
-        server.set(true)
+        baseRef.set("base")
 
         patchDir.set(extension.paper.spigotServerPatchDir)
     }

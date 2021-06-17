@@ -215,6 +215,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             patchDir.convention(config.patchDir)
             inputDir.convention(config.outputDir)
+            baseRef.convention("base")
         }
 
         rebuildPatches {
