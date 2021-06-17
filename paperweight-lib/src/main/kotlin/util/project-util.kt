@@ -58,6 +58,8 @@ private fun Project.createBuildTasks(reobfConfig: RemapJar.() -> Unit): TaskProv
     val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
 
     val reobfJar by tasks.registering<RemapJar> {
+        group = "paperweight"
+        description = "Re-obfuscate the built jar to obf mappings"
         dependsOn(shadowJar)
         inputJar.fileProvider(shadowJar.map { it.outputs.files.singleFile })
 

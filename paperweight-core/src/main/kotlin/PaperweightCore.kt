@@ -115,6 +115,8 @@ class PaperweightCore : Plugin<Project> {
 
             @Suppress("UNUSED_VARIABLE")
             val paperclipJar by target.tasks.registering<Jar> {
+                group = "paperweight"
+                description = "Build a runnable paperclip jar"
                 with(target.tasks.named("jar", Jar::class).get())
 
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
