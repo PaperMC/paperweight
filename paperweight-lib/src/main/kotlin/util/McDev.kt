@@ -49,6 +49,23 @@ object McDev {
         logger.lifecycle("Importing {} classes from vanilla...", importMcDev.size)
 
         decompJar.openZip().use { zipFile ->
+            // pull in all package-info classes
+            zipFile.walk().use { stream ->
+                for (zipEntry in stream) {
+                    if (zipEntry.toString().endsWith("package-info.java")) {
+                        // substring(1) trims the leading /
+                        val targetFile = targetDir.resolve(zipEntry.invariantSeparatorsPathString.substring(1))
+                        if (targetFile.exists()) {
+                            continue
+                        }
+                        if (!targetFile.parent.exists()) {
+                            targetFile.parent.createDirectories()
+                        }
+                        zipEntry.copyTo(targetFile)
+                    }
+                }
+            }
+
             for (file in importMcDev) {
                 if (!file.parent.exists()) {
                     file.parent.createDirectories()
