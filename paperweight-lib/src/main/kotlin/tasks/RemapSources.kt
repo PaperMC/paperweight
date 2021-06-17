@@ -61,8 +61,10 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -95,6 +97,9 @@ abstract class RemapSources : BaseTask() {
     @get:InputFile
     abstract val additionalAts: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
 
@@ -108,6 +113,7 @@ abstract class RemapSources : BaseTask() {
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        jvmargs.convention(listOf("-Xmx2G"))
         sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
         testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
         generatedAt.convention(defaultOutput("at"))
@@ -120,7 +126,7 @@ abstract class RemapSources : BaseTask() {
 
         try {
             val queue = workerExecutor.processIsolation {
-                forkOptions.jvmArgs("-Xmx2G")
+                forkOptions.jvmArgs(jvmargs.get())
             }
 
             val srcDir = spigotServerDir.path.resolve("src/main/java")

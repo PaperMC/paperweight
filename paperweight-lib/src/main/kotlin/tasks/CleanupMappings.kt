@@ -50,17 +50,25 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.isLibraryJar
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.set
 import java.util.Collections
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.*
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 
 abstract class CleanupMappings : BaseTask() {
 
@@ -73,59 +81,36 @@ abstract class CleanupMappings : BaseTask() {
     @get:InputFile
     abstract val inputMappings: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val caseOnlyNameChanges: RegularFileProperty
 
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
     override fun init() {
+        jvmargs.convention(listOf("-Xmx1G"))
         caseOnlyNameChanges.convention(defaultOutput("caseOnlyClassNameChanges", "json"))
     }
 
     @TaskAction
     fun run() {
-        val libs = librariesDir.path.useDirectoryEntries {
-            it.filter { p -> p.isLibraryJar }
-                .map { p -> ClassProviderRoot.fromJar(p) }
-                .toList()
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs(jvmargs.get())
         }
 
-        val mappings = MappingFormats.TINY.read(
-            inputMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
-        )
+        queue.submit(CleanupMappingsAction::class) {
+            inputMappings.set(this@CleanupMappings.inputMappings.path)
+            librariesDir.set(this@CleanupMappings.librariesDir.path)
+            sourceJar.set(this@CleanupMappings.sourceJar.path)
 
-        val caseOnlyChanges = Collections.synchronizedList(mutableListOf<ClassNameChange>())
-
-        val cleanedMappings = HypoContext.builder()
-            .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(sourceJar.path)))
-            .withContextProviders(AsmClassDataProvider.of(libs))
-            .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
-            .build().use { hypoContext ->
-                HydrationManager.createDefault()
-                    .register(BridgeMethodHydrator.create())
-                    .register(SuperConstructorHydrator.create())
-                    .hydrate(hypoContext)
-
-                ChangeChain.create()
-                    .addLink(RemoveUnusedMappings.create(), RemoveLambdaMappings)
-                    .addLink(PropagateMappingsUp.create())
-                    .addLink(CopyMappingsDown.create())
-                    .addLink(ParamIndexesForSource, FindCaseOnlyClassNameChanges(caseOnlyChanges))
-                    .applyChain(mappings, MappingsCompletionManager.create(hypoContext))
-            }
-
-        MappingFormats.TINY.write(
-            cleanedMappings,
-            outputMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
-        )
-
-        caseOnlyNameChanges.path.bufferedWriter(Charsets.UTF_8).use { writer ->
-            gson.toJson(caseOnlyChanges, writer)
+            outputMappings.set(this@CleanupMappings.outputMappings.path)
+            caseOnlyNameChanges.set(this@CleanupMappings.caseOnlyNameChanges.path)
         }
     }
 
@@ -237,5 +222,62 @@ abstract class CleanupMappings : BaseTask() {
         }
 
         override fun name(): String = "ParamIndexesForSource"
+    }
+
+    interface CleanupMappingsParams : WorkParameters {
+        val inputMappings: RegularFileProperty
+        val librariesDir: DirectoryProperty
+        val sourceJar: RegularFileProperty
+
+        val outputMappings: RegularFileProperty
+        val caseOnlyNameChanges: RegularFileProperty
+    }
+
+    abstract class CleanupMappingsAction : WorkAction<CleanupMappingsParams> {
+
+        override fun execute() {
+            val libs = parameters.librariesDir.path.useDirectoryEntries {
+                it.filter { p -> p.isLibraryJar }
+                    .map { p -> ClassProviderRoot.fromJar(p) }
+                    .toList()
+            }
+
+            val mappings = MappingFormats.TINY.read(
+                parameters.inputMappings.path,
+                Constants.SPIGOT_NAMESPACE,
+                Constants.DEOBF_NAMESPACE
+            )
+
+            val caseOnlyChanges = Collections.synchronizedList(mutableListOf<ClassNameChange>())
+
+            val cleanedMappings = HypoContext.builder()
+                .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.sourceJar.path)))
+                .withContextProviders(AsmClassDataProvider.of(libs))
+                .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
+                .build().use { hypoContext ->
+                    HydrationManager.createDefault()
+                        .register(BridgeMethodHydrator.create())
+                        .register(SuperConstructorHydrator.create())
+                        .hydrate(hypoContext)
+
+                    ChangeChain.create()
+                        .addLink(RemoveUnusedMappings.create(), RemoveLambdaMappings)
+                        .addLink(PropagateMappingsUp.create())
+                        .addLink(CopyMappingsDown.create())
+                        .addLink(ParamIndexesForSource, FindCaseOnlyClassNameChanges(caseOnlyChanges))
+                        .applyChain(mappings, MappingsCompletionManager.create(hypoContext))
+                }
+
+            MappingFormats.TINY.write(
+                cleanedMappings,
+                parameters.outputMappings.path,
+                Constants.SPIGOT_NAMESPACE,
+                Constants.DEOBF_NAMESPACE
+            )
+
+            parameters.caseOnlyNameChanges.path.bufferedWriter(Charsets.UTF_8).use { writer ->
+                gson.toJson(caseOnlyChanges, writer)
+            }
+        }
     }
 }
