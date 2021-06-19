@@ -106,7 +106,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
                 }
             }
 
-            git("add", "src").setupOut().execute()
+            git("add", "--force", "src").setupOut().execute()
             git("commit", "-m", "Vanilla $ ${Date()}", "--author=Vanilla <auto@mated.null>").setupOut().execute()
 
             // Apply patches
@@ -121,7 +121,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
                 git("apply", "--ignore-whitespace", "--directory=$dirPrefix", file.absolutePathString()).setupOut().execute()
             }
 
-            git("add", "src").setupOut().execute()
+            git("add", "--force", "src").setupOut().execute()
             git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
             git("checkout", "-f", "HEAD~2").setupOut().execute()
         } finally {

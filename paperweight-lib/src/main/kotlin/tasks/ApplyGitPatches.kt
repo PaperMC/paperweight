@@ -91,7 +91,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
-                    git("add", ".").setupOut().run()
+                    git("add", "--force", ".").setupOut().run()
                     git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").setupOut().run()
                 }
 
