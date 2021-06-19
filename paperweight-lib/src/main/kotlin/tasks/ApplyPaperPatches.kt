@@ -121,7 +121,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursively() }
 
-            git("add", ".").executeSilently()
+            git("add", "--force", ".").executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
