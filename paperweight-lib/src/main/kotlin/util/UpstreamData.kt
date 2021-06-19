@@ -26,7 +26,7 @@ import com.github.salomonbrys.kotson.fromJson
 import java.nio.file.Path
 import kotlin.io.path.bufferedReader
 import kotlin.io.path.isRegularFile
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.RegularFile
 
 data class UpstreamData(
     val vanillaJar: Path,
@@ -39,8 +39,8 @@ data class UpstreamData(
     val reobfMappings: Path
 )
 
-fun readUpstreamData(inputFile: RegularFileProperty): UpstreamData? {
-    return inputFile.pathOrNull?.let { file ->
+fun readUpstreamData(inputFile: RegularFile): UpstreamData? {
+    return inputFile.convertToPathOrNull()?.let { file ->
         if (file.isRegularFile()) {
             file.bufferedReader(Charsets.UTF_8).use { reader ->
                 gson.fromJson(reader)

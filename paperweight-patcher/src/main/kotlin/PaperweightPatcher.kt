@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.Transformer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
@@ -83,19 +84,17 @@ class PaperweightPatcher : Plugin<Project> {
 
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
-            val upstreamData = upstreamDataTask.flatMap {
-                target.provider { readUpstreamData(it.dataFile) }
-            }.orNull ?: return@afterEvaluate
 
             for (upstream in patcher.upstreams) {
                 for (patchTask in upstream.patchTasks) {
                     patchTask.patchTask {
-                        sourceMcDevJar.convention(target, upstreamData.decompiledJar)
-                        mcLibrariesDir.convention(target, upstreamData.libSourceDir)
+                        sourceMcDevJar.convention(target, upstreamDataTask.mapUpstreamData { it.decompiledJar })
+                        mcLibrariesDir.convention(target, upstreamDataTask.mapUpstreamData { it.libSourceDir })
                     }
                 }
             }
 
+            val upstreamData = upstreamDataTask.readUpstreamData().orNull ?: return@afterEvaluate
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
 
             val reobfJar = serverProj.setupServerProject(
@@ -130,6 +129,13 @@ class PaperweightPatcher : Plugin<Project> {
             }
         }
     }
+
+    private fun TaskProvider<PaperweightPatcherUpstreamData>.readUpstreamData(): Provider<UpstreamData> =
+        flatMap { it.dataFile.flatMap { dataFile -> it.project.provider { readUpstreamData(dataFile) } } }
+
+    private fun <O> TaskProvider<PaperweightPatcherUpstreamData>.mapUpstreamData(
+        transform: Transformer<O, UpstreamData?>
+    ): Provider<O> = readUpstreamData().map(transform)
 
     private fun Project.createUpstreamTask(
         upstream: PatcherUpstream,
