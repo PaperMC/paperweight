@@ -136,6 +136,7 @@ fun ControllableOutputTask.applyGitPatches(
 
     // This prevents the `git am` command line from getting too big with too many patches
     // mostly an issue with Windows
+    layout.cache.createDirectories()
     val tempDir = createTempDirectory(layout.cache, "paperweight")
     try {
         val mailDir = tempDir.resolve("new")
