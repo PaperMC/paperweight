@@ -118,7 +118,7 @@ class PaperweightCore : Plugin<Project> {
                 mcVersion.set(target.ext.minecraftVersion)
             }
 
-            paperclipJar.configure {
+            paperclipJar {
                 with(target.tasks.named("jar", Jar::class).get())
 
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
