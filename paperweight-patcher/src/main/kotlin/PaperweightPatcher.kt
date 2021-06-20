@@ -41,7 +41,7 @@ import org.gradle.api.Transformer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
 
@@ -82,6 +82,11 @@ class PaperweightPatcher : Plugin<Project> {
             }
         }
 
+        val paperclipJar by target.tasks.registering<Jar> {
+            group = "paperweight"
+            description = "Build a runnable paperclip jar"
+        }
+
         target.afterEvaluate {
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
 
@@ -111,9 +116,7 @@ class PaperweightPatcher : Plugin<Project> {
                 mcVersion.set(upstreamData.mcVersion)
             }
 
-            val paperclipJar = target.tasks.registering(Jar::class) {
-                group = "paperweight"
-                description = "Build a runnable paperclip jar"
+            paperclipJar.configure {
                 with(target.tasks.named("jar", Jar::class).get())
 
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
