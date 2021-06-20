@@ -143,6 +143,21 @@ open class AllTasks(
         dependsOn(rebuildApiPatches, rebuildServerPatches)
     }
 
+    val generateReobfMappings by tasks.registering<GenerateReobfMappings> {
+        inputMappings.set(patchMappings.flatMap { it.outputMappings })
+        notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
+        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
+
+        reobfMappings.set(cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+    }
+
+    val patchReobfMappings by tasks.registering<PatchMappings> {
+        inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+        patch.set(extension.paper.reobfMappingsPatch.fileExists(project))
+
+        outputMappings.set(cache.resolve(Constants.PATCHED_REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+    }
+
     @Suppress("unused")
     val makeMcDevSrc by tasks.registering<MakeMcDevSrc> {
         group = "paper"

@@ -27,13 +27,11 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
 import io.papermc.paperweight.tasks.GeneratePaperclipPatch
-import io.papermc.paperweight.tasks.GenerateReobfMappings
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.initSubmodules
 import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.set
 import io.papermc.paperweight.util.setupServerProject
 import java.io.File
 import org.gradle.api.Plugin
@@ -67,14 +65,6 @@ class PaperweightCore : Plugin<Project> {
         val tasks = AllTasks(target)
         target.createPatchRemapTask(tasks)
 
-        val generateReobfMappings by target.tasks.registering<GenerateReobfMappings> {
-            inputMappings.set(tasks.patchMappings.flatMap { it.outputMappings })
-            notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-            sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
-
-            reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
-        }
-
         target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
@@ -102,7 +92,7 @@ class PaperweightCore : Plugin<Project> {
             val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
-            generateReobfMappings {
+            tasks.generateReobfMappings {
                 inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
             }
 
@@ -111,7 +101,7 @@ class PaperweightCore : Plugin<Project> {
                 cache.resolve(Constants.FINAL_REMAPPED_JAR),
                 cache.resolve(Constants.SERVER_LIBRARIES),
             ) {
-                mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
+                mappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
             } ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
