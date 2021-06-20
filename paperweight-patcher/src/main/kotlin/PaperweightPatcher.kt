@@ -110,7 +110,7 @@ class PaperweightPatcher : Plugin<Project> {
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
                 inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
 
-                reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+                reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
             val reobfJar = serverProj.setupServerProject(

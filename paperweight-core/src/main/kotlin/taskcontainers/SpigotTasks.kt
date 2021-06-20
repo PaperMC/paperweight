@@ -107,6 +107,9 @@ open class SpigotTasks(
         inputMappings.set(cleanupMappings.flatMap { it.outputMappings })
         patch.set(extension.paper.mappingsPatch.fileExists(project))
 
+        fromNamespace.set(Constants.SPIGOT_NAMESPACE)
+        toNamespace.set(Constants.DEOBF_NAMESPACE)
+
         outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 

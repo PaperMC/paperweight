@@ -22,8 +22,6 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants.DEOBF_NAMESPACE
-import io.papermc.paperweight.util.Constants.SPIGOT_NAMESPACE
 import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.commentRegex
 import io.papermc.paperweight.util.deleteForcefully
@@ -32,6 +30,8 @@ import io.papermc.paperweight.util.pathOrNull
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
@@ -46,6 +46,12 @@ abstract class PatchMappings : DefaultTask() {
     @get:InputFile
     abstract val patch: RegularFileProperty
 
+    @get:Input
+    abstract val fromNamespace: Property<String>
+
+    @get:Input
+    abstract val toNamespace: Property<String>
+
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
@@ -57,8 +63,8 @@ abstract class PatchMappings : DefaultTask() {
     private fun appendPatch(input: RegularFileProperty, output: RegularFileProperty) {
         val mappings = MappingFormats.TINY.read(
             input.path,
-            SPIGOT_NAMESPACE,
-            DEOBF_NAMESPACE
+            fromNamespace.get(),
+            toNamespace.get()
         )
         patch.pathOrNull?.let { patchFile ->
             val temp = createTempFile("patch", "tiny")
@@ -76,12 +82,12 @@ abstract class PatchMappings : DefaultTask() {
                         }
                     }
                 }
-                MappingFormats.TINY.read(mappings, temp, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
+                MappingFormats.TINY.read(mappings, temp, fromNamespace.get(), toNamespace.get())
             } finally {
                 temp.deleteForcefully()
             }
         }
 
-        MappingFormats.TINY.write(mappings, output.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
+        MappingFormats.TINY.write(mappings, output.path, fromNamespace.get(), toNamespace.get())
     }
 }

@@ -148,14 +148,17 @@ open class AllTasks(
         notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
-        reobfMappings.set(cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+        reobfMappings.set(cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
     val patchReobfMappings by tasks.registering<PatchMappings> {
         inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
         patch.set(extension.paper.reobfMappingsPatch.fileExists(project))
 
-        outputMappings.set(cache.resolve(Constants.PATCHED_REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+        fromNamespace.set(Constants.DEOBF_NAMESPACE)
+        toNamespace.set(Constants.SPIGOT_NAMESPACE)
+
+        outputMappings.set(cache.resolve(Constants.PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
     @Suppress("unused")
