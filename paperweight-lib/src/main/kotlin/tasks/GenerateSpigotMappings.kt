@@ -369,9 +369,9 @@ private fun extractFieldMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *
     }
 
     for (fieldMapping in old.fieldMappings) {
-        var fieldName = fieldMapping.obfuscatedName
-        if (fieldName in setOf("if", "do")) {
-            fieldName += "_"
+        val fieldName = when (val name = fieldMapping.obfuscatedName) {
+            "if", "do" -> name + "_"
+            else -> name
         }
         new.createFieldMapping(FieldSignature(fieldName, fieldMapping.type.get()), fieldMapping.deobfuscatedName)
     }

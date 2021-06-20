@@ -47,6 +47,7 @@ import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
+import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.DefaultTask
@@ -268,7 +269,13 @@ abstract class GenerateReobfMappings : DefaultTask() {
             }
 
             for (fieldMapping in fieldClassMapping.fieldMappings) {
-                fieldMapping.copy(targetMappings)
+                when (val name = fieldMapping.obfuscatedName) {
+                    "if", "do" -> targetMappings.createFieldMapping(
+                        FieldSignature(name + "_", fieldMapping.type.orNull),
+                        fieldMapping.deobfuscatedName
+                    )
+                    else -> fieldMapping.copy(targetMappings)
+                }
             }
         }
     }
