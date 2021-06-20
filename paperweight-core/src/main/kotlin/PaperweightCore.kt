@@ -88,6 +88,11 @@ class PaperweightCore : Plugin<Project> {
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
         }
 
+        val paperclipJar by target.tasks.registering<Jar> {
+            group = "paperweight"
+            description = "Build a runnable paperclip jar"
+        }
+
         target.afterEvaluate {
             // Setup the server jar
             val cache = target.layout.cache
@@ -113,10 +118,7 @@ class PaperweightCore : Plugin<Project> {
                 mcVersion.set(target.ext.minecraftVersion)
             }
 
-            @Suppress("UNUSED_VARIABLE")
-            val paperclipJar by target.tasks.registering<Jar> {
-                group = "paperweight"
-                description = "Build a runnable paperclip jar"
+            paperclipJar.configure {
                 with(target.tasks.named("jar", Jar::class).get())
 
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
