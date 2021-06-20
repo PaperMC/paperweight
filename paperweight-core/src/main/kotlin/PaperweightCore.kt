@@ -175,7 +175,7 @@ class PaperweightCore : Plugin<Project> {
 
             // library class imports
             mcLibrarySourcesDir.set(allTasks.downloadMcLibraries.flatMap { it.sourcesOutputDir }.get())
-            libraryImports.set(extension.paper.libraryImports)
+            devImports.set(extension.paper.devImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
         }

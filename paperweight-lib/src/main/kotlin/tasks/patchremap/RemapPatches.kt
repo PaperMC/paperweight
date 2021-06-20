@@ -77,7 +77,7 @@ abstract class RemapPatches : BaseTask() {
     abstract val mcLibrarySourcesDir: DirectoryProperty
 
     @get:InputFile
-    abstract val libraryImports: RegularFileProperty
+    abstract val devImports: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputPatchDir: DirectoryProperty
@@ -163,12 +163,11 @@ abstract class RemapPatches : BaseTask() {
             if (skip == 0) {
                 // We need to include any missing classes for the patches later on
                 McDev.importMcDev(
-                    patches,
-                    spigotDecompJar.path,
-                    libraryImports.path,
-                    mcLibrarySourcesDir.path,
-                    null,
-                    tempInputDir.resolve("src/main/java")
+                    patches = patches,
+                    decompJar = spigotDecompJar.path,
+                    importsFile = devImports.path,
+                    librariesDir = mcLibrarySourcesDir.path,
+                    targetDir = tempInputDir.resolve("src/main/java")
                 )
 
                 patchApplier.commitInitialSource() // Initial commit of Spigot sources

@@ -45,8 +45,7 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
     val additionalSpigotMemberMappings: RegularFileProperty = objects.fileProperty()
-    val libraryImports: RegularFileProperty = objects.fileFrom(buildDataDir, "library-imports.txt")
-    val mcdevImports: RegularFileProperty = objects.fileFrom(buildDataDir, "mcdev-imports.txt")
+    val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
 

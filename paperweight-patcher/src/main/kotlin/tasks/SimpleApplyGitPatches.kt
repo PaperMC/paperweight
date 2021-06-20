@@ -66,11 +66,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
     @get:Optional
     @get:InputFile
-    abstract val libraryImports: RegularFileProperty
-
-    @get:Optional
-    @get:InputFile
-    abstract val mcdevImports: RegularFileProperty
+    abstract val devImports: RegularFileProperty
 
     @get:Optional
     @get:InputDirectory
@@ -119,13 +115,12 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         if (sourceMcDevJar.isPresent && importMcDev.get()) {
             McDev.importMcDev(
-                patches,
-                sourceMcDevJar.path,
-                libraryImports.pathOrNull,
-                mcLibrariesDir.pathOrNull,
-                mcdevImports.pathOrNull,
-                srcDir,
-                printOutput.get()
+                patches = patches,
+                decompJar = sourceMcDevJar.path,
+                importsFile = devImports.pathOrNull,
+                librariesDir = mcLibrariesDir.pathOrNull,
+                targetDir = srcDir,
+                printOutput = printOutput.get()
             )
         }
 

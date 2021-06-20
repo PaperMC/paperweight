@@ -51,8 +51,7 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
     val serverProject: Property<Project> = objects.property()
 
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
-    val libraryImports: RegularFileProperty = objects.fileFrom(buildDataDir, "library-imports.txt")
-    val mcdevImports: RegularFileProperty = objects.fileFrom(buildDataDir, "mcdev-imports.txt")
+    val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
 
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 

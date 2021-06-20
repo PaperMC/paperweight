@@ -60,15 +60,11 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @get:Optional
     @get:InputFile
-    abstract val libraryImports: RegularFileProperty
+    abstract val devImports: RegularFileProperty
 
     @get:Optional
     @get:Input
     abstract val unneededFiles: ListProperty<String>
-
-    @get:Optional
-    @get:InputFile
-    abstract val mcdevImports: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -105,13 +101,12 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             val patches = patchDir.path.listDirectoryEntries("*.patch")
             McDev.importMcDev(
-                patches,
-                sourceMcDevJar.path,
-                libraryImports.pathOrNull,
-                mcLibrariesDir.path,
-                mcdevImports.pathOrNull,
-                sourceDir,
-                printOutput.get()
+                patches = patches,
+                decompJar = sourceMcDevJar.path,
+                importsFile = devImports.pathOrNull,
+                librariesDir = mcLibrariesDir.path,
+                targetDir = sourceDir,
+                printOutput = printOutput.get()
             )
 
             val caseOnlyChanges = caseOnlyClassNameChanges.path.bufferedReader(Charsets.UTF_8).use { reader ->

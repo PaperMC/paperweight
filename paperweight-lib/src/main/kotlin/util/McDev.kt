@@ -41,15 +41,14 @@ object McDev {
     fun importMcDev(
         patches: Iterable<Path>,
         decompJar: Path,
-        libraryImports: Path?,
-        libraryDir: Path?,
-        additionalClasses: Path?,
+        importsFile: Path?,
+        librariesDir: Path?,
         targetDir: Path,
         printOutput: Boolean = true
     ) {
         val patchLines = readPatchLines(patches)
 
-        val importMcDev = readMcDevNames(patchLines, additionalClasses).asSequence()
+        val importMcDev = readMcDevNames(patchLines, importsFile).asSequence()
             .map { targetDir.resolve("net/minecraft/$it.java") }
             .filter { !it.exists() }
             .filterNot { file -> bannedClasses.any { file.toString().contains(it) } }
@@ -83,21 +82,19 @@ object McDev {
 
                 val zipPath = zipFile.getPath(vanillaFile)
                 if (zipPath.notExists()) {
-                    println("Vanilla class not found: $vanillaFile. Is it a paper-added class?")
-//                    throw PaperweightException("Vanilla class not found: $vanillaFile") // TODO re-enable harsh check once we moved all our classes out of vanilla packages
                     continue
                 }
                 zipPath.copyTo(file)
             }
         }
 
-        val libFiles = libraryDir?.listDirectoryEntries("*-sources.jar") ?: return
+        val libFiles = librariesDir?.listDirectoryEntries("*-sources.jar") ?: return
         if (libFiles.isEmpty()) {
             throw PaperweightException("No library files found")
         }
 
         // Import library classes
-        val imports = findLibraries(libraryImports, libFiles, patchLines)
+        val imports = findLibraries(importsFile, libFiles, patchLines)
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", imports.size)
 
         for ((libraryFileName, importFilePath) in imports) {
@@ -145,6 +142,14 @@ object McDev {
 
         additionalClasses?.useLines { lines ->
             lines.filterNot { it.startsWith("#") }
+                .mapNotNull {
+                    val parts = it.split(" ")
+                    if (parts.size != 2 && parts[0] != "minecraft") {
+                        null
+                    } else {
+                        parts[1]
+                    }
+                }
                 .forEach { line ->
                     result += line.removeSuffix(".java").replace('.', '/').removePrefix("net/minecraft/")
                 }
@@ -159,11 +164,13 @@ object McDev {
         // Imports from library-imports.txt
         libraryImports?.useLines { lines ->
             lines.filterNot { it.startsWith('#') }
-                .mapTo(result) { line ->
-                    val split = line.split(' ')
-                    val libFileName = libFiles.firstOrNull { it.name.startsWith(split[0]) }?.name
-                        ?: throw PaperweightException("Failed to read library line '$line', no library file was found.")
-                    LibraryImport(libFileName, split[1].removeSuffix(".java").replace('.', '/') + ".java")
+                .map { it.split(' ') }
+                .filter { it.size == 2 }
+                .filter { it[0] != "minecraft" }
+                .mapTo(result) { parts ->
+                    val libFileName = libFiles.firstOrNull { it.name.startsWith(parts[0]) }?.name
+                        ?: throw PaperweightException("Failed to read library line '${parts[0]} ${parts[1]}', no library file was found.")
+                    LibraryImport(libFileName, parts[1].removeSuffix(".java").replace('.', '/') + ".java")
                 }
         }
 

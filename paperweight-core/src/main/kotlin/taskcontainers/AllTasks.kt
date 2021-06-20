@@ -106,8 +106,7 @@ open class AllTasks(
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
-        libraryImports.set(extension.paper.libraryImports.fileExists(project))
-        mcdevImports.set(extension.paper.mcdevImports.fileExists(project))
+        devImports.set(extension.paper.devImports.fileExists(project))
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 
         outputDir.set(extension.paper.paperServerDir)

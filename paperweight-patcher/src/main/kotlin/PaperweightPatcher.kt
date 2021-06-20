@@ -225,8 +225,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             bareDirectory.convention(config.isBareDirectory)
             importMcDev.convention(config.importMcDev)
-            libraryImports.convention(ext.libraryImports.fileExists(project))
-            mcdevImports.convention(ext.mcdevImports.fileExists(project))
+            devImports.convention(ext.devImports.fileExists(project))
         }
 
         applyPatches {
