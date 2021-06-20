@@ -116,7 +116,7 @@ class PaperweightPatcher : Plugin<Project> {
                 mcVersion.set(upstreamData.mcVersion)
             }
 
-            paperclipJar.configure {
+            paperclipJar {
                 with(target.tasks.named("jar", Jar::class).get())
 
                 val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
