@@ -74,9 +74,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
-        outputs.upToDateWhen { false }
         upstreamBranch.convention("master")
-        printOutput.convention(true)
     }
 
     @TaskAction
@@ -106,7 +104,15 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             }
 
             val patches = patchDir.path.listDirectoryEntries("*.patch")
-            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.path, mcdevImports.pathOrNull, sourceDir)
+            McDev.importMcDev(
+                patches,
+                sourceMcDevJar.path,
+                libraryImports.pathOrNull,
+                mcLibrariesDir.path,
+                mcdevImports.pathOrNull,
+                sourceDir,
+                printOutput.get()
+            )
 
             val caseOnlyChanges = caseOnlyClassNameChanges.path.bufferedReader(Charsets.UTF_8).use { reader ->
                 gson.fromJson<List<ClassNameChange>>(reader)

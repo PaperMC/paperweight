@@ -36,7 +36,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.os.OperatingSystem
 
 abstract class ApplyGitPatches : ControllableOutputTask() {
 
@@ -65,15 +64,14 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
-        outputs.upToDateWhen { false }
-        printOutput.convention(false)
+        printOutput.convention(false).finalizeValueOnRead()
     }
 
     @TaskAction
     fun run() {
         Git(upstream.path).let { git ->
             git("fetch").setupOut().run()
-            git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently()
+            git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently(silenceErr = true)
         }
 
         val outputPath = outputDir.path
@@ -93,12 +91,12 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
-                    git("add", ".").runOut()
-                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").runOut()
+                    git("add", ".").setupOut().run()
+                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").setupOut().run()
                 }
 
                 git("tag", "-d", "base").runSilently(silenceErr = true)
-                git("tag", "base").executeSilently()
+                git("tag", "base").executeSilently(silenceErr = true)
 
                 applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
             }
@@ -149,14 +147,7 @@ fun ControllableOutputTask.applyGitPatches(
         if (git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).showErrors().run() != 0) {
             statusFile.writeText("1")
             logger.error("***   Please review above details and finish the apply then")
-            logger.error("***   save the changes with `./gradlew rebuildPaperPatches`")
-
-            if (OperatingSystem.current().isWindows) {
-                logger.error("")
-                logger.error("***   Because you're on Windows you'll need to finish the AM,")
-                logger.error("***   rebuild all patches, and then re-run the patch apply again.")
-                logger.error("***   Consider using the scripts with Windows Subsystem for Linux.")
-            }
+            logger.error("***   save the changes with `./gradlew rebuildPatches`")
 
             throw PaperweightException("Failed to apply patches")
         } else {
@@ -171,8 +162,8 @@ fun ControllableOutputTask.applyGitPatches(
 }
 
 fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String) {
-    git("init", "--quiet").executeSilently()
-    git("config", "commit.gpgsign", "false").executeSilently()
+    git("init", "--quiet").executeSilently(silenceErr = true)
+    git("config", "commit.gpgsign", "false").executeSilently(silenceErr = true)
     git("remote", "remove", "upstream").runSilently(silenceErr = true)
     git("remote", "add", "upstream", upstream.toUri().toString()).executeSilently(silenceErr = true)
     git("fetch", "upstream", "--prune").executeSilently(silenceErr = true)

@@ -25,6 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -37,7 +38,15 @@ object McDev {
         "ServerWorkerThread",
     )
 
-    fun importMcDev(patches: Iterable<Path>, decompJar: Path, libraryImports: Path?, libraryDir: Path?, additionalClasses: Path?, targetDir: Path) {
+    fun importMcDev(
+        patches: Iterable<Path>,
+        decompJar: Path,
+        libraryImports: Path?,
+        libraryDir: Path?,
+        additionalClasses: Path?,
+        targetDir: Path,
+        printOutput: Boolean = true
+    ) {
         val patchLines = readPatchLines(patches)
 
         val importMcDev = readMcDevNames(patchLines, additionalClasses).asSequence()
@@ -46,7 +55,7 @@ object McDev {
             .filterNot { file -> bannedClasses.any { file.toString().contains(it) } }
             .toSet()
 
-        logger.lifecycle("Importing {} classes from vanilla...", importMcDev.size)
+        logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
 
         decompJar.openZip().use { zipFile ->
             // pull in all package-info classes
@@ -89,7 +98,7 @@ object McDev {
 
         // Import library classes
         val imports = findLibraries(libraryImports, libFiles, patchLines)
-        logger.lifecycle("Importing {} classes from library sources...", imports.size)
+        logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", imports.size)
 
         for ((libraryFileName, importFilePath) in imports) {
             val libFile = libFiles.firstOrNull { it.name == libraryFileName }

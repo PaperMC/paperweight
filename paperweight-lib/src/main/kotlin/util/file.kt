@@ -53,10 +53,10 @@ val Provider<out FileSystemLocation>.path: Path
 val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
-fun DirectoryProperty.convention(project: Project, path: Path?) = convention(project.layout.dir(project.provider { path?.toFile() }))
-fun DirectoryProperty.convention(project: Project, path: Provider<Path>) = convention(project.layout.dir(path.map { it.toFile() }))
-fun RegularFileProperty.convention(project: Project, path: Path?) = convention(project.layout.file(project.provider { path?.toFile() }))
-fun RegularFileProperty.convention(project: Project, path: Provider<Path>) = convention(project.layout.file(path.map { it.toFile() }))
+fun FileSystemLocationProperty<*>.pathProvider(path: Provider<Path?>) = fileProvider(path.map { it.toFile() })
+
+fun DirectoryProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.dir(path.map { it.toFile() }))
+fun RegularFileProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.file(path.map { it.toFile() }))
 
 val Path.isLibraryJar: Boolean
     get() = name.endsWith(".jar") && !name.endsWith("-sources.jar")

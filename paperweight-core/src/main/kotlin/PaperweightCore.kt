@@ -83,7 +83,9 @@ class PaperweightCore : Plugin<Project> {
             mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
-            reobfMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+            mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
+            notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
+            sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
 
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
         }
@@ -130,7 +132,7 @@ class PaperweightCore : Plugin<Project> {
                 }
                 from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }))
 
-                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
+                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.elements.map { it.single() })
             }
         }
     }

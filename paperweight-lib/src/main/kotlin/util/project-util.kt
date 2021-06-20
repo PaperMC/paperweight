@@ -30,24 +30,29 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 
-fun Project.setupServerProject(parent: Project, remappedJar: Any?, libsFile: Any?, reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar>? {
+fun Project.setupServerProject(parent: Project, remappedJar: Any, libsFile: Any, reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar>? {
     if (!projectDir.exists()) {
         return null
     }
 
     plugins.apply("java")
-    dependencies.apply {
-        val remapped = remappedJar.convertToPathOrNull()
-        if (remapped != null && remapped.exists()) {
-            add("implementation", parent.files(remapped))
-        }
 
-        val libs = libsFile.convertToPathOrNull()
-        if (libs != null && libs.exists()) {
-            libs.forEachLine { line ->
-                add("implementation", line)
+    configurations {
+        named("implementation") {
+            withDependencies {
+                dependencies {
+                    val libs = libsFile.convertToPathOrNull()
+                    if (libs != null && libs.exists()) {
+                        libs.forEachLine { line ->
+                            add("implementation", line)
+                        }
+                    }
+                }
             }
         }
+    }
+    dependencies.apply {
+        add("implementation", parent.files(remappedJar))
     }
 
     apply(plugin = "com.github.johnrengelman.shadow")

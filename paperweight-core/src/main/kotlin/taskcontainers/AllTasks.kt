@@ -29,6 +29,7 @@ import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.fileExists
+import io.papermc.paperweight.util.isBaseExecution
 import io.papermc.paperweight.util.registering
 import io.papermc.paperweight.util.set
 import java.nio.file.Path
@@ -73,11 +74,16 @@ open class AllTasks(
     val applyApiPatches by tasks.registering<ApplyGitPatches> {
         group = "paper"
         description = "Setup the Paper-API project"
+
+        if (project.isBaseExecution) {
+            outputs.upToDateWhen { false }
+        }
+        printOutput.set(project.isBaseExecution)
+
         branch.set("HEAD")
         upstreamBranch.set("upstream")
         upstream.set(patchSpigotApi.flatMap { it.outputDir })
         patchDir.set(extension.paper.spigotApiPatchDir)
-        printOutput.set(true)
         unneededFiles.value(listOf("README.md"))
 
         outputDir.set(extension.paper.paperApiDir)
@@ -87,6 +93,12 @@ open class AllTasks(
     val applyServerPatches by tasks.registering<ApplyPaperPatches> {
         group = "paper"
         description = "Setup the Paper-Server project"
+
+        if (project.isBaseExecution) {
+            outputs.upToDateWhen { false }
+        }
+        printOutput.set(project.isBaseExecution)
+
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })

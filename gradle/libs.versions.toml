@@ -28,7 +28,7 @@ lorenzTiny = "org.quiltmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
 # Gradle
-gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.0"
+gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.1"
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:7.0.0"
 gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:10.0.0"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:2.1.4"

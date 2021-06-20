@@ -104,6 +104,13 @@ fun commentRegex(): Regex {
     return Regex("\\s*#.*")
 }
 
+val Project.isBaseExecution: Boolean
+    get() = providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
+        .forUseAtConfigurationTime()
+        .orElse(provider { "false" })
+        .map { it == "false" }
+        .get()
+
 fun redirect(input: InputStream, out: OutputStream): Thread {
     return Thread {
         try {

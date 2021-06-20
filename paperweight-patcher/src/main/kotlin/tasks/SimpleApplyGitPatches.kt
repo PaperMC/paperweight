@@ -80,10 +80,9 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
-        outputs.upToDateWhen { false }
         upstreamBranch.convention("master")
         importMcDev.convention(false)
-        printOutput.convention(true)
+        printOutput.convention(true).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -119,7 +118,15 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
 
         if (sourceMcDevJar.isPresent && importMcDev.get()) {
-            McDev.importMcDev(patches, sourceMcDevJar.path, libraryImports.pathOrNull, mcLibrariesDir.pathOrNull, mcdevImports.pathOrNull, srcDir)
+            McDev.importMcDev(
+                patches,
+                sourceMcDevJar.path,
+                libraryImports.pathOrNull,
+                mcLibrariesDir.pathOrNull,
+                mcdevImports.pathOrNull,
+                srcDir,
+                printOutput.get()
+            )
         }
 
         git("add", ".").executeSilently()

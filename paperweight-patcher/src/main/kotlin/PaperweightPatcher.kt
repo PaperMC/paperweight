@@ -31,6 +31,7 @@ import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
 import io.papermc.paperweight.tasks.GeneratePaperclipPatch
+import io.papermc.paperweight.tasks.GenerateReobfMappings
 import io.papermc.paperweight.util.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -67,6 +68,7 @@ class PaperweightPatcher : Plugin<Project> {
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
         val downstreamData = target.tasks.register(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
+        val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
 
@@ -99,21 +101,30 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
 
-            val upstreamData = upstreamDataTask.readUpstreamData().orNull ?: return@afterEvaluate
+            val upstreamData = upstreamDataTask.readUpstreamData()
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
+
+            generateReobfMappings {
+                inputMappings.pathProvider(upstreamData.map { it.mappings })
+                notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
+                sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
+                inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
+
+                reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_SPIGOT_MOJANG_YARN_MAPPINGS))
+            }
 
             val reobfJar = serverProj.setupServerProject(
                 target,
-                upstreamData.remappedJar,
-                upstreamData.libFile
+                upstreamData.map { it.remappedJar },
+                upstreamData.flatMap { provider { it.libFile } }
             ) {
-                mappingsFile.set(upstreamData.reobfMappings)
+                mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
             } ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                originalJar.set(upstreamData.vanillaJar)
+                originalJar.pathProvider(upstreamData.map { it.vanillaJar })
                 patchedJar.set(reobfJar.flatMap { it.outputJar })
-                mcVersion.set(upstreamData.mcVersion)
+                mcVersion.set(upstreamData.map { it.mcVersion })
             }
 
             paperclipJar {
@@ -128,7 +139,7 @@ class PaperweightPatcher : Plugin<Project> {
                 }
                 from(target.zipTree(generatePaperclipPatch.flatMap { it.outputZip }.get()))
 
-                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.singleFile)
+                manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.elements.map { it.single() })
             }
         }
     }
@@ -194,6 +205,12 @@ class PaperweightPatcher : Plugin<Project> {
         val project = this
         val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
+
+            if (isBaseExecution) {
+                outputs.upToDateWhen { false }
+            }
+            printOutput.set(isBaseExecution)
+
             val (cloneTask, upstreamDataTask) = upstreamTaskPair
             dependsOn(upstreamDataTask)
 

@@ -67,7 +67,13 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     abstract val mcdevFile: RegularFileProperty
 
     @get:InputFile
-    abstract val reobfMappings: RegularFileProperty
+    abstract val mappings: RegularFileProperty
+
+    @get:InputFile
+    abstract val notchToSpigotMappings: RegularFileProperty
+
+    @get:InputFile
+    abstract val sourceMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
@@ -89,7 +95,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             mcLibrariesDir.path,
             mcLibrariesFile.pathOrNull,
             mcdevFile.pathOrNull,
-            reobfMappings.path
+            mappings.path,
+            notchToSpigotMappings.path,
+            sourceMappings.path
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)
