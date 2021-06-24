@@ -37,6 +37,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -70,6 +71,9 @@ abstract class RemapJar : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:InputFiles
+    abstract val remapClasspath: ConfigurableFileCollection
+
     override fun init() {
         outputJar.convention(defaultOutput())
         singleThreaded.convention(true)
@@ -88,6 +92,7 @@ abstract class RemapJar : BaseTask() {
             mappingsFile.path.absolutePathString(),
             fromNamespace.get(),
             toNamespace.get(),
+            *remapClasspath.asFileTree.map { it.absolutePath }.toTypedArray(),
             "--fixpackageaccess",
             "--renameinvalidlocals"
         )
