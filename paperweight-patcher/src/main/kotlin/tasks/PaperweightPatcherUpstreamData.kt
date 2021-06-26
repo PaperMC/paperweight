@@ -23,12 +23,18 @@
 package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.UpstreamData
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.fromJson
+import io.papermc.paperweight.util.gson
 import io.papermc.paperweight.util.path
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.StartParameterInternal
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
@@ -39,6 +45,9 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
 
     @get:InputDirectory
     abstract val projectDir: DirectoryProperty
+
+    @get:Input
+    abstract val reobfPackagesToFix: ListProperty<String>
 
     @get:Internal
     abstract val workDir: DirectoryProperty
@@ -55,11 +64,23 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
         val params = NestedRootBuildRunner.createStartParameterForNewBuild(services)
         params.projectDir = projectDir.get().asFile
 
-        params.setTaskNames(listOf(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
-        params.projectProperties[Constants.UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
-        params.projectProperties[Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM] = dataFile.path.absolutePathString()
-        params.systemPropertiesArgs[Constants.PAPERWEIGHT_DEBUG] = System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false")
+        val upstreamDataFile = createTempFile(dataFile.path.parent, "data", ".json")
+        try {
+            params.setTaskNames(listOf(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
+            params.projectProperties[Constants.UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
+            params.projectProperties[Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM] = upstreamDataFile.absolutePathString()
+            params.systemPropertiesArgs[Constants.PAPERWEIGHT_DEBUG] = System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false")
 
-        NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
+            NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
+
+            val upstreamData = gson.fromJson<UpstreamData>(upstreamDataFile)
+            val ourData = upstreamData.copy(reobfPackagesToFix = upstreamData.reobfPackagesToFix + reobfPackagesToFix.get())
+
+            dataFile.path.bufferedWriter(Charsets.UTF_8).use { writer ->
+                gson.toJson(ourData, writer)
+            }
+        } finally {
+            upstreamDataFile.deleteForcefully()
+        }
     }
 }

@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.AsmUtil
+import io.papermc.paperweight.util.ClassNodeCache
 import io.papermc.paperweight.util.SyntheticUtil
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.openZip
@@ -31,12 +32,16 @@ import io.papermc.paperweight.util.walk
 import io.papermc.paperweight.util.writeZip
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import kotlin.io.path.*
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.isDirectory
+import kotlin.io.path.name
+import kotlin.io.path.writeBytes
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -238,52 +243,5 @@ class OverrideAnnotationAdder(private val node: ClassNode, private val classNode
         val result = hashSetOf<String>()
         collectSuperMethods(node, result)
         return result
-    }
-}
-
-class ClassNodeCache(private val jarFile: FileSystem, private val fallbackJar: FileSystem) {
-
-    private val classNodeMap = hashMapOf<String, ClassNode?>()
-
-    fun findClass(name: String): ClassNode? {
-        return classNodeMap.computeIfAbsent(normalize(name)) { fileName ->
-            val classData = findClassData(fileName) ?: return@computeIfAbsent null
-            val classReader = ClassReader(classData)
-            val node = ClassNode(Opcodes.ASM9)
-            classReader.accept(node, 0)
-            return@computeIfAbsent node
-        }
-    }
-
-    private fun findClassData(className: String): ByteArray? {
-        jarFile.getPath(className).let { remappedClass ->
-            if (remappedClass.exists()) {
-                return remappedClass.readBytes()
-            }
-        }
-        fallbackJar.getPath(className).let { libraryClass ->
-            if (libraryClass.exists()) {
-                return libraryClass.readBytes()
-            }
-        }
-        return ClassLoader.getSystemResourceAsStream(className)?.readBytes() // JDK class
-    }
-
-    private fun normalize(name: String): String {
-        var workingName = name
-        if (workingName.endsWith(".class")) {
-            workingName = workingName.substring(0, workingName.length - 6)
-        }
-
-        var startIndex = 0
-        var endIndex = workingName.length
-        if (workingName.startsWith('L')) {
-            startIndex = 1
-        }
-        if (workingName.endsWith(';')) {
-            endIndex--
-        }
-
-        return workingName.substring(startIndex, endIndex).replace('.', '/') + ".class"
     }
 }

@@ -108,7 +108,7 @@ class PaperweightPatcher : Plugin<Project> {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
-                inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
+                inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
 
                 reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
@@ -116,7 +116,8 @@ class PaperweightPatcher : Plugin<Project> {
             val reobfJar = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
-                upstreamData.flatMap { provider { it.libFile } }
+                upstreamData.flatMap { provider { it.libFile } },
+                objects.listProperty() // TODO support this in forks as well
             ) {
                 mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
             } ?: return@afterEvaluate
@@ -182,6 +183,7 @@ class PaperweightPatcher : Plugin<Project> {
             upstreamData {
                 dependsOn(cloneTask)
                 projectDir.convention(cloneTask.flatMap { it.outputDir })
+                reobfPackagesToFix.convention(ext.reobfPackagesToFix)
             }
 
             return@let cloneTask

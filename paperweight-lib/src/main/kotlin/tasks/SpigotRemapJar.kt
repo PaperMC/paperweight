@@ -34,6 +34,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -48,10 +49,12 @@ abstract class SpigotRemapJar : BaseTask() {
     @get:InputFile
     abstract val memberMappings: RegularFileProperty
 
+    @get:Optional
     @get:InputFile
     abstract val fieldMappings: RegularFileProperty
 
     // TODO remove support after 1.16.5 support is no longer needed
+    @get:Optional
     @get:InputFile
     abstract val packageMappings: RegularFileProperty
 

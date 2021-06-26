@@ -93,13 +93,14 @@ class PaperweightCore : Plugin<Project> {
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
             tasks.generateReobfMappings {
-                inputJar.fileProvider(serverProj.tasks.named("shadowJar", Jar::class).map { it.outputs.files.singleFile })
+                inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
             }
 
             val reobfJar = serverProj.setupServerProject(
                 target,
                 cache.resolve(Constants.FINAL_REMAPPED_JAR),
                 cache.resolve(Constants.SERVER_LIBRARIES),
+                ext.paper.reobfPackagesToFix
             ) {
                 mappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
             } ?: return@afterEvaluate

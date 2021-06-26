@@ -68,7 +68,7 @@ class PathJsonConverter : JsonDeserializer<Path?>, JsonSerializer<Path?> {
 }
 
 inline fun <reified T> Gson.fromJson(file: Any): T =
-    file.convertToPath().bufferedReader().use { fromJson(it) }
+    file.convertToPath().bufferedReader(Charsets.UTF_8).use { fromJson(it) }
 
 val ProjectLayout.cache: Path
     get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").path

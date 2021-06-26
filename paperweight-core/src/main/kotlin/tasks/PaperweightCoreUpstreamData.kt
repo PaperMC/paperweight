@@ -32,6 +32,7 @@ import kotlin.io.path.createDirectories
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
@@ -75,6 +76,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:InputFile
     abstract val sourceMappings: RegularFileProperty
 
+    @get:Input
+    abstract val reobfPackagesToFix: ListProperty<String>
+
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
 
@@ -97,7 +101,8 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             mcdevFile.pathOrNull,
             mappings.path,
             notchToSpigotMappings.path,
-            sourceMappings.path
+            sourceMappings.path,
+            reobfPackagesToFix.get()
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)

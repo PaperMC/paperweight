@@ -29,6 +29,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.kotlin.dsl.listProperty
 
 open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
@@ -53,4 +55,6 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val craftBukkitPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
     val spigotServerPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
     val spigotApiPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
+
+    val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 }

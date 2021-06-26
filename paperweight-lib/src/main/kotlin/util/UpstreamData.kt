@@ -38,7 +38,8 @@ data class UpstreamData(
     val mcdevFile: Path?,
     val mappings: Path,
     val notchToSpigotMappings: Path,
-    val sourceMappings: Path
+    val sourceMappings: Path,
+    val reobfPackagesToFix: List<String>
 )
 
 fun readUpstreamData(inputFile: RegularFile): UpstreamData? {

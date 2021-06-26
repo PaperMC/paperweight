@@ -40,6 +40,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
@@ -52,6 +53,7 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
 
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
+    val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 
