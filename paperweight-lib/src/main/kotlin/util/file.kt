@@ -27,12 +27,7 @@ import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.AclEntry
-import java.nio.file.attribute.AclEntryPermission
-import java.nio.file.attribute.AclEntryType
-import java.nio.file.attribute.AclFileAttributeView
 import java.nio.file.attribute.DosFileAttributeView
-import java.util.EnumSet
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import kotlin.io.path.*
@@ -90,20 +85,6 @@ private val currentUser = System.getProperty("user.name")
 private fun Path.fixWindowsPermissionsForDeletion() {
     if (!isWindows || notExists()) {
         return
-    }
-
-    runCatching {
-        val aclAttr = fileAttributesView<AclFileAttributeView>()
-
-        val user = fileSystem.userPrincipalLookupService.lookupPrincipalByName(currentUser)
-
-        val builder = AclEntry.newBuilder()
-        val perms = EnumSet.allOf(AclEntryPermission::class.java)
-        builder.setPermissions(perms)
-        builder.setPrincipal(user)
-        builder.setType(AclEntryType.ALLOW)
-
-        aclAttr.acl = listOf(builder.build())
     }
 
     runCatching {

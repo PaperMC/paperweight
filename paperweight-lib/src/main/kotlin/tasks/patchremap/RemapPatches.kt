@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.Git
@@ -84,17 +85,17 @@ abstract class RemapPatches : BaseTask() {
 
     @get:Internal
     @get:Option(
-        option = "skip-remapping-patches",
-        description = "For forks, skip remapping first # of patches, but still apply them (e.g. --skip-remapping-patches=300)"
-    )
-    abstract val skipRemappingPatches: Property<String>
-
-    @get:Internal
-    @get:Option(
         option = "skip-patches",
         description = "For resuming, skip first # of patches (e.g. --skip-patches=300)"
     )
     abstract val skipPatches: Property<String>
+
+    @get:Internal
+    @get:Option(
+        option = "skip-pre-patches",
+        description = "For resuming non-remapped patches, skip first # of patches (e.g. --skip-pre-patches=300)"
+    )
+    abstract val skipPrePatches: Property<String>
 
     @get:Internal
     @get:Option(
@@ -105,28 +106,29 @@ abstract class RemapPatches : BaseTask() {
 
     override fun init() {
         skipPatches.convention("0")
-        skipRemappingPatches.convention("0")
-        limitPatches.convention("-1")
+        skipPrePatches.convention("0")
     }
 
     @TaskAction
     fun run() {
         val skip = skipPatches.get().toInt()
-        val skipRemapping = skipRemappingPatches.get().toInt()
-        var limit = limitPatches.get().toInt()
+        val skipPre = skipPrePatches.get().toInt()
 
         // Check patches
-        val patches = inputPatchDir.path.useDirectoryEntries("*.patch") { it.toMutableList() }
-        if (patches.isEmpty()) {
-            println("No input patches found")
+        val inputElements = inputPatchDir.path.listDirectoryEntries().sorted()
+        if (inputElements.any { it.isRegularFile() }) {
+            throw PaperweightException("Remap patch input directory must only contain directories or patch files, not both")
+        }
+
+        val patchesToSkip = inputElements.dropLast(1).flatMap { it.listDirectoryEntries("*.patch").sorted() }
+        val patchesToRemap = inputElements.last().listDirectoryEntries("*.patch").sorted()
+
+        if (patchesToRemap.isEmpty()) {
+            println("No input patches to remap found")
             return
         }
 
-        if (limit == -1) {
-            limit = patches.size
-        }
-
-        patches.sort()
+        val limit = limitPatches.map { it.toInt() }.orElse(patchesToRemap.size).get()
 
         val mappings = MappingFormats.TINY.read(
             mappingsFile.path,
@@ -141,11 +143,11 @@ abstract class RemapPatches : BaseTask() {
         // Remap output directory, after each output this directory will be re-named to the input directory below for
         // the next remap operation
         println("setting up repo")
-        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.path, recreate = skip == 0)
+        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.path, recreate = skip == 0 && skipPre == 0)
         val tempInputDir = createWorkDirByCloning(
             "patch-remap-input",
             source = spigotServerDir.path,
-            recreate = skip == 0
+            recreate = skip == 0 && skipPre == 0
         )
         val tempOutputDir = createWorkDir("patch-remap-output")
 
@@ -161,21 +163,33 @@ abstract class RemapPatches : BaseTask() {
             val patchApplier = PatchApplier("remapped", "old", tempInputDir)
 
             if (skip == 0) {
-                // We need to include any missing classes for the patches later on
-                McDev.importMcDev(
-                    patches = patches,
-                    decompJar = spigotDecompJar.path,
-                    importsFile = devImports.path,
-                    librariesDir = mcLibrarySourcesDir.path,
-                    targetDir = tempInputDir.resolve("src/main/java")
-                )
+                // first run
+                patchApplier.createBranches()
 
-                patchApplier.commitInitialSource() // Initial commit of Spigot sources
+                if (skipPre == 0) {
+                    // We need to include any missing classes for the patches later on
+                    McDev.importMcDev(
+                        patches = patchesToSkip + patchesToRemap,
+                        decompJar = spigotDecompJar.path,
+                        importsFile = devImports.path,
+                        librariesDir = mcLibrarySourcesDir.path,
+                        targetDir = tempInputDir.resolve("src/main/java")
+                    )
+
+                    patchApplier.commitPlain("McDev imports")
+                }
+
+                val patchesToApply = patchesToSkip.dropWhile { it.name.substringBefore('-').toInt() <= skipPre }
+                println("Applying ${patchesToApply.size} patches before remapping")
+                for (patch in patchesToApply) {
+                    patchApplier.applyPatch(patch)
+                }
+
                 patchApplier.checkoutRemapped() // Switch to remapped branch without checking out files
 
                 remapper.remap() // Remap to new mappings
-                patchApplier.commitInitialRemappedSource() // Initial commit of Spigot sources mapped to new mappings
-                patchApplier.checkoutOld() // Normal checkout back to Spigot mappings branch
+                patchApplier.commitInitialRemappedSource() // Initial commit of pre-remap sources mapped to new mappings
+                patchApplier.checkoutOld() // Normal checkout back to pre-remap mappings branch
             } else if (patchApplier.isUnfinishedPatch()) {
                 println("===========================")
                 println("Finishing current patch")
@@ -191,21 +205,7 @@ abstract class RemapPatches : BaseTask() {
             }
 
             // Repo setup is done, we can begin the patch loop now
-            patches.asSequence().dropWhile { it.name.substringBefore('-').toInt() <= skip }.take(limit).forEach { patch ->
-                val patchNum = patch.name.substringBefore('-').toInt()
-                if (patchNum < skipRemapping) {
-                    println("Applying $patch (not remapping)")
-                    patchApplier.applyPatch(patch)
-                    return@forEach
-                } else if (patchNum == skipRemapping) {
-                    println("Applying $patch - using as base remapped commit")
-                    patchApplier.applyPatch(patch)
-                    patchApplier.checkoutRemapped()
-                    remapper.remap()
-                    patchApplier.commitInitialRemappedSource()
-                    return@forEach
-                }
-
+            patchesToRemap.asSequence().dropWhile { it.name.substringBefore('-').toInt() <= skip }.take(limit).forEach { patch ->
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")

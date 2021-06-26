@@ -51,6 +51,13 @@ abstract class SpigotRemapJar : BaseTask() {
     @get:InputFile
     abstract val fieldMappings: RegularFileProperty
 
+    // TODO remove support after 1.16.5 support is no longer needed
+    @get:InputFile
+    abstract val packageMappings: RegularFileProperty
+
+    @get:Input
+    abstract val mcVersion: Property<String>
+
     @get:InputFile
     abstract val accessTransformers: RegularFileProperty
 
@@ -93,8 +100,13 @@ abstract class SpigotRemapJar : BaseTask() {
 
         val classMappingPath = classMappings.path.absolutePathString()
         val memberMappingsPath = memberMappings.path.absolutePathString()
-        val fieldMappingsPath = fieldMappings.path.absolutePathString()
         val accessTransformersPath = accessTransformers.path.absolutePathString()
+
+        val finalMappingsPath = if (mcVersion.get().startsWith("1.17")) {
+            fieldMappings.path.absolutePathString()
+        } else {
+            packageMappings.path.absolutePathString()
+        }
 
         val work = layout.projectDirectory.file(workDirName.get())
 
@@ -139,7 +151,7 @@ abstract class SpigotRemapJar : BaseTask() {
                         finalMapCommand.get(),
                         membersJarPath,
                         accessTransformersPath,
-                        fieldMappingsPath,
+                        finalMappingsPath,
                         outputJarPath
                     )
                 )

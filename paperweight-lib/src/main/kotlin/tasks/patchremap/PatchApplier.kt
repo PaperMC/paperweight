@@ -52,10 +52,13 @@ class PatchApplier(
         git("checkout", unmappedBranch).executeSilently()
     }
 
-    fun commitInitialSource() {
-        git("checkout", "-b", unmappedBranch).executeSilently()
+    fun commitPlain(message: String) {
         git("add", ".").executeSilently()
-        git("commit", "-m", "Initial Source", "--author=Initial <auto@mated.null>").executeSilently()
+        git("commit", "-m", message, "--author=Initial <auto@mated.null>").executeSilently()
+    }
+
+    fun createBranches() {
+        git("checkout", "-b", unmappedBranch).executeSilently()
         git("branch", remappedBranch).executeSilently()
     }
 
@@ -89,10 +92,8 @@ class PatchApplier(
     }
 
     fun applyPatch(patch: Path) {
-        println("Applying patch ${patch.name}")
         val result = git("am", "--3way", "--ignore-whitespace", patch.absolutePathString()).runOut()
         if (result != 0) {
-            System.err.println("Patch failed to apply: $patch")
             throw RuntimeException("Patch failed to apply: $patch")
         }
     }

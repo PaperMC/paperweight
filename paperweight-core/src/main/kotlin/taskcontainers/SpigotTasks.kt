@@ -82,8 +82,12 @@ open class SpigotTasks(
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
         memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
-        fieldMappings.set(generateSpigotMappings.flatMap { it.spigotFieldMappings })
         accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
+
+        fieldMappings.set(generateSpigotMappings.flatMap { it.spigotFieldMappings })
+        packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.flatMap { project.provider { it.packageMappings } }))
+
+        mcVersion.set(extension.minecraftVersion)
 
         workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })
 
@@ -93,6 +97,9 @@ open class SpigotTasks(
         classMapCommand.set(buildDataInfo.map { it.classMapCommand })
         memberMapCommand.set(buildDataInfo.map { it.memberMapCommand })
         finalMapCommand.set(buildDataInfo.map { it.finalMapCommand })
+    }
+
+    init {
     }
 
     val cleanupMappings by tasks.registering<CleanupMappings> {
@@ -196,7 +203,7 @@ open class SpigotTasks(
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
         spigotDeps.set(downloadSpigotDependencies.flatMap { it.outputDir })
-        additionalAts.set(extension.paper.additionalAts)
+        additionalAts.set(extension.paper.additionalAts.fileExists(project))
     }
 
     val remapGeneratedAt by tasks.registering<RemapAccessTransform> {

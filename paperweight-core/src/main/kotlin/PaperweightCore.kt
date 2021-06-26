@@ -145,8 +145,8 @@ class PaperweightCore : Plugin<Project> {
 
         @Suppress("UNUSED_VARIABLE")
         val remapPatches: TaskProvider<RemapPatches> by tasks.registering<RemapPatches> {
-            group = "paper"
-            description = "EXPERIMENTAL & BROKEN: Attempt to remap Paper's patches from Spigot mappings to SRG."
+            group = "paperweight"
+            description = "NOT FOR TYPICAL USE: Attempt to remap Paper's patches from Spigot mappings to Mojang mappings."
 
             inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
             apiPatchDir.set(extension.paper.spigotApiPatchDir)
