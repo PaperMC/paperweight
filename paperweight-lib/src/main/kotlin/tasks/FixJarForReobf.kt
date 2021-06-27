@@ -170,12 +170,12 @@ abstract class FixJarForReobf : BaseTask() {
  * to determine the _intended_ owning class of a field access. Prior to reobf all of this works exactly as expected when looking at Java source code,
  * but after reobf there are many cases that look like this:
  *
- *     field `a` declared in class `Foo` with type `int`
+ *     field `a` declared in class `Foo`
  *     field `a` declared in class `Bar` which extends `Foo`
  *
- * In the _deobfuscated_ code these fields would have different names, so they won't overlap and the JVM will output field access instructions
- * described in the link above. Reobf generally only changes the field's name and type (and the name of the owner class), but it doesn't actually fix
- * the issue where field accesses which used to be unambiguous are now ambiguous.
+ * In the deobfuscated code these fields would have different names, so they won't overlap and the JVM will output field access instructions described
+ * in the link above. Reobf generally only changes the field's name and type (and the name of the owner class), but it doesn't actually fix the issue
+ * where field accesses which used to be unambiguous are now ambiguous.
  *
  * So with that in mind, this class will look at field access instructions and match the actual field the instruction is trying to access (even if
  * it's not directly declared in the owner class) and change the owner accordingly. This will keep field accesses unambiguous even after reobf with
