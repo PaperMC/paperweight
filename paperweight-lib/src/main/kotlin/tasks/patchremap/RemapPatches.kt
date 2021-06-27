@@ -33,13 +33,16 @@ import io.papermc.paperweight.util.copyRecursively
 import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
 import java.nio.file.Path
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
@@ -80,6 +83,9 @@ abstract class RemapPatches : BaseTask() {
     @get:InputFile
     abstract val devImports: RegularFileProperty
 
+    @get:Input
+    abstract val ignoreGitIgnore: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputPatchDir: DirectoryProperty
 
@@ -104,9 +110,13 @@ abstract class RemapPatches : BaseTask() {
     )
     abstract val limitPatches: Property<String>
 
+    @get:Inject
+    abstract val providers: ProviderFactory
+
     override fun init() {
         skipPatches.convention("0")
         skipPrePatches.convention("0")
+        ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -160,7 +170,7 @@ abstract class RemapPatches : BaseTask() {
             sourceInputDir,
             tempOutputDir
         ).let { remapper ->
-            val patchApplier = PatchApplier("remapped", "old", tempInputDir)
+            val patchApplier = PatchApplier("remapped", "old", ignoreGitIgnore.get(), tempInputDir)
 
             if (skip == 0) {
                 // first run

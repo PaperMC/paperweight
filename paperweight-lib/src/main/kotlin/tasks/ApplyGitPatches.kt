@@ -25,11 +25,13 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -60,11 +62,18 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     @get:Input
     abstract val unneededFiles: ListProperty<String>
 
+    @get:Input
+    abstract val ignoreGitIgnore: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    @get:Inject
+    abstract val providers: ProviderFactory
+
     override fun init() {
         printOutput.convention(false).finalizeValueOnRead()
+        ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -91,7 +100,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
-                    git("add", "--force", ".").setupOut().run()
+                    git(*Git.add(ignoreGitIgnore, ".")).setupOut().run()
                     git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").setupOut().run()
                 }
 

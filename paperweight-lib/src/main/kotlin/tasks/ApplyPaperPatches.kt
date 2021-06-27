@@ -25,11 +25,13 @@ package io.papermc.paperweight.tasks
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.*
 
 abstract class ApplyPaperPatches : ControllableOutputTask() {
@@ -66,11 +68,18 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:Input
     abstract val unneededFiles: ListProperty<String>
 
+    @get:Input
+    abstract val ignoreGitIgnore: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    @get:Inject
+    abstract val providers: ProviderFactory
+
     override fun init() {
         upstreamBranch.convention("master")
+        ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -121,7 +130,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursively() }
 
-            git("add", "--force", ".").executeSilently()
+            git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()

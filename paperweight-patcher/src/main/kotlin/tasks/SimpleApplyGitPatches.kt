@@ -31,10 +31,12 @@ import io.papermc.paperweight.util.McDev
 import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.pathOrNull
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -72,13 +74,20 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
+    @get:Input
+    abstract val ignoreGitIgnore: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    @get:Inject
+    abstract val providers: ProviderFactory
 
     override fun init() {
         upstreamBranch.convention("master")
         importMcDev.convention(false)
         printOutput.convention(true).finalizeValueOnRead()
+        ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -124,7 +133,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
             )
         }
 
-        git("add", "--force", ".").executeSilently()
+        git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
         git("commit", "--allow-empty", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
         git("tag", "-d", "base").runSilently(silenceErr = true)
         git("tag", "base").executeSilently()

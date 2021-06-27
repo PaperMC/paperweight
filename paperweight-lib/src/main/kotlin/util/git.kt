@@ -29,6 +29,8 @@ import java.io.OutputStream
 import java.nio.charset.Charset
 import java.nio.file.Path
 import kotlin.io.path.exists
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 
 class Git(val repo: Path, val env: Map<String, String> = emptyMap()) {
 
@@ -59,6 +61,32 @@ class Git(val repo: Path, val env: Map<String, String> = emptyMap()) {
             Command(builder, commandText)
         } catch (e: IOException) {
             throw PaperweightException("Failed to execute command: ${cmd.joinToString(separator = " ")}", e)
+        }
+    }
+
+    companion object {
+        private const val IGNORE_GITIGNORE_PROPERTY_NAME = "paperweight.ignore-gitignore"
+
+        var ignorePropertyField: Provider<Boolean>? = null
+        fun ignoreProperty(providers: ProviderFactory): Provider<Boolean> {
+            var current = ignorePropertyField
+            if (current != null) {
+                return current
+            }
+            current = providers.gradleProperty(IGNORE_GITIGNORE_PROPERTY_NAME).map { it.toBoolean() }.orElse(false)
+            ignorePropertyField = current
+            return current
+        }
+
+        fun add(ignoreGitIgnore: Provider<Boolean>, vararg args: String): Array<String> {
+            return add(ignoreGitIgnore.get(), *args)
+        }
+        fun add(ignoreGitIgnore: Boolean, vararg args: String): Array<String> {
+            return if (ignoreGitIgnore) {
+                arrayOf("add", "--force", *args)
+            } else {
+                arrayOf("add", *args)
+            }
         }
     }
 }

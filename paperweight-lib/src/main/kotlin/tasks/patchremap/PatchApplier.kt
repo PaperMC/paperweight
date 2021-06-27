@@ -31,6 +31,7 @@ import kotlin.io.path.*
 class PatchApplier(
     private val remappedBranch: String,
     private val unmappedBranch: String,
+    private val ignoreGitIgnore: Boolean,
     targetDir: Path
 ) {
 
@@ -53,7 +54,7 @@ class PatchApplier(
     }
 
     fun commitPlain(message: String) {
-        git("add", "--force", ".").executeSilently()
+        git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
         git("commit", "-m", message, "--author=Initial <auto@mated.null>").executeSilently()
     }
 
@@ -63,7 +64,7 @@ class PatchApplier(
     }
 
     fun commitInitialRemappedSource() {
-        git("add", "--force", ".").executeSilently()
+        git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
         git("commit", "-m", "Initial Remapped Source", "--author=Initial <auto@mated.null>").executeSilently()
         git("tag", remappedBaseTag)
     }
@@ -87,7 +88,7 @@ class PatchApplier(
         val time = commitTime ?: throw PaperweightException("commitTime not set")
         clearCommit()
 
-        git("add", "--force", ".").executeSilently()
+        git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
         git("commit", "-m", message, "--author=$author", "--date=$time").execute()
     }
 

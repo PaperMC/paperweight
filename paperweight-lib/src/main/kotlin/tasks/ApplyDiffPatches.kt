@@ -35,11 +35,13 @@ import io.papermc.paperweight.util.unzip
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Date
+import javax.inject.Inject
 import kotlin.io.path.*
 import kotlin.streams.asSequence
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -66,11 +68,18 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
     @get:Input
     abstract val branch: Property<String>
 
+    @get:Input
+    abstract val ignoreGitIgnore: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    @get:Inject
+    abstract val providers: ProviderFactory
+
     override fun init() {
         printOutput.convention(false)
+        ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
@@ -106,7 +115,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
                 }
             }
 
-            git("add", "--force", "src").setupOut().execute()
+            git(*Git.add(ignoreGitIgnore, "src")).setupOut().execute()
             git("commit", "-m", "Vanilla $ ${Date()}", "--author=Vanilla <auto@mated.null>").setupOut().execute()
 
             // Apply patches
@@ -121,7 +130,7 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
                 git("apply", "--ignore-whitespace", "--directory=$dirPrefix", file.absolutePathString()).setupOut().execute()
             }
 
-            git("add", "--force", "src").setupOut().execute()
+            git(*Git.add(ignoreGitIgnore, "src")).setupOut().execute()
             git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
             git("checkout", "-f", "HEAD~2").setupOut().execute()
         } finally {
