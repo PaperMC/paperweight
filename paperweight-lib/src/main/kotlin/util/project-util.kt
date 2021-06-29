@@ -27,7 +27,6 @@ import io.papermc.paperweight.tasks.RemapJar
 import kotlin.io.path.exists
 import kotlin.io.path.forEachLine
 import org.gradle.api.Project
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar

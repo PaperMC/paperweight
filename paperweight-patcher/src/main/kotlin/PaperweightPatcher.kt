@@ -101,8 +101,6 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
 
-
-
             val upstreamData = upstreamDataTask.readUpstreamData()
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
 
