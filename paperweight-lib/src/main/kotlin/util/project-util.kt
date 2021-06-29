@@ -28,6 +28,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.forEachLine
 import org.gradle.api.Project
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
@@ -36,9 +37,9 @@ fun Project.setupServerProject(
     parent: Project,
     remappedJar: Any,
     libsFile: Any,
-    packagesToFix: ListProperty<String>,
+    packagesToFix: Provider<List<String>?>,
     reobfConfig: RemapJar.() -> Unit
-): TaskProvider<RemapJar>? {
+): ServerTasks? {
     if (!projectDir.exists()) {
         return null
     }
@@ -67,7 +68,7 @@ fun Project.setupServerProject(
     return createBuildTasks(packagesToFix, reobfConfig)
 }
 
-private fun Project.createBuildTasks(packagesToFix: ListProperty<String>, reobfConfig: RemapJar.() -> Unit): TaskProvider<RemapJar> {
+private fun Project.createBuildTasks(packagesToFix: Provider<List<String>?>, reobfConfig: RemapJar.() -> Unit): ServerTasks {
     val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
 
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
@@ -92,5 +93,10 @@ private fun Project.createBuildTasks(packagesToFix: ListProperty<String>, reobfC
         outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
     }
 
-    return reobfJar
+    return ServerTasks(fixJarForReobf, reobfJar)
 }
+
+data class ServerTasks(
+    val fixJarForReobf: TaskProvider<FixJarForReobf>,
+    val reobfJar: TaskProvider<RemapJar>,
+)

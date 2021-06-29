@@ -43,7 +43,7 @@ import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
-        target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
+        val ext = target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -76,6 +76,7 @@ class PaperweightCore : Plugin<Project> {
             mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
+            reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
 
             dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
         }
@@ -96,7 +97,7 @@ class PaperweightCore : Plugin<Project> {
                 inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
             }
 
-            val reobfJar = serverProj.setupServerProject(
+            val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 cache.resolve(Constants.FINAL_REMAPPED_JAR),
                 cache.resolve(Constants.SERVER_LIBRARIES),

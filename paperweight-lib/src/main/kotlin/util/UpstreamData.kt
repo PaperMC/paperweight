@@ -39,7 +39,7 @@ data class UpstreamData(
     val mappings: Path,
     val notchToSpigotMappings: Path,
     val sourceMappings: Path,
-    val reobfPackagesToFix: List<String>
+    val reobfPackagesToFix: List<String>?
 )
 
 fun readUpstreamData(inputFile: RegularFile): UpstreamData? {

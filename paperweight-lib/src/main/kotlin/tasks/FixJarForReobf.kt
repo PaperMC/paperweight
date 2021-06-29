@@ -40,6 +40,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
@@ -57,6 +58,7 @@ abstract class FixJarForReobf : BaseTask() {
     @get:InputFile
     abstract val inputJar: RegularFileProperty
 
+    @get:Optional
     @get:Input
     abstract val packagesToProcess: ListProperty<String>
 
@@ -76,13 +78,19 @@ abstract class FixJarForReobf : BaseTask() {
 
     @TaskAction
     fun run() {
+        val pack = packagesToProcess.orNull
+        if (pack == null) {
+            inputJar.path.copyTo(outputJar.path)
+            return
+        }
+
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
         }
 
         queue.submit(FixJarForReobfWorker::class) {
             inputJar.set(this@FixJarForReobf.inputJar.path)
-            packagesToProcess.set(this@FixJarForReobf.packagesToProcess.get())
+            packagesToProcess.set(pack)
             outputJar.set(this@FixJarForReobf.outputJar.path)
         }
     }

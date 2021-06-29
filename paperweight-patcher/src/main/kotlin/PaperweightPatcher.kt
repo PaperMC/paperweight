@@ -101,6 +101,8 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
 
+
+
             val upstreamData = upstreamDataTask.readUpstreamData()
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
 
@@ -113,11 +115,11 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
-            val reobfJar = serverProj.setupServerProject(
+            val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
                 upstreamData.flatMap { provider { it.libFile } },
-                objects.listProperty() // TODO support this in forks as well
+                upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {
                 mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
             } ?: return@afterEvaluate

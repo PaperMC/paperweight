@@ -74,7 +74,7 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
             NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
 
             val upstreamData = gson.fromJson<UpstreamData>(upstreamDataFile)
-            val ourData = upstreamData.copy(reobfPackagesToFix = upstreamData.reobfPackagesToFix + reobfPackagesToFix.get())
+            val ourData = upstreamData.copy(reobfPackagesToFix = (upstreamData.reobfPackagesToFix ?: emptyList()) + reobfPackagesToFix.get())
 
             dataFile.path.bufferedWriter(Charsets.UTF_8).use { writer ->
                 gson.toJson(ourData, writer)
