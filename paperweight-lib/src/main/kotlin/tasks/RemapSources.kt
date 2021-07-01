@@ -22,7 +22,18 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.MappingFormats
+import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.copyRecursively
+import io.papermc.paperweight.util.defaultOutput
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.isLibraryJar
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.zip
 import java.nio.file.Files
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -62,39 +73,48 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
+@CacheableTask
 abstract class RemapSources : BaseTask() {
 
-    @get:InputFile
+    @get:CompileClasspath
     abstract val vanillaJar: RegularFileProperty
 
-    @get:InputFile
+    @get:CompileClasspath
     abstract val vanillaRemappedSpigotJar: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mappings: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val spigotDeps: DirectoryProperty
+    @get:CompileClasspath
+    abstract val spigotDeps: ConfigurableFileCollection
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val spigotServerDir: DirectoryProperty
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val spigotApiDir: DirectoryProperty
 
     @get:Optional
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val additionalAts: RegularFileProperty
 
     @get:Internal
@@ -136,7 +156,7 @@ abstract class RemapSources : BaseTask() {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
-                classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
+                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
 
                 mappings.set(this@RemapSources.mappings.path)
@@ -155,7 +175,7 @@ abstract class RemapSources : BaseTask() {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
-                classpath.from(spigotDeps.get().asFileTree.filter { it.toPath().isLibraryJar }.files)
+                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 classpath.from(srcDir)
                 additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
 

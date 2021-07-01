@@ -32,14 +32,10 @@ import io.papermc.paperweight.util.walk
 import io.papermc.paperweight.util.writeZip
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
-import kotlin.io.path.isDirectory
-import kotlin.io.path.name
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassWriter
@@ -49,12 +45,13 @@ import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 
+@CacheableTask
 abstract class FixJar : BaseTask(), AsmUtil {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:InputFile
+    @get:Classpath
     abstract val vanillaJar: RegularFileProperty
 
     @get:OutputFile

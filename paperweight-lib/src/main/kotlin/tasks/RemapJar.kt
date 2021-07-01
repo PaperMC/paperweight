@@ -29,25 +29,30 @@ import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
-import kotlin.io.path.absolutePathString
+import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class RemapJar : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mappingsFile: RegularFileProperty
 
     @get:Input
@@ -59,20 +64,20 @@ abstract class RemapJar : BaseTask() {
     @get:Input
     abstract val rebuildSourceFilenames: Property<Boolean>
 
+    @get:CompileClasspath
+    abstract val remapClasspath: ConfigurableFileCollection
+
+    @get:Classpath
+    abstract val remapper: ConfigurableFileCollection
+
     @get:Internal
     abstract val jvmargs: ListProperty<String>
 
     @get:Internal
     abstract val singleThreaded: Property<Boolean>
 
-    @get:Classpath
-    abstract val remapper: ConfigurableFileCollection
-
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
-
-    @get:InputFiles
-    abstract val remapClasspath: ConfigurableFileCollection
 
     override fun init() {
         outputJar.convention(defaultOutput())

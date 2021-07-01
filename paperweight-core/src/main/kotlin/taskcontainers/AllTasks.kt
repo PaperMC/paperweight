@@ -25,7 +25,6 @@ package io.papermc.paperweight.core.taskcontainers
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.patchremap.ApplyAccessTransform
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.cache
 import io.papermc.paperweight.util.fileExists
@@ -68,7 +67,7 @@ open class AllTasks(
         executable.from(project.configurations.named(Constants.DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })
-        libraries.set(downloadMcLibraries.flatMap { it.outputDir })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
     }
 
     val applyApiPatches by tasks.registering<ApplyGitPatches> {

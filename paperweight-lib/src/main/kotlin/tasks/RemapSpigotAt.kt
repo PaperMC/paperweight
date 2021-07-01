@@ -36,19 +36,26 @@ import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.bombe.type.MethodDescriptor
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class RemapSpigotAt : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val spigotAt: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mapping: RegularFileProperty
 
     @get:OutputFile

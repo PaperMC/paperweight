@@ -42,7 +42,6 @@ import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.set
 import javax.inject.Inject
-import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -57,31 +56,37 @@ import org.cadixdev.lorenz.model.MethodMapping
 import org.cadixdev.lorenz.model.MethodParameterMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
+@CacheableTask
 abstract class GenerateMappings : DefaultTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val vanillaJar: RegularFileProperty
 
-    @get:InputFiles
-    abstract val librariesDir: DirectoryProperty
+    @get:Classpath
+    abstract val libraries: ConfigurableFileCollection
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val vanillaMappings: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val paramMappings: RegularFileProperty
 
     @get:OutputFile
@@ -108,7 +113,7 @@ abstract class GenerateMappings : DefaultTask() {
 
         queue.submit(GenerateMappingsAction::class) {
             vanillaJar.set(this@GenerateMappings.vanillaJar.path)
-            librariesDir.set(this@GenerateMappings.librariesDir.path)
+            libraries.from(this@GenerateMappings.libraries.files)
             vanillaMappings.set(this@GenerateMappings.vanillaMappings.path)
             paramMappings.set(this@GenerateMappings.paramMappings.path)
             outputMappings.set(this@GenerateMappings.outputMappings.path)
@@ -117,7 +122,7 @@ abstract class GenerateMappings : DefaultTask() {
 
     interface GenerateMappingsParams : WorkParameters {
         val vanillaJar: RegularFileProperty
-        val librariesDir: DirectoryProperty
+        val libraries: ConfigurableFileCollection
         val vanillaMappings: RegularFileProperty
         val paramMappings: RegularFileProperty
         val outputMappings: RegularFileProperty
@@ -142,11 +147,11 @@ abstract class GenerateMappings : DefaultTask() {
                     .build()
             ).merge()
 
-            val libs = parameters.librariesDir.path.useDirectoryEntries {
-                it.filter { p -> p.isLibraryJar }
-                    .map { p -> ClassProviderRoot.fromJar(p) }
-                    .toList()
-            }
+            val libs = parameters.libraries.files.asSequence()
+                .map { f -> f.toPath() }
+                .filter { p -> p.isLibraryJar }
+                .map { p -> ClassProviderRoot.fromJar(p) }
+                .toList()
 
             val filledMerged = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.vanillaJar.path)))

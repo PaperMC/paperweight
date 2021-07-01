@@ -23,7 +23,14 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.Git
+import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.unzip
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*

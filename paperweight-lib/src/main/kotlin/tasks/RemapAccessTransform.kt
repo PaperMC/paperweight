@@ -28,16 +28,22 @@ import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.path
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class RemapAccessTransform : BaseTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val inputFile: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mappings: RegularFileProperty
 
     @get:OutputFile

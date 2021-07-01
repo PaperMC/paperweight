@@ -25,7 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.path
-import kotlin.io.path.createDirectories
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -33,6 +33,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+// Not cached since this is Mojang's server jar
 abstract class DownloadServerJar : BaseTask() {
 
     @get:Input

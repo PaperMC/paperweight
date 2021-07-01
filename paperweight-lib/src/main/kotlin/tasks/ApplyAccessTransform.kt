@@ -20,9 +20,8 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.patchremap
+package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.tasks.BaseTask
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
@@ -40,10 +39,14 @@ import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
@@ -54,12 +57,14 @@ import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
+@CacheableTask
 abstract class ApplyAccessTransform : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
 
     @get:OutputFile

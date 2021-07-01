@@ -27,15 +27,20 @@ import io.papermc.paperweight.util.path
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 
 /**
  * Because Spigot doesn't remap all classes, there are class and package name clashes if we don't do this in the source
  * remap step. Other than that, we don't need this jar
  */
+@CacheableTask
 abstract class FilterSpigotExcludes : ZippedTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val excludesFile: RegularFileProperty
 
     override fun run(rootDir: Path) {

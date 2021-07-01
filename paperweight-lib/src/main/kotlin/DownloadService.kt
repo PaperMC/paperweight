@@ -81,12 +81,14 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
             .setCookieSpec(CookieSpecs.STANDARD)
             .build()
 
-        if (time != Instant.EPOCH) {
-            val value = DateTimeFormatter.RFC_1123_DATE_TIME.format(time.atZone(ZoneOffset.UTC))
-            httpGet.setHeader("If-Modified-Since", value)
-        }
-        if (etag != null) {
-            httpGet.setHeader("If-None-Match", etag)
+        if (target.exists()) {
+            if (time != Instant.EPOCH) {
+                val value = DateTimeFormatter.RFC_1123_DATE_TIME.format(time.atZone(ZoneOffset.UTC))
+                httpGet.setHeader("If-Modified-Since", value)
+            }
+            if (etag != null) {
+                httpGet.setHeader("If-None-Match", etag)
+            }
         }
 
         httpClient.execute(host, httpGet).use { response ->
@@ -112,14 +114,12 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
             return@with DateUtils.parseDate(value).toInstant() ?: Instant.EPOCH
         }
         if (response.statusLine.statusCode == HttpStatus.SC_NOT_MODIFIED) {
-            if (lastModified != Instant.EPOCH && time >= lastModified) {
-                return lastModified
-            }
+            return lastModified
         }
 
         val entity = response.entity ?: return lastModified
-        entity.content.use { input ->
-            target.outputStream().buffered().use { output ->
+        target.outputStream().use { output ->
+            entity.content.use { input ->
                 input.copyTo(output)
             }
         }

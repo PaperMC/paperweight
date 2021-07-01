@@ -32,45 +32,55 @@ import io.papermc.paperweight.util.runJar
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class SpigotRemapJar : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val classMappings: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val memberMappings: RegularFileProperty
 
     @get:Optional
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val fieldMappings: RegularFileProperty
 
     // TODO remove support after 1.16.5 support is no longer needed
     @get:Optional
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val packageMappings: RegularFileProperty
 
     @get:Input
     abstract val mcVersion: Property<String>
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val accessTransformers: RegularFileProperty
 
     @get:Input
     abstract val workDirName: Property<String>
 
-    @get:InputFile
+    @get:Classpath
     abstract val specialSourceJar: RegularFileProperty
 
-    @get:InputFile
+    @get:Classpath
     abstract val specialSource2Jar: RegularFileProperty
 
     @get:Input

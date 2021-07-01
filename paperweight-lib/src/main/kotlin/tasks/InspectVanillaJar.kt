@@ -31,11 +31,14 @@ import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.walk
 import kotlin.io.path.*
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -44,15 +47,17 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.MethodNode
 
+@CacheableTask
 abstract class InspectVanillaJar : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val librariesDir: DirectoryProperty
+    @get:Classpath
+    abstract val libraries: ConfigurableFileCollection
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mcLibraries: RegularFileProperty
 
     @get:OutputFile
@@ -134,7 +139,10 @@ abstract class InspectVanillaJar : BaseTask() {
 
         val serverLibs = mutableSetOf<MavenArtifact>()
 
-        val libs = librariesDir.path.useDirectoryEntries { it.filter { p -> p.isLibraryJar }.toList() }
+        val libs = libraries.files.asSequence()
+            .map { f -> f.toPath() }
+            .filter { p -> p.isLibraryJar }
+            .toList()
 
         inputJar.path.openZip().use { jar ->
             for (libFile in libs) {

@@ -30,16 +30,22 @@ import io.papermc.paperweight.util.pathOrNull
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 
+@CacheableTask
 abstract class ApplyRawDiffPatches : ZippedTask() {
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputDir: DirectoryProperty
 
     @get:Optional
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val patchDir: DirectoryProperty
 
     override fun init() {

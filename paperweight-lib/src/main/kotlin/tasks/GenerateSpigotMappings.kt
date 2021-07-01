@@ -28,8 +28,7 @@ import io.papermc.paperweight.util.emptyMergeResult
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.parentClass
 import io.papermc.paperweight.util.path
-import kotlin.io.path.readLines
-import kotlin.io.path.useLines
+import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.cadixdev.lorenz.MappingSet
@@ -45,25 +44,34 @@ import org.cadixdev.lorenz.model.MethodMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class GenerateSpigotMappings : DefaultTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val classMappings: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val memberMappings: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val loggerFields: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val syntheticMethods: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val sourceMappings: RegularFileProperty
 
     @get:OutputFile

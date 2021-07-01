@@ -25,8 +25,7 @@ package io.papermc.paperweight.tasks.patchremap
 import io.papermc.paperweight.util.Constants
 import io.papermc.paperweight.util.deleteRecursively
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.moveTo
+import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.mercury.Mercury

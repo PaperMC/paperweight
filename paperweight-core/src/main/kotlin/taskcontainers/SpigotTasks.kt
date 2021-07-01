@@ -58,7 +58,7 @@ open class SpigotTasks(
 
     val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
         inputJar.set(downloadServerJar.flatMap { it.outputJar })
-        librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
         mcLibraries.set(setupMcLibraries.flatMap { it.outputFile })
 
         serverLibraries.set(cache.resolve(Constants.SERVER_LIBRARIES))
@@ -104,7 +104,7 @@ open class SpigotTasks(
 
     val cleanupMappings by tasks.registering<CleanupMappings> {
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
-        librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(Constants.CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
@@ -202,7 +202,7 @@ open class SpigotTasks(
         mappings.set(patchMappings.flatMap { it.outputMappings })
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
-        spigotDeps.set(downloadSpigotDependencies.flatMap { it.outputDir })
+        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
         additionalAts.set(extension.paper.additionalAts.fileExists(project))
     }
 

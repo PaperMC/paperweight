@@ -38,18 +38,22 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 import org.w3c.dom.Element
 
+// Not cached since these are Mojang's files
 abstract class DownloadTask : DefaultTask() {
 
     @get:Input
@@ -65,9 +69,11 @@ abstract class DownloadTask : DefaultTask() {
     fun run() = downloader.get().download(url, outputFile)
 }
 
+@CacheableTask
 abstract class DownloadMcLibraries : DefaultTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mcLibrariesFile: RegularFileProperty
 
     @get:Input
@@ -88,9 +94,10 @@ abstract class DownloadMcLibraries : DefaultTask() {
     @TaskAction
     fun run() {
         val out = outputDir.path
-        out.deleteRecursively()
+        val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
+        out.deleteRecursively(excludes)
         val sourcesOut = sourcesOutputDir.path
-        sourcesOut.deleteRecursively()
+        sourcesOut.deleteRecursively(excludes)
 
         val mcRepos = listOf(mcRepo.get())
 
@@ -110,12 +117,15 @@ abstract class DownloadMcLibraries : DefaultTask() {
     }
 }
 
+@CacheableTask
 abstract class DownloadSpigotDependencies : BaseTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val apiPom: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val serverPom: RegularFileProperty
 
     @get:OutputDirectory
@@ -133,7 +143,8 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         val serverSetup = parsePom(serverPom.path)
 
         val out = outputDir.path
-        out.deleteRecursively()
+        val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
+        out.deleteRecursively(excludes)
 
         val spigotRepos = mutableSetOf<String>()
         spigotRepos += apiSetup.repos
@@ -239,7 +250,9 @@ interface DownloadParams : WorkParameters {
     val downloadToDir: Property<Boolean>
     val downloader: Property<DownloadService>
 }
+
 abstract class DownloadWorker : WorkAction<DownloadParams> {
+
     @get:Inject
     abstract val layout: ProjectLayout
 

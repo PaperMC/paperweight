@@ -32,25 +32,26 @@ import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.runJar
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class RunForgeFlower : BaseTask() {
 
     @get:Classpath
     abstract val executable: ConfigurableFileCollection
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:Classpath
-    abstract val libraries: DirectoryProperty
+    @get:CompileClasspath
+    abstract val libraries: ConfigurableFileCollection
 
     @get:Internal
     abstract val jvmargs: ListProperty<String>
@@ -72,7 +73,7 @@ abstract class RunForgeFlower : BaseTask() {
         }
         target.createDirectories()
 
-        val libs = libraries.path.useDirectoryEntries { it.toMutableList() }
+        val libs = libraries.files.mapTo(ArrayList()) { it.toPath() }
         libs.sort()
         val tempFile = createTempFile("paperweight", "txt")
 

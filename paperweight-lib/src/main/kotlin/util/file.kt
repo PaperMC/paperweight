@@ -27,6 +27,7 @@ import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -61,26 +62,35 @@ fun Path.deleteForcefully() {
     deleteIfExists()
 }
 
-fun Path.deleteRecursively() {
+fun Path.deleteRecursively(excludes: Iterable<PathMatcher> = emptyList()) {
     if (!exists()) {
         return
     }
     if (!isDirectory()) {
+        if (excludes.any { it.matches(this) }) {
+            return
+        }
         fixWindowsPermissionsForDeletion()
         deleteIfExists()
         return
     }
 
     val fileList = Files.walk(this).use { stream ->
-        stream.asSequence().toList()
+        stream.asSequence().filterNot { file -> excludes.any { it.matches(file) } }.toList()
     }
 
     fileList.forEach { f -> f.fixWindowsPermissionsForDeletion() }
-    fileList.asReversed().forEach { f -> f.deleteIfExists() }
+    fileList.asReversed().forEach { f ->
+        // Don't try to delete directories where the excludes glob has caused files to not get deleted inside it
+        if (f.isRegularFile()) {
+            f.deleteIfExists()
+        } else if (f.isDirectory() && f.listDirectoryEntries().isEmpty()) {
+            f.deleteIfExists()
+        }
+    }
 }
 
 private val isWindows = System.getProperty("os.name").contains("windows", ignoreCase = true)
-private val currentUser = System.getProperty("user.name")
 
 private fun Path.fixWindowsPermissionsForDeletion() {
     if (!isWindows || notExists()) {

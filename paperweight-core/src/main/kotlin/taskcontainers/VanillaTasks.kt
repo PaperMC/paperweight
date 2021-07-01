@@ -55,7 +55,7 @@ open class VanillaTasks(
 
     val generateMappings by tasks.registering<GenerateMappings> {
         vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
-        librariesDir.set(downloadMcLibraries.flatMap { it.outputDir })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
         paramMappings.fileProvider(project.configurations.named(Constants.PARAM_MAPPINGS_CONFIG).map { it.singleFile })

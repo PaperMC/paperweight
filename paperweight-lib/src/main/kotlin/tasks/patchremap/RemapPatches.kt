@@ -49,7 +49,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.*
 
 abstract class RemapPatches : BaseTask() {
 

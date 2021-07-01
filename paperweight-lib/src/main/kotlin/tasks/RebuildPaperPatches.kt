@@ -27,7 +27,6 @@ import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.deleteRecursively
 import io.papermc.paperweight.util.path
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Future

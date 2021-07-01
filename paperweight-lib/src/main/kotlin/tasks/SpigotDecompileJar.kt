@@ -35,17 +35,19 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class SpigotDecompileJar : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:InputFile
+    @get:Classpath
     abstract val fernFlowerJar: RegularFileProperty
 
     @get:Input

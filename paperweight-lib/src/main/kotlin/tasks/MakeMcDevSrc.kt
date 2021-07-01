@@ -27,21 +27,26 @@ import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.walk
 import java.nio.file.StandardCopyOption
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
-import kotlin.io.path.isRegularFile
+import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class MakeMcDevSrc : DefaultTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val source: RegularFileProperty
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val paperServerDir: DirectoryProperty
 
     @get:OutputDirectory

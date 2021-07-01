@@ -57,28 +57,34 @@ import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
+@CacheableTask
 abstract class CleanupMappings : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val sourceJar: RegularFileProperty
 
-    @get:InputFiles
-    abstract val librariesDir: DirectoryProperty
+    @get:CompileClasspath
+    abstract val libraries: ConfigurableFileCollection
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val inputMappings: RegularFileProperty
 
     @get:Internal
@@ -106,7 +112,7 @@ abstract class CleanupMappings : BaseTask() {
 
         queue.submit(CleanupMappingsAction::class) {
             inputMappings.set(this@CleanupMappings.inputMappings.path)
-            librariesDir.set(this@CleanupMappings.librariesDir.path)
+            libraries.from(this@CleanupMappings.libraries.files)
             sourceJar.set(this@CleanupMappings.sourceJar.path)
 
             outputMappings.set(this@CleanupMappings.outputMappings.path)
@@ -229,7 +235,7 @@ abstract class CleanupMappings : BaseTask() {
 
     interface CleanupMappingsParams : WorkParameters {
         val inputMappings: RegularFileProperty
-        val librariesDir: DirectoryProperty
+        val libraries: ConfigurableFileCollection
         val sourceJar: RegularFileProperty
 
         val outputMappings: RegularFileProperty
@@ -239,11 +245,11 @@ abstract class CleanupMappings : BaseTask() {
     abstract class CleanupMappingsAction : WorkAction<CleanupMappingsParams> {
 
         override fun execute() {
-            val libs = parameters.librariesDir.path.useDirectoryEntries {
-                it.filter { p -> p.isLibraryJar }
-                    .map { p -> ClassProviderRoot.fromJar(p) }
-                    .toList()
-            }
+            val libs = parameters.libraries.files.asSequence()
+                .map { f -> f.toPath() }
+                .filter { p -> p.isLibraryJar }
+                .map { p -> ClassProviderRoot.fromJar(p) }
+                .toList()
 
             val mappings = MappingFormats.TINY.read(
                 parameters.inputMappings.path,

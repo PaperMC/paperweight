@@ -30,19 +30,21 @@ import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.commons.Remapper
 
+@CacheableTask
 abstract class RemapJarAtlas : BaseTask() {
 
-    @get:InputFile
+    @get:Classpath
     abstract val inputJar: RegularFileProperty
 
     @get:Input
