@@ -175,10 +175,10 @@ fun MavenPom.pomConfig() {
 
     developers {
         developer {
-            id.set("DemonWav")
+            id.set("DenWav")
             name.set("Kyle Wood")
-            email.set("demonwav@gmail.com")
-            url.set("https://github.com/DemonWav")
+            email.set("kyle@denwav.dev")
+            url.set("https://github.com/DenWav")
         }
     }
 
