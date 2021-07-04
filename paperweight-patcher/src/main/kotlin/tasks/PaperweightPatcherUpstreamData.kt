@@ -23,6 +23,9 @@
 package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY
+import io.papermc.paperweight.util.Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM
+import io.papermc.paperweight.util.Constants.UPSTREAM_WORK_DIR_PROPERTY
 import io.papermc.paperweight.util.UpstreamData
 import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.fromJson
@@ -65,10 +68,15 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
         params.projectDir = projectDir.get().asFile
 
         val upstreamDataFile = createTempFile(dataFile.path.parent, "data", ".json")
+        upstreamDataFile.deleteForcefully() // We won't be the ones to create this file
+
         try {
-            params.setTaskNames(listOf(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
-            params.projectProperties[Constants.UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
-            params.projectProperties[Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM] = upstreamDataFile.absolutePathString()
+            params.setTaskNames(listOf(PAPERWEIGHT_PREPARE_DOWNSTREAM))
+            params.projectProperties[UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
+
+            params.projectProperties[PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY] = upstreamDataFile.absolutePathString()
+            params.projectProperties[PAPERWEIGHT_PREPARE_DOWNSTREAM] = upstreamDataFile.absolutePathString() // TODO remove after next version
+
             params.systemPropertiesArgs[Constants.PAPERWEIGHT_DEBUG] = System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false")
 
             NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)

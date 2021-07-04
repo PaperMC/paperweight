@@ -63,7 +63,8 @@ class PaperweightPatcher : Plugin<Project> {
         target.configurations.create(Constants.PAPERCLIP_CONFIG)
 
         val workDirProp = target.providers.gradleProperty(Constants.UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
-        val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).forUseAtConfigurationTime()
+        val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+            .orElse(target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)).forUseAtConfigurationTime()
 
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }

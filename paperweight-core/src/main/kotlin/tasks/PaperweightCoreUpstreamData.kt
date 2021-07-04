@@ -63,10 +63,6 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:InputFile
     abstract val mcLibrariesFile: RegularFileProperty
 
-    @get:Optional
-    @get:InputFile
-    abstract val mcdevFile: RegularFileProperty
-
     @get:InputFile
     abstract val mappings: RegularFileProperty
 
@@ -98,7 +94,6 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             mcVersion.get(),
             mcLibrariesDir.path,
             mcLibrariesFile.pathOrNull,
-            mcdevFile.pathOrNull,
             mappings.path,
             notchToSpigotMappings.path,
             sourceMappings.path,

@@ -78,7 +78,13 @@ class PaperweightCore : Plugin<Project> {
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
             reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
 
-            dataFile.set(target.layout.file(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM).map { File(it) }))
+            dataFile.set(
+                target.layout.file(
+                    providers.gradleProperty(Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+                        .orElse(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
+                        .map { File(it) }
+                )
+            )
         }
 
         val paperclipJar by target.tasks.registering<Jar> {

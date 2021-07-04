@@ -22,10 +22,8 @@
 
 package io.papermc.paperweight.util
 
-import com.github.salomonbrys.kotson.fromJson
 import java.nio.file.Path
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.isRegularFile
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFile
 
 data class UpstreamData(
@@ -35,7 +33,6 @@ data class UpstreamData(
     val mcVersion: String,
     val libSourceDir: Path,
     val libFile: Path?,
-    val mcdevFile: Path?,
     val mappings: Path,
     val notchToSpigotMappings: Path,
     val sourceMappings: Path,
@@ -45,9 +42,7 @@ data class UpstreamData(
 fun readUpstreamData(inputFile: RegularFile): UpstreamData? {
     return inputFile.convertToPathOrNull()?.let { file ->
         if (file.isRegularFile()) {
-            file.bufferedReader(Charsets.UTF_8).use { reader ->
-                gson.fromJson(reader)
-            }
+            gson.fromJson(file)
         } else {
             null
         }

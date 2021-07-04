@@ -37,13 +37,13 @@ object Constants {
     const val DECOMPILER_CONFIG = "decompiler"
     const val PAPERCLIP_CONFIG = "paperclip"
 
-    const val PAPERWEIGHT_PREPARE_DOWNSTREAM = "prepareForDownstream"
-
     const val CACHE_PATH = "caches"
     private const val PAPER_PATH = "paperweight"
 
     const val UPSTREAMS = "$PAPER_PATH/upstreams"
     const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"
+    const val PAPERWEIGHT_PREPARE_DOWNSTREAM = "prepareForDownstream"
+    const val PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY = "paperweightDownstreamDataFile"
 
     private const val JARS_PATH = "$PAPER_PATH/jars"
     const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
