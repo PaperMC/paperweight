@@ -90,6 +90,18 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
                 arrayOf("add", *args)
             }
         }
+
+        fun checkForGit() {
+            try {
+                val proc = ProcessBuilder("git", "--version").redirectErrorStream(true).start()
+                proc.inputStream.copyTo(UselessOutputStream)
+                if (proc.waitFor() == 0) {
+                    return
+                }
+            } catch (_: Exception) {}
+
+            throw PaperweightException("You must have git installed and available on your PATH in order to use paperweight.")
+        }
     }
 }
 

@@ -78,6 +78,8 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        Git.checkForGit()
+
         Git(upstream.path).let { git ->
             git("fetch").setupOut().run()
             git("branch", "-f", upstreamBranch.get(), branch.get()).runSilently(silenceErr = true)

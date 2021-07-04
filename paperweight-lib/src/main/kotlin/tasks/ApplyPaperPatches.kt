@@ -89,6 +89,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        Git.checkForGit()
+
         val outputFile = outputDir.path
         recreateCloneDirectory(outputFile)
 

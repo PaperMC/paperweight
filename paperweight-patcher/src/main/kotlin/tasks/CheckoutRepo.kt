@@ -76,6 +76,8 @@ abstract class CheckoutRepo : DefaultTask() {
 
     @TaskAction
     fun run() {
+        Git.checkForGit()
+
         val dir = outputDir.path
         val urlText = url.get().trim()
 

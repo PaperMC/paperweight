@@ -76,6 +76,8 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        Git.checkForGit()
+
         val git = Git(outputDir.path)
         git("checkout", "-B", branch.get(), "HEAD").executeSilently(silenceErr = true)
 

@@ -50,6 +50,8 @@ abstract class ApplyRawDiffPatches : ZippedTask() {
     }
 
     override fun run(rootDir: Path) {
+        Git.checkForGit()
+
         val input = inputDir.path
         input.copyRecursively(rootDir)
 

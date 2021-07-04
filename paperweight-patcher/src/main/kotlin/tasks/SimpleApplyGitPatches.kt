@@ -85,6 +85,8 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        Git.checkForGit()
+
         val output = outputDir.path
         recreateCloneDirectory(output)
 

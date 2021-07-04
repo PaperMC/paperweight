@@ -49,6 +49,8 @@ import org.gradle.kotlin.dsl.registering
 class PaperweightPatcher : Plugin<Project> {
 
     override fun apply(target: Project) {
+        Git.checkForGit()
+
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
