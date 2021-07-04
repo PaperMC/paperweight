@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.initSubmodules
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout

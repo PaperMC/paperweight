@@ -22,8 +22,8 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
@@ -58,7 +58,7 @@ class PatchSourceRemapWorker(
     fun remap() {
         setup()
 
-        println("mapping to ${Constants.DEOBF_NAMESPACE}")
+        println("mapping to $DEOBF_NAMESPACE")
 
         merc.rewrite(inputDir, outputDir)
 

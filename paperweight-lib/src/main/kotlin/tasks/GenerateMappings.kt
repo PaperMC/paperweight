@@ -33,14 +33,8 @@ import dev.denwav.hypo.mappings.contributors.CopyMappingsDown
 import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
 import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.emptyMergeResult
-import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.isLibraryJar
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
@@ -59,14 +53,7 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -171,7 +158,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
                 }
 
             ensureParentExists(parameters.outputMappings)
-            MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+            MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
         }
     }
 }
@@ -186,6 +173,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<TopLevelClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateTopLevelClassMappings(
         left: TopLevelClassMapping,
         right: TopLevelClassMapping,
@@ -207,6 +195,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<InnerClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
         right: InnerClassMapping,
@@ -229,6 +218,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): FieldMapping? {
         throw IllegalStateException("Unexpectedly merged field: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
         strictRightDuplicate: FieldMapping?,
@@ -240,6 +230,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): FieldMapping? {
         return target.createFieldMapping(left.signature, left.deobfuscatedName)
     }
+
     override fun addLeftFieldMapping(
         left: FieldMapping,
         target: ClassMapping<*, *>,
@@ -257,6 +248,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<MethodMapping?> {
         throw IllegalStateException("Unexpectedly merged method: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateMethodMappings(
         left: MethodMapping,
         standardRightDuplicate: MethodMapping?,
@@ -289,6 +281,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<TopLevelClassMapping?> {
         return emptyMergeResult()
     }
+
     override fun addRightInnerClassMapping(
         right: InnerClassMapping?,
         target: ClassMapping<*, *>?,
@@ -296,6 +289,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): MergeResult<InnerClassMapping?> {
         return emptyMergeResult()
     }
+
     override fun addRightFieldMapping(
         right: FieldMapping?,
         target: ClassMapping<*, *>?,
@@ -303,6 +297,7 @@ class ParamsMergeHandler : MappingSetMergerHandler {
     ): FieldMapping? {
         return null
     }
+
     override fun addRightMethodMapping(
         right: MethodMapping?,
         target: ClassMapping<*, *>?,

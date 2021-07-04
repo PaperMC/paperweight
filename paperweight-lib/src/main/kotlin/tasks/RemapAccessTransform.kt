@@ -22,10 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.CacheableTask
@@ -56,7 +54,7 @@ abstract class RemapAccessTransform : BaseTask() {
     @TaskAction
     fun run() {
         val at = AccessTransformFormats.FML.read(inputFile.path)
-        val mappingSet = MappingFormats.TINY.read(mappings.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappingSet = MappingFormats.TINY.read(mappings.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
 
         val resultAt = at.remap(mappingSet)
         AccessTransformFormats.FML.write(outputFile.path, resultAt)

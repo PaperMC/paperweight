@@ -1,7 +1,7 @@
 name: Deploy Snapshot
 on:
   push:
-    branches: ['main']
+    branches: [ 'main' ]
     paths-ignore:
       - 'license/*'
       - 'readme.md'

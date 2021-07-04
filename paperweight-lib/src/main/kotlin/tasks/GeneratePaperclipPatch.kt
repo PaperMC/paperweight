@@ -23,10 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.deleteForcefully
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
 import io.sigpipe.jbsdiff.Diff
 import java.io.IOException
 import java.nio.file.Path
@@ -34,7 +31,6 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Properties
 import javax.inject.Inject
-import kotlin.collections.listOf
 import kotlin.collections.set
 import kotlin.experimental.and
 import kotlin.io.path.*

@@ -46,8 +46,8 @@ maintain a consistent code style. Adjust any errors `ktlint` can't fix itself be
 
 ### IDE Setup
 
-It's recommended to run the `ktlintApplyToIdea` and `addKtlintFormatGitPreCommitHook` tasks to configure your
-IDE with `ktlint` style settings and to automatically format this project's code before committing:
+It's recommended to run the `ktlintApplyToIdea` and `addKtlintFormatGitPreCommitHook` tasks to configure your IDE
+with `ktlint` style settings and to automatically format this project's code before committing:
 
 ```
 ./gradlew ktlintApplyToIdea addKtlintFormatGitPreCommitHook

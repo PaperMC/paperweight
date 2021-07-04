@@ -22,23 +22,12 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.commentRegex
-import io.papermc.paperweight.util.deleteForcefully
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 @CacheableTask
 abstract class PatchMappings : DefaultTask() {

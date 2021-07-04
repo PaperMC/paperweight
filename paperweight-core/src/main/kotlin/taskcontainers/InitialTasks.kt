@@ -30,14 +30,8 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MinecraftManifest
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.download
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -54,8 +48,8 @@ open class InitialTasks(
 ) {
 
     val downloadMcManifest by tasks.registering<DownloadTask> {
-        url.set(Constants.MC_MANIFEST_URL)
-        outputFile.set(cache.resolve(Constants.MC_MANIFEST))
+        url.set(MC_MANIFEST_URL)
+        outputFile.set(cache.resolve(MC_MANIFEST))
 
         outputs.upToDateWhen { false }
 
@@ -69,7 +63,7 @@ open class InitialTasks(
                 manifest.versions.first { it.id == version }.url
             }
         )
-        outputFile.set(cache.resolve(Constants.VERSION_JSON))
+        outputFile.set(cache.resolve(VERSION_JSON))
 
         downloader.set(downloadService)
     }
@@ -83,7 +77,7 @@ open class InitialTasks(
                 }
             }
         )
-        outputFile.set(cache.resolve(Constants.MC_LIBRARIES))
+        outputFile.set(cache.resolve(MC_LIBRARIES))
     }
 
     val downloadMappings by tasks.registering<DownloadTask> {
@@ -92,7 +86,7 @@ open class InitialTasks(
                 version["downloads"]["server_mappings"]["url"].string
             }
         )
-        outputFile.set(cache.resolve(Constants.SERVER_MAPPINGS))
+        outputFile.set(cache.resolve(SERVER_MAPPINGS))
 
         downloader.set(downloadService)
     }

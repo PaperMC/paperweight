@@ -22,9 +22,7 @@
 
 package io.papermc.paperweight.patcher.tasks
 
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty

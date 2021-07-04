@@ -22,11 +22,8 @@
 
 package io.papermc.paperweight.core.extension
 
-import io.papermc.paperweight.util.dirFrom
-import io.papermc.paperweight.util.fileFrom
-import io.papermc.paperweight.util.path
-import kotlin.io.path.name
-import kotlin.io.path.useDirectoryEntries
+import io.papermc.paperweight.util.*
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory

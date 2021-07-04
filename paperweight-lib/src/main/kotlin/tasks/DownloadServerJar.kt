@@ -23,8 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property

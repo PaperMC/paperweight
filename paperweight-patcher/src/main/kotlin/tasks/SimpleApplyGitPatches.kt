@@ -22,15 +22,8 @@
 
 package io.papermc.paperweight.patcher.tasks
 
-import io.papermc.paperweight.tasks.ControllableOutputTask
-import io.papermc.paperweight.tasks.applyGitPatches
-import io.papermc.paperweight.tasks.checkoutRepoFromUpstream
-import io.papermc.paperweight.tasks.recreateCloneDirectory
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty

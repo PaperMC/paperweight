@@ -23,8 +23,7 @@
 package io.papermc.paperweight.util
 
 import java.nio.file.FileSystem
-import kotlin.io.path.exists
-import kotlin.io.path.readBytes
+import kotlin.io.path.*
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode

@@ -22,8 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Command
-import io.papermc.paperweight.util.UselessOutputStream
+import io.papermc.paperweight.util.*
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
 

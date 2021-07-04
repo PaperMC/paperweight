@@ -22,8 +22,7 @@
 
 package io.papermc.paperweight
 
-import io.papermc.paperweight.util.convertToPath
-import io.papermc.paperweight.util.convertToUrl
+import io.papermc.paperweight.util.*
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime

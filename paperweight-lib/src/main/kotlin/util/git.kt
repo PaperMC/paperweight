@@ -23,16 +23,17 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.util.constants.*
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.charset.Charset
 import java.nio.file.Path
-import kotlin.io.path.exists
+import kotlin.io.path.*
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 
-class Git(val repo: Path, val env: Map<String, String> = emptyMap()) {
+class Git(private val repo: Path, private val env: Map<String, String> = emptyMap()) {
 
     @Suppress("unused")
     constructor(repo: Any) : this(repo.convertToPath())
@@ -81,6 +82,7 @@ class Git(val repo: Path, val env: Map<String, String> = emptyMap()) {
         fun add(ignoreGitIgnore: Provider<Boolean>, vararg args: String): Array<String> {
             return add(ignoreGitIgnore.get(), *args)
         }
+
         fun add(ignoreGitIgnore: Boolean, vararg args: String): Array<String> {
             return if (ignoreGitIgnore) {
                 arrayOf("add", "--force", *args)
@@ -97,7 +99,7 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
     private var errStream: OutputStream = UselessOutputStream
 
     fun run(): Int {
-        if (System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false") == "true") {
+        if (System.getProperty(PAPERWEIGHT_DEBUG, "false") == "true") {
             // Override all settings for debug
             setup(System.out, System.err)
             println()

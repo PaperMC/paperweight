@@ -23,7 +23,7 @@
 package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
-import io.papermc.paperweight.util.providerFor
+import io.papermc.paperweight.util.*
 import org.gradle.api.Action
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory

@@ -25,16 +25,12 @@ package io.papermc.paperweight.core.taskcontainers
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.fileExists
-import io.papermc.paperweight.util.isBaseExecution
-import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -60,11 +56,11 @@ open class AllTasks(
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta"))
 
-        outputJar.set(cache.resolve(Constants.FINAL_REMAPPED_JAR))
+        outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
     }
 
     val decompileJar by tasks.registering<RunForgeFlower> {
-        executable.from(project.configurations.named(Constants.DECOMPILER_CONFIG))
+        executable.from(project.configurations.named(DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
@@ -147,17 +143,17 @@ open class AllTasks(
         notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
-        reobfMappings.set(cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
+        reobfMappings.set(cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
     val patchReobfMappings by tasks.registering<PatchMappings> {
         inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
         patch.set(extension.paper.reobfMappingsPatch.fileExists(project))
 
-        fromNamespace.set(Constants.DEOBF_NAMESPACE)
-        toNamespace.set(Constants.SPIGOT_NAMESPACE)
+        fromNamespace.set(DEOBF_NAMESPACE)
+        toNamespace.set(SPIGOT_NAMESPACE)
 
-        outputMappings.set(cache.resolve(Constants.PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+        outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
     @Suppress("unused")
@@ -165,6 +161,6 @@ open class AllTasks(
         group = "paper"
         source.set(decompileJar.flatMap { it.outputJar })
         paperServerDir.set(extension.paper.paperServerDir)
-        target.set(cache.resolve(Constants.MC_DEV_DIR))
+        target.set(cache.resolve(MC_DEV_DIR))
     }
 }

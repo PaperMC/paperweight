@@ -22,11 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import kotlin.io.path.*
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
@@ -108,7 +105,7 @@ abstract class RemapSpigotAt : BaseTask() {
             }
         }
 
-        val mappings = MappingFormats.TINY.read(mapping.path, Constants.SPIGOT_NAMESPACE, Constants.DEOBF_NAMESPACE)
+        val mappings = MappingFormats.TINY.read(mapping.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
         val remappedAt = outputAt.remap(mappings)
 
         AccessTransformFormats.FML.write(outputFile.path, remappedAt)

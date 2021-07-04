@@ -48,6 +48,7 @@ val Provider<out FileSystemLocation>.path: Path
     get() = get().path
 val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
+
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
 fun FileSystemLocationProperty<*>.pathProvider(path: Provider<Path?>) = fileProvider(path.map { it.toFile() })
 

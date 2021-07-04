@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty

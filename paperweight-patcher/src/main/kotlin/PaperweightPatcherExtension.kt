@@ -28,10 +28,8 @@ import io.papermc.paperweight.patcher.upstream.DefaultRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.PaperRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cacheDir
-import io.papermc.paperweight.util.dirWithDefault
-import io.papermc.paperweight.util.fileFrom
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Action
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
@@ -67,7 +65,7 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
      *
      * This means a project which is several upstreams deep will all use the upstreams directory defined by the root project.
      */
-    val upstreamsDir: Property<Directory> = objects.directoryProperty().convention(layout.cacheDir(Constants.UPSTREAMS))
+    val upstreamsDir: Property<Directory> = objects.directoryProperty().convention(layout.cacheDir(UPSTREAMS))
 
     init {
         upstreams.registerFactory(PatcherUpstream::class.java) { name -> DefaultPatcherUpstream(name, objects, tasks) }

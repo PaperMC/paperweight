@@ -22,10 +22,9 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.tasks.FixJarForReobf
-import io.papermc.paperweight.tasks.RemapJar
-import kotlin.io.path.exists
-import kotlin.io.path.forEachLine
+import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.constants.*
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
@@ -85,9 +84,9 @@ private fun Project.createBuildTasks(packagesToFix: Provider<List<String>?>, reo
 
         reobfConfig()
 
-        fromNamespace.set(Constants.DEOBF_NAMESPACE)
-        toNamespace.set(Constants.SPIGOT_NAMESPACE)
-        remapper.from(rootProject.configurations.named(Constants.REMAPPER_CONFIG))
+        fromNamespace.set(DEOBF_NAMESPACE)
+        toNamespace.set(SPIGOT_NAMESPACE)
+        remapper.from(rootProject.configurations.named(REMAPPER_CONFIG))
 
         outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
     }

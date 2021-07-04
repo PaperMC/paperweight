@@ -23,13 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import com.github.salomonbrys.kotson.fromJson
-import io.papermc.paperweight.util.ClassNameChange
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*

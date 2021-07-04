@@ -22,9 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.atlas.Atlas

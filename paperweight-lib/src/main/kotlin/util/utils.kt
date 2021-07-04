@@ -26,8 +26,8 @@ import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.*
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.tasks.BaseTask
-import io.papermc.paperweight.util.Constants.paperTaskOutput
+import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.constants.*
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -71,8 +71,9 @@ inline fun <reified T> Gson.fromJson(file: Any): T =
     file.convertToPath().bufferedReader(Charsets.UTF_8).use { fromJson(it) }
 
 val ProjectLayout.cache: Path
-    get() = projectDirectory.file(".gradle/${Constants.CACHE_PATH}").path
-fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/${Constants.CACHE_PATH}").dir(path)
+    get() = projectDirectory.file(".gradle/CACHE_PATH").path
+
+fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 fun ProjectLayout.initSubmodules() {
     Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
 }
@@ -88,6 +89,7 @@ inline fun <reified T : Task> TaskContainer.providerFor(name: String): TaskProvi
         register<T>(name)
     }
 }
+
 inline fun <reified T : Task> TaskContainer.configureTask(name: String, noinline configure: T.() -> Unit): TaskProvider<T> {
     return if (names.contains(name)) {
         named(name, configure)
@@ -105,7 +107,7 @@ fun commentRegex(): Regex {
 }
 
 val Project.isBaseExecution: Boolean
-    get() = providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
+    get() = providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         .forUseAtConfigurationTime()
         .orElse(provider { "false" })
         .map { it == "false" }
@@ -183,9 +185,11 @@ fun BaseTask.defaultOutput(name: String, ext: String): RegularFileProperty {
         layout.cache.resolve(paperTaskOutput(name, ext)).toFile()
     }
 }
+
 fun BaseTask.defaultOutput(ext: String): RegularFileProperty {
     return defaultOutput(name, ext)
 }
+
 fun BaseTask.defaultOutput(): RegularFileProperty {
     return defaultOutput("jar")
 }

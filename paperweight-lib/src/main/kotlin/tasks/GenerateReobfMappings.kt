@@ -42,10 +42,8 @@ import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
 import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.orNull
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.FieldSignature
@@ -53,14 +51,7 @@ import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -192,17 +183,17 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
         override fun execute() {
             val baseMappings = MappingFormats.TINY.read(
                 parameters.inputMappings.path,
-                Constants.SPIGOT_NAMESPACE,
-                Constants.DEOBF_NAMESPACE
+                SPIGOT_NAMESPACE,
+                DEOBF_NAMESPACE
             )
 
             val notchToSpigot = MappingFormats.TINY.read(
                 parameters.notchToSpigotMappings.path,
-                Constants.OBF_NAMESPACE,
-                Constants.SPIGOT_NAMESPACE
+                OBF_NAMESPACE,
+                SPIGOT_NAMESPACE
             )
 
-            val fieldMappings = MappingFormats.TINY.read(parameters.sourceMappings.path, Constants.OBF_NAMESPACE, Constants.DEOBF_NAMESPACE)
+            val fieldMappings = MappingFormats.TINY.read(parameters.sourceMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
             val spigotFieldMappings = filterFieldMappings(notchToSpigot).reverse().merge(fieldMappings)
 
             val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse()
@@ -229,8 +220,8 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             MappingFormats.TINY.write(
                 cleanedOutputMappings,
                 parameters.reobfMappings.path,
-                Constants.DEOBF_NAMESPACE,
-                Constants.SPIGOT_NAMESPACE
+                DEOBF_NAMESPACE,
+                SPIGOT_NAMESPACE
             )
         }
 
@@ -241,6 +232,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
                         registry.submitChange(RemoveMappingChange.of(MemberReference.of(fieldMapping)))
                     }
                 }
+
                 override fun name(): String = "RemoveFieldMappings"
             }
 

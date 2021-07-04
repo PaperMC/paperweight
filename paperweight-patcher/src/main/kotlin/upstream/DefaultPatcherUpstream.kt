@@ -23,15 +23,13 @@
 package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
-import io.papermc.paperweight.util.providerFor
+import io.papermc.paperweight.util.*
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.kotlin.dsl.domainObjectContainer
-import org.gradle.kotlin.dsl.newInstance
-import org.gradle.kotlin.dsl.property
+import org.gradle.kotlin.dsl.*
 
 open class DefaultPatcherUpstream(
     private val name: String,

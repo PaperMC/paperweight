@@ -22,14 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.AsmUtil
-import io.papermc.paperweight.util.MavenArtifact
-import io.papermc.paperweight.util.SyntheticUtil
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.isLibraryJar
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.walk
+import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty

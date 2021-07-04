@@ -30,9 +30,9 @@ import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
 import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
-import io.papermc.paperweight.tasks.GeneratePaperclipPatch
-import io.papermc.paperweight.tasks.GenerateReobfMappings
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
@@ -49,7 +49,7 @@ import org.gradle.kotlin.dsl.registering
 class PaperweightPatcher : Plugin<Project> {
 
     override fun apply(target: Project) {
-        val patcher = target.extensions.create(Constants.EXTENSION, PaperweightPatcherExtension::class)
+        val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -59,16 +59,16 @@ class PaperweightPatcher : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.create(Constants.REMAPPER_CONFIG)
-        target.configurations.create(Constants.PAPERCLIP_CONFIG)
+        target.configurations.create(REMAPPER_CONFIG)
+        target.configurations.create(PAPERCLIP_CONFIG)
 
-        val workDirProp = target.providers.gradleProperty(Constants.UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
-        val dataFileProp = target.providers.gradleProperty(Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
-            .orElse(target.providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)).forUseAtConfigurationTime()
+        val workDirProp = target.providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
+        val dataFileProp = target.providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+            .orElse(target.providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM)).forUseAtConfigurationTime()
 
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
-        val downstreamData = target.tasks.register(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM)
+        val downstreamData = target.tasks.register(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
@@ -111,7 +111,7 @@ class PaperweightPatcher : Plugin<Project> {
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
                 inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
 
-                reobfMappings.set(target.layout.cache.resolve(Constants.REOBF_MOJANG_SPIGOT_MAPPINGS))
+                reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
             val (_, reobfJar) = serverProj.setupServerProject(
@@ -132,7 +132,7 @@ class PaperweightPatcher : Plugin<Project> {
             paperclipJar {
                 with(target.tasks.named("jar", Jar::class).get())
 
-                val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
+                val paperclipConfig = target.configurations.named(PAPERCLIP_CONFIG)
                 dependsOn(paperclipConfig, generatePaperclipPatch)
 
                 val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })

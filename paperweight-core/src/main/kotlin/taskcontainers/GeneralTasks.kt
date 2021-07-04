@@ -27,11 +27,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.BuildDataInfo
-import io.papermc.paperweight.util.contents
-import io.papermc.paperweight.util.download
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.registering
+import io.papermc.paperweight.util.*
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer

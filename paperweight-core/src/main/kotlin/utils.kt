@@ -23,8 +23,8 @@
 package io.papermc.paperweight.core
 
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
-import io.papermc.paperweight.util.Constants
+import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Project
 
 val Project.ext: PaperweightCoreExtension
-    get() = extensions.getByName(Constants.EXTENSION) as PaperweightCoreExtension
+    get() = extensions.getByName(PAPERWEIGHT_EXTENSION) as PaperweightCoreExtension

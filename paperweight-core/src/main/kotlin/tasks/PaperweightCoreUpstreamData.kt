@@ -22,13 +22,9 @@
 
 package io.papermc.paperweight.core.tasks
 
-import io.papermc.paperweight.util.UpstreamData
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
-import kotlin.io.path.bufferedWriter
-import kotlin.io.path.createDirectories
+import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty

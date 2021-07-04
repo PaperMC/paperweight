@@ -22,17 +22,20 @@
 
 package io.papermc.paperweight.patcher.tasks
 
-import io.papermc.paperweight.tasks.ControllableOutputTask
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import kotlin.io.path.*
-import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 
 abstract class SimpleRebuildGitPatches : ControllableOutputTask() {

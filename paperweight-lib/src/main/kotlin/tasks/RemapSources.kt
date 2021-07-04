@@ -22,18 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.copyRecursively
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.findOutputDir
-import io.papermc.paperweight.util.isLibraryJar
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
-import io.papermc.paperweight.util.set
-import io.papermc.paperweight.util.zip
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -46,43 +36,12 @@ import org.cadixdev.mercury.SourceRewriter
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
 import org.cadixdev.mercury.remapper.MercuryRemapper
-import org.eclipse.jdt.core.dom.ASTNode
-import org.eclipse.jdt.core.dom.ASTVisitor
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration
-import org.eclipse.jdt.core.dom.Expression
-import org.eclipse.jdt.core.dom.FieldAccess
-import org.eclipse.jdt.core.dom.IBinding
-import org.eclipse.jdt.core.dom.IMethodBinding
-import org.eclipse.jdt.core.dom.ITypeBinding
-import org.eclipse.jdt.core.dom.IVariableBinding
-import org.eclipse.jdt.core.dom.Initializer
-import org.eclipse.jdt.core.dom.LambdaExpression
-import org.eclipse.jdt.core.dom.MethodDeclaration
-import org.eclipse.jdt.core.dom.MethodInvocation
-import org.eclipse.jdt.core.dom.MethodReference
-import org.eclipse.jdt.core.dom.Modifier
-import org.eclipse.jdt.core.dom.Name
-import org.eclipse.jdt.core.dom.QualifiedName
-import org.eclipse.jdt.core.dom.SimpleName
-import org.eclipse.jdt.core.dom.SuperFieldAccess
-import org.eclipse.jdt.core.dom.SuperMethodInvocation
-import org.eclipse.jdt.core.dom.ThisExpression
-import org.eclipse.jdt.core.dom.TypeDeclaration
-import org.eclipse.jdt.core.dom.VariableDeclarationFragment
+import org.eclipse.jdt.core.dom.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -204,8 +163,8 @@ abstract class RemapSources : JavaLauncherTask() {
         override fun execute() {
             val mappingSet = MappingFormats.TINY.read(
                 parameters.mappings.path,
-                Constants.SPIGOT_NAMESPACE,
-                Constants.DEOBF_NAMESPACE
+                SPIGOT_NAMESPACE,
+                DEOBF_NAMESPACE
             )
 
             val additionalAt = parameters.additionalAts.pathOrNull?.let { AccessTransformFormats.FML.read(it) }
@@ -338,7 +297,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
             // find declaring method
             var parentNode: ASTNode? = node
-            loop@while (parentNode != null) {
+            loop@ while (parentNode != null) {
                 when (parentNode) {
                     is MethodDeclaration, is AnonymousClassDeclaration, is LambdaExpression, is Initializer -> break@loop
                 }

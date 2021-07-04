@@ -22,10 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.walk
+import io.papermc.paperweight.util.*
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask

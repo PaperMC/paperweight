@@ -22,12 +22,17 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.emptyMergeResult
-import io.papermc.paperweight.util.orNull
-import io.papermc.paperweight.util.parentClass
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
+import kotlin.collections.Map
+import kotlin.collections.MutableMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.component3
+import kotlin.collections.component4
+import kotlin.collections.hashMapOf
+import kotlin.collections.iterator
+import kotlin.collections.set
 import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.bombe.type.signature.MethodSignature
@@ -97,8 +102,8 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
         val sourceMappings = MappingFormats.TINY.read(
             sourceMappings.path,
-            Constants.OBF_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
+            OBF_NAMESPACE,
+            DEOBF_NAMESPACE
         )
 
         val synths = hashMapOf<String, MutableMap<String, MutableMap<String, String>>>()
@@ -123,15 +128,15 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         MappingFormats.TINY.write(
             notchToSpigotSet,
             notchToSpigotMappings.path,
-            Constants.OBF_NAMESPACE,
-            Constants.SPIGOT_NAMESPACE
+            OBF_NAMESPACE,
+            SPIGOT_NAMESPACE
         )
 
         MappingFormats.TINY.write(
             spigotToNamedSet,
             outputMappings.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
+            SPIGOT_NAMESPACE,
+            DEOBF_NAMESPACE
         )
 
         val fieldSourceMappings = extractFieldMappings(sourceMappings, classMappingSet)
@@ -197,6 +202,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
     ): MergeResult<InnerClassMapping?> {
         throw IllegalStateException("Unexpectedly merged class: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateInnerClassMappings(
         left: InnerClassMapping,
         right: InnerClassMapping,
@@ -219,6 +225,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
             "Unexpected added class from Spigot: ${left.fullObfuscatedName} - ${left.fullDeobfuscatedName}"
         )
     }
+
     override fun addRightInnerClassMapping(
         right: InnerClassMapping,
         target: ClassMapping<*, *>,
@@ -237,6 +244,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
     ): FieldMapping {
         throw IllegalStateException("Unexpectedly merged field: ${left.fullObfuscatedName}")
     }
+
     override fun mergeDuplicateFieldMappings(
         left: FieldMapping,
         strictRightDuplicate: FieldMapping?,
@@ -259,6 +267,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
     ): MergeResult<MethodMapping?> {
         throw IllegalStateException("Unexpectedly merged method: $left")
     }
+
     override fun mergeDuplicateMethodMappings(
         left: MethodMapping,
         standardRightDuplicate: MethodMapping?,
@@ -290,6 +299,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
             return MergeResult(newMapping)
         }
     }
+
     override fun addLeftMethodMapping(
         left: MethodMapping,
         target: ClassMapping<*, *>,

@@ -23,11 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.MavenArtifact
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.pathOrNull
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
@@ -38,15 +34,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -266,7 +254,8 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
                 try {
                     val sourceArtifact = artifact.copy(classifier = "sources")
                     sourceArtifact.downloadToDir(parameters.downloader.get(), sourceDir, parameters.repos.get())
-                } catch (ignored: Exception) {}
+                } catch (ignored: Exception) {
+                }
             }
         } else {
             artifact.downloadToFile(parameters.downloader.get(), target, parameters.repos.get())

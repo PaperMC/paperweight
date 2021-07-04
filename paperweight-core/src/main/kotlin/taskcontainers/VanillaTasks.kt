@@ -24,12 +24,8 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.DownloadMcLibraries
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.download
-import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -46,9 +42,9 @@ open class VanillaTasks(
 
     val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
         mcLibrariesFile.set(setupMcLibraries.flatMap { it.outputFile })
-        mcRepo.set(Constants.MC_LIBRARY_URL)
-        outputDir.set(cache.resolve(Constants.MINECRAFT_JARS_PATH))
-        sourcesOutputDir.set(cache.resolve(Constants.MINECRAFT_SOURCES_PATH))
+        mcRepo.set(MC_LIBRARY_URL)
+        outputDir.set(cache.resolve(MINECRAFT_JARS_PATH))
+        sourcesOutputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
 
         downloader.set(downloadService)
     }
@@ -58,17 +54,17 @@ open class VanillaTasks(
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
-        paramMappings.fileProvider(project.configurations.named(Constants.PARAM_MAPPINGS_CONFIG).map { it.singleFile })
+        paramMappings.fileProvider(project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile })
 
-        outputMappings.set(cache.resolve(Constants.MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }
 
     val remapJar by tasks.registering<RemapJar> {
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
         mappingsFile.set(generateMappings.flatMap { it.outputMappings })
-        fromNamespace.set(Constants.OBF_NAMESPACE)
-        toNamespace.set(Constants.DEOBF_NAMESPACE)
-        remapper.from(project.configurations.named(Constants.REMAPPER_CONFIG))
+        fromNamespace.set(OBF_NAMESPACE)
+        toNamespace.set(DEOBF_NAMESPACE)
+        remapper.from(project.configurations.named(REMAPPER_CONFIG))
     }
 
     val fixJar by tasks.registering<FixJar> {

@@ -23,15 +23,9 @@
 package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.tasks.BaseTask
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.McDev
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.copyRecursively
-import io.papermc.paperweight.util.deleteRecursively
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -140,11 +134,7 @@ abstract class RemapPatches : BaseTask() {
 
         val limit = limitPatches.map { it.toInt() }.orElse(patchesToRemap.size).get()
 
-        val mappings = MappingFormats.TINY.read(
-            mappingsFile.path,
-            Constants.SPIGOT_NAMESPACE,
-            Constants.DEOBF_NAMESPACE
-        )
+        val mappings = MappingFormats.TINY.read(mappingsFile.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
 
         // This should pull in any libraries needed for type bindings
         val configFiles = project.project(":Paper-Server").configurations["runtimeClasspath"].resolve().map { it.toPath() }

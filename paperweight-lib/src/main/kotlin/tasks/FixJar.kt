@@ -22,15 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.AsmUtil
-import io.papermc.paperweight.util.ClassNodeCache
-import io.papermc.paperweight.util.SyntheticUtil
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
-import io.papermc.paperweight.util.walk
-import io.papermc.paperweight.util.writeZip
+import io.papermc.paperweight.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import javax.inject.Inject

@@ -26,12 +26,8 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.download
-import io.papermc.paperweight.util.fileExists
-import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -61,7 +57,7 @@ open class SpigotTasks(
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
         mcLibraries.set(setupMcLibraries.flatMap { it.outputFile })
 
-        serverLibraries.set(cache.resolve(Constants.SERVER_LIBRARIES))
+        serverLibraries.set(cache.resolve(SERVER_LIBRARIES))
     }
 
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
@@ -73,9 +69,9 @@ open class SpigotTasks(
 
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
-        outputMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_MAPPINGS))
-        notchToSpigotMappings.set(cache.resolve(Constants.OBF_SPIGOT_MAPPINGS))
-        spigotFieldMappings.set(cache.resolve(Constants.SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
+        outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
+        notchToSpigotMappings.set(cache.resolve(OBF_SPIGOT_MAPPINGS))
+        spigotFieldMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
     }
 
     val spigotRemapJar by tasks.registering<SpigotRemapJar> {
@@ -104,17 +100,17 @@ open class SpigotTasks(
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
 
-        outputMappings.set(cache.resolve(Constants.CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 
     val patchMappings by tasks.registering<PatchMappings> {
         inputMappings.set(cleanupMappings.flatMap { it.outputMappings })
         patch.set(extension.paper.mappingsPatch.fileExists(project))
 
-        fromNamespace.set(Constants.SPIGOT_NAMESPACE)
-        toNamespace.set(Constants.DEOBF_NAMESPACE)
+        fromNamespace.set(SPIGOT_NAMESPACE)
+        toNamespace.set(DEOBF_NAMESPACE)
 
-        outputMappings.set(cache.resolve(Constants.PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 
     val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
@@ -181,7 +177,7 @@ open class SpigotTasks(
         dependsOn(patchSpigot)
         apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
         serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
-        outputDir.set(cache.resolve(Constants.SPIGOT_JARS_PATH))
+        outputDir.set(cache.resolve(SPIGOT_JARS_PATH))
 
         downloader.set(downloadService)
     }

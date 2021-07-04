@@ -24,7 +24,7 @@ package io.papermc.paperweight.patcher.upstream
 
 import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
 import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
-import io.papermc.paperweight.util.providerFor
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory

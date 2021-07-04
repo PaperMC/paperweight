@@ -23,8 +23,7 @@
 package io.papermc.paperweight.tasks.patchremap
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.Git
-import io.papermc.paperweight.util.deleteRecursively
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 

@@ -22,12 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.ensureParentExists
-import io.papermc.paperweight.util.orNull
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.at.AccessChange
@@ -41,14 +36,7 @@ import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -194,7 +182,8 @@ fun AccessTransform?.apply(currentModifier: Int): Int {
         ModifierChange.ADD -> {
             value = value or Opcodes.ACC_FINAL
         }
-        else -> {}
+        else -> {
+        }
     }
     return value
 }

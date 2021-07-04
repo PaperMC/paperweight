@@ -1,17 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.gradle.api.artifacts.repositories.PasswordCredentials
-import org.gradle.api.publish.maven.MavenPom
-import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.publish.maven.tasks.PublishToMavenLocal
-import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
-import org.gradle.kotlin.dsl.credentials
-import org.gradle.kotlin.dsl.existing
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.getValue
-import org.gradle.kotlin.dsl.maven
-import org.gradle.kotlin.dsl.provideDelegate
-import org.gradle.kotlin.dsl.registering
-import org.gradle.kotlin.dsl.withType
 
 plugins {
     `maven-publish`
@@ -192,6 +179,7 @@ fun MavenPom.pomConfig() {
 fun version(): String {
     return project.version.toString()
 }
+
 fun localVersion(): String {
     return if (isSnapshot) {
         version().substringBefore('-') + "-LOCAL-SNAPSHOT"

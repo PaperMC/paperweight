@@ -25,7 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
+import kotlin.io.path.*
 
 data class MavenArtifact(
     private val group: String,

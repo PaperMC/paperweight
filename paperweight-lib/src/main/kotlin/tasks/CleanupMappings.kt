@@ -43,16 +43,21 @@ import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
 import dev.denwav.hypo.model.data.types.PrimitiveType
-import io.papermc.paperweight.util.ClassNameChange
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.MappingFormats
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.isLibraryJar
-import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.util.Collections
 import javax.inject.Inject
+import kotlin.collections.HashMap
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.asSequence
+import kotlin.collections.joinToString
+import kotlin.collections.listOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.plusAssign
+import kotlin.collections.set
+import kotlin.collections.toList
+import kotlin.collections.withIndex
 import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
@@ -60,15 +65,7 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -256,8 +253,8 @@ abstract class CleanupMappings : JavaLauncherTask() {
 
             val mappings = MappingFormats.TINY.read(
                 parameters.inputMappings.path,
-                Constants.SPIGOT_NAMESPACE,
-                Constants.DEOBF_NAMESPACE
+                SPIGOT_NAMESPACE,
+                DEOBF_NAMESPACE
             )
 
             val caseOnlyChanges = Collections.synchronizedList(mutableListOf<ClassNameChange>())
@@ -283,8 +280,8 @@ abstract class CleanupMappings : JavaLauncherTask() {
             MappingFormats.TINY.write(
                 cleanedMappings,
                 parameters.outputMappings.path,
-                Constants.SPIGOT_NAMESPACE,
-                Constants.DEOBF_NAMESPACE
+                SPIGOT_NAMESPACE,
+                DEOBF_NAMESPACE
             )
 
             parameters.caseOnlyNameChanges.path.bufferedWriter(Charsets.UTF_8).use { writer ->

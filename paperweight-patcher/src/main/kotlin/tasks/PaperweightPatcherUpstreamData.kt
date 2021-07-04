@@ -22,15 +22,12 @@
 
 package io.papermc.paperweight.patcher.tasks
 
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY
-import io.papermc.paperweight.util.Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM
-import io.papermc.paperweight.util.Constants.UPSTREAM_WORK_DIR_PROPERTY
-import io.papermc.paperweight.util.UpstreamData
-import io.papermc.paperweight.util.deleteForcefully
-import io.papermc.paperweight.util.fromJson
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
+import kotlin.collections.emptyList
+import kotlin.collections.listOf
+import kotlin.collections.plus
+import kotlin.collections.set
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -77,7 +74,7 @@ abstract class PaperweightPatcherUpstreamData : DefaultTask() {
             params.projectProperties[PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY] = upstreamDataFile.absolutePathString()
             params.projectProperties[PAPERWEIGHT_PREPARE_DOWNSTREAM] = upstreamDataFile.absolutePathString() // TODO remove after next version
 
-            params.systemPropertiesArgs[Constants.PAPERWEIGHT_DEBUG] = System.getProperty(Constants.PAPERWEIGHT_DEBUG, "false")
+            params.systemPropertiesArgs[PAPERWEIGHT_DEBUG] = System.getProperty(PAPERWEIGHT_DEBUG, "false")
 
             NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
 

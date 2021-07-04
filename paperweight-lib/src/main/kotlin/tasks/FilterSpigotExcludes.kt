@@ -22,8 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.deleteForcefully
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty

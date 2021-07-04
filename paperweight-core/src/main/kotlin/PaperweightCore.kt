@@ -26,13 +26,10 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
-import io.papermc.paperweight.tasks.GeneratePaperclipPatch
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
-import io.papermc.paperweight.util.Constants
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.initSubmodules
-import io.papermc.paperweight.util.registering
-import io.papermc.paperweight.util.setupServerProject
+import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -43,7 +40,7 @@ import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
-        val ext = target.extensions.create(Constants.EXTENSION, PaperweightCoreExtension::class)
+        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -57,15 +54,15 @@ class PaperweightCore : Plugin<Project> {
         // which are required for configuration
         target.layout.initSubmodules()
 
-        target.configurations.create(Constants.PARAM_MAPPINGS_CONFIG)
-        target.configurations.create(Constants.REMAPPER_CONFIG)
-        target.configurations.create(Constants.DECOMPILER_CONFIG)
-        target.configurations.create(Constants.PAPERCLIP_CONFIG)
+        target.configurations.create(PARAM_MAPPINGS_CONFIG)
+        target.configurations.create(REMAPPER_CONFIG)
+        target.configurations.create(DECOMPILER_CONFIG)
+        target.configurations.create(PAPERCLIP_CONFIG)
 
         val tasks = AllTasks(target)
         target.createPatchRemapTask(tasks)
 
-        target.tasks.register<PaperweightCoreUpstreamData>(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM) {
+        target.tasks.register<PaperweightCoreUpstreamData>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
@@ -80,8 +77,8 @@ class PaperweightCore : Plugin<Project> {
 
             dataFile.set(
                 target.layout.file(
-                    providers.gradleProperty(Constants.PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
-                        .orElse(providers.gradleProperty(Constants.PAPERWEIGHT_PREPARE_DOWNSTREAM))
+                    providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+                        .orElse(providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM))
                         .map { File(it) }
                 )
             )
@@ -105,8 +102,8 @@ class PaperweightCore : Plugin<Project> {
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
-                cache.resolve(Constants.FINAL_REMAPPED_JAR),
-                cache.resolve(Constants.SERVER_LIBRARIES),
+                cache.resolve(FINAL_REMAPPED_JAR),
+                cache.resolve(SERVER_LIBRARIES),
                 ext.paper.reobfPackagesToFix
             ) {
                 mappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
@@ -121,7 +118,7 @@ class PaperweightCore : Plugin<Project> {
             paperclipJar {
                 with(target.tasks.named("jar", Jar::class).get())
 
-                val paperclipConfig = target.configurations.named(Constants.PAPERCLIP_CONFIG)
+                val paperclipConfig = target.configurations.named(PAPERCLIP_CONFIG)
                 dependsOn(paperclipConfig, generatePaperclipPatch)
 
                 val paperclipZip = target.zipTree(paperclipConfig.map { it.singleFile })
