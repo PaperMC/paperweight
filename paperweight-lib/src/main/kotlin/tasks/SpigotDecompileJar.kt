@@ -42,7 +42,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class SpigotDecompileJar : BaseTask() {
+abstract class SpigotDecompileJar : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -57,6 +57,8 @@ abstract class SpigotDecompileJar : BaseTask() {
     abstract val outputJar: RegularFileProperty
 
     override fun init() {
+        super.init()
+
         outputJar.convention(defaultOutput())
     }
 
@@ -82,7 +84,7 @@ abstract class SpigotDecompileJar : BaseTask() {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.deleteForcefully()
 
-            runJar(objects.fileCollection().from(fernFlowerJar), workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
+            launcher.runJar(objects.fileCollection().from(fernFlowerJar), workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
 
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).moveTo(outputJarFile)

@@ -42,7 +42,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class RunForgeFlower : BaseTask() {
+abstract class RunForgeFlower : JavaLauncherTask() {
 
     @get:Classpath
     abstract val executable: ConfigurableFileCollection
@@ -53,13 +53,15 @@ abstract class RunForgeFlower : BaseTask() {
     @get:CompileClasspath
     abstract val libraries: ConfigurableFileCollection
 
-    @get:Internal
-    abstract val jvmargs: ListProperty<String>
-
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     override fun init() {
+        super.init()
+
         jvmargs.convention(listOf("-Xmx4G"))
         outputJar.convention(defaultOutput())
     }
@@ -107,7 +109,7 @@ abstract class RunForgeFlower : BaseTask() {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.deleteForcefully()
 
-            runJar(executable, layout.cache, logFile, jvmArgs = jvmargs.get(), args = argList.toTypedArray())
+            launcher.runJar(executable, layout.cache, logFile, jvmArgs = jvmargs.get(), args = argList.toTypedArray())
 
             // FernFlower is weird with how it does directory output
             target.resolve(inputJar.path.name).moveTo(out, overwrite = true)

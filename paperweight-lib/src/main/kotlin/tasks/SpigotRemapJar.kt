@@ -43,7 +43,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class SpigotRemapJar : BaseTask() {
+abstract class SpigotRemapJar : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -96,6 +96,8 @@ abstract class SpigotRemapJar : BaseTask() {
     abstract val outputJar: RegularFileProperty
 
     override fun init() {
+        super.init()
+
         outputJar.convention(defaultOutput())
     }
 
@@ -127,7 +129,7 @@ abstract class SpigotRemapJar : BaseTask() {
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("class.log"))
                 logFile.deleteForcefully()
-                runJar(
+                launcher.runJar(
                     objects.fileCollection().from(specialSource2Jar),
                     workingDir = work,
                     logFile = logFile,
@@ -143,7 +145,7 @@ abstract class SpigotRemapJar : BaseTask() {
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("member.log"))
                 logFile.deleteForcefully()
-                runJar(
+                launcher.runJar(
                     objects.fileCollection().from(specialSource2Jar),
                     workingDir = work,
                     logFile = logFile,
@@ -156,7 +158,7 @@ abstract class SpigotRemapJar : BaseTask() {
             try {
                 val logFile = layout.cache.resolve(paperTaskOutput("final.log"))
                 logFile.deleteForcefully()
-                runJar(
+                launcher.runJar(
                     objects.fileCollection().from(specialSourceJar),
                     workingDir = work,
                     logFile = logFile,

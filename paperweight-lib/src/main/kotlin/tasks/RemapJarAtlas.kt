@@ -26,13 +26,16 @@ import io.papermc.paperweight.util.ensureDeleted
 import io.papermc.paperweight.util.ensureParentExists
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.bombe.asm.jar.JarEntryRemappingTransformer
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
@@ -42,7 +45,7 @@ import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.commons.Remapper
 
 @CacheableTask
-abstract class RemapJarAtlas : BaseTask() {
+abstract class RemapJarAtlas : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -53,8 +56,17 @@ abstract class RemapJarAtlas : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
+
+    override fun init() {
+        super.init()
+
+        jvmargs.convention(listOf("-Xmx1G"))
+    }
 
     @TaskAction
     fun run() {
@@ -62,7 +74,8 @@ abstract class RemapJarAtlas : BaseTask() {
         ensureDeleted(outputJar)
 
         val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs("-Xmx1G")
+            forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(AtlasAction::class) {

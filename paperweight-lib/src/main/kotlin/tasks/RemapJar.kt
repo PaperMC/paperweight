@@ -46,7 +46,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class RemapJar : BaseTask() {
+abstract class RemapJar : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -70,16 +70,18 @@ abstract class RemapJar : BaseTask() {
     @get:Classpath
     abstract val remapper: ConfigurableFileCollection
 
+    @get:OutputFile
+    abstract val outputJar: RegularFileProperty
+
     @get:Internal
     abstract val jvmargs: ListProperty<String>
 
     @get:Internal
     abstract val singleThreaded: Property<Boolean>
 
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
     override fun init() {
+        super.init()
+
         outputJar.convention(defaultOutput())
         singleThreaded.convention(true)
         jvmargs.convention(listOf("-Xmx1G"))
@@ -109,6 +111,6 @@ abstract class RemapJar : BaseTask() {
         }
 
         ensureParentExists(logFile)
-        runJar(remapper, layout.cache, logFile, jvmArgs = jvmargs.get(), args = args.toTypedArray())
+        launcher.runJar(remapper, layout.cache, logFile, jvmArgs = jvmargs.get(), args = args.toTypedArray())
     }
 }

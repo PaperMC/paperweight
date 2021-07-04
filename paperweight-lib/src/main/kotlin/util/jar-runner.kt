@@ -25,12 +25,18 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.io.OutputStream
 import java.util.jar.JarFile
-import kotlin.io.path.createDirectories
-import kotlin.io.path.outputStream
+import kotlin.io.path.*
 import org.gradle.api.file.FileCollection
-import org.gradle.internal.jvm.Jvm
+import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaLauncher
 
-fun runJar(classpath: FileCollection, workingDir: Any, logFile: Any?, jvmArgs: List<String> = listOf(), vararg args: String) {
+fun JavaLauncher.runJar(
+    classpath: FileCollection,
+    workingDir: Any,
+    logFile: Any?,
+    jvmArgs: List<String> = listOf(),
+    vararg args: String
+) {
     var mainClass: String? = null
     for (file in classpath.files) {
         mainClass = JarFile(file).use { jarFile ->
@@ -55,7 +61,7 @@ fun runJar(classpath: FileCollection, workingDir: Any, logFile: Any?, jvmArgs: L
     }
 
     val processBuilder = ProcessBuilder(
-        Jvm.current().javaExecutable.canonicalPath,
+        this.executablePath.path.absolutePathString(),
         *jvmArgs.toTypedArray(),
         "-classpath",
         classpath.asPath,
@@ -79,4 +85,14 @@ fun runJar(classpath: FileCollection, workingDir: Any, logFile: Any?, jvmArgs: L
             throw PaperweightException("Execution of ${classpath.asPath} failed with exit code $e")
         }
     }
+}
+
+fun Provider<JavaLauncher>.runJar(
+    classpath: FileCollection,
+    workingDir: Any,
+    logFile: Any?,
+    jvmArgs: List<String> = listOf(),
+    vararg args: String
+) {
+    get().runJar(classpath, workingDir, logFile, jvmArgs, *args)
 }

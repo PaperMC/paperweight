@@ -42,6 +42,7 @@ import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.set
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
 import org.cadixdev.lorenz.merge.MappingSetMerger
@@ -55,7 +56,6 @@ import org.cadixdev.lorenz.model.InnerClassMapping
 import org.cadixdev.lorenz.model.MethodMapping
 import org.cadixdev.lorenz.model.MethodParameterMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -73,7 +73,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class GenerateMappings : DefaultTask() {
+abstract class GenerateMappings : JavaLauncherTask() {
 
     @get:Classpath
     abstract val vanillaJar: RegularFileProperty
@@ -98,17 +98,17 @@ abstract class GenerateMappings : DefaultTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
-    init {
-        @Suppress("LeakingThis")
-        run {
-            jvmargs.convention(listOf("-Xmx1G"))
-        }
+    override fun init() {
+        super.init()
+
+        jvmargs.convention(listOf("-Xmx1G"))
     }
 
     @TaskAction
     fun run() {
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(GenerateMappingsAction::class) {

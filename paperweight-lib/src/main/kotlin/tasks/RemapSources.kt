@@ -89,7 +89,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class RemapSources : BaseTask() {
+abstract class RemapSources : JavaLauncherTask() {
 
     @get:CompileClasspath
     abstract val vanillaJar: RegularFileProperty
@@ -117,9 +117,6 @@ abstract class RemapSources : BaseTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val additionalAts: RegularFileProperty
 
-    @get:Internal
-    abstract val jvmargs: ListProperty<String>
-
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
 
@@ -129,10 +126,15 @@ abstract class RemapSources : BaseTask() {
     @get:OutputFile
     abstract val testsOutputZip: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        super.init()
+
         jvmargs.convention(listOf("-Xmx2G"))
         sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
         testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
@@ -147,6 +149,7 @@ abstract class RemapSources : BaseTask() {
         try {
             val queue = workerExecutor.processIsolation {
                 forkOptions.jvmArgs(jvmargs.get())
+                forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
             }
 
             val srcDir = spigotServerDir.path.resolve("src/main/java")

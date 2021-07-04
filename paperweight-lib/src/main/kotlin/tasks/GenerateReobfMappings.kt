@@ -47,10 +47,10 @@ import io.papermc.paperweight.util.MappingFormats
 import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.CacheableTask
@@ -67,7 +67,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class GenerateReobfMappings : DefaultTask() {
+abstract class GenerateReobfMappings : JavaLauncherTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -84,26 +84,26 @@ abstract class GenerateReobfMappings : DefaultTask() {
     @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:Internal
-    abstract val jvmargs: ListProperty<String>
-
     @get:OutputFile
     abstract val reobfMappings: RegularFileProperty
+
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
-    init {
-        @Suppress("LeakingThis")
-        run {
-            jvmargs.convention(listOf("-Xmx2G"))
-        }
+    override fun init() {
+        super.init()
+
+        jvmargs.convention(listOf("-Xmx2G"))
     }
 
     @TaskAction
     fun run() {
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(GenerateReobfMappingsAction::class) {

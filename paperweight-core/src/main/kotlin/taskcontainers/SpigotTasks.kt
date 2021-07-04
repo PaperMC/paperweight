@@ -99,9 +99,6 @@ open class SpigotTasks(
         finalMapCommand.set(buildDataInfo.map { it.finalMapCommand })
     }
 
-    init {
-    }
-
     val cleanupMappings by tasks.registering<CleanupMappings> {
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })

@@ -29,6 +29,7 @@ import io.papermc.paperweight.util.orNull
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.set
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
@@ -39,9 +40,11 @@ import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -58,7 +61,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
 @CacheableTask
-abstract class ApplyAccessTransform : BaseTask() {
+abstract class ApplyAccessTransform : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -70,10 +73,16 @@ abstract class ApplyAccessTransform : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        super.init()
+
+        jvmargs.convention(listOf("-Xmx1G"))
         outputJar.convention(defaultOutput())
     }
 
@@ -83,7 +92,8 @@ abstract class ApplyAccessTransform : BaseTask() {
         ensureDeleted(outputJar.path)
 
         val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs("-Xmx1G")
+            forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(AtlasAction::class) {

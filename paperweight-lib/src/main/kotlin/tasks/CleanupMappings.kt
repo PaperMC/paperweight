@@ -75,7 +75,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class CleanupMappings : BaseTask() {
+abstract class CleanupMappings : JavaLauncherTask() {
 
     @get:Classpath
     abstract val sourceJar: RegularFileProperty
@@ -87,19 +87,21 @@ abstract class CleanupMappings : BaseTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val inputMappings: RegularFileProperty
 
-    @get:Internal
-    abstract val jvmargs: ListProperty<String>
-
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
     @get:OutputFile
     abstract val caseOnlyNameChanges: RegularFileProperty
 
+    @get:Internal
+    abstract val jvmargs: ListProperty<String>
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        super.init()
+
         jvmargs.convention(listOf("-Xmx1G"))
         caseOnlyNameChanges.convention(defaultOutput("caseOnlyClassNameChanges", "json"))
     }
@@ -108,6 +110,7 @@ abstract class CleanupMappings : BaseTask() {
     fun run() {
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(CleanupMappingsAction::class) {

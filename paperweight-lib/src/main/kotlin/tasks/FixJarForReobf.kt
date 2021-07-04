@@ -55,7 +55,7 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodNode
 
 @CacheableTask
-abstract class FixJarForReobf : BaseTask() {
+abstract class FixJarForReobf : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -74,6 +74,8 @@ abstract class FixJarForReobf : BaseTask() {
     abstract val workerExecutor: WorkerExecutor
 
     override fun init() {
+        super.init()
+
         outputJar.convention(defaultOutput())
         jvmargs.convention(listOf("-Xmx2G"))
     }
@@ -88,6 +90,7 @@ abstract class FixJarForReobf : BaseTask() {
 
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(FixJarForReobfWorker::class) {

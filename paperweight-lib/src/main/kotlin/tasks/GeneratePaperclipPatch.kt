@@ -51,7 +51,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class GeneratePaperclipPatch : ZippedTask() {
+abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
 
     @get:Classpath
     abstract val originalJar: RegularFileProperty
@@ -70,12 +70,14 @@ abstract class GeneratePaperclipPatch : ZippedTask() {
 
     override fun init() {
         super.init()
+
         jvmargs.convention(listOf("-Xmx1G"))
     }
 
     override fun run(rootDir: Path) {
         val queue = workerExecutor.processIsolation {
             forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
         queue.submit(PaperclipAction::class) {
