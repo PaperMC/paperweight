@@ -28,9 +28,13 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import java.util.Locale
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -157,31 +161,87 @@ open class AllTasks(
         outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
+    val decompileRemapJar by tasks.registering<RunForgeFlower> {
+        executable.from(project.configurations.named(DECOMPILER_CONFIG))
+
+        inputJar.set(remapJar.flatMap { it.outputJar })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+    }
+
+    val generateMojangMappedPaperclipPatch by tasks.registering<GeneratePaperclipPatch> {
+        originalJar.set(downloadServerJar.flatMap { it.outputJar })
+        mcVersion.set(extension.minecraftVersion)
+    }
+
+    val mojangMappedPaperclipJar by tasks.registering<Jar> {
+        archiveClassifier.set("mojang-mapped-paperclip")
+        with(tasks.named("jar", Jar::class).get())
+
+        val paperclipConfig = project.configurations.named(PAPERCLIP_CONFIG)
+        dependsOn(paperclipConfig, generateMojangMappedPaperclipPatch)
+
+        val paperclipZip = project.zipTree(paperclipConfig.map { it.singleFile }.get())
+        from(paperclipZip) {
+            exclude("META-INF/MANIFEST.MF")
+        }
+        from(project.zipTree(generateMojangMappedPaperclipPatch.flatMap { it.outputZip }))
+
+        manifest.from(paperclipZip.matching { include("META-INF/MANIFEST.MF") }.elements.map { it.single() })
+    }
+
     @Suppress("unused")
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         // dependsOn(applyPatches)
 
-        decompiledJar.set(decompileJar.flatMap { it.outputJar }.get())
+        decompiledJar.set(decompileRemapJar.flatMap { it.outputJar })
         sourceDir.set(extension.paper.paperServerDir.map { it.dir("src/main/java") }.get())
         minecraftVersion.set(extension.minecraftVersion)
+        serverUrl.set(buildDataInfo.map { it.serverUrl })
+        mojangMappedPaperclipFile.set(mojangMappedPaperclipJar.flatMap { it.archiveFile })
+        vanillaJarIncludes.set(extension.vanillaJarIncludes)
+        vanillaServerLibraries.set(
+            inspectVanillaJar.map { inspect ->
+                inspect.serverLibraries.path.readLines(Charsets.UTF_8).filter { it.isNotBlank() }
+            }
+        )
+        serverProject.set(extension.serverProject)
 
         buildDataDir.set(extension.craftBukkit.buildDataDir)
         spigotClassMappingsFile.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
         spigotMemberMappingsFile.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
         spigotAtFile.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
-        paramMappingsUrl.set(extension.paramMappingsRepo)
-        decompilerUrl.set(extension.paramMappingsRepo)
-        remapperUrl.set(extension.paramMappingsRepo)
-
-        paramMappingsConfig.set(project.configurations.named(Constants.PARAM_MAPPINGS_CONFIG))
-        decompilerConfig.set(project.configurations.named(Constants.DECOMPILER_CONFIG))
-        remapperConfig.set(project.configurations.named(Constants.REMAPPER_CONFIG))
+        paramMappingsConfig.set(project.configurations.named(PARAM_MAPPINGS_CONFIG))
+        decompilerConfig.set(project.configurations.named(DECOMPILER_CONFIG))
+        remapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
 
         additionalSpigotClassMappingsFile.set(extension.paper.additionalSpigotClassMappings)
         additionalSpigotMemberMappingsFile.set(extension.paper.additionalSpigotMemberMappings)
         mappingsPatchFile.set(extension.paper.mappingsPatch)
+        reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
 
         devBundleFile.set(project.layout.buildDirectory.map { it.file("libs/paperDevBundle-${project.version}.zip") })
+    }
+
+    init {
+        project.afterEvaluate {
+            generateMojangMappedPaperclipPatch {
+                patchedJar.set(extension.serverProject.get().tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar })
+            }
+            generateDevelopmentBundle {
+                val server = extension.serverProject.get()
+                mappedServerCoordinates.set(
+                    sequenceOf(
+                        server.group,
+                        server.name.toLowerCase(Locale.ENGLISH),
+                        server.version
+                    ).joinToString(":")
+                )
+
+                paramMappingsUrl.set(project.repositories.named<MavenArtifactRepository>(PARAM_MAPPINGS_REPO_NAME).get().url.toString())
+                decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).get().url.toString())
+                remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).get().url.toString())
+            }
+        }
     }
 }
