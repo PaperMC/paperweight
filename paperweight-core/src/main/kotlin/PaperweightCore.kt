@@ -93,20 +93,17 @@ class PaperweightCore : Plugin<Project> {
 
         target.afterEvaluate {
             target.repositories {
-                maven(extension.paramMappingsRepo) {
-                    content {
-                        onlyForConfigurations(Constants.PARAM_MAPPINGS_CONFIG)
-                    }
+                maven(ext.paramMappingsRepo) {
+                    name = PARAM_MAPPINGS_REPO_NAME
+                    content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
                 }
-                maven(extension.remapRepo) {
-                    content {
-                        onlyForConfigurations(Constants.REMAPPER_CONFIG)
-                    }
+                maven(ext.remapRepo) {
+                    name = REMAPPER_REPO_NAME
+                    content { onlyForConfigurations(REMAPPER_CONFIG) }
                 }
-                maven(extension.decompileRepo) {
-                    content {
-                        onlyForConfigurations(Constants.DECOMPILER_CONFIG)
-                    }
+                maven(ext.decompileRepo) {
+                    name = DECOMPILER_REPO_NAME
+                    content { onlyForConfigurations(DECOMPILER_CONFIG) }
                 }
             }
 
