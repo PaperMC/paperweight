@@ -36,6 +36,8 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.bufferedReader
@@ -132,7 +134,14 @@ object UselessOutputStream : OutputStream() {
     }
 }
 
-class DelegatingOutputStream(private vararg val delegates: OutputStream) : OutputStream() {
+class DelegatingOutputStream(vararg delegates: OutputStream) : OutputStream() {
+
+    private val delegates: MutableSet<OutputStream> = Collections.newSetFromMap(IdentityHashMap())
+
+    init {
+        this.delegates.addAll(delegates)
+    }
+
     override fun write(b: Int) {
         for (delegate in delegates) {
             delegate.write(b)
