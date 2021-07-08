@@ -71,7 +71,7 @@ inline fun <reified T> Gson.fromJson(file: Any): T =
     file.convertToPath().bufferedReader(Charsets.UTF_8).use { fromJson(it) }
 
 val ProjectLayout.cache: Path
-    get() = projectDirectory.file(".gradle/CACHE_PATH").path
+    get() = projectDirectory.file(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 fun ProjectLayout.initSubmodules() {
