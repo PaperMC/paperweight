@@ -65,7 +65,7 @@ class PatchApplier(
     fun commitInitialRemappedSource() {
         git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
         git("commit", "-m", "Initial Remapped Source", "--author=Initial <auto@mated.null>").executeSilently()
-        git("tag", remappedBaseTag)
+        git("tag", remappedBaseTag).executeSilently()
     }
 
     fun recordCommit() {
@@ -105,7 +105,7 @@ class PatchApplier(
         git(
             "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
             target.absolutePathString(), remappedBaseTag
-        ).runOut()
+        ).executeOut()
     }
 
     fun isUnfinishedPatch(): Boolean {
