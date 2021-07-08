@@ -132,6 +132,14 @@ object UselessOutputStream : OutputStream() {
     }
 }
 
+class DelegatingOutputStream(private vararg val delegates: OutputStream) : OutputStream() {
+    override fun write(b: Int) {
+        for (delegate in delegates) {
+            delegate.write(b)
+        }
+    }
+}
+
 fun Any.convertToPath(): Path {
     return when (this) {
         is Path -> this
