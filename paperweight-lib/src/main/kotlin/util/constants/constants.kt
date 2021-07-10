@@ -88,6 +88,8 @@ const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
 
 const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 
+const val RELOCATION_EXTENSION = "relocation"
+
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
 fun Task.paperTaskOutputDir() = paperTaskOutputDir(name)
