@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.tasks.patchremap
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -85,17 +84,10 @@ abstract class RemapPatches : BaseTask() {
 
     @get:Internal
     @get:Option(
-        option = "skip-patches",
-        description = "For resuming, skip first # of patches (e.g. --skip-patches=300)"
+        option = "continue-remap",
+        description = "For resuming, don't recreate remap dir and pick up where last run left off"
     )
-    abstract val skipPatches: Property<String>
-
-    @get:Internal
-    @get:Option(
-        option = "skip-pre-patches",
-        description = "For resuming non-remapped patches, skip first # of patches (e.g. --skip-pre-patches=300)"
-    )
-    abstract val skipPrePatches: Property<String>
+    abstract val continueRemapping: Property<Boolean>
 
     @get:Internal
     @get:Option(
@@ -108,20 +100,33 @@ abstract class RemapPatches : BaseTask() {
     abstract val providers: ProviderFactory
 
     override fun init() {
-        skipPatches.convention("0")
-        skipPrePatches.convention("0")
+        continueRemapping.convention(false)
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
 
     @TaskAction
     fun run() {
-        val skip = skipPatches.get().toInt()
-        val skipPre = skipPrePatches.get().toInt()
+        val metaFile = layout.cache / "paperweight" / "remap-meta"
+        val meta = if (metaFile.exists()) {
+            if (continueRemapping.get()) {
+                gson.fromJson<RemapMeta>(metaFile)
+            } else {
+                metaFile.deleteForcefully()
+                null
+            }
+        } else {
+            null
+        }
 
         // Check patches
         val inputElements = inputPatchDir.path.listDirectoryEntries().sorted()
         if (inputElements.any { it.isRegularFile() }) {
-            throw PaperweightException("Remap patch input directory must only contain directories or patch files, not both")
+            println("Remap patch input directory must only contain directories or patch files, not both")
+            return
+        }
+        if (inputElements.size == 1) {
+            println("No patches to remap, only 1 patch set found")
+            return
         }
 
         val patchesToSkip = inputElements.dropLast(1).flatMap { it.listDirectoryEntries("*.patch").sorted() }
@@ -143,11 +148,11 @@ abstract class RemapPatches : BaseTask() {
         // Remap output directory, after each output this directory will be re-named to the input directory below for
         // the next remap operation
         println("setting up repo")
-        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.path, recreate = skip == 0 && skipPre == 0)
+        val tempApiDir = createWorkDir("patch-remap-api", source = spigotApiDir.path, recreate = !continueRemapping.get())
         val tempInputDir = createWorkDirByCloning(
             "patch-remap-input",
             source = spigotServerDir.path,
-            recreate = skip == 0 && skipPre == 0
+            recreate = !continueRemapping.get()
         )
         val tempOutputDir = createWorkDir("patch-remap-output")
 
@@ -162,26 +167,40 @@ abstract class RemapPatches : BaseTask() {
         ).let { remapper ->
             val patchApplier = PatchApplier("remapped", "old", ignoreGitIgnore.get(), tempInputDir)
 
-            if (skip == 0) {
+            if (!continueRemapping.get()) {
                 // first run
                 patchApplier.createBranches()
 
-                if (skipPre == 0) {
-                    // We need to include any missing classes for the patches later on
-                    McDev.importMcDev(
-                        patches = patchesToSkip + patchesToRemap,
-                        decompJar = spigotDecompJar.path,
-                        importsFile = devImports.path,
-                        librariesDir = mcLibrarySourcesDir.path,
-                        targetDir = tempInputDir.resolve("src/main/java")
-                    )
+                // We need to include any missing classes for the patches later on
+                McDev.importMcDev(
+                    patches = patchesToSkip + patchesToRemap,
+                    decompJar = spigotDecompJar.path,
+                    importsFile = devImports.path,
+                    librariesDir = mcLibrarySourcesDir.path,
+                    targetDir = tempInputDir.resolve("src/main/java")
+                )
 
-                    patchApplier.commitPlain("McDev imports")
+                patchApplier.commitPlain("McDev imports")
+            }
+
+            if (meta == null || meta.stage == RemapStage.PRE_REMAP) {
+                var foundResume = false
+                val patchesToApply = patchesToSkip.dropWhile { patch ->
+                    when {
+                        meta == null -> false
+                        meta.patchSet == patch.parent.name && meta.patchName == patch.name -> {
+                            foundResume = true
+                            true
+                        }
+                        else -> !foundResume
+                    }
                 }
-
-                val patchesToApply = patchesToSkip.dropWhile { it.name.substringBefore('-').toInt() <= skipPre }
                 println("Applying ${patchesToApply.size} patches before remapping")
                 for (patch in patchesToApply) {
+                    metaFile.deleteForcefully()
+                    metaFile.bufferedWriter().use { writer ->
+                        gson.toJson(RemapMeta(RemapStage.PRE_REMAP, patch.parent.name, patch.name), writer)
+                    }
                     patchApplier.applyPatch(patch)
                 }
 
@@ -205,7 +224,22 @@ abstract class RemapPatches : BaseTask() {
             }
 
             // Repo setup is done, we can begin the patch loop now
-            patchesToRemap.asSequence().dropWhile { it.name.substringBefore('-').toInt() <= skip }.take(limit).forEach { patch ->
+            var counter = 0
+            var remapSkip = meta != null && meta.stage == RemapStage.REMAP
+            for (patch in patchesToRemap) {
+                if (remapSkip && meta != null) {
+                    if (meta.patchSet == patch.parent.name && meta.patchName == patch.name) {
+                        remapSkip = false
+                        continue
+                    }
+                    continue
+                }
+
+                metaFile.deleteForcefully()
+                metaFile.bufferedWriter().use { writer ->
+                    gson.toJson(RemapMeta(RemapStage.REMAP, patch.parent.name, patch.name), writer)
+                }
+
                 println("===========================")
                 println("attempting to remap $patch")
                 println("===========================")
@@ -218,8 +252,12 @@ abstract class RemapPatches : BaseTask() {
                 println("===========================")
                 println("done remapping patch $patch")
                 println("===========================")
-            }
 
+                counter++
+                if (counter >= limit) {
+                    break
+                }
+            }
             patchApplier.generatePatches(outputPatchDir.path)
         }
     }
@@ -243,5 +281,16 @@ abstract class RemapPatches : BaseTask() {
                 Git(workDir)("clone", source.absolutePathString(), this.absolutePathString()).executeSilently()
             }
         }
+    }
+
+    data class RemapMeta(
+        val stage: RemapStage,
+        val patchSet: String,
+        val patchName: String
+    )
+
+    enum class RemapStage {
+        PRE_REMAP,
+        REMAP
     }
 }
