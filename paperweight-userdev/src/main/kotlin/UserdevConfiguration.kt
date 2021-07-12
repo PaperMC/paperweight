@@ -55,28 +55,6 @@ class UserdevConfiguration(
     private val devBundleChanged = extractDevBundle.first
     val devBundleConfig = extractDevBundle.second
 
-    val vanillaServerJar = download(
-        "vanilla minecraft server jar",
-        project.download,
-        devBundleChanged,
-        devBundleConfig.buildData.serverUrl,
-        cache.resolve(paperConfigurationOutput("downloadServerJar", "jar"))
-    )
-
-    val filteredVanillaServerJar: Path = run {
-        val filteredJar = cache.resolve(paperConfigurationOutput("filterJar", "jar"))
-        if (devBundleChanged || !filteredJar.hasCorrect256()) {
-            project.logger.lifecycle(":filtering vanilla server jar")
-            filterJar(
-                vanillaServerJar,
-                filteredJar,
-                devBundleConfig.buildData.vanillaJarIncludes
-            )
-            filteredJar.writeSha256()
-        }
-        filteredJar
-    }
-
     private val minecraftManifestJson = download(
         "minecraft manifest",
         project.download,
@@ -94,6 +72,28 @@ class UserdevConfiguration(
         cache.resolve(VERSION_JSON)
     )
     val minecraftVersionManifest = gson.fromJson<JsonObject>(minecraftVersionManifestJson)
+
+    val vanillaServerJar = download(
+        "vanilla minecraft server jar",
+        project.download,
+        devBundleChanged,
+        minecraftVersionManifest["downloads"]["server"]["url"].string,
+        cache.resolve(paperConfigurationOutput("downloadServerJar", "jar"))
+    )
+
+    val filteredVanillaServerJar: Path = run {
+        val filteredJar = cache.resolve(paperConfigurationOutput("filterJar", "jar"))
+        if (devBundleChanged || !filteredJar.hasCorrect256()) {
+            project.logger.lifecycle(":filtering vanilla server jar")
+            filterJar(
+                vanillaServerJar,
+                filteredJar,
+                devBundleConfig.buildData.vanillaJarIncludes
+            )
+            filteredJar.writeSha256()
+        }
+        filteredJar
+    }
 
     val mojangServerMappings = download(
         "mojang server mappings",
@@ -273,13 +273,18 @@ class UserdevConfiguration(
     }
 
     val filteredMojangMappedPaperJar: Path by lazy {
-        val input = mojangMappedPaperJar // init lazy value
+        // init lazy values
+        val input = mojangMappedPaperJar
+        val sources = patchedSourcesJar
+
         val output = cache.resolve(paperConfigurationOutput("filteredPaperServerJar", "jar"))
 
         if (!devBundleChanged && output.hasCorrect256()) {
             return@lazy output
         }
-        filterPaperJar(patchedSourcesJar, input, output, devBundleConfig.buildData.relocations)
+
+        println(":filtering mojang mapped paper jar")
+        filterPaperJar(sources, input, output, devBundleConfig.buildData.relocations)
         output.writeSha256()
         output
     }
