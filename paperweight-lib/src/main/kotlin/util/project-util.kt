@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.extension.RelocationExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -50,6 +51,8 @@ fun Project.setupServerProject(
     }
 
     plugins.apply("java")
+
+    extensions.create<RelocationExtension>(RELOCATION_EXTENSION, objects)
 
     configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
         withDependencies {
