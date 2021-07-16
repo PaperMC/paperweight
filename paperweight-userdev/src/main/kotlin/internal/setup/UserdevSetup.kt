@@ -29,7 +29,6 @@ import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.download
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
@@ -304,7 +303,7 @@ class UserdevSetup(
         output.writeSha256()
     }
 
-    fun installServerArtifactToIvyRepository(cache: Path, repo: Path) {
+    fun installServerArtifactToIvyRepository(repo: Path) {
         filterMojangMappedPaperJar()
 
         val hashes = cache.resolve(paperConfigurationOutput("installedArtifacts", "hashes"))
