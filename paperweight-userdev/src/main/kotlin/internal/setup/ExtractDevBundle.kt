@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.configuration
+package io.papermc.paperweight.userdev.internal.setup
 
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.tasks.*
