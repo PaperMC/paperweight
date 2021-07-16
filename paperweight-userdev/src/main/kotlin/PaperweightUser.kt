@@ -72,7 +72,7 @@ abstract class PaperweightUser : Plugin<Project> {
             target.objects
         )
 
-        createConfigurations(target, target.provider { devBundleConfig })
+        createConfigurations(target, target.provider { userdevSetup })
 
         val reobfJar by target.tasks.registering<RemapJar> {
             group = "paperweight"
@@ -118,7 +118,6 @@ abstract class PaperweightUser : Plugin<Project> {
             }
 
             configureRepositories(userdev, devBundleConfig)
-            configureResolutionStrategy(userdevSetup)
         }
     }
 
@@ -143,16 +142,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
         for (repo in devBundleConfig.buildData.libraryRepositories) {
             maven(repo) {
-                content {
-                    /*
-                        for (dep in devBundleConfig.buildData.libraryDependencies) {
-                            includeFromDependencyNotation(dep)
-                        }
-                        includeFromDependencyNotation(devBundleConfig.apiCoordinates)
-                        includeFromDependencyNotation(devBundleConfig.mojangApiCoordinates)
-                         */
-                    onlyForConfigurations(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
-                }
+                content { onlyForConfigurations(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME) }
             }
         }
 
@@ -181,9 +171,9 @@ abstract class PaperweightUser : Plugin<Project> {
 
     private fun createConfigurations(
         target: Project,
-        devBundleConfigProvider: Provider<GenerateDevBundle.DevBundleConfig>
+        userdevSetup: Provider<UserdevSetup>
     ) {
-        val devBundleConfig by lazy { devBundleConfigProvider.get() }
+        val devBundleConfig by lazy { userdevSetup.get().devBundleConfig }
 
         target.configurations.create(DECOMPILER_CONFIG) {
             defaultDependencies {
@@ -228,6 +218,7 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {
+                userdevSetup.get().installServerArtifactToIvyRepository(target.layout.cache.resolve(IVY_REPOSITORY))
                 add(target.dependencies.create(devBundleConfig.mappedServerCoordinates))
             }
         }
@@ -239,30 +230,6 @@ abstract class PaperweightUser : Plugin<Project> {
                     target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
                     target.configurations.getByName(PAPER_API_CONFIG)
                 )
-            }
-        }
-    }
-
-    private fun Project.configureResolutionStrategy(userdevSetup: UserdevSetup) {
-        // We resolve these configurations in UserdevConfiguration, so if we attempt to do anything with
-        // UserdevConfiguration while resolving one of these configurations, a stackoverflow is likely
-        val configurationsResolvedDuringResolution = setOf(DEV_BUNDLE_CONFIG, REMAPPER_CONFIG, DECOMPILER_CONFIG, PARAM_MAPPINGS_CONFIG)
-
-        var resolvedMinecraft = false
-
-        configurations.filterNot {
-            configurationsResolvedDuringResolution.contains(it.name)
-        }.forEach { configuration ->
-            configuration.resolutionStrategy.eachDependency {
-                val shouldResolve = !resolvedMinecraft &&
-                    "${target.group}:${target.name}:${target.version}" == userdevSetup.devBundleConfig.mappedServerCoordinates
-                if (shouldResolve) {
-                    userdevSetup.installServerArtifactToIvyRepository(
-                        layout.cache,
-                        layout.cache.resolve(IVY_REPOSITORY)
-                    )
-                    resolvedMinecraft = true
-                }
             }
         }
     }
