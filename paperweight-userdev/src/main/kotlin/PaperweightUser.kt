@@ -94,12 +94,11 @@ abstract class PaperweightUser : Plugin<Project> {
             // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
             // but it does work and allows using the cleanCache task without setting up the workspace first
             val cleaningCache = gradle.startParameter.taskRequests
-                .map {
-                    it.args.any { arg ->
+                .any { req ->
+                    req.args.any { arg ->
                         NameMatcher().find(arg, tasks.names) == cleanCache.name
                     }
                 }
-                .any { it }
             if (cleaningCache) return@afterEvaluate
 
             checkForDevBundle() // Print a friendly error message if the dev bundle is missing before we call anything that will try and resolve it
