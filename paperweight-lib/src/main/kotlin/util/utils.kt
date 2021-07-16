@@ -53,6 +53,7 @@ import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
@@ -273,3 +274,5 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
             }
         )
 }
+
+fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }

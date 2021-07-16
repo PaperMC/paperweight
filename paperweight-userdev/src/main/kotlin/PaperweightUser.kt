@@ -25,6 +25,7 @@ package io.papermc.paperweight.userdev
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
@@ -60,14 +61,14 @@ abstract class PaperweightUser : Plugin<Project> {
         target.configurations.create(DEV_BUNDLE_CONFIG)
 
         // these must not be initialized until afterEvaluate, as they resolve the dev bundle
-        val userdevConfiguration by lazy { UserdevConfiguration(target, workerExecutor, javaToolchainService) }
-        val devBundleConfig by lazy { userdevConfiguration.devBundleConfig }
+        val userdevSetup by lazy { UserdevSetup(target, workerExecutor, javaToolchainService) }
+        val devBundleConfig by lazy { userdevSetup.devBundleConfig }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
             target,
-            target.provider { userdevConfiguration },
+            target.provider { userdevSetup },
             target.objects
         )
 
@@ -79,8 +80,8 @@ abstract class PaperweightUser : Plugin<Project> {
 
             outputJar.convention(project.layout.buildDirectory.file("libs/${project.name}-${project.version}.jar"))
 
-            mappingsFile.pathProvider(target.provider { userdevConfiguration.extractedBundle.resolve(devBundleConfig.buildData.reobfMappingsFile) })
-            remapClasspath.from(target.provider { userdevConfiguration.mojangMappedPaperJar })
+            mappingsFile.pathProvider(target.provider { userdevSetup.extractedBundle.resolve(devBundleConfig.buildData.reobfMappingsFile) })
+            remapClasspath.from(target.provider { userdevSetup.mojangMappedPaperJar })
 
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
@@ -117,7 +118,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
 
             configureRepositories(userdev, devBundleConfig)
-            configureResolutionStrategy(userdevConfiguration)
+            configureResolutionStrategy(userdevSetup)
         }
     }
 
@@ -178,8 +179,11 @@ abstract class PaperweightUser : Plugin<Project> {
         }
     }
 
-    private fun createConfigurations(target: Project, devBundleConfigDelegate: Provider<GenerateDevBundle.DevBundleConfig>) {
-        val devBundleConfig by lazy { devBundleConfigDelegate.get() }
+    private fun createConfigurations(
+        target: Project,
+        devBundleConfigProvider: Provider<GenerateDevBundle.DevBundleConfig>
+    ) {
+        val devBundleConfig by lazy { devBundleConfigProvider.get() }
 
         target.configurations.create(DECOMPILER_CONFIG) {
             defaultDependencies {
@@ -239,7 +243,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
     }
 
-    private fun Project.configureResolutionStrategy(userdevConfiguration: UserdevConfiguration) {
+    private fun Project.configureResolutionStrategy(userdevSetup: UserdevSetup) {
         // We resolve these configurations in UserdevConfiguration, so if we attempt to do anything with
         // UserdevConfiguration while resolving one of these configurations, a stackoverflow is likely
         val configurationsResolvedDuringResolution = setOf(DEV_BUNDLE_CONFIG, REMAPPER_CONFIG, DECOMPILER_CONFIG, PARAM_MAPPINGS_CONFIG)
@@ -251,9 +255,9 @@ abstract class PaperweightUser : Plugin<Project> {
         }.forEach { configuration ->
             configuration.resolutionStrategy.eachDependency {
                 val shouldResolve = !resolvedMinecraft &&
-                    "${target.group}:${target.name}:${target.version}" == userdevConfiguration.devBundleConfig.mappedServerCoordinates
+                    "${target.group}:${target.name}:${target.version}" == userdevSetup.devBundleConfig.mappedServerCoordinates
                 if (shouldResolve) {
-                    userdevConfiguration.installServerArtifactToIvyRepository(
+                    userdevSetup.installServerArtifactToIvyRepository(
                         layout.cache,
                         layout.cache.resolve(IVY_REPOSITORY)
                     )

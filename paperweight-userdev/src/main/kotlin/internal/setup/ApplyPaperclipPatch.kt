@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.configuration
+package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.util.*
 import java.nio.file.Path

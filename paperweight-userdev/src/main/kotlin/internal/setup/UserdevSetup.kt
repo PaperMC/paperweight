@@ -20,36 +20,32 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev
+package io.papermc.paperweight.userdev.internal.setup
 
 import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
-import io.papermc.paperweight.configuration.download
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.configuration.applyDevBundlePatches
-import io.papermc.paperweight.userdev.configuration.extractDevBundle
-import io.papermc.paperweight.userdev.configuration.filterPaperJar
-import io.papermc.paperweight.userdev.configuration.patchPaperclip
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.download
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.workers.WorkerExecutor
 
-class UserdevConfiguration(
+class UserdevSetup(
     private val project: Project,
     private val workerExecutor: WorkerExecutor,
     private val javaToolchainService: JavaToolchainService,
     private val cache: Path = project.layout.cache
 ) {
     companion object {
-        const val APPLY_MOJANG_MAPPED_PAPERCLIP = "applyMojangMappedPaperclipPatch"
-        const val DECOMPILE_MINECRAFT_SERVER_JAR = "decompileMinecraftServerJar"
-        const val MAPPED_MINECRAFT_SERVER_JAR = "mappedMinecraftServerJar"
+        private const val APPLY_MOJANG_MAPPED_PAPERCLIP = "applyMojangMappedPaperclipPatch"
+        private const val DECOMPILE_MINECRAFT_SERVER_JAR = "decompileMinecraftServerJar"
+        private const val MAPPED_MINECRAFT_SERVER_JAR = "mappedMinecraftServerJar"
     }
 
     val extractedBundle: Path = cache.resolve(paperConfigurationOutput("extractDevBundle", "dir"))
@@ -81,7 +77,7 @@ class UserdevConfiguration(
         gson.fromJson(minecraftVersionManifestJson)
     }
 
-    val vanillaServerJar: Path = cache.resolve(paperConfigurationOutput("downloadServerJar", "jar"))
+    private val vanillaServerJar: Path = cache.resolve(paperConfigurationOutput("downloadServerJar", "jar"))
     private fun downloadVanillaServerJar() {
         download(
             "vanilla minecraft server jar",
@@ -92,7 +88,7 @@ class UserdevConfiguration(
         )
     }
 
-    val filteredVanillaServerJar: Path = cache.resolve(paperConfigurationOutput("filterJar", "jar"))
+    private val filteredVanillaServerJar: Path = cache.resolve(paperConfigurationOutput("filterJar", "jar"))
     private fun filterVanillaServerJar() {
         downloadVanillaServerJar()
         val filteredJar = filteredVanillaServerJar
@@ -110,7 +106,7 @@ class UserdevConfiguration(
         filteredJar.writeSha256()
     }
 
-    val mojangServerMappings: Path = cache.resolve(SERVER_MAPPINGS)
+    private val mojangServerMappings: Path = cache.resolve(SERVER_MAPPINGS)
     private fun downloadMojangServerMappings() {
         download(
             "mojang server mappings",
@@ -121,7 +117,7 @@ class UserdevConfiguration(
         )
     }
 
-    val minecraftLibrariesFile: Path = cache.resolve(MC_LIBRARIES)
+    private val minecraftLibrariesFile: Path = cache.resolve(MC_LIBRARIES)
     private fun writeMinecraftLibrariesFile() {
         setupMinecraftLibraries(
             minecraftVersionManifest["libraries"].array.map { lib ->
@@ -144,8 +140,8 @@ class UserdevConfiguration(
                 .toList()
         )
 
-    val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
-    val minecraftLibrarySources = cache.resolve(MINECRAFT_SOURCES_PATH)
+    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
+    private val minecraftLibrarySources = cache.resolve(MINECRAFT_SOURCES_PATH)
     private fun downloadMinecraftLibraries() {
         writeMinecraftLibrariesFile()
         val jars = minecraftLibraryJars
@@ -173,7 +169,7 @@ class UserdevConfiguration(
         hashesFile.writeText(hashLibraries(jars, sources))
     }
 
-    val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
+    private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
     private fun generateMappings() {
         downloadMinecraftLibraries()
         downloadMojangServerMappings()
@@ -199,7 +195,7 @@ class UserdevConfiguration(
         mappingsFile.writeSha256()
     }
 
-    val mappedMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(MAPPED_MINECRAFT_SERVER_JAR, "jar"))
+    private val mappedMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(MAPPED_MINECRAFT_SERVER_JAR, "jar"))
     private fun remapMinecraftServerJar() {
         generateMappings()
 
@@ -227,7 +223,7 @@ class UserdevConfiguration(
         output.writeSha256()
     }
 
-    val decompiledMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "jar"))
+    private val decompiledMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "jar"))
     private fun decompileMinecraftServerJar() {
         remapMinecraftServerJar()
 
@@ -252,7 +248,7 @@ class UserdevConfiguration(
         output.writeSha256()
     }
 
-    val patchedSourcesJar: Path = cache.resolve(paperConfigurationOutput("patchedSourcesJar", "jar"))
+    private val patchedSourcesJar: Path = cache.resolve(paperConfigurationOutput("patchedSourcesJar", "jar"))
     private fun patchDecompiledSources() {
         decompileMinecraftServerJar()
 
@@ -291,7 +287,7 @@ class UserdevConfiguration(
         output.writeSha256()
     }
 
-    val filteredMojangMappedPaperJar: Path = cache.resolve(paperConfigurationOutput("filteredMojangMappedPaperJar", "jar"))
+    private val filteredMojangMappedPaperJar: Path = cache.resolve(paperConfigurationOutput("filteredMojangMappedPaperJar", "jar"))
     private fun filterMojangMappedPaperJar() {
         applyMojangMappedPaperclipPatch()
         patchDecompiledSources()
