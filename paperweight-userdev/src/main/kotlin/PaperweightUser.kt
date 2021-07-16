@@ -31,7 +31,9 @@ import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -56,17 +58,8 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         target.configurations.create(DEV_BUNDLE_CONFIG)
-        target.configurations.create(DECOMPILER_CONFIG)
-        target.configurations.create(PARAM_MAPPINGS_CONFIG)
-        target.configurations.create(REMAPPER_CONFIG) {
-            isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps (which aren't on the quilt repo)
-        }
-        target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG)
-        target.configurations.create(MINECRAFT_LIBRARIES_CONFIG) {
-            exclude("junit", "junit") // json-simple exposes junit for some reason
-        }
-        target.configurations.create(PAPER_API_CONFIG)
 
+        // these must not be initialized until afterEvaluate, as they resolve the dev bundle
         val userdevConfiguration by lazy { UserdevConfiguration(target, workerExecutor, javaToolchainService) }
         val devBundleConfig by lazy { userdevConfiguration.devBundleConfig }
 
@@ -77,6 +70,8 @@ abstract class PaperweightUser : Plugin<Project> {
             target.provider { userdevConfiguration },
             target.objects
         )
+
+        createConfigurations(target, target.provider { devBundleConfig })
 
         val reobfJar by target.tasks.registering<RemapJar> {
             group = "paperweight"
@@ -93,24 +88,25 @@ abstract class PaperweightUser : Plugin<Project> {
             remapper.from(project.configurations.named(REMAPPER_CONFIG))
         }
 
-        // Manually check if cleanCache is a target, and skip setup.
-        // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
-        // but it does work and allows using the cleanCache task without setting up the workspace first
-        val cleaningCache = target.gradle.startParameter.taskRequests
-            .map {
-                it.args.any { arg ->
-                    NameMatcher().find(arg, target.tasks.names) == cleanCache.name
-                }
-            }
-            .any { it }
-        if (cleaningCache) return
-
         target.afterEvaluate {
-            val jar = project.tasks.named<AbstractArchiveTask>("jar") {
+            // Manually check if cleanCache is a target, and skip setup.
+            // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
+            // but it does work and allows using the cleanCache task without setting up the workspace first
+            val cleaningCache = gradle.startParameter.taskRequests
+                .any { req ->
+                    req.args.any { arg ->
+                        NameMatcher().find(arg, tasks.names) == cleanCache.name
+                    }
+                }
+            if (cleaningCache) return@afterEvaluate
+
+            checkForDevBundle() // Print a friendly error message if the dev bundle is missing before we call anything that will try and resolve it
+
+            val jar = tasks.named<AbstractArchiveTask>("jar") {
                 archiveClassifier.set("dev")
             }
-            val devJarTask = if (project.tasks.findByName("shadowJar") != null) {
-                project.tasks.named<AbstractArchiveTask>("shadowJar") {
+            val devJarTask = if (tasks.findByName("shadowJar") != null) {
+                tasks.named<AbstractArchiveTask>("shadowJar") {
                     archiveClassifier.set("dev-all")
                 }
             } else {
@@ -120,89 +116,162 @@ abstract class PaperweightUser : Plugin<Project> {
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
             }
 
-            configurations.named(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME) {
-                extendsFrom(
-                    configurations.named(MOJANG_MAPPED_SERVER_CONFIG).get(),
-                    configurations.named(MINECRAFT_LIBRARIES_CONFIG).get(),
-                    configurations.named(PAPER_API_CONFIG).get()
-                )
+            configureRepositories(userdev, devBundleConfig)
+            configureResolutionStrategy(userdevConfiguration)
+        }
+    }
+
+    private fun Project.configureRepositories(
+        userdev: PaperweightUserExtension,
+        devBundleConfig: GenerateDevBundle.DevBundleConfig
+    ) = repositories {
+        if (userdev.injectPaperRepository.get()) {
+            maven(PAPER_MAVEN_REPO_URL) {
+                content { onlyForConfigurations(DEV_BUNDLE_CONFIG) }
             }
+        }
 
-            if (configurations.named(DEV_BUNDLE_CONFIG).get().isEmpty) {
-                throw PaperweightException(
-                    "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration in" +
-                        " order to function. Use the paperweightDevBundle extension function to do this easily."
-                )
-            }
-
-            target.repositories {
-                if (userdev.injectPaperRepository.get()) {
-                    maven(PAPER_MAVEN_REPO_URL) {
-                        content { onlyForConfigurations(DEV_BUNDLE_CONFIG) }
-                    }
-                }
-
-                maven(devBundleConfig.buildData.paramMappings.url) {
-                    content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
-                }
-                maven(devBundleConfig.remap.dep.url) {
-                    content { onlyForConfigurations(REMAPPER_CONFIG) }
-                }
-                maven(devBundleConfig.decompile.dep.url) {
-                    content { onlyForConfigurations(DECOMPILER_CONFIG) }
-                }
-                for (repo in devBundleConfig.buildData.libraryRepositories) {
-                    maven(repo) {
-                        content {
-                            onlyForConfigurations(
-                                MINECRAFT_LIBRARIES_CONFIG,
-                                PAPER_API_CONFIG,
-                                JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME
-                            )
+        maven(devBundleConfig.buildData.paramMappings.url) {
+            content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+        }
+        maven(devBundleConfig.remap.dep.url) {
+            content { onlyForConfigurations(REMAPPER_CONFIG) }
+        }
+        maven(devBundleConfig.decompile.dep.url) {
+            content { onlyForConfigurations(DECOMPILER_CONFIG) }
+        }
+        for (repo in devBundleConfig.buildData.libraryRepositories) {
+            maven(repo) {
+                content {
+                    /*
+                        for (dep in devBundleConfig.buildData.libraryDependencies) {
+                            includeFromDependencyNotation(dep)
                         }
-                    }
-                }
-
-                ivy(layout.cache.resolve(IVY_REPOSITORY)) {
-                    content {
-                        val parts = devBundleConfig.mappedServerCoordinates.split(":")
-                        includeModule(parts[0], parts[1])
-                    }
-                    patternLayout {
-                        artifact(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
-                        ivy(IvyArtifactRepository.MAVEN_IVY_PATTERN)
-                        setM2compatible(true)
-                    }
-                    metadataSources(IvyArtifactRepository.MetadataSources::ivyDescriptor)
-                    isAllowInsecureProtocol = true
-                    resolve.isDynamicMode = false
+                        includeFromDependencyNotation(devBundleConfig.apiCoordinates)
+                        includeFromDependencyNotation(devBundleConfig.mojangApiCoordinates)
+                         */
+                    onlyForConfigurations(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
                 }
             }
+        }
 
-            target.dependencies {
+        ivy(layout.cache.resolve(IVY_REPOSITORY)) {
+            content {
+                includeFromDependencyNotation(devBundleConfig.mappedServerCoordinates)
+            }
+            patternLayout {
+                artifact(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
+                ivy(IvyArtifactRepository.MAVEN_IVY_PATTERN)
+                setM2compatible(true)
+            }
+            metadataSources(IvyArtifactRepository.MetadataSources::ivyDescriptor)
+            isAllowInsecureProtocol = true
+            resolve.isDynamicMode = false
+        }
+    }
+
+    private fun Project.checkForDevBundle() {
+        if (configurations.getByName(DEV_BUNDLE_CONFIG).isEmpty) {
+            val message = "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration in" +
+                " order to function. Use the paperweightDevBundle extension function to do this easily."
+            throw PaperweightException(message)
+        }
+    }
+
+    private fun createConfigurations(target: Project, devBundleConfigDelegate: Provider<GenerateDevBundle.DevBundleConfig>) {
+        val devBundleConfig by lazy { devBundleConfigDelegate.get() }
+
+        target.configurations.create(DECOMPILER_CONFIG) {
+            defaultDependencies {
                 for (dep in devBundleConfig.decompile.dep.coordinates) {
-                    DECOMPILER_CONFIG(dep)
+                    add(target.dependencies.create(dep))
                 }
-                for (dep in devBundleConfig.buildData.paramMappings.coordinates) {
-                    PARAM_MAPPINGS_CONFIG(dep)
-                }
-                for (dep in devBundleConfig.remap.dep.coordinates) {
-                    REMAPPER_CONFIG(dep)
-                }
-
-                for (lib in devBundleConfig.buildData.libraryDependencies) {
-                    MINECRAFT_LIBRARIES_CONFIG(lib)
-                }
-
-                PAPER_API_CONFIG(devBundleConfig.apiCoordinates)
-                PAPER_API_CONFIG(devBundleConfig.mojangApiCoordinates)
-                MOJANG_MAPPED_SERVER_CONFIG(devBundleConfig.mappedServerCoordinates)
             }
+        }
 
-            userdevConfiguration.installServerArtifactToIvyRepository(
-                target.layout.cache,
-                target.layout.cache.resolve(IVY_REPOSITORY)
-            )
+        target.configurations.create(PARAM_MAPPINGS_CONFIG) {
+            defaultDependencies {
+                for (dep in devBundleConfig.buildData.paramMappings.coordinates) {
+                    add(target.dependencies.create(dep))
+                }
+            }
+        }
+
+        target.configurations.create(REMAPPER_CONFIG) {
+            isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps (which aren't on the quilt repo)
+            defaultDependencies {
+                for (dep in devBundleConfig.remap.dep.coordinates) {
+                    add(target.dependencies.create(dep))
+                }
+            }
+        }
+
+        target.configurations.create(MINECRAFT_LIBRARIES_CONFIG) {
+            exclude("junit", "junit") // json-simple exposes junit for some reason
+            defaultDependencies {
+                for (dep in devBundleConfig.buildData.libraryDependencies) {
+                    add(target.dependencies.create(dep))
+                }
+            }
+        }
+
+        target.configurations.create(PAPER_API_CONFIG) {
+            defaultDependencies {
+                add(target.dependencies.create(devBundleConfig.apiCoordinates))
+                add(target.dependencies.create(devBundleConfig.mojangApiCoordinates))
+            }
+        }
+
+        target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
+            defaultDependencies {
+                add(target.dependencies.create(devBundleConfig.mappedServerCoordinates))
+            }
+        }
+
+        target.plugins.withType<JavaPlugin> {
+            target.configurations.named(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME) {
+                extendsFrom(
+                    target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG),
+                    target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
+                    target.configurations.getByName(PAPER_API_CONFIG)
+                )
+            }
+        }
+    }
+
+    private fun Project.configureResolutionStrategy(userdevConfiguration: UserdevConfiguration) {
+        // We resolve these configurations in UserdevConfiguration, so if we attempt to do anything with
+        // UserdevConfiguration while resolving one of these configurations, a stackoverflow is likely
+        val configurationsResolvedDuringResolution = setOf(DEV_BUNDLE_CONFIG, REMAPPER_CONFIG, DECOMPILER_CONFIG, PARAM_MAPPINGS_CONFIG)
+
+        var resolvedMinecraft = false
+
+        configurations.filterNot {
+            configurationsResolvedDuringResolution.contains(it.name)
+        }.forEach { configuration ->
+            configuration.resolutionStrategy.eachDependency {
+                val shouldResolve = !resolvedMinecraft &&
+                    "${target.group}:${target.name}:${target.version}" == userdevConfiguration.devBundleConfig.mappedServerCoordinates
+                if (shouldResolve) {
+                    userdevConfiguration.installServerArtifactToIvyRepository(
+                        layout.cache,
+                        layout.cache.resolve(IVY_REPOSITORY)
+                    )
+                    resolvedMinecraft = true
+                }
+            }
+        }
+    }
+
+    private fun RepositoryContentDescriptor.includeFromDependencyNotation(dependencyNotation: String) {
+        val split = dependencyNotation.split(':')
+        when {
+            split.size == 1 -> includeGroup(split[0])
+            split.size == 2 -> includeModule(split[0], split[1])
+            split.size >= 3 -> {
+                includeModule(split[0], split[1])
+                includeVersion(split[0], split[1], split[2])
+            }
         }
     }
 }
