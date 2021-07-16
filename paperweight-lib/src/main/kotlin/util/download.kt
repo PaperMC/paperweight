@@ -20,10 +20,9 @@
  * USA
  */
 
-package io.papermc.paperweight.configuration
+package io.papermc.paperweight.util
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.provider.Provider

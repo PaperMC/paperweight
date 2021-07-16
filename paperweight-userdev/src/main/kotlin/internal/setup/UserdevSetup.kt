@@ -26,10 +26,10 @@ import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
-import io.papermc.paperweight.configuration.download
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.download
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
