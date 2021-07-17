@@ -53,8 +53,18 @@ fun installToIvyRepo(
 
     versionDir.createDirectories()
 
-    sourcesJar.copyTo(versionDir.resolve("$name-$version-sources.jar"), overwrite = true)
-    binaryJar.copyTo(versionDir.resolve("$name-$version.jar"), overwrite = true)
+    val sourcesDestination = versionDir.resolve("$name-$version-sources.jar")
+    val jarDestination = versionDir.resolve("$name-$version.jar")
+
+    val upToDate = sourcesDestination.isRegularFile() && jarDestination.isRegularFile() &&
+        sourcesDestination.sha256asHex() == sourcesJar.sha256asHex() &&
+        jarDestination.sha256asHex() == binaryJar.sha256asHex()
+    if (upToDate) {
+        return
+    }
+
+    sourcesJar.copyTo(sourcesDestination, overwrite = true)
+    binaryJar.copyTo(jarDestination, overwrite = true)
 
     val ivy = versionDir.resolve("ivy-$version.xml")
     // todo
