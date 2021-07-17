@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
 import org.gradle.api.provider.Provider
 
 data class MavenDep(val url: String, val coordinates: List<String>)
@@ -45,5 +46,17 @@ fun determineArtifactCoordinates(configuration: Configuration): List<String> {
         }.map {
             it.second
         }.joinToString(":")
+    }
+}
+
+fun RepositoryContentDescriptor.includeFromDependencyNotation(dependencyNotation: String) {
+    val split = dependencyNotation.split(':')
+    when {
+        split.size == 1 -> includeGroup(split[0])
+        split.size == 2 -> includeModule(split[0], split[1])
+        split.size >= 3 -> {
+            includeModule(split[0], split[1])
+            includeVersion(split[0], split[1], split[2])
+        }
     }
 }

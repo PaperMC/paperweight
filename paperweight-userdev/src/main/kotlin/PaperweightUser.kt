@@ -31,8 +31,6 @@ import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
-import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
@@ -146,18 +144,8 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        ivy(layout.cache.resolve(IVY_REPOSITORY)) {
-            content {
-                includeFromDependencyNotation(devBundleConfig.mappedServerCoordinates)
-            }
-            patternLayout {
-                artifact(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
-                ivy(IvyArtifactRepository.MAVEN_IVY_PATTERN)
-                setM2compatible(true)
-            }
-            metadataSources(IvyArtifactRepository.MetadataSources::ivyDescriptor)
-            isAllowInsecureProtocol = true
-            resolve.isDynamicMode = false
+        setupIvyRepository(layout.cache.resolve(IVY_REPOSITORY)) {
+            content { includeFromDependencyNotation(devBundleConfig.mappedServerCoordinates) }
         }
     }
 
@@ -230,18 +218,6 @@ abstract class PaperweightUser : Plugin<Project> {
                     target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
                     target.configurations.getByName(PAPER_API_CONFIG)
                 )
-            }
-        }
-    }
-
-    private fun RepositoryContentDescriptor.includeFromDependencyNotation(dependencyNotation: String) {
-        val split = dependencyNotation.split(':')
-        when {
-            split.size == 1 -> includeGroup(split[0])
-            split.size == 2 -> includeModule(split[0], split[1])
-            split.size >= 3 -> {
-                includeModule(split[0], split[1])
-                includeVersion(split[0], split[1], split[2])
             }
         }
     }
