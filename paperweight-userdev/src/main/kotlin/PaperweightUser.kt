@@ -206,7 +206,6 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {
-                target.logger.lifecycle("> paperweight: setting up userdev workspace")
                 userdevSetup.get().installServerArtifactToIvyRepository(target.layout.cache.resolve(IVY_REPOSITORY))
                 add(target.dependencies.create(devBundleConfig.mappedServerCoordinates))
             }

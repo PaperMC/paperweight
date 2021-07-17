@@ -48,7 +48,7 @@ fun installToIvyRepo(
     artifactCoordinates: String,
     sourcesJar: Path,
     binaryJar: Path
-) {
+): Boolean {
     val (group, name, version, versionDir) = parseCoordinates(artifactCoordinates, repo)
 
     versionDir.createDirectories()
@@ -60,7 +60,7 @@ fun installToIvyRepo(
         sourcesDestination.sha256asHex() == sourcesJar.sha256asHex() &&
         jarDestination.sha256asHex() == binaryJar.sha256asHex()
     if (upToDate) {
-        return
+        return false
     }
 
     sourcesJar.copyTo(sourcesDestination, overwrite = true)
@@ -80,6 +80,7 @@ fun installToIvyRepo(
 
     """.trimIndent()
     ivy.writeText(xml, Charsets.UTF_8)
+    return true
 }
 
 private fun parseCoordinates(coordinatesString: String, root: Path): ArtifactLocation {
