@@ -10,6 +10,10 @@ dependencies {
     implementation(libs.bundles.asm)
 
     implementation(libs.bundles.hypo)
+
+    // Hypo needs a log4j2 impl
+    implementation(libs.log4j.core)
+
     implementation(libs.bundles.cadix)
 
     implementation(libs.lorenzTiny)

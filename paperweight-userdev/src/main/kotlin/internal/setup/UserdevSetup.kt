@@ -47,7 +47,7 @@ class UserdevSetup(
         private const val MAPPED_MINECRAFT_SERVER_JAR = "mappedMinecraftServerJar"
     }
 
-    val extractedBundle: Path = cache.resolve(paperConfigurationOutput("extractDevBundle", "dir"))
+    val extractedBundle: Path = cache.resolve(paperSetupOutput("extractDevBundle", "dir"))
     private val extractDevBundle = extractDevBundle(
         extractedBundle,
         project.configurations.named(DEV_BUNDLE_CONFIG).map { it.singleFile }.convertToPath()
@@ -76,7 +76,7 @@ class UserdevSetup(
         gson.fromJson(minecraftVersionManifestJson)
     }
 
-    private val vanillaServerJar: Path = cache.resolve(paperConfigurationOutput("downloadServerJar", "jar"))
+    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
     private fun downloadVanillaServerJar() {
         download(
             "vanilla minecraft server jar",
@@ -87,7 +87,7 @@ class UserdevSetup(
         )
     }
 
-    private val filteredVanillaServerJar: Path = cache.resolve(paperConfigurationOutput("filterJar", "jar"))
+    private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
     private fun filterVanillaServerJar() {
         downloadVanillaServerJar()
         val filteredJar = filteredVanillaServerJar
@@ -146,7 +146,7 @@ class UserdevSetup(
         val jars = minecraftLibraryJars
         val sources = minecraftLibrarySources
 
-        val hashesFile = cache.resolve(paperConfigurationOutput("libraries", "hashes"))
+        val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
         val upToDate = !devBundleChanged &&
             hashesFile.isRegularFile() &&
             hashesFile.readText(Charsets.UTF_8) == hashLibraries(jars, sources)
@@ -194,12 +194,12 @@ class UserdevSetup(
         mappingsFile.writeSha256()
     }
 
-    private val mappedMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(MAPPED_MINECRAFT_SERVER_JAR, "jar"))
+    private val mappedMinecraftServerJar: Path = cache.resolve(paperSetupOutput(MAPPED_MINECRAFT_SERVER_JAR, "jar"))
     private fun remapMinecraftServerJar() {
         generateMappings()
 
         val output = mappedMinecraftServerJar
-        val logFile = cache.resolve(paperConfigurationOutput(MAPPED_MINECRAFT_SERVER_JAR, "log"))
+        val logFile = cache.resolve(paperSetupOutput(MAPPED_MINECRAFT_SERVER_JAR, "log"))
 
         if (!devBundleChanged && output.hasCorrect256()) {
             return
@@ -222,12 +222,12 @@ class UserdevSetup(
         output.writeSha256()
     }
 
-    private val decompiledMinecraftServerJar: Path = cache.resolve(paperConfigurationOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "jar"))
+    private val decompiledMinecraftServerJar: Path = cache.resolve(paperSetupOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "jar"))
     private fun decompileMinecraftServerJar() {
         remapMinecraftServerJar()
 
         val output = decompiledMinecraftServerJar
-        val logFile = cache.resolve(paperConfigurationOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "log"))
+        val logFile = cache.resolve(paperSetupOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "log"))
 
         if (!devBundleChanged && output.hasCorrect256()) {
             return
@@ -247,7 +247,7 @@ class UserdevSetup(
         output.writeSha256()
     }
 
-    private val patchedSourcesJar: Path = cache.resolve(paperConfigurationOutput("patchedSourcesJar", "jar"))
+    private val patchedSourcesJar: Path = cache.resolve(paperSetupOutput("patchedSourcesJar", "jar"))
     private fun patchDecompiledSources() {
         decompileMinecraftServerJar()
 
@@ -266,10 +266,10 @@ class UserdevSetup(
         output.writeSha256()
     }
 
-    val mojangMappedPaperJar: Path = cache.resolve(paperConfigurationOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "jar"))
+    val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "jar"))
     private fun applyMojangMappedPaperclipPatch() {
         val output = mojangMappedPaperJar
-        val logFile = cache.resolve(paperConfigurationOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "log"))
+        val logFile = cache.resolve(paperSetupOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "log"))
 
         if (!devBundleChanged && output.hasCorrect256()) {
             return
@@ -286,7 +286,7 @@ class UserdevSetup(
         output.writeSha256()
     }
 
-    private val filteredMojangMappedPaperJar: Path = cache.resolve(paperConfigurationOutput("filteredMojangMappedPaperJar", "jar"))
+    private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
     private fun filterMojangMappedPaperJar() {
         applyMojangMappedPaperclipPatch()
         patchDecompiledSources()
@@ -306,7 +306,7 @@ class UserdevSetup(
     fun installServerArtifactToIvyRepository(repo: Path) {
         filterMojangMappedPaperJar()
 
-        val hashes = cache.resolve(paperConfigurationOutput("installedArtifacts", "hashes"))
+        val hashes = cache.resolve(paperSetupOutput("installedArtifacts", "hashes"))
 
         val upToDate = hashes.isRegularFile() &&
             hashes.readText(Charsets.UTF_8) == hashFiles(listOf(patchedSourcesJar, filteredMojangMappedPaperJar))

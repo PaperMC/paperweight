@@ -40,6 +40,7 @@ val shadowJar by tasks.existing(ShadowJar::class) {
         "org.apache.commons",
         "org.apache.felix",
         "org.apache.http",
+        "org.apache.logging.log4j",
         "org.cadixdev",
         "org.eclipse",
         "org.jgrapht",
