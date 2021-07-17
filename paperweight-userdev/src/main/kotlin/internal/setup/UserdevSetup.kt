@@ -29,7 +29,9 @@ import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -41,12 +43,6 @@ class UserdevSetup(
     private val javaToolchainService: JavaToolchainService,
     private val cache: Path = project.layout.cache
 ) {
-    companion object {
-        private const val APPLY_MOJANG_MAPPED_PAPERCLIP = "applyMojangMappedPaperclipPatch"
-        private const val DECOMPILE_MINECRAFT_SERVER_JAR = "decompileMinecraftServerJar"
-        private const val MAPPED_MINECRAFT_SERVER_JAR = "mappedMinecraftServerJar"
-    }
-
     val extractedBundle: Path = cache.resolve(paperSetupOutput("extractDevBundle", "dir"))
     private val extractDevBundle = extractDevBundle(
         extractedBundle,
@@ -58,8 +54,6 @@ class UserdevSetup(
     private val minecraftVersionManifest: JsonObject by lazy {
         val minecraftManifestJson = download(
             "minecraft manifest",
-            project.download,
-            devBundleChanged,
             MC_MANIFEST_URL,
             cache.resolve(MC_MANIFEST)
         )
@@ -67,12 +61,9 @@ class UserdevSetup(
 
         val minecraftVersionManifestJson = download(
             "minecraft version manifest",
-            project.download,
-            devBundleChanged,
             minecraftManifest.versions.first { it.id == devBundleConfig.minecraftVersion }.url,
             cache.resolve(VERSION_JSON)
         )
-
         gson.fromJson(minecraftVersionManifestJson)
     }
 
@@ -80,8 +71,6 @@ class UserdevSetup(
     private fun downloadVanillaServerJar() {
         download(
             "vanilla minecraft server jar",
-            project.download,
-            devBundleChanged,
             minecraftVersionManifest["downloads"]["server"]["url"].string,
             vanillaServerJar
         )
@@ -92,9 +81,11 @@ class UserdevSetup(
         downloadVanillaServerJar()
         val filteredJar = filteredVanillaServerJar
 
-        if (!devBundleChanged && filteredJar.hasCorrect256()) {
-            return
-        }
+        val hashFile = filteredJar.resolveSibling(filteredJar.nameWithoutExtension + ".hashes")
+
+        val hash = { hash(vanillaServerJar, filteredVanillaServerJar) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":filtering vanilla server jar")
         filterJar(
@@ -102,15 +93,13 @@ class UserdevSetup(
             filteredJar,
             devBundleConfig.buildData.vanillaJarIncludes
         )
-        filteredJar.writeSha256()
+        hashFile.writeText(hash())
     }
 
     private val mojangServerMappings: Path = cache.resolve(SERVER_MAPPINGS)
     private fun downloadMojangServerMappings() {
         download(
             "mojang server mappings",
-            project.download,
-            devBundleChanged,
             minecraftVersionManifest["downloads"]["server_mappings"]["url"].string,
             mojangServerMappings
         )
@@ -125,11 +114,6 @@ class UserdevSetup(
             minecraftLibrariesFile
         )
     }
-
-    private fun hashFiles(files: List<Path>): String =
-        files.sortedBy { it.name }.joinToString("\n") {
-            "${it.name}:${toHex(it.hashFile(digestSha256()))}"
-        }
 
     private fun hashLibraries(jars: Path, sources: Path): String =
         hashFiles(
@@ -147,12 +131,9 @@ class UserdevSetup(
         val sources = minecraftLibrarySources
 
         val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
-        val upToDate = !devBundleChanged &&
-            hashesFile.isRegularFile() &&
-            hashesFile.readText(Charsets.UTF_8) == hashLibraries(jars, sources)
-        if (upToDate) {
-            return
-        }
+        val hash = { hash(hashLibraries(jars, sources), minecraftLibrariesFile) }
+        val upToDate = hashesFile.isRegularFile() && hashesFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":downloading minecraft libraries")
         downloadMinecraftLibraries(
@@ -165,7 +146,7 @@ class UserdevSetup(
         )
         workerExecutor.await()
         hashesFile.parent.createDirectories()
-        hashesFile.writeText(hashLibraries(jars, sources))
+        hashesFile.writeText(hash())
     }
 
     private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
@@ -176,9 +157,10 @@ class UserdevSetup(
 
         val mappingsFile = mojangPlusYarnMappings
 
-        if (!devBundleChanged && mappingsFile.hasCorrect256()) {
-            return
-        }
+        val hashFile = cache.resolve(paperSetupOutput("generateMappings", "hashes"))
+        val hash = { hash(hashLibraries(minecraftLibraryJars, minecraftLibrarySources), mojangServerMappings, filteredVanillaServerJar) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":generating mappings")
         generateMappings(
@@ -191,19 +173,29 @@ class UserdevSetup(
             launcher = javaToolchainService.defaultJavaLauncher(project).get()
         )
         workerExecutor.await()
-        mappingsFile.writeSha256()
+        hashFile.parent.createDirectories()
+        hashFile.writeText(hash())
     }
 
-    private val mappedMinecraftServerJar: Path = cache.resolve(paperSetupOutput(MAPPED_MINECRAFT_SERVER_JAR, "jar"))
+    private val mappedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("mappedMinecraftServerJar", "jar"))
     private fun remapMinecraftServerJar() {
         generateMappings()
 
         val output = mappedMinecraftServerJar
-        val logFile = cache.resolve(paperSetupOutput(MAPPED_MINECRAFT_SERVER_JAR, "log"))
+        val logFile = output.resolveSibling(output.nameWithoutExtension + ".log")
+        val hashFile = output.resolveSibling(output.nameWithoutExtension + ".hashes")
 
-        if (!devBundleChanged && output.hasCorrect256()) {
-            return
+        val hash = {
+            hash(
+                hashLibraries(minecraftLibraryJars, minecraftLibrarySources),
+                mojangPlusYarnMappings,
+                filteredVanillaServerJar,
+                devBundleConfig.remap.args,
+                output
+            )
         }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":remapping minecraft server jar")
         runTinyRemapper(
@@ -219,19 +211,28 @@ class UserdevSetup(
             launcher = javaToolchainService.defaultJavaLauncher(project).get(),
             workingDir = cache
         )
-        output.writeSha256()
+        hashFile.parent.createDirectories()
+        hashFile.writeText(hash())
     }
 
-    private val decompiledMinecraftServerJar: Path = cache.resolve(paperSetupOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "jar"))
+    private val decompiledMinecraftServerJar: Path = cache.resolve(paperSetupOutput("decompileMinecraftServerJar", "jar"))
     private fun decompileMinecraftServerJar() {
         remapMinecraftServerJar()
 
         val output = decompiledMinecraftServerJar
-        val logFile = cache.resolve(paperSetupOutput(DECOMPILE_MINECRAFT_SERVER_JAR, "log"))
+        val logFile = output.resolveSibling(output.nameWithoutExtension + ".log")
+        val hashFile = output.resolveSibling(output.nameWithoutExtension + ".hashes")
 
-        if (!devBundleChanged && output.hasCorrect256()) {
-            return
+        val hash = {
+            hash(
+                hashLibraries(minecraftLibraryJars, minecraftLibrarySources),
+                mappedMinecraftServerJar,
+                devBundleConfig.decompile.args,
+                output
+            )
         }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":decompiling mapped minecraft server jar")
         runForgeFlower(
@@ -244,86 +245,136 @@ class UserdevSetup(
             outputJar = output,
             javaLauncher = javaToolchainService.defaultJavaLauncher(project).get()
         )
-        output.writeSha256()
+        hashFile.writeText(hash())
     }
 
     private val patchedSourcesJar: Path = cache.resolve(paperSetupOutput("patchedSourcesJar", "jar"))
     private fun patchDecompiledSources() {
         decompileMinecraftServerJar()
 
+        val patches = extractedBundle.resolve(devBundleConfig.patchDir)
         val output = patchedSourcesJar
+        val hashFile = output.resolveSibling(output.nameWithoutExtension + ".hashes")
 
-        if (!devBundleChanged && output.hasCorrect256()) {
-            return
-        }
+        val hash = { hash(output, decompiledMinecraftServerJar, hashDirectory(patches)) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":applying patches to decompiled jar")
         applyDevBundlePatches(
             decompiledMinecraftServerJar,
-            extractedBundle.resolve(devBundleConfig.patchDir),
+            patches,
             output
         )
-        output.writeSha256()
+        hashFile.parent.createDirectories()
+        hashFile.writeText(hash())
     }
 
-    val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "jar"))
+    val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("applyMojangMappedPaperclipPatch", "jar"))
     private fun applyMojangMappedPaperclipPatch() {
+        val paperclip = extractedBundle.resolve(devBundleConfig.buildData.mojangMappedPaperclipFile)
         val output = mojangMappedPaperJar
-        val logFile = cache.resolve(paperSetupOutput(APPLY_MOJANG_MAPPED_PAPERCLIP, "log"))
+        val logFile = output.resolveSibling(output.nameWithoutExtension + ".log")
+        val hashFile = output.resolveSibling(output.nameWithoutExtension + ".hashes")
 
-        if (!devBundleChanged && output.hasCorrect256()) {
-            return
-        }
+        val hash = { hash(paperclip, mojangMappedPaperJar) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
         project.logger.lifecycle(":applying mojang mapped paperclip patch")
         patchPaperclip(
             project = project,
             launcher = javaToolchainService.defaultJavaLauncher(project).get(),
-            paperclip = extractedBundle.resolve(devBundleConfig.buildData.mojangMappedPaperclipFile),
+            paperclip = paperclip,
             outputJar = output,
             logFile = logFile
         )
-        output.writeSha256()
+        hashFile.parent.createDirectories()
+        hashFile.writeText(hash())
     }
 
     private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
     private fun filterMojangMappedPaperJar() {
-        applyMojangMappedPaperclipPatch()
         patchDecompiledSources()
+        applyMojangMappedPaperclipPatch()
         val input = mojangMappedPaperJar
         val sources = patchedSourcesJar
         val output = filteredMojangMappedPaperJar
 
-        if (!devBundleChanged && output.hasCorrect256()) {
-            return
-        }
+        val hashFile = output.resolveSibling(output.nameWithoutExtension + ".hashes")
+        val hash = { hash(input, sources, output, gson.toJson(devBundleConfig.buildData.relocations)) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
 
-        println(":filtering mojang mapped paper jar")
+        project.logger.lifecycle(":filtering mojang mapped paper jar")
         filterPaperJar(sources, input, output, devBundleConfig.buildData.relocations)
-        output.writeSha256()
+        hashFile.parent.createDirectories()
+        hashFile.writeText(hash())
     }
 
     fun installServerArtifactToIvyRepository(repo: Path) {
         filterMojangMappedPaperJar()
 
-        val hashes = cache.resolve(paperSetupOutput("installedArtifacts", "hashes"))
-
-        val upToDate = hashes.isRegularFile() &&
-            hashes.readText(Charsets.UTF_8) == hashFiles(listOf(patchedSourcesJar, filteredMojangMappedPaperJar))
-        if (upToDate) {
-            return
-        }
-
-        println(":installing server artifacts to cache")
-        installToIvyRepo(
+        val didInstall = installToIvyRepo(
             repo,
             devBundleConfig.mappedServerCoordinates,
             patchedSourcesJar,
             filteredMojangMappedPaperJar
         )
+        if (didInstall) {
+            project.logger.lifecycle(":installed server artifacts to cache")
+            project.logger.lifecycle(":done setting up paperweight userdev workspace")
+        }
+    }
 
-        hashes.writeText(hashFiles(listOf(patchedSourcesJar, filteredMojangMappedPaperJar)), Charsets.UTF_8)
+    private fun hash(vararg things: Any): String = hash(things.toList())
 
-        println(":done setting up paperweight userdev workspace")
+    private fun hash(things: List<Any>): String {
+        val strings = arrayListOf<String>()
+        val paths = arrayListOf<Path>()
+
+        for (thing in things) {
+            when (thing) {
+                is String -> strings.add(thing)
+                is Path -> paths.add(thing)
+                is Iterable<*> -> strings.add(hash(thing.filterNotNull()))
+                else -> error("Unknown type: ${thing.javaClass.name}")
+            }
+        }
+
+        return hashFiles(paths) + if (strings.isEmpty()) {
+            ""
+        } else {
+            "\n" + strings.sorted().joinToString("\n") { toHex(it.byteInputStream().hash(digestSha256())) }
+        }
+    }
+
+    private fun hashFiles(files: List<Path>): String = files
+        .filter { it.isRegularFile() }
+        .sortedBy { it.pathString }
+        .joinToString("\n") {
+            "${it.name}:${toHex(it.hashFile(digestSha256()))}"
+        }
+
+    private fun hashDirectory(dir: Path): String =
+        Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
+
+    private fun download(
+        downloadName: String,
+        remote: String,
+        destination: Path
+    ): Path {
+        val hashFile = destination.resolveSibling(destination.name + ".hashes")
+
+        val upToDate = hashFile.isRegularFile() &&
+            hashFile.readText() == hash(remote, destination)
+        if (upToDate) return destination
+
+        project.logger.lifecycle(":downloading $downloadName")
+        destination.parent.createDirectories()
+        project.download.get().download(remote, destination)
+        hashFile.writeText(hash(remote, destination))
+
+        return destination
     }
 }
