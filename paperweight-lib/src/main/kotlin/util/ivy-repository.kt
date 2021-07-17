@@ -24,6 +24,24 @@ package io.papermc.paperweight.util
 
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.kotlin.dsl.*
+
+fun RepositoryHandler.setupIvyRepository(
+    url: Any,
+    configuration: IvyArtifactRepository.() -> Unit
+) = ivy(url) {
+    patternLayout {
+        artifact(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
+        ivy(IvyArtifactRepository.MAVEN_IVY_PATTERN)
+        setM2compatible(true)
+    }
+    metadataSources(IvyArtifactRepository.MetadataSources::ivyDescriptor)
+    isAllowInsecureProtocol = true
+    resolve.isDynamicMode = false
+    configuration(this)
+}
 
 fun installToIvyRepo(
     repo: Path,
