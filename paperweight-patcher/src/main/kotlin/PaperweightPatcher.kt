@@ -150,6 +150,7 @@ class PaperweightPatcher : Plugin<Project> {
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
+                upstreamData.map { it.decompiledJar },
                 upstreamData.flatMap { provider { it.libFile } },
                 upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {

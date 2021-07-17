@@ -35,6 +35,7 @@ import org.gradle.kotlin.dsl.*
 fun Project.setupServerProject(
     parent: Project,
     remappedJar: Any,
+    remappedJarSources: Any,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
     reobfConfig: RemapJar.() -> Unit
@@ -46,6 +47,24 @@ fun Project.setupServerProject(
     plugins.apply("java")
 
     extensions.create<RelocationExtension>(RELOCATION_EXTENSION, objects)
+
+    val mcServerCoordinates = "com.mojang:minecraft-server:${project.version}"
+
+    repositories.setupIvyRepository(parent.layout.cache.resolve(IVY_REPOSITORY)) {
+        content { includeFromDependencyNotation(mcServerCoordinates) }
+    }
+
+    val mojangMappedServerConfig = configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
+        defaultDependencies {
+            installToIvyRepo(
+                parent.layout.cache.resolve(IVY_REPOSITORY),
+                mcServerCoordinates,
+                remappedJarSources.convertToPath(),
+                remappedJar.convertToPath()
+            )
+            add(project.dependencies.create(mcServerCoordinates))
+        }
+    }
 
     configurations {
         named("implementation") {
@@ -59,10 +78,9 @@ fun Project.setupServerProject(
                     }
                 }
             }
+
+            extendsFrom(mojangMappedServerConfig)
         }
-    }
-    dependencies.apply {
-        add("implementation", parent.files(remappedJar))
     }
 
     apply(plugin = "com.github.johnrengelman.shadow")
