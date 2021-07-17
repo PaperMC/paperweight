@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.util
 
+import java.io.InputStream
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -144,30 +145,17 @@ fun FileSystem.walk(): Stream<Path> {
 
 fun ProcessBuilder.directory(path: Path): ProcessBuilder = directory(path.toFile())
 
-fun Path.hashFile(digest: MessageDigest): ByteArray = inputStream().use { iS ->
-    val digestStream = DigestInputStream(iS, digest)
+fun InputStream.hash(digest: MessageDigest): ByteArray {
+    val digestStream = DigestInputStream(this, digest)
     digestStream.use { stream ->
         val buffer = ByteArray(1024)
         while (stream.read(buffer) != -1) {
             // reading
         }
     }
-    digestStream.messageDigest.digest()
+    return digestStream.messageDigest.digest()
 }
+
+fun Path.hashFile(digest: MessageDigest): ByteArray = inputStream().use { iS -> iS.hash(digest) }
 
 fun Path.sha256asHex(): String = toHex(hashFile(digestSha256()))
-
-private fun hashFile(file: Path): Path {
-    val sha256 = file.resolveSibling("sha256")
-    sha256.createDirectories()
-    return sha256.resolve("${file.name}.sha256")
-}
-
-fun Path.hasCorrect256(): Boolean {
-    val hashFile = hashFile(this)
-    return isRegularFile() &&
-        hashFile.isRegularFile() &&
-        hashFile.readText(Charsets.UTF_8) == sha256asHex()
-}
-
-fun Path.writeSha256() = hashFile(this).writeText(sha256asHex(), Charsets.UTF_8)
