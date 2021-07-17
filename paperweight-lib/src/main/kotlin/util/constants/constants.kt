@@ -82,7 +82,7 @@ const val VERSION_JSON = "$DATA_PATH/McVersion.json"
 const val MC_LIBRARIES = "$DATA_PATH/McLibraries.txt"
 const val SERVER_LIBRARIES = "$DATA_PATH/ServerLibraries.txt"
 
-private const val CONFIGURATION_CACHE = "$PAPER_PATH/configurationCache"
+private const val SETUP_CACHE = "$PAPER_PATH/setupCache"
 private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
@@ -94,6 +94,6 @@ const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 
 const val RELOCATION_EXTENSION = "relocation"
 
-fun paperConfigurationOutput(name: String, ext: String) = "$CONFIGURATION_CACHE/$name.$ext"
+fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
