@@ -276,3 +276,4 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
 }
 
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
+fun <P : Property<*>> P.withDisallowUnsafeRead(): P = apply { disallowUnsafeRead() }
