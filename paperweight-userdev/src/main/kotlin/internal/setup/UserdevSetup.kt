@@ -83,7 +83,7 @@ class UserdevSetup(
 
         val hashFile = filteredJar.resolveSibling(filteredJar.nameWithoutExtension + ".hashes")
 
-        val hash = { hash(vanillaServerJar, filteredVanillaServerJar) }
+        val hash = { hash(vanillaServerJar, filteredVanillaServerJar, devBundleConfig.buildData.vanillaJarIncludes) }
         val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
         if (upToDate) return
 
@@ -271,7 +271,12 @@ class UserdevSetup(
     }
 
     val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("applyMojangMappedPaperclipPatch", "jar"))
-    private fun applyMojangMappedPaperclipPatch() {
+
+    // This can be called when a user queries the server jar provider in
+    // PaperweightUserExtension, possibly by a task running in a separate
+    // thread to dependency resolution.
+    @Synchronized
+    fun applyMojangMappedPaperclipPatch() {
         val paperclip = extractedBundle.resolve(devBundleConfig.buildData.mojangMappedPaperclipFile)
         val output = mojangMappedPaperJar
         val logFile = output.resolveSibling(output.nameWithoutExtension + ".log")

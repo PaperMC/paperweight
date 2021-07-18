@@ -65,7 +65,6 @@ abstract class PaperweightUser : Plugin<Project> {
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
-            target,
             target.provider { userdevSetup },
             target.objects
         )
