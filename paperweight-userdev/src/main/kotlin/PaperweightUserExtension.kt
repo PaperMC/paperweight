@@ -24,7 +24,6 @@ package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
-import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -35,7 +34,6 @@ import org.gradle.kotlin.dsl.*
  * Extension exposing configuration and other APIs for paperweight userdev.
  */
 abstract class PaperweightUserExtension(
-    project: Project,
     setup: Provider<UserdevSetup>,
     objects: ObjectFactory
 ) {
@@ -49,18 +47,17 @@ abstract class PaperweightUserExtension(
     /**
      * Provides a runnable Mojang mapped server jar, extracted from the current dev bundle.
      */
-    val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().value(
-        project.layout.file(
-            setup.map {
-                it.extractedBundle.resolve(it.devBundleConfig.buildData.mojangMappedPaperclipFile).toFile()
-            }
-        )
-    ).withDisallowChanges()
+    val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().pathProvider(
+        setup.map {
+            it.applyMojangMappedPaperclipPatch()
+            it.mojangMappedPaperJar
+        }
+    ).withDisallowChanges().withDisallowUnsafeRead()
 
     /**
      * Provides the Minecraft version of the current dev bundle.
      */
     val minecraftVersion: Provider<String> = objects.property<String>().value(
         setup.map { it.devBundleConfig.minecraftVersion }
-    ).withDisallowChanges()
+    ).withDisallowChanges().withDisallowUnsafeRead()
 }
