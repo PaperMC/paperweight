@@ -27,7 +27,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import java.util.Locale
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
@@ -110,15 +109,6 @@ class DevBundleTasks(
         }
 
         generateDevelopmentBundle {
-            val server = serverProj.get()
-            mappedServerCoordinates.set(
-                sequenceOf(
-                    server.group,
-                    server.name.toLowerCase(Locale.ENGLISH),
-                    server.version
-                ).joinToString(":")
-            )
-
             remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).get().url.toString())
             decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).get().url.toString())
         }
