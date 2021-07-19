@@ -25,24 +25,47 @@ import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.kotlin.dsl.*
 
 /**
- * Adds a dependency to the dev bundle [org.gradle.api.artifacts.Configuration].
- * Defaults to adding Paper's dev bundle, but by overriding the default arguments,
- * any dependency can be added.
+ * Adds a dependency on Paper's dev bundle to the dev bundle [org.gradle.api.artifacts.Configuration].
  *
  * @param version dependency version
  * @param group dependency group
  * @param artifactId dependency artifactId
- * @param configuration Dependency configuration
- * @param classifier Dependency classifier
- * @param ext Dependency extension
- * @param devBundleConfigurationName Name of the development bundle [org.gradle.api.artifacts.Configuration]
+ * @param configuration dependency configuration
+ * @param classifier dependency classifier
+ * @param ext dependency extension
+ * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
+ * @param configurationAction action configuring the dependency
  */
-fun DependencyHandlerScope.paperweightDevBundle(
+fun DependencyHandlerScope.paperDevBundle(
     version: String? = null,
     group: String = "io.papermc.paper",
     artifactId: String = "dev-bundle",
     configuration: String? = null,
     classifier: String? = null,
     ext: String? = null,
-    devBundleConfigurationName: String = DEV_BUNDLE_CONFIG
-): ExternalModuleDependency = devBundleConfigurationName(group, artifactId, version, configuration, classifier, ext)
+    devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
+): ExternalModuleDependency = devBundleConfigurationName(group, artifactId, version, configuration, classifier, ext, configurationAction)
+
+/**
+ * Adds a dependency to the dev bundle [org.gradle.api.artifacts.Configuration].
+ *
+ * @param group dependency group
+ * @param version dependency version
+ * @param artifactId dependency artifactId
+ * @param configuration dependency configuration
+ * @param classifier dependency classifier
+ * @param ext dependency extension
+ * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
+ * @param configurationAction action configuring the dependency
+ */
+fun DependencyHandlerScope.paperweightDevBundle(
+    group: String,
+    version: String? = null,
+    artifactId: String = "dev-bundle",
+    configuration: String? = null,
+    classifier: String? = null,
+    ext: String? = null,
+    devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
+    configurationAction: ExternalModuleDependency.() -> Unit = {}
+): ExternalModuleDependency = devBundleConfigurationName(group, artifactId, version, configuration, classifier, ext, configurationAction)
