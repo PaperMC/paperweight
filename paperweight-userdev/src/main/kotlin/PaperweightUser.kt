@@ -31,6 +31,10 @@ import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
@@ -84,6 +88,18 @@ abstract class PaperweightUser : Plugin<Project> {
             toNamespace.set(SPIGOT_NAMESPACE)
 
             remapper.from(project.configurations.named(REMAPPER_CONFIG))
+        }
+
+        target.configurations.create(REOBF_CONFIG) {
+            isCanBeConsumed = true
+            isCanBeResolved = false
+            attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_RUNTIME))
+                attribute(Category.CATEGORY_ATTRIBUTE, target.objects.named(Category.LIBRARY))
+                attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, target.objects.named(LibraryElements.JAR))
+                attribute(Bundling.BUNDLING_ATTRIBUTE, target.objects.named(Bundling.EXTERNAL))
+            }
+            outgoing.artifact(reobfJar)
         }
 
         target.afterEvaluate {
