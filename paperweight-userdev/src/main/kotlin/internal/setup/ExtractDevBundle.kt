@@ -23,6 +23,7 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import com.github.salomonbrys.kotson.fromJson
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
@@ -57,6 +58,14 @@ fun extractDevBundle(
 }
 
 fun readDevBundleConfig(extractedDevBundlePath: Path): GenerateDevBundle.DevBundleConfig {
+    val dataVersion = extractedDevBundlePath.resolve("data-version.txt").readText().trim().toInt()
+    if (dataVersion != GenerateDevBundle.currentDataVersion) {
+        throw PaperweightException(
+            "The paperweight development bundle you are attempting to use is of data version '$dataVersion', but" +
+                " the currently running version of paperweight only supports data version '${GenerateDevBundle.currentDataVersion}'."
+        )
+    }
+
     val configFile = extractedDevBundlePath.resolve("config.json")
     val config: GenerateDevBundle.DevBundleConfig = configFile.bufferedReader(Charsets.UTF_8).use { reader ->
         gson.fromJson(reader)

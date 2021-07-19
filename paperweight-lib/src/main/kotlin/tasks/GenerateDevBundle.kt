@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Locale
 import kotlin.io.path.*
 import org.apache.tools.ant.types.selectors.SelectorUtils
 import org.gradle.api.DefaultTask
@@ -58,7 +59,10 @@ abstract class GenerateDevBundle : DefaultTask() {
     abstract val mojangMappedPaperclipFile: RegularFileProperty
 
     @get:Input
-    abstract val mappedServerCoordinates: Property<String>
+    abstract val apiCoordinates: Property<String>
+
+    @get:Input
+    abstract val mojangApiCoordinates: Property<String>
 
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
@@ -71,12 +75,6 @@ abstract class GenerateDevBundle : DefaultTask() {
 
     @get:Internal
     abstract val serverProject: Property<Project>
-
-    @get:Input
-    abstract val apiCoordinates: Property<String>
-
-    @get:Input
-    abstract val mojangApiCoordinates: Property<String>
 
     @get:Input
     abstract val relocations: Property<String>
@@ -123,6 +121,7 @@ abstract class GenerateDevBundle : DefaultTask() {
                 zip.getPath("config.json").bufferedWriter(Charsets.UTF_8).use { writer ->
                     gson.toJson(config, writer)
                 }
+                zip.getPath("data-version.txt").writeText(currentDataVersion.toString())
 
                 val dataZip = zip.getPath(dataDir)
                 dataZip.createDirectories()
@@ -275,7 +274,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
         return DevBundleConfig(
             minecraftVersion = minecraftVersion.get(),
-            mappedServerCoordinates = mappedServerCoordinates.get(),
+            mappedServerCoordinates = createCoordinatesFor(serverProject.get()),
             apiCoordinates = "${apiCoordinates.get()}:${serverProject.get().version}",
             mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverProject.get().version}",
             buildData = createBuildDataConfig(dataTargetDir),
@@ -284,6 +283,9 @@ abstract class GenerateDevBundle : DefaultTask() {
             patchDir = patchTargetDir
         )
     }
+
+    private fun createCoordinatesFor(project: Project): String =
+        sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), project.version).joinToString(":")
 
     private fun relocations(): List<Relocation> = gson.fromJson(relocations.get())
 
@@ -369,5 +371,8 @@ abstract class GenerateDevBundle : DefaultTask() {
     companion object {
         const val reobfMappingsFileName = "$DEOBF_NAMESPACE-$SPIGOT_NAMESPACE-reobf.tiny"
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
+
+        // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
+        const val currentDataVersion = 0
     }
 }
