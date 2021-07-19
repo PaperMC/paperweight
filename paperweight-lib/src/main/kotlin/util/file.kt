@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.util
 
+import java.io.InputStream
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -29,6 +30,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
+import java.security.DigestInputStream
+import java.security.MessageDigest
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import kotlin.io.path.*
@@ -50,7 +53,7 @@ val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
 
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
-fun FileSystemLocationProperty<*>.pathProvider(path: Provider<Path?>) = fileProvider(path.map { it.toFile() })
+fun <P : FileSystemLocationProperty<*>> P.pathProvider(path: Provider<Path?>) = apply { fileProvider(path.map { it.toFile() }) }
 
 fun DirectoryProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.dir(path.map { it.toFile() }))
 fun RegularFileProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.file(path.map { it.toFile() }))
@@ -105,14 +108,14 @@ private fun Path.fixWindowsPermissionsForDeletion() {
     }
 }
 
-fun Path.copyRecursively(target: Path) {
+fun Path.copyRecursivelyTo(target: Path) {
     target.createDirectories()
     if (!exists()) {
         return
     }
     Files.walk(this).use { stream ->
-        stream.forEach { f ->
-            val targetPath = target.resolve(f.relativeTo(this))
+        for (f in stream) {
+            val targetPath = target.resolve(f.relativeTo(this).invariantSeparatorsPathString)
             if (f.isDirectory()) {
                 targetPath.createDirectories()
             } else {
@@ -140,3 +143,18 @@ fun FileSystem.walk(): Stream<Path> {
 }
 
 fun ProcessBuilder.directory(path: Path): ProcessBuilder = directory(path.toFile())
+
+fun InputStream.hash(digest: MessageDigest): ByteArray {
+    val digestStream = DigestInputStream(this, digest)
+    digestStream.use { stream ->
+        val buffer = ByteArray(1024)
+        while (stream.read(buffer) != -1) {
+            // reading
+        }
+    }
+    return digestStream.messageDigest.digest()
+}
+
+fun Path.hashFile(digest: MessageDigest): ByteArray = inputStream().use { iS -> iS.hash(digest) }
+
+fun Path.sha256asHex(): String = toHex(hashFile(digestSha256()))
