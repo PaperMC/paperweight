@@ -82,6 +82,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:Inject
     abstract val providers: ProviderFactory
 
+    @get:OutputDirectory
+    abstract val mcDevSources: DirectoryProperty
+
     override fun init() {
         upstreamBranch.convention("master")
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
@@ -143,6 +146,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             git("tag", "base").executeSilently()
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
+
+            makeMcDevSrc(sourceMcDevJar.path, sourceDir, mcDevSources.path)
         }
     }
 

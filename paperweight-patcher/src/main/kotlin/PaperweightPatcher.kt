@@ -119,6 +119,7 @@ class PaperweightPatcher : Plugin<Project> {
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
+                upstreamData.map { it.decompiledJar },
                 upstreamData.flatMap { provider { it.libFile } },
                 upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {
@@ -227,6 +228,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             patchDir.convention(config.patchDir.fileExists(project))
             outputDir.convention(config.outputDir)
+            mcDevSources.set(project.layout.projectDirectory.path.resolve(MC_DEV_DIR))
 
             bareDirectory.convention(config.isBareDirectory)
             importMcDev.convention(config.importMcDev)

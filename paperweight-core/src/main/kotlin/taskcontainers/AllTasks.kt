@@ -64,6 +64,8 @@ open class AllTasks(
 
         inputJar.set(copyResources.flatMap { it.outputJar })
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+
+        outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
     }
 
     val applyApiPatches by tasks.registering<ApplyGitPatches> {
@@ -105,6 +107,7 @@ open class AllTasks(
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 
         outputDir.set(extension.paper.paperServerDir)
+        mcDevSources.set(project.layout.projectDirectory.path.resolve(MC_DEV_DIR))
     }
 
     val applyPatches by tasks.registering<Task> {
@@ -154,13 +157,5 @@ open class AllTasks(
         toNamespace.set(SPIGOT_NAMESPACE)
 
         outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
-    }
-
-    @Suppress("unused")
-    val makeMcDevSrc by tasks.registering<MakeMcDevSrc> {
-        group = "paper"
-        source.set(decompileJar.flatMap { it.outputJar })
-        paperServerDir.set(extension.paper.paperServerDir)
-        target.set(cache.resolve(MC_DEV_DIR))
     }
 }

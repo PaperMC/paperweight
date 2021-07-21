@@ -26,14 +26,19 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import kotlin.io.path.*
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
+import org.gradle.plugins.ide.idea.model.IdeaModel
 
 fun Project.setupServerProject(
     parent: Project,
     remappedJar: Any,
+    remappedJarSources: Any,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
     reobfConfig: RemapJar.() -> Unit
@@ -44,29 +49,39 @@ fun Project.setupServerProject(
 
     plugins.apply("java")
 
-    configurations {
-        named("implementation") {
-            withDependencies {
-                dependencies {
-                    val libs = libsFile.convertToPathOrNull()
-                    if (libs != null && libs.exists()) {
-                        libs.forEachLine { line ->
-                            add("implementation", line)
-                        }
+    configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
+        withDependencies {
+            dependencies {
+                // update mc-dev sources on dependency resolution
+                makeMcDevSrc(
+                    remappedJarSources.convertToPath(),
+                    layout.projectDirectory.path.resolve("src/main/java"),
+                    parent.layout.projectDirectory.path.resolve(MC_DEV_DIR)
+                )
+
+                add(create(parent.files(remappedJar)))
+
+                val libs = libsFile.convertToPathOrNull()
+                if (libs != null && libs.exists()) {
+                    libs.forEachLine { line ->
+                        add(create(line))
                     }
                 }
             }
         }
     }
-    dependencies.apply {
-        add("implementation", parent.files(remappedJar))
-    }
 
-    apply(plugin = "com.github.johnrengelman.shadow")
-    return createBuildTasks(packagesToFix, reobfConfig)
+    addMcDevSourcesRoot(parent)
+
+    plugins.apply("com.github.johnrengelman.shadow")
+    return createBuildTasks(parent, packagesToFix, reobfConfig)
 }
 
-private fun Project.createBuildTasks(packagesToFix: Provider<List<String>?>, reobfConfig: RemapJar.() -> Unit): ServerTasks {
+private fun Project.createBuildTasks(
+    parent: Project,
+    packagesToFix: Provider<List<String>?>,
+    reobfConfig: RemapJar.() -> Unit
+): ServerTasks {
     val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
 
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
@@ -86,7 +101,7 @@ private fun Project.createBuildTasks(packagesToFix: Provider<List<String>?>, reo
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
-        remapper.from(rootProject.configurations.named(REMAPPER_CONFIG))
+        remapper.from(parent.configurations.named(REMAPPER_CONFIG))
 
         outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
     }
@@ -98,3 +113,24 @@ data class ServerTasks(
     val fixJarForReobf: TaskProvider<FixJarForReobf>,
     val reobfJar: TaskProvider<RemapJar>,
 )
+
+private fun Project.addMcDevSourcesRoot(parent: Project) {
+    plugins.apply("idea")
+
+    val dir = parent.layout.projectDirectory.path.resolve(MC_DEV_DIR).toFile()
+
+    the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
+        java {
+            srcDirs(dir)
+            exclude {
+                it.file.absoluteFile.invariantSeparatorsPath.contains(MC_DEV_DIR)
+            }
+        }
+    }
+
+    extensions.configure<IdeaModel> {
+        module {
+            generatedSourceDirs.add(dir)
+        }
+    }
+}
