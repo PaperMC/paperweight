@@ -76,6 +76,9 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Inject
     abstract val providers: ProviderFactory
 
+    @get:OutputDirectory
+    abstract val mcDevSources: DirectoryProperty
+
     override fun init() {
         upstreamBranch.convention("master")
         importMcDev.convention(false)
@@ -134,5 +137,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         git("tag", "base").executeSilently()
 
         applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
+
+        makeMcDevSrc(sourceMcDevJar.path, srcDir, mcDevSources.path)
     }
 }

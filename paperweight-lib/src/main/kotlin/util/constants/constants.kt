@@ -75,8 +75,9 @@ const val SERVER_LIBRARIES = "$DATA_PATH/ServerLibraries.txt"
 private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
+const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 
-const val MC_DEV_DIR = "mcdev-source"
+const val MC_DEV_DIR = "work/mcdev-source"
 
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"

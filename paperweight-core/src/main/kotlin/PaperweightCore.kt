@@ -105,6 +105,7 @@ class PaperweightCore : Plugin<Project> {
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 cache.resolve(FINAL_REMAPPED_JAR),
+                cache.resolve(FINAL_DECOMPILE_JAR),
                 cache.resolve(SERVER_LIBRARIES),
                 ext.paper.reobfPackagesToFix
             ) {
