@@ -120,6 +120,7 @@ class PaperweightPatcher : Plugin<Project> {
                 target,
                 upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
+                patcher.mcDevSourceDir.path,
                 upstreamData.flatMap { provider { it.libFile } },
                 upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {
@@ -228,7 +229,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             patchDir.convention(config.patchDir.fileExists(project))
             outputDir.convention(config.outputDir)
-            mcDevSources.set(project.layout.projectDirectory.path.resolve(MC_DEV_DIR))
+            mcDevSources.set(ext.mcDevSourceDir)
 
             bareDirectory.convention(config.isBareDirectory)
             importMcDev.convention(config.importMcDev)

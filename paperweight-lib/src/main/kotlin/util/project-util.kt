@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPlugin
@@ -39,6 +40,7 @@ fun Project.setupServerProject(
     parent: Project,
     remappedJar: Any,
     remappedJarSources: Any,
+    mcDevSourceDir: Path,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
     reobfConfig: RemapJar.() -> Unit
@@ -56,7 +58,7 @@ fun Project.setupServerProject(
                 makeMcDevSrc(
                     remappedJarSources.convertToPath(),
                     layout.projectDirectory.path.resolve("src/main/java"),
-                    parent.layout.projectDirectory.path.resolve(MC_DEV_DIR)
+                    mcDevSourceDir
                 )
 
                 add(create(parent.files(remappedJar)))
@@ -71,7 +73,7 @@ fun Project.setupServerProject(
         }
     }
 
-    addMcDevSourcesRoot(parent)
+    addMcDevSourcesRoot(mcDevSourceDir)
 
     plugins.apply("com.github.johnrengelman.shadow")
     return createBuildTasks(parent, packagesToFix, reobfConfig)
@@ -114,16 +116,17 @@ data class ServerTasks(
     val reobfJar: TaskProvider<RemapJar>,
 )
 
-private fun Project.addMcDevSourcesRoot(parent: Project) {
+private fun Project.addMcDevSourcesRoot(mcDevSourceDir: Path) {
     plugins.apply("idea")
 
-    val dir = parent.layout.projectDirectory.path.resolve(MC_DEV_DIR).toFile()
+    val dir = mcDevSourceDir.toFile()
 
     the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
         java {
             srcDirs(dir)
+            val pathString = dir.invariantSeparatorsPath
             exclude {
-                it.file.absoluteFile.invariantSeparatorsPath.contains(MC_DEV_DIR)
+                it.file.absoluteFile.invariantSeparatorsPath.contains(pathString)
             }
         }
     }
