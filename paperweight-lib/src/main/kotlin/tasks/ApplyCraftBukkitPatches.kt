@@ -41,7 +41,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-abstract class ApplyDiffPatches : ControllableOutputTask() {
+abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
 
     @get:InputFile
     abstract val sourceJar: RegularFileProperty
@@ -63,6 +63,9 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
     @get:Input
     abstract val ignoreGitIgnore: Property<Boolean>
 
+    @get:InputDirectory
+    abstract val craftBukkitDir: DirectoryProperty
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -72,14 +75,21 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
     override fun init() {
         printOutput.convention(false)
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
+        outputDir.convention(project, defaultOutput("repo").path)
     }
 
     @TaskAction
     fun run() {
         Git.checkForGit()
 
+        outputDir.path.deleteRecursively()
+        outputDir.path.parent.let {
+            it.createDirectories()
+            val git = Git(it)
+            git("clone", "--no-hardlinks", craftBukkitDir.path.absolutePathString(), outputDir.path.absolutePathString()).setupOut().execute()
+        }
+
         val git = Git(outputDir.path)
-        git("checkout", "-B", branch.get(), "HEAD").executeSilently(silenceErr = true)
 
         val basePatchDirFile = outputDir.path.resolve("src/main/java")
         basePatchDirFile.resolve(cleanDirPath.get()).deleteRecursively()
@@ -126,7 +136,6 @@ abstract class ApplyDiffPatches : ControllableOutputTask() {
 
             git(*Git.add(ignoreGitIgnore, "src")).setupOut().execute()
             git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
-            git("checkout", "-f", "HEAD~2").setupOut().execute()
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
                 rootPatchDir.deleteRecursively()

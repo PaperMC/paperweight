@@ -130,13 +130,12 @@ open class SpigotTasks(
         patchDir.set(extension.paper.craftBukkitPatchPatchesDir.fileExists(project))
     }
 
-    val patchCraftBukkit by tasks.registering<ApplyDiffPatches> {
+    val patchCraftBukkit by tasks.registering<ApplyCraftBukkitPatches> {
         sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
         cleanDirPath.set("net/minecraft")
         branch.set("patched")
         patchZip.set(patchCraftBukkitPatches.flatMap { it.outputZip })
-
-        outputDir.set(extension.craftBukkit.craftBukkitDir)
+        craftBukkitDir.set(extension.craftBukkit.craftBukkitDir)
     }
 
     val patchSpigotApiPatches by tasks.registering<ApplyRawDiffPatches> {
@@ -161,7 +160,7 @@ open class SpigotTasks(
     }
 
     val patchSpigotServer by tasks.registering<ApplyGitPatches> {
-        branch.set(patchCraftBukkit.flatMap { it.branch })
+        branch.set("HEAD")
         upstreamBranch.set("upstream")
         upstream.set(patchCraftBukkit.flatMap { it.outputDir })
         patchZip.set(patchSpigotServerPatches.flatMap { it.outputZip })
