@@ -49,6 +49,8 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
 
     val serverProject: Property<Project> = objects.property()
 
+    val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory.dir("work/mcdev-source"))
+
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
