@@ -64,8 +64,6 @@ open class AllTasks(
 
         inputJar.set(copyResources.flatMap { it.outputJar })
         libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
-
-        outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
     }
 
     val applyApiPatches by tasks.registering<ApplyGitPatches> {
