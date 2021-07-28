@@ -105,7 +105,7 @@ open class AllTasks(
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 
         outputDir.set(extension.paper.paperServerDir)
-        mcDevSources.set(extension.paper.mcDevSourceDir)
+        mcDevSources.set(extension.mcDevSourceDir)
     }
 
     val applyPatches by tasks.registering<Task> {

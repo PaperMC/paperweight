@@ -106,7 +106,7 @@ class PaperweightCore : Plugin<Project> {
                 target,
                 cache.resolve(FINAL_REMAPPED_JAR),
                 tasks.decompileJar.flatMap { it.outputJar },
-                ext.paper.mcDevSourceDir.path,
+                ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES),
                 ext.paper.reobfPackagesToFix
             ) {
