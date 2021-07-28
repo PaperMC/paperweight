@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -41,7 +40,6 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server-unmapped")
     val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
-    val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(layout.cacheDir(MC_DEV_SOURCES_DIR))
 
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
