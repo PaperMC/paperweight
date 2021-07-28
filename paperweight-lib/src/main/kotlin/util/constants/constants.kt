@@ -76,5 +76,7 @@ private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
 
+const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
+
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
