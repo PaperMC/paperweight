@@ -106,6 +106,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             val upstreamData = upstreamDataTask.readUpstreamData()
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
+            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
