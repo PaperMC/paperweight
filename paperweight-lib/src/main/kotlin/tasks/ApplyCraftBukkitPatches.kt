@@ -34,16 +34,13 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
+@CacheableTask
 abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val sourceJar: RegularFileProperty
 
     @get:Input
@@ -51,10 +48,12 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
 
     @get:Optional
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val patchDir: DirectoryProperty
 
     @get:Optional
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val patchZip: RegularFileProperty
 
     @get:Input
@@ -64,6 +63,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
     abstract val ignoreGitIgnore: Property<Boolean>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val craftBukkitDir: DirectoryProperty
 
     @get:OutputDirectory
