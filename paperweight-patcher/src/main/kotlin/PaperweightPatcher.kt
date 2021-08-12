@@ -72,6 +72,7 @@ class PaperweightPatcher : Plugin<Project> {
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
         val downstreamData = target.tasks.register(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
+        val patchReobfMappings by target.tasks.registering(PatchMappings::class)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
 
@@ -117,6 +118,16 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
+            patchReobfMappings {
+                inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+                patch.set(target.layout.cache.resolve("paperweight/upstreams/paper/build-data/reobf-mappings-patch.tiny"))
+
+                fromNamespace.set(DEOBF_NAMESPACE)
+                toNamespace.set(SPIGOT_NAMESPACE)
+
+                outputMappings.set(target.layout.cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+            }
+
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
@@ -125,7 +136,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.flatMap { provider { it.libFile } },
                 upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {
-                mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
+                mappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
             } ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
