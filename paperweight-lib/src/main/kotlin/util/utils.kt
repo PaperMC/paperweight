@@ -59,7 +59,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
-import org.gradle.jvm.toolchain.JvmVendorSpec
 import org.gradle.kotlin.dsl.*
 
 val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
@@ -269,7 +268,6 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
             launcherFor {
                 // If the java plugin isn't applied, or no toolchain value was set
                 languageVersion.set(JavaLanguageVersion.of(16))
-                vendor.set(JvmVendorSpec.ADOPTOPENJDK)
             }
         )
 }
