@@ -42,7 +42,6 @@ import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
-import kotlin.experimental.and
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.cadixdev.lorenz.model.ClassMapping
@@ -259,7 +258,7 @@ fun digestSha256(): MessageDigest = try {
 fun toHex(hash: ByteArray): String {
     val sb: StringBuilder = StringBuilder(hash.size * 2)
     for (aHash in hash) {
-        sb.append("%02X".format(aHash and 0xFF.toByte()))
+        sb.append("%02X".format(aHash.toInt() and 0xFF))
     }
     return sb.toString()
 }
