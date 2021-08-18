@@ -43,7 +43,7 @@ fun applyDevBundlePatches(
         Files.walk(devBundlePatches).use { stream ->
             stream.forEach {
                 if (it.name.endsWith(".patch")) {
-                    git("apply", it.absolutePathString()).executeOut()
+                    git("apply", "--ignore-whitespace", it.absolutePathString()).executeOut()
                 } else if (it.isRegularFile()) {
                     val destination = workDir.resolve(it.relativeTo(devBundlePatches))
                     destination.parent.createDirectories()
