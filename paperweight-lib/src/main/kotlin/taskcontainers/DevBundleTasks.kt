@@ -77,6 +77,7 @@ class DevBundleTasks(
 
         generateMojangMappedPaperclipPatch {
             originalJar.pathProvider(vanillaJar)
+            patchedJar.set(serverProj.flatMap { proj -> proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar } })
             mcVersion.set(minecraftVer)
         }
 
@@ -92,25 +93,18 @@ class DevBundleTasks(
             serverProject.set(serverProj)
             relocations.set(serverProj.flatMap { proj -> proj.the<RelocationExtension>().relocations.map { gson.toJson(it) } })
 
-            remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).get().url.toString())
-            decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).get().url.toString())
-
             devBundleConfiguration(this)
         }
 
         project.afterEvaluate {
-            configureAfterEvaluate(serverProj)
+            configureAfterEvaluate()
         }
     }
 
-    private fun configureAfterEvaluate(serverProj: Provider<Project>) {
-        generateMojangMappedPaperclipPatch {
-            patchedJar.set(serverProj.get().tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar })
-        }
-
+    private fun configureAfterEvaluate() {
         generateDevelopmentBundle {
-            remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).get().url.toString())
-            decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).get().url.toString())
+            remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
+            decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).map { it.url.toString() })
         }
     }
 }
