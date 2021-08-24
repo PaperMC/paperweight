@@ -58,6 +58,8 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()
 
+    val additionalReobfMappingsPatch: RegularFileProperty = objects.fileProperty()
+
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 
     /**

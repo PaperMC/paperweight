@@ -100,6 +100,7 @@ class PaperweightCore : Plugin<Project> {
             mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
+            reobfMappingsPatch.set(ext.paper.reobfMappingsPatch.fileExists(project))
             reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
             vanillaJarIncludes.set(ext.vanillaJarIncludes)
             paramMappingsUrl.set(ext.paramMappingsRepo)

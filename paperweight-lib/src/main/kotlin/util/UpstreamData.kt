@@ -38,6 +38,7 @@ data class UpstreamData(
     val mappings: Path,
     val notchToSpigotMappings: Path,
     val sourceMappings: Path,
+    val reobfMappingsPatch: Path,
     val reobfPackagesToFix: List<String>?,
     val vanillaIncludes: List<String>,
     val paramMappings: MavenDep

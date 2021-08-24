@@ -79,6 +79,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:InputFile
     abstract val sourceMappings: RegularFileProperty
 
+    @get:InputFile
+    abstract val reobfMappingsPatch: RegularFileProperty
+
     @get:Input
     abstract val reobfPackagesToFix: ListProperty<String>
 
@@ -112,6 +115,7 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             mappings.path,
             notchToSpigotMappings.path,
             sourceMappings.path,
+            reobfMappingsPatch.path,
             reobfPackagesToFix.get(),
             vanillaJarIncludes.get(),
             determineMavenDep(paramMappingsUrl, paramMappingsConfig)

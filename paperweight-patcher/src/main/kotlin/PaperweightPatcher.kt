@@ -75,6 +75,8 @@ class PaperweightPatcher : Plugin<Project> {
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
         val downstreamData = target.tasks.register(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
+        val patchReobfMappings by target.tasks.registering(PatchMappings::class)
+        val mergeReobfPatches by target.tasks.registering(MergeFiles::class)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
 
@@ -124,6 +126,12 @@ class PaperweightPatcher : Plugin<Project> {
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
+            mergeReobfPatches {
+                file.pathProvider(upstreamData.map { it.reobfMappingsPatch })
+                secondFile.set(patcher.additionalReobfMappingsPatch.fileExists(project))
+                fileExt.set("tiny")
+            }
+
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
@@ -131,6 +139,13 @@ class PaperweightPatcher : Plugin<Project> {
                 inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
+            }
+
+            patchReobfMappings {
+                inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+                patch.set(mergeReobfPatches.flatMap { it.mergedFile })
+
+                outputMappings.set(target.layout.cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
             devBundleTasks.configure(
@@ -142,7 +157,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.libDir },
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
-                reobfMappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
+                reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
 
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
@@ -156,7 +171,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.flatMap { provider { it.libFile } },
                 upstreamData.flatMap { provider { it.reobfPackagesToFix } }
             ) {
-                mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
+                mappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
             } ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
