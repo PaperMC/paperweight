@@ -29,10 +29,11 @@ fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
     ensureDeleted(target)
 
     decompileJar.openZip().use { fs ->
+        val root = fs.getPath("/")
         fs.walk().use { stream ->
             stream.forEach { sourceFile ->
                 if (sourceFile.isRegularFile()) {
-                    val sourceFilePath = sourceFile.pathString.removePrefix("/")
+                    val sourceFilePath = sourceFile.relativeTo(root).invariantSeparatorsPathString
 
                     if (!paperSource.resolve(sourceFilePath).isRegularFile()) {
                         val targetFile = target.resolve(sourceFilePath)
