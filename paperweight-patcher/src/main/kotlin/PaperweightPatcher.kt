@@ -76,7 +76,7 @@ class PaperweightPatcher : Plugin<Project> {
         val downstreamData = target.tasks.register(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
         val patchReobfMappings by target.tasks.registering(PatchMappings::class)
-        val mergeReobfPatches by target.tasks.registering(MergeFiles::class)
+        val mergeReobfPatches by target.tasks.registering(MergeMappingsPatches::class)
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
 
@@ -127,9 +127,8 @@ class PaperweightPatcher : Plugin<Project> {
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
             mergeReobfPatches {
-                file.pathProvider(upstreamData.map { it.reobfMappingsPatch })
-                secondFile.set(patcher.additionalReobfMappingsPatch.fileExists(project))
-                fileExt.set("tiny")
+                inputPatches.pathProvider(upstreamData.map { it.reobfMappingsPatch })
+                patch.set(patcher.additionalReobfMappingsPatch.fileExists(project))
             }
 
             generateReobfMappings {
@@ -143,7 +142,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             patchReobfMappings {
                 inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
-                patch.set(mergeReobfPatches.flatMap { it.mergedFile })
+                patch.set(mergeReobfPatches.flatMap { it.mergedPatches })
 
                 outputMappings.set(target.layout.cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
