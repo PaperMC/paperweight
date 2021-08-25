@@ -129,6 +129,8 @@ class PaperweightPatcher : Plugin<Project> {
             mergeReobfPatches {
                 inputPatches.pathProvider(upstreamData.map { it.reobfMappingsPatch })
                 patch.set(patcher.additionalReobfMappingsPatch.fileExists(project))
+                fromNamespace.set(DEOBF_NAMESPACE)
+                toNamespace.set(SPIGOT_NAMESPACE)
             }
 
             generateReobfMappings {
@@ -143,6 +145,9 @@ class PaperweightPatcher : Plugin<Project> {
             patchReobfMappings {
                 inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
                 patch.set(mergeReobfPatches.flatMap { it.mergedPatches })
+
+                fromNamespace.set(DEOBF_NAMESPACE)
+                toNamespace.set(SPIGOT_NAMESPACE)
 
                 outputMappings.set(target.layout.cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
