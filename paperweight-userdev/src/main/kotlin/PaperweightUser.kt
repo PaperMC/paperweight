@@ -137,12 +137,11 @@ abstract class PaperweightUser : Plugin<Project> {
             // Print a friendly error message if the dev bundle is missing before we call anything else that will try and resolve it
             checkForDevBundle()
 
-            configureRepositories(userdev, devBundleConfig)
+            configureRepositories(devBundleConfig)
         }
     }
 
     private fun Project.configureRepositories(
-        userdev: PaperweightUserExtension,
         devBundleConfig: GenerateDevBundle.DevBundleConfig
     ) = repositories {
         maven(devBundleConfig.buildData.paramMappings.url) {
@@ -155,9 +154,7 @@ abstract class PaperweightUser : Plugin<Project> {
             content { onlyForConfigurations(DECOMPILER_CONFIG) }
         }
         for (repo in devBundleConfig.buildData.libraryRepositories) {
-            maven(repo) {
-                content { onlyForConfigurations(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME) }
-            }
+            maven(repo)
         }
 
         setupIvyRepository(layout.cache.resolve(IVY_REPOSITORY)) {
@@ -236,13 +233,19 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         target.plugins.withType<JavaPlugin> {
-            target.configurations.named(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME) {
-                extendsFrom(
-                    target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG),
-                    target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
-                    target.configurations.getByName(PAPER_API_CONFIG)
-                )
-            }
+            listOf(
+                JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
+                JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
+            ).map(target.configurations::named)
+                .forEach { config ->
+                    config {
+                        extendsFrom(
+                            target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG),
+                            target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
+                            target.configurations.getByName(PAPER_API_CONFIG)
+                        )
+                    }
+                }
         }
     }
 }
