@@ -110,6 +110,8 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
                 git("tag", "base").executeSilently(silenceErr = true)
 
                 applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
+
+                restoreStashedChanges(outputPath)
             }
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
@@ -189,6 +191,7 @@ fun recreateCloneDirectory(target: Path) {
     if (target.exists()) {
         if (target.resolve(".git").isDirectory()) {
             val git = Git(target)
+            git("stash").run()
             git("clean", "-fxd").runSilently(silenceErr = true)
             git("reset", "--hard", "HEAD").runSilently(silenceErr = true)
         } else {
@@ -199,5 +202,14 @@ fun recreateCloneDirectory(target: Path) {
         }
     } else {
         target.createDirectories()
+    }
+}
+
+fun restoreStashedChanges(target: Path) {
+    if (target.exists()) {
+        if (target.resolve(".git").isDirectory()) {
+            val git = Git(target)
+            git("stash", "pop").run()
+        }
     }
 }

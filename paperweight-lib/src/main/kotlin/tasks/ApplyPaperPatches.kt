@@ -148,6 +148,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
 
             makeMcDevSrc(sourceMcDevJar.path, sourceDir, mcDevSources.path)
+
+            restoreStashedChanges(outputFile)
         }
     }
 
