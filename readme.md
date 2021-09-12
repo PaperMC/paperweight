@@ -8,15 +8,17 @@ Install this plugin to Maven Local:
 ./gradlew publishToMavenLocal
 ```
 
-Clone a new Paper repo and checkout the `feature/mojmap` branch.
+Clone either [Paper](https://github.com/PaperMC/Paper) or [The Paper Fork Template](https://github.com/PaperMC/paperweight-examples).
+
+In the cloned repo:
 
 * Add `mavenLocal()` to the list of repos in `settings.gradle.kts`.
-* Change `paperweight` version to `1.0.0-LOCAL-SNAPSHOT` in the `plugins {}` block in `build.gradle.kts`.
+* Change `paperweight` version to `<Current Paperweight Version>-LOCAL-SNAPSHOT` in the `plugins {}` block in `build.gradle.kts`.
 
-Run the task (on the Paper repo) to set up the development environment:
+Run the task below (In the repo you cloned) to set up the development environment:
 
 ```bash
-./gradlew patchPaper
+./gradlew applyPatches
 ```
 
 > All task outputs `paperweight` creates goes into `<project-root>/.gradle/caches`.
