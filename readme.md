@@ -33,6 +33,13 @@ Create a remote JVM debug run configuration in IntelliJ which connects to port 5
 
 Gradle will not start until the debugger is connected so you don't need to worry about missing a breakpoint.
 
+Sometimes, Paperweight will fail to compile when publishing, due to a NoClassDefFoundException. This is a known issue
+with IntelliJ, and can often be solved by adding the following arguments to the publishToMavenLocal task:
+
+```bash
+./gradlew publishToMavenLocal -Dkotlin.daemon.jvm.options=--illegal-access=permit
+```
+
 ### Style Guide
 
 This projects follows the opinionated [`ktlint`](https://ktlint.github.io/) linter and formatter. It uses the
