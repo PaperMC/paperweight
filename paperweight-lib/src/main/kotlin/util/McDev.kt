@@ -48,13 +48,17 @@ object McDev {
     ) {
         val patchLines = readPatchLines(patches)
 
-        val importMcDev = readMcDevNames(patchLines, importsFile).asSequence()
+        val (importMcDev, banned) = readMcDevNames(patchLines, importsFile).asSequence()
             .map { targetDir.resolve("net/minecraft/$it.java") }
             .filter { !it.exists() }
-            .filterNot { file -> bannedClasses.any { file.toString().contains(it) } }
-            .toSet()
+            .distinct()
+            .partition { file -> bannedClasses.none { file.toString().contains(it) } }
 
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
+
+        banned.forEach {
+            logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File is banned", it.toString())
+        }
 
         decompJar.openZip().use { zipFile ->
             // pull in all package-info classes
@@ -82,6 +86,7 @@ object McDev {
 
                 val zipPath = zipFile.getPath(vanillaFile)
                 if (zipPath.notExists()) {
+                    logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File not found", file.toString())
                     continue
                 }
                 zipPath.copyTo(file)
