@@ -54,6 +54,9 @@ abstract class RemapSources : JavaLauncherTask() {
     abstract val vanillaJar: RegularFileProperty
 
     @get:CompileClasspath
+    abstract val mojangMappedVanillaJar: RegularFileProperty
+
+    @get:CompileClasspath
     abstract val vanillaRemappedSpigotJar: RegularFileProperty
 
     @get:InputFile
@@ -116,6 +119,7 @@ abstract class RemapSources : JavaLauncherTask() {
             // Remap sources
             queue.submit(RemapAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
+                classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
@@ -135,6 +139,7 @@ abstract class RemapSources : JavaLauncherTask() {
             // Remap tests
             queue.submit(RemapAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
+                classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
