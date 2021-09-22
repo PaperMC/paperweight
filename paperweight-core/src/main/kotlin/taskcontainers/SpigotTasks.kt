@@ -193,6 +193,7 @@ open class SpigotTasks(
         spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
         mappings.set(patchMappings.flatMap { it.outputMappings })
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
         spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
         additionalAts.set(extension.paper.additionalAts.fileExists(project))
