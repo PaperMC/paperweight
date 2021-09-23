@@ -1,6 +1,6 @@
 [versions]
 asm = "9.1"
-lorenz = "0.5.6"
+lorenz = "0.5.7"
 hypo = "1.2.1"
 
 [libraries]
@@ -13,9 +13,9 @@ kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
 cadix-lorenz-asm = { module = "org.cadixdev:lorenz-asm", version.ref = "lorenz" }
 cadix-lorenz-proguard = { module = "org.cadixdev:lorenz-io-proguard", version.ref = "lorenz" }
-cadix-atlas = "org.cadixdev:atlas:0.2.0"
+cadix-atlas = "org.cadixdev:atlas:0.2.1"
 cadix-at = "org.cadixdev:at:0.1.0-rc1"
-cadix-mercury = "org.cadixdev:mercury:0.1.0-rc2-SNAPSHOT"
+cadix-mercury = "org.cadixdev:mercury:0.1.0"
 
 hypo-model = { module = "dev.denwav.hypo:hypo-model", version.ref = "hypo" }
 hypo-core = { module = "dev.denwav.hypo:hypo-core", version.ref = "hypo" }
