@@ -170,8 +170,9 @@ class AccessTransformerVisitor(
         super.visitInnerClass(name, outerName, innerName, completedClassAt(name).get().apply(access))
     }
 
-    private fun completedClassAt(className: String): AccessTransformSet.Class =
+    private fun completedClassAt(className: String): AccessTransformSet.Class = synchronized(at) {
         at.getOrCreateClass(className).apply { complete(inheritanceProvider) }
+    }
 }
 
 private const val RESET_ACCESS: Int = (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv()
