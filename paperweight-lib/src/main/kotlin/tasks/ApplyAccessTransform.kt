@@ -31,6 +31,8 @@ import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.atlas.Atlas
+import org.cadixdev.atlas.AtlasTransformerContext
+import org.cadixdev.bombe.analysis.InheritanceProvider
 import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
@@ -97,7 +99,7 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
 
             Atlas().apply {
                 install {
-                    AtJarEntryTransformer(at)
+                    AtJarEntryTransformer(it, at)
                 }
                 run(parameters.inputJar.path, parameters.outputJar.path)
             }
@@ -111,21 +113,25 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
     }
 }
 
-class AtJarEntryTransformer(private val at: AccessTransformSet) : JarEntryTransformer {
+class AtJarEntryTransformer(
+    private val context: AtlasTransformerContext,
+    private val at: AccessTransformSet
+) : JarEntryTransformer {
     override fun transform(entry: JarClassEntry): JarClassEntry {
         val reader = ClassReader(entry.contents)
         val writer = ClassWriter(reader, 0)
-        reader.accept(AccessTransformerVisitor(at, writer), 0)
+        reader.accept(AccessTransformerVisitor(at, context.inheritanceProvider(), writer), 0)
         return JarClassEntry(entry.name, entry.time, writer.toByteArray())
     }
 }
 
 class AccessTransformerVisitor(
     private val at: AccessTransformSet,
+    private val inheritanceProvider: InheritanceProvider,
     writer: ClassWriter
 ) : ClassVisitor(Opcodes.ASM7, writer) {
 
-    private var classTransform: AccessTransformSet.Class? = null
+    private lateinit var classTransform: AccessTransformSet.Class
 
     override fun visit(
         version: Int,
@@ -135,8 +141,8 @@ class AccessTransformerVisitor(
         superName: String?,
         interfaces: Array<out String>?
     ) {
-        classTransform = at.getClass(name).orNull
-        super.visit(version, classTransform?.get().apply(access), name, signature, superName, interfaces)
+        classTransform = completedClassAt(name)
+        super.visit(version, classTransform.get().apply(access), name, signature, superName, interfaces)
     }
 
     override fun visitField(
@@ -146,7 +152,7 @@ class AccessTransformerVisitor(
         signature: String?,
         value: Any?
     ): FieldVisitor {
-        return super.visitField(classTransform?.getField(name).apply(access), name, descriptor, signature, value)
+        return super.visitField(classTransform.getField(name).apply(access), name, descriptor, signature, value)
     }
 
     override fun visitMethod(
@@ -156,13 +162,16 @@ class AccessTransformerVisitor(
         signature: String?,
         exceptions: Array<out String>?
     ): MethodVisitor {
-        val newAccess = classTransform?.getMethod(MethodSignature.of(name, descriptor)).apply(access)
+        val newAccess = classTransform.getMethod(MethodSignature.of(name, descriptor)).apply(access)
         return super.visitMethod(newAccess, name, descriptor, signature, exceptions)
     }
 
     override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
-        super.visitInnerClass(name, outerName, innerName, at.getClass(name).orNull?.get().apply(access))
+        super.visitInnerClass(name, outerName, innerName, completedClassAt(name).get().apply(access))
     }
+
+    private fun completedClassAt(className: String): AccessTransformSet.Class =
+        at.getOrCreateClass(className).apply { complete(inheritanceProvider) }
 }
 
 private const val RESET_ACCESS: Int = (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv()
