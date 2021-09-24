@@ -64,12 +64,32 @@ abstract class PaperweightUser : Plugin<Project> {
         target.configurations.create(DEV_BUNDLE_CONFIG)
 
         // these must not be initialized until afterEvaluate, as they resolve the dev bundle
-        val userdevSetup by lazy { UserdevSetup(target, workerExecutor, javaToolchainService) }
+        val userdevSetup by lazy {
+            val devBundleZip = target.configurations.named(DEV_BUNDLE_CONFIG).map { it.singleFile }.convertToPath()
+            val serviceName = "paperweight-userdev:setupService:${devBundleZip.sha256asHex()}"
+
+            target.gradle.sharedServices.registrations.findByName(serviceName)?.let {
+                return@lazy it.service.get() as UserdevSetup
+            }
+
+            target.gradle.sharedServices
+                .registerIfAbsent(serviceName, UserdevSetup::class) {
+                    parameters {
+                        cache.set(target.layout.cache)
+                        bundleZip.set(devBundleZip)
+                        downloadService.set(target.download)
+                    }
+                }
+                .get()
+        }
         val devBundleConfig by lazy { userdevSetup.devBundleConfig }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
+            target,
+            workerExecutor,
+            javaToolchainService,
             target.provider { userdevSetup },
             target.objects
         )
@@ -139,11 +159,12 @@ abstract class PaperweightUser : Plugin<Project> {
             // Print a friendly error message if the dev bundle is missing before we call anything else that will try and resolve it
             checkForDevBundle()
 
-            configureRepositories(devBundleConfig)
+            configureRepositories(userdevSetup, devBundleConfig)
         }
     }
 
     private fun Project.configureRepositories(
+        userdevSetup: UserdevSetup,
         devBundleConfig: GenerateDevBundle.DevBundleConfig
     ) = repositories {
         maven(devBundleConfig.buildData.paramMappings.url) {
@@ -159,9 +180,7 @@ abstract class PaperweightUser : Plugin<Project> {
             maven(repo)
         }
 
-        setupIvyRepository(layout.cache.resolve(IVY_REPOSITORY)) {
-            content { includeFromDependencyNotation(devBundleConfig.mappedServerCoordinates) }
-        }
+        userdevSetup.addIvyRepository(project)
     }
 
     private fun Project.checkForDevBundle() {
@@ -229,7 +248,9 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {
-                userdevSetup.get().installServerArtifactToIvyRepository(target.layout.cache.resolve(IVY_REPOSITORY))
+                userdevSetup.get().createOrUpdateIvyRepository(
+                    UserdevSetup.Context(target, workerExecutor, javaToolchainService)
+                )
                 add(target.dependencies.create(devBundleConfig.mappedServerCoordinates))
             }
         }

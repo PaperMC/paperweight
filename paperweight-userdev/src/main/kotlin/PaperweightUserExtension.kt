@@ -24,16 +24,22 @@ package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
+import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
+import org.gradle.workers.WorkerExecutor
 
 /**
  * Extension exposing configuration and other APIs for paperweight userdev.
  */
 abstract class PaperweightUserExtension(
+    project: Project,
+    workerExecutor: WorkerExecutor,
+    javaToolchainService: JavaToolchainService,
     setup: Provider<UserdevSetup>,
     objects: ObjectFactory
 ) {
@@ -49,7 +55,9 @@ abstract class PaperweightUserExtension(
      */
     val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().pathProvider(
         setup.map {
-            it.applyMojangMappedPaperclipPatch()
+            it.applyMojangMappedPaperclipPatch(
+                UserdevSetup.Context(project, workerExecutor, javaToolchainService)
+            )
             it.mojangMappedPaperJar
         }
     ).withDisallowChanges().withDisallowUnsafeRead()
