@@ -1,25 +1,22 @@
 ## paperweight
 
-How to use this for testing:
+`paperweight` consists of three Gradle plugins:
+- `paperweight-core`: Used to build Paper
+- `paperweight-patcher`: Used to create forks of Paper or other `paperweight-patcher`-based forks
+- `paperweight-userdev`: Used to develop internals plugins using Mojang mappings
 
-Install this plugin to Maven Local:
+### How to use this for testing:
 
+- Install `paperweight` to Maven Local:
 ```bash
 ./gradlew publishToMavenLocal
 ```
+- Add `mavenLocal()` for plugin resolution in your test project
+  (see the [Gradle docs](https://docs.gradle.org/current/userguide/plugins.html#sec:custom_plugin_repositories) for more details)
+- Adjust the `paperweight` version in your test project
+  - Local versions of `paperweight` will use have the `-SNAPSHOT` suffix in the version from `gradle.properties` replaced by `-LOCAL-SNAPSHOT`
 
-Clone a new Paper repo and checkout the `feature/mojmap` branch.
-
-* Add `mavenLocal()` to the list of repos in `settings.gradle.kts`.
-* Change `paperweight` version to `1.0.0-LOCAL-SNAPSHOT` in the `plugins {}` block in `build.gradle.kts`.
-
-Run the task (on the Paper repo) to set up the development environment:
-
-```bash
-./gradlew patchPaper
-```
-
-> All task outputs `paperweight` creates goes into `<project-root>/.gradle/caches`.
+> Most output `paperweight` creates goes into `<project-root>/.gradle/caches/paperweight`
 
 ### Debugging
 
