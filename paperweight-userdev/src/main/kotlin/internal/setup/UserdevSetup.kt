@@ -240,9 +240,51 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hashFile.writeText(hash())
     }
 
+    private val fixedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("fixedMinecraftServerJar", "jar"))
+    private fun fixMinecraftServerJar(context: Context) {
+        remapMinecraftServerJar(context)
+
+        val hashFile = fixedMinecraftServerJar.resolveSibling(fixedMinecraftServerJar.nameWithoutExtension + ".hashes")
+        val hash = { hash(vanillaServerJar, mappedMinecraftServerJar, fixedMinecraftServerJar) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
+
+        LOGGER.lifecycle(":fixing minecraft server jar")
+        fixJar(
+            workerExecutor = context.workerExecutor,
+            launcher = context.defaultJavaLauncher,
+            vanillaJarPath = vanillaServerJar,
+            inputJarPath = mappedMinecraftServerJar,
+            outputJarPath = fixedMinecraftServerJar
+        ).await()
+        hashFile.writeText(hash())
+    }
+
+    private val accessTransformedServerJar: Path = cache.resolve(paperSetupOutput("accessTransformedServerJar", "jar"))
+    private fun accessTransformMinecraftServerJar(context: Context) {
+        fixMinecraftServerJar(context)
+
+        val at = extractedBundle.resolve(devBundleConfig.buildData.accessTransformFile)
+
+        val hashFile = accessTransformedServerJar.resolveSibling(accessTransformedServerJar.nameWithoutExtension + ".hashes")
+        val hash = { hash(fixedMinecraftServerJar, at, accessTransformedServerJar) }
+        val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
+        if (upToDate) return
+
+        LOGGER.lifecycle(":access transforming minecraft server jar")
+        applyAccessTransform(
+            inputJarPath = fixedMinecraftServerJar,
+            outputJarPath = accessTransformedServerJar,
+            atFilePath = at,
+            workerExecutor = context.workerExecutor,
+            launcher = context.defaultJavaLauncher
+        ).await()
+        hashFile.writeText(hash())
+    }
+
     private val decompiledMinecraftServerJar: Path = cache.resolve(paperSetupOutput("decompileMinecraftServerJar", "jar"))
     private fun decompileMinecraftServerJar(context: Context) {
-        remapMinecraftServerJar(context)
+        accessTransformMinecraftServerJar(context)
 
         val output = decompiledMinecraftServerJar
         val logFile = output.resolveSibling(output.nameWithoutExtension + ".log")
@@ -251,7 +293,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         val hash = {
             hash(
                 hashLibraries(minecraftLibraryJars, minecraftLibrarySources),
-                mappedMinecraftServerJar,
+                accessTransformedServerJar,
                 devBundleConfig.decompile.args,
                 output
             )
@@ -265,7 +307,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             logFile = logFile,
             workingDir = cache,
             executable = context.project.configurations.named(DECOMPILER_CONFIG).get(),
-            inputJar = mappedMinecraftServerJar,
+            inputJar = accessTransformedServerJar,
             libraries = minecraftLibraryJars.listDirectoryEntries("*.jar"),
             outputJar = output,
             javaLauncher = context.defaultJavaLauncher

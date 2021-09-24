@@ -49,9 +49,6 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     abstract val remappedJar: RegularFileProperty
 
     @get:InputFile
-    abstract val initialRemapJar: RegularFileProperty
-
-    @get:InputFile
     abstract val decompiledJar: RegularFileProperty
 
     @get:Input
@@ -94,6 +91,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:Classpath
     abstract val paramMappingsConfig: Property<Configuration>
 
+    @get:InputFile
+    abstract val atFile: RegularFileProperty
+
     @TaskAction
     fun run() {
         val dataFilePath = dataFile.path
@@ -102,7 +102,6 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
 
         val data = UpstreamData(
             vanillaJar.path,
-            initialRemapJar.path,
             remappedJar.path,
             decompiledJar.path,
             mcVersion.get(),
@@ -114,7 +113,8 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             sourceMappings.path,
             reobfPackagesToFix.get(),
             vanillaJarIncludes.get(),
-            determineMavenDep(paramMappingsUrl, paramMappingsConfig)
+            determineMavenDep(paramMappingsUrl, paramMappingsConfig),
+            atFile.path
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)

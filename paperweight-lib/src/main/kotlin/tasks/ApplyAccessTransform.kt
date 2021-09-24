@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
+import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.at.AccessChange
@@ -39,9 +40,11 @@ import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -49,6 +52,31 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+
+fun applyAccessTransform(
+    inputJarPath: Path,
+    outputJarPath: Path,
+    atFilePath: Path,
+    jvmArgs: List<String> = listOf("-Xmx1G"),
+    workerExecutor: WorkerExecutor,
+    launcher: JavaLauncher
+): WorkQueue {
+    ensureParentExists(outputJarPath)
+    ensureDeleted(outputJarPath)
+
+    val queue = workerExecutor.processIsolation {
+        forkOptions.jvmArgs(jvmArgs)
+        forkOptions.executable(launcher.executablePath.path.absolutePathString())
+    }
+
+    queue.submit(ApplyAccessTransform.AtlasAction::class) {
+        inputJar.set(inputJarPath)
+        atFile.set(atFilePath)
+        outputJar.set(outputJarPath)
+    }
+
+    return queue
+}
 
 @CacheableTask
 abstract class ApplyAccessTransform : JavaLauncherTask() {
@@ -78,19 +106,14 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        ensureParentExists(outputJar.path)
-        ensureDeleted(outputJar.path)
-
-        val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs(jvmargs.get())
-            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
-        }
-
-        queue.submit(AtlasAction::class) {
-            inputJar.set(this@ApplyAccessTransform.inputJar.path)
-            atFile.set(this@ApplyAccessTransform.atFile.path)
-            outputJar.set(this@ApplyAccessTransform.outputJar.path)
-        }
+        applyAccessTransform(
+            inputJarPath = inputJar.path,
+            outputJarPath = outputJar.path,
+            atFilePath = atFile.path,
+            jvmArgs = jvmargs.get(),
+            workerExecutor = workerExecutor,
+            launcher = launcher.get()
+        )
     }
 
     abstract class AtlasAction : WorkAction<AtlasParameters> {

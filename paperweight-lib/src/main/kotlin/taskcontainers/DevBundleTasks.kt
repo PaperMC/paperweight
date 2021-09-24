@@ -39,10 +39,6 @@ class DevBundleTasks(
     private val project: Project,
     tasks: TaskContainer = project.tasks,
 ) {
-    val decompileRemapJar by tasks.registering<RunForgeFlower> {
-        executable.from(project.configurations.named(DECOMPILER_CONFIG))
-    }
-
     val generateMojangMappedPaperclipPatch by tasks.registering<GeneratePaperclipPatch>()
 
     val mojangMappedPaperclipJar by tasks.registering<Jar> {
@@ -52,8 +48,6 @@ class DevBundleTasks(
 
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "paperweight"
-
-        decompiledJar.set(decompileRemapJar.flatMap { it.outputJar })
 
         remapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
         decompilerConfig.set(project.configurations.named(DECOMPILER_CONFIG))
@@ -65,16 +59,11 @@ class DevBundleTasks(
         serverProj: Provider<Project>,
         minecraftVer: Provider<String>,
         vanillaJar: Provider<Path?>,
-        remapJar: Provider<Path?>,
+        decompileJar: Provider<Path?>,
         serverLibrariesTxt: Provider<Path?>,
-        librariesDir: Provider<Path>,
+        accessTransformFile: Provider<Path?>,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
-        decompileRemapJar {
-            inputJar.pathProvider(remapJar)
-            libraries.from(librariesDir.map { project.fileTree(it) })
-        }
-
         generateMojangMappedPaperclipPatch {
             originalJar.pathProvider(vanillaJar)
             patchedJar.set(serverProj.flatMap { proj -> proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar } })
@@ -92,6 +81,8 @@ class DevBundleTasks(
             )
             serverProject.set(serverProj)
             relocations.set(serverProj.flatMap { proj -> proj.the<RelocationExtension>().relocations.map { gson.toJson(it) } })
+            decompiledJar.pathProvider(decompileJar)
+            atFile.pathProvider(accessTransformFile)
 
             devBundleConfiguration(this)
         }

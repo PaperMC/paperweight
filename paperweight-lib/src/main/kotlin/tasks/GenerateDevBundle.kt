@@ -100,6 +100,9 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:InputFile
     abstract val reobfMappingsFile: RegularFileProperty
 
+    @get:InputFile
+    abstract val atFile: RegularFileProperty
+
     @get:OutputFile
     abstract val devBundleFile: RegularFileProperty
 
@@ -127,6 +130,7 @@ abstract class GenerateDevBundle : DefaultTask() {
                 dataZip.createDirectories()
                 reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
                 mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
+                atFile.path.copyTo(dataZip.resolve(atFileName))
 
                 val patchesZip = zip.getPath(patchesDir)
                 tempPatchDir.copyRecursivelyTo(patchesZip)
@@ -293,6 +297,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         return BuildData(
             paramMappings = MavenDep(paramMappingsUrl.get(), listOf(paramMappingsCoordinates.get())),
             reobfMappingsFile = "$targetDir/$reobfMappingsFileName",
+            accessTransformFile = "$targetDir/$atFileName",
             mojangMappedPaperclipFile = "$targetDir/$mojangMappedPaperclipFileName",
             vanillaJarIncludes = vanillaJarIncludes.get(),
             libraryDependencies = determineLibraries(vanillaServerLibraries.get()),
@@ -359,6 +364,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     data class BuildData(
         val paramMappings: MavenDep,
         val reobfMappingsFile: String,
+        val accessTransformFile: String,
         val mojangMappedPaperclipFile: String,
         val vanillaJarIncludes: List<String>,
         val libraryDependencies: Set<String>,
@@ -369,10 +375,11 @@ abstract class GenerateDevBundle : DefaultTask() {
     data class Runner(val dep: MavenDep, val args: List<String>)
 
     companion object {
+        const val atFileName = "transform.at"
         const val reobfMappingsFileName = "$DEOBF_NAMESPACE-$SPIGOT_NAMESPACE-reobf.tiny"
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 0
+        const val currentDataVersion = 1
     }
 }

@@ -137,9 +137,9 @@ class PaperweightPatcher : Plugin<Project> {
                 patcher.serverProject,
                 upstreamData.map { it.mcVersion },
                 upstreamData.map { it.vanillaJar },
-                upstreamData.map { it.initialRemapJar },
+                upstreamData.map { it.decompiledJar },
                 upstreamData.map { it.libFile ?: throw PaperweightException("No libs file?") },
-                upstreamData.map { it.libDir },
+                upstreamData.map { it.accessTransform }
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
                 reobfMappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
