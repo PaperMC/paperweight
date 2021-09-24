@@ -30,7 +30,6 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -39,6 +38,7 @@ import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.w3c.dom.Element
 
@@ -100,7 +100,7 @@ fun downloadMinecraftLibraries(
     sourcesOut: Path?,
     mcRepo: String,
     mcLibrariesFile: Path
-) {
+): WorkQueue {
     val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
     out.deleteRecursively(excludes)
     sourcesOut?.deleteRecursively(excludes)
@@ -120,6 +120,8 @@ fun downloadMinecraftLibraries(
             }
         }
     }
+
+    return queue
 }
 
 @CacheableTask
@@ -257,9 +259,6 @@ interface DownloadParams : WorkParameters {
 }
 
 abstract class DownloadWorker : WorkAction<DownloadParams> {
-
-    @get:Inject
-    abstract val layout: ProjectLayout
 
     override fun execute() {
         val target = parameters.target.path

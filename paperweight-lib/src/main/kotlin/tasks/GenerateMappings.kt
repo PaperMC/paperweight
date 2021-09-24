@@ -59,6 +59,7 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 
 fun generateMappings(
@@ -70,7 +71,7 @@ fun generateMappings(
     workerExecutor: WorkerExecutor,
     launcher: JavaLauncher,
     jvmArgs: List<String> = listOf("-Xmx1G")
-) {
+): WorkQueue {
     val queue = workerExecutor.processIsolation {
         forkOptions.jvmArgs(jvmArgs)
         forkOptions.executable(launcher.executablePath.path.absolutePathString())
@@ -83,6 +84,8 @@ fun generateMappings(
         paramMappings.set(paramMappingsPath)
         outputMappings.set(outputMappingsPath)
     }
+
+    return queue
 }
 
 @CacheableTask
