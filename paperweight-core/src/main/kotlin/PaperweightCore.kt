@@ -147,7 +147,7 @@ class PaperweightCore : Plugin<Project> {
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
-                cache.resolve(FINAL_REMAPPED_JAR),
+                tasks.copyResources.flatMap { it.outputJar },
                 tasks.decompileJar.flatMap { it.outputJar },
                 ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES),
