@@ -28,15 +28,15 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.options.Option
 
 abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
 
@@ -49,14 +49,19 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
     @get:OutputDirectory
     abstract val patchDir: DirectoryProperty
 
-    @get:Internal
-    @get:Option(option = "filter-patches", description = "Controls if patches should be cleaned up, defaults to true")
+    @get:Input
     abstract val filterPatches: Property<Boolean>
+
+    @get:Inject
+    abstract val providers: ProviderFactory
 
     override fun init() {
         printOutput.convention(true)
-        filterPatches.convention(true)
-
+        filterPatches.convention(
+            providers.gradleProperty("paperweight.filter-patches")
+                .map { it.toBoolean() }
+                .orElse(true)
+        )
         outputs.upToDateWhen { false }
     }
 
