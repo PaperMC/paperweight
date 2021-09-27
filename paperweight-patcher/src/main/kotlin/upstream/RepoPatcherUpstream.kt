@@ -35,7 +35,6 @@ interface RepoPatcherUpstream : PatcherUpstream {
     val cloneTaskName: String
     val cloneTask: TaskProvider<CheckoutRepo>
 
-    @JvmDefault
     fun github(owner: String, repo: String): String {
         return "https://github.com/$owner/$repo.git"
     }

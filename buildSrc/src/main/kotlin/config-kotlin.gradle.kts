@@ -48,8 +48,10 @@ gradlePlugin {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
-        useIR = true
-        freeCompilerArgs = listOf("-Xopt-in=kotlin.io.path.ExperimentalPathApi")
+        freeCompilerArgs = listOf(
+            "-Xjvm-default=all",
+            "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
+        )
     }
 }
 
