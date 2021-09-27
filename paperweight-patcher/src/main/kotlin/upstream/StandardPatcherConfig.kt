@@ -30,7 +30,6 @@ interface StandardPatcherConfig : MinimalPatcherConfig {
 
     val serverSourceDirPath: Property<String>
 
-    @JvmDefault
     fun baseName(name: String) {
         apiSourceDirPath.set("$name-API")
         serverSourceDirPath.set("$name-Server")

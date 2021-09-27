@@ -13,7 +13,7 @@ dependencies {
     implementation(libs.gradle.ktlint)
     implementation(libs.gradle.shadow)
     implementation(libs.gradle.kotlin.dsl)
-    implementation(libs.gradle.kotlin.plugin.withVersion(embeddedKotlinVersion))
+    implementation(libs.gradle.plugin.kotlin.withVersion(embeddedKotlinVersion))
 }
 
 fun Provider<MinimalExternalModuleDependency>.withVersion(version: String): Provider<String> {
