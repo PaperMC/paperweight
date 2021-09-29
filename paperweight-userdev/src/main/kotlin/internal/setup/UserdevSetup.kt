@@ -323,6 +323,9 @@ class UserdevSetup(
         val didInstall = installToIvyRepo(
             repo,
             devBundleConfig.mappedServerCoordinates,
+            devBundleConfig.buildData.libraryDependencies.toList() +
+                devBundleConfig.apiCoordinates +
+                devBundleConfig.mojangApiCoordinates,
             patchedSourcesJar,
             filteredMojangMappedPaperJar
         )

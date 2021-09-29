@@ -22,7 +22,10 @@
 
 package io.papermc.paperweight.util
 
+import java.io.ByteArrayOutputStream
 import java.nio.file.Path
+import javax.xml.XMLConstants
+import javax.xml.stream.XMLOutputFactory
 import kotlin.io.path.*
 import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
@@ -46,57 +49,94 @@ fun RepositoryHandler.setupIvyRepository(
 fun installToIvyRepo(
     repo: Path,
     artifactCoordinates: String,
+    dependencies: List<String>,
     sourcesJar: Path,
     binaryJar: Path
 ): Boolean {
-    val (group, name, version, versionDir) = parseCoordinates(artifactCoordinates, repo)
+    val (module, versionDir) = parseModuleLocation(artifactCoordinates, repo)
+    val (_, name, version) = module
 
     versionDir.createDirectories()
 
     val sourcesDestination = versionDir.resolve("$name-$version-sources.jar")
     val jarDestination = versionDir.resolve("$name-$version.jar")
 
-    val upToDate = sourcesDestination.isRegularFile() && jarDestination.isRegularFile() &&
+    val ivy = versionDir.resolve("ivy-$version.xml")
+    val xml = writeIvyModule(module, dependencies.map { parseModule(it) })
+
+    val upToDate = sourcesDestination.isRegularFile() && jarDestination.isRegularFile() && ivy.isRegularFile() &&
         sourcesDestination.sha256asHex() == sourcesJar.sha256asHex() &&
-        jarDestination.sha256asHex() == binaryJar.sha256asHex()
+        jarDestination.sha256asHex() == binaryJar.sha256asHex() &&
+        ivy.readText(Charsets.UTF_8) == xml
     if (upToDate) {
         return false
     }
 
     sourcesJar.copyTo(sourcesDestination, overwrite = true)
     binaryJar.copyTo(jarDestination, overwrite = true)
-
-    val ivy = versionDir.resolve("ivy-$version.xml")
-    // If at some point we want to specify transitive dependencies though ivy metadata, it might be worth
-    // implementing this in a more proper way. For now, this works just fine.
-    val xml = """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <ivy-module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd" version="2.0">
-            <info organisation="$group" module="$name" revision="$version" status="release">
-            </info>
-            <dependencies>
-            </dependencies>
-        </ivy-module>
-
-    """.trimIndent()
     ivy.writeText(xml, Charsets.UTF_8)
+
     return true
 }
 
-private fun parseCoordinates(coordinatesString: String, root: Path): ArtifactLocation {
-    val parts = coordinatesString.split(":")
-    val group = parts[0]
-    val groupDir = root.resolve(group.replace(".", "/"))
-    val name = parts[1]
-    val nameDir = groupDir.resolve(name)
-    val version = parts[2]
-    val versionDir = nameDir.resolve(version)
-    return ArtifactLocation(group, name, version, versionDir)
+private val OUTPUT_FACTORY = XMLOutputFactory.newInstance()
+private const val XSI = XMLConstants.W3C_XML_SCHEMA_INSTANCE_NS_URI
+private const val IVY = "http://ant.apache.org/ivy/schemas/ivy.xsd"
+
+private fun writeIvyModule(
+    module: Module,
+    dependencies: List<Module>
+): String = ByteArrayOutputStream().use { outputStream ->
+    val writer = OUTPUT_FACTORY.createXMLStreamWriter(outputStream, Charsets.UTF_8.name())
+
+    writer.writeStartDocument("UTF-8", "1.0")
+    writer.writeStartElement("ivy-module")
+    writer.writeNamespace("xsi", XSI)
+    writer.writeAttribute(XSI, "noNamespaceSchemaLocation", IVY)
+    writer.writeAttribute("version", "2.0")
+
+    writer.writeEmptyElement("info")
+    writer.writeAttribute("organisation", module.group)
+    writer.writeAttribute("module", module.name)
+    writer.writeAttribute("revision", module.version)
+    writer.writeAttribute("status", "release")
+
+    writer.writeStartElement("dependencies")
+    for (dep in dependencies) {
+        writer.writeEmptyElement("dependency")
+        writer.writeAttribute("org", dep.group)
+        writer.writeAttribute("name", dep.name)
+        writer.writeAttribute("rev", dep.version)
+    }
+    writer.writeEndElement()
+
+    writer.writeEndElement()
+    writer.writeEndDocument()
+
+    String(outputStream.toByteArray(), Charsets.UTF_8)
 }
 
-private data class ArtifactLocation(
+private fun parseModule(coordinatesString: String): Module {
+    val parts = coordinatesString.split(":")
+    val group = parts[0]
+    val name = parts[1]
+    val version = parts[2]
+    return Module(group, name, version)
+}
+
+private fun parseModuleLocation(coordinatesString: String, root: Path): ModuleLocation {
+    val (group, name, version) = parseModule(coordinatesString)
+    val versionDir = root / group.replace(".", "/") / name / version
+    return ModuleLocation(Module(group, name, version), versionDir)
+}
+
+private data class Module(
     val group: String,
     val name: String,
     val version: String,
-    val versionDir: Path
+)
+
+private data class ModuleLocation(
+    val module: Module,
+    val versionDir: Path,
 )
