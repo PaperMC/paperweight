@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev
+package io.papermc.paperweight.userdev.attribute
 
 import org.gradle.api.Named
 import org.gradle.api.attributes.Attribute
@@ -31,7 +31,7 @@ import org.gradle.api.attributes.Attribute
 interface Obfuscation : Named {
     companion object {
         val OBFUSCATION_ATTRIBUTE = Attribute.of(
-            "io.papermc.obfuscation",
+            "io.papermc.paperweight.obfuscation",
             Obfuscation::class.java
         )
 

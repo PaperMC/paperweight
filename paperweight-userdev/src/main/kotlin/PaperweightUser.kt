@@ -25,6 +25,7 @@ package io.papermc.paperweight.userdev
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
