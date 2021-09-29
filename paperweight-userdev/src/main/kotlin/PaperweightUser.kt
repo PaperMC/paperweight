@@ -25,6 +25,7 @@ package io.papermc.paperweight.userdev
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -98,6 +99,7 @@ abstract class PaperweightUser : Plugin<Project> {
                 attribute(Category.CATEGORY_ATTRIBUTE, target.objects.named(Category.LIBRARY))
                 attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, target.objects.named(LibraryElements.JAR))
                 attribute(Bundling.BUNDLING_ATTRIBUTE, target.objects.named(Bundling.EXTERNAL))
+                attribute(Obfuscation.OBFUSCATION_ATTRIBUTE, target.objects.named(Obfuscation.OBFUSCATED))
             }
             outgoing.artifact(reobfJar)
         }
