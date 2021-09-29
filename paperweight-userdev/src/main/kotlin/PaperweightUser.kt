@@ -98,6 +98,7 @@ abstract class PaperweightUser : Plugin<Project> {
                 attribute(Category.CATEGORY_ATTRIBUTE, target.objects.named(Category.LIBRARY))
                 attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, target.objects.named(LibraryElements.JAR))
                 attribute(Bundling.BUNDLING_ATTRIBUTE, target.objects.named(Bundling.EXTERNAL))
+                attribute(Obfuscation.OBFUSCATION_ATTRIBUTE, target.objects.named(Obfuscation.OBFUSCATED))
             }
             outgoing.artifact(reobfJar)
         }
