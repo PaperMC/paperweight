@@ -42,10 +42,10 @@ val tinyRemapperArgsList: List<String> = listOf(
     "{from}",
     "{to}",
     "{classpath}",
-    "--fixpackageaccess",
-    "--renameinvalidlocals",
+    "--fix-package-access",
+    "--rename-invalid-locals",
     "--threads=1",
-    "--rebuildsourcefilenames"
+    "--rebuild-source-filenames"
 )
 
 private fun List<String>.createTinyRemapperArgs(
