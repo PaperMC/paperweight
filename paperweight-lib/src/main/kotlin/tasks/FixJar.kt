@@ -34,9 +34,11 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -44,6 +46,31 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
+
+fun fixJar(
+    workerExecutor: WorkerExecutor,
+    jvmArgs: List<String> = arrayListOf("-Xmx512m"),
+    launcher: JavaLauncher,
+    vanillaJarPath: Path,
+    inputJarPath: Path,
+    outputJarPath: Path
+): WorkQueue {
+    ensureParentExists(outputJarPath)
+    ensureDeleted(outputJarPath)
+
+    val queue = workerExecutor.processIsolation {
+        forkOptions.jvmArgs(jvmArgs)
+        forkOptions.executable(launcher.executablePath.path.absolutePathString())
+    }
+
+    queue.submit(FixJar.FixJarAction::class) {
+        inputJar.set(inputJarPath)
+        vanillaJar.set(vanillaJarPath)
+        outputJar.set(outputJarPath)
+    }
+
+    return queue
+}
 
 @CacheableTask
 abstract class FixJar : JavaLauncherTask() {
@@ -72,16 +99,14 @@ abstract class FixJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs(jvmargs.get())
-            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
-        }
-
-        queue.submit(FixJarAction::class) {
-            inputJar.set(this@FixJar.inputJar.path)
-            vanillaJar.set(this@FixJar.vanillaJar.path)
-            outputJar.set(this@FixJar.outputJar.path)
-        }
+        fixJar(
+            workerExecutor = workerExecutor,
+            jvmArgs = jvmargs.get(),
+            launcher = launcher.get(),
+            vanillaJarPath = vanillaJar.path,
+            inputJarPath = inputJar.path,
+            outputJarPath = outputJar.path
+        )
     }
 
     interface FixJarParams : WorkParameters {

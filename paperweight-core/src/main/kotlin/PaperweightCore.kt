@@ -70,9 +70,9 @@ class PaperweightCore : Plugin<Project> {
             ext.serverProject,
             ext.minecraftVersion,
             tasks.downloadServerJar.map { it.outputJar.path },
-            tasks.remapJar.map { it.outputJar.path },
+            tasks.decompileJar.map { it.outputJar.path },
             tasks.inspectVanillaJar.map { it.serverLibraries.path },
-            tasks.downloadMcLibraries.map { it.outputDir.path }
+            tasks.mergeAdditionalAts.map { it.outputFile.path }
         ) {
             vanillaJarIncludes.set(ext.vanillaJarIncludes)
             reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
@@ -90,7 +90,6 @@ class PaperweightCore : Plugin<Project> {
         target.tasks.register<PaperweightCoreUpstreamData>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-            initialRemapJar.set(tasks.remapJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
@@ -104,6 +103,7 @@ class PaperweightCore : Plugin<Project> {
             vanillaJarIncludes.set(ext.vanillaJarIncludes)
             paramMappingsUrl.set(ext.paramMappingsRepo)
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
+            atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
 
             dataFile.set(
                 target.layout.file(

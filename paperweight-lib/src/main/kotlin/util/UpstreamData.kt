@@ -28,7 +28,6 @@ import org.gradle.api.file.RegularFile
 
 data class UpstreamData(
     val vanillaJar: Path,
-    val initialRemapJar: Path,
     val remappedJar: Path,
     val decompiledJar: Path,
     val mcVersion: String,
@@ -40,7 +39,8 @@ data class UpstreamData(
     val sourceMappings: Path,
     val reobfPackagesToFix: List<String>?,
     val vanillaIncludes: List<String>,
-    val paramMappings: MavenDep
+    val paramMappings: MavenDep,
+    val accessTransform: Path
 )
 
 fun readUpstreamData(inputFile: RegularFile): UpstreamData? {

@@ -194,7 +194,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
         if (!hasDevBundle) {
             val message = "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration, as" +
-                "well as a repository to resolve it from in order to function. Use the paperweightDevBundle extension function to do this easily."
+                " well as a repository to resolve it from in order to function. Use the paperweightDevBundle extension function to do this easily."
             throw PaperweightException(message)
         }
     }
