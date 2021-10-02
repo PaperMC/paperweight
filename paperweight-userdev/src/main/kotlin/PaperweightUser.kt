@@ -222,7 +222,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         target.configurations.create(REMAPPER_CONFIG) {
-            isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps (which aren't on the quilt repo)
+            isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
             defaultDependencies {
                 for (dep in devBundleConfig.remap.dep.coordinates) {
                     add(target.dependencies.create(dep))
@@ -230,23 +230,8 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.configurations.create(MINECRAFT_LIBRARIES_CONFIG) {
-            exclude("junit", "junit") // json-simple exposes junit for some reason
-            defaultDependencies {
-                for (dep in devBundleConfig.buildData.libraryDependencies) {
-                    add(target.dependencies.create(dep))
-                }
-            }
-        }
-
-        target.configurations.create(PAPER_API_CONFIG) {
-            defaultDependencies {
-                add(target.dependencies.create(devBundleConfig.apiCoordinates))
-                add(target.dependencies.create(devBundleConfig.mojangApiCoordinates))
-            }
-        }
-
         target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
+            exclude("junit", "junit") // json-simple exposes junit for some reason
             defaultDependencies {
                 userdevSetup.get().createOrUpdateIvyRepository(
                     UserdevSetup.Context(target, workerExecutor, javaToolchainService)
@@ -259,16 +244,11 @@ abstract class PaperweightUser : Plugin<Project> {
             listOf(
                 JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
                 JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
-            ).map(target.configurations::named)
-                .forEach { config ->
-                    config {
-                        extendsFrom(
-                            target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG),
-                            target.configurations.getByName(MINECRAFT_LIBRARIES_CONFIG),
-                            target.configurations.getByName(PAPER_API_CONFIG)
-                        )
-                    }
+            ).map(target.configurations::named).forEach { config ->
+                config {
+                    extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
                 }
+            }
         }
     }
 }

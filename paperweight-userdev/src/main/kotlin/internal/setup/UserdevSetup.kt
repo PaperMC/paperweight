@@ -397,6 +397,9 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         val didInstall = installToIvyRepo(
             cache.resolve(IVY_REPOSITORY),
             devBundleConfig.mappedServerCoordinates,
+            devBundleConfig.buildData.libraryDependencies.toList() +
+                devBundleConfig.apiCoordinates +
+                devBundleConfig.mojangApiCoordinates,
             patchedSourcesJar,
             filteredMojangMappedPaperJar
         )
