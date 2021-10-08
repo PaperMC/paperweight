@@ -25,6 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -42,7 +43,7 @@ object McDev {
         patches: Iterable<Path>,
         decompJar: Path,
         importsFile: Path?,
-        librariesDir: Path?,
+        librarySources: FileCollection,
         targetDir: Path,
         printOutput: Boolean = true
     ) {
@@ -93,7 +94,7 @@ object McDev {
             }
         }
 
-        val libFiles = librariesDir?.listDirectoryEntries("*-sources.jar") ?: return
+        val libFiles = librarySources.map { it.toPath() }
         if (libFiles.isEmpty()) {
             throw PaperweightException("No library files found")
         }

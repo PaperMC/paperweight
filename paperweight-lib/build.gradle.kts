@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.httpclient)
     implementation(libs.kotson)
 
     // ASM for inspection

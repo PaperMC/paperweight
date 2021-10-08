@@ -22,16 +22,16 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
+import io.papermc.paperweight.core.tasks.DetermineSpigotDependencies
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -41,7 +41,6 @@ open class SpigotTasks(
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
-    downloadService: Provider<DownloadService> = project.download,
 ) : VanillaTasks(project) {
 
     val addAdditionalSpigotMappings by tasks.registering<AddAdditionalSpigotMappings> {
@@ -89,7 +88,7 @@ open class SpigotTasks(
 
     val cleanupMappings by tasks.registering<CleanupMappings> {
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(minecraftLibraries)
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
@@ -164,13 +163,18 @@ open class SpigotTasks(
         dependsOn(patchSpigotApi, patchSpigotServer)
     }
 
-    val downloadSpigotDependencies by tasks.registering<DownloadSpigotDependencies> {
+    val determineSpigotDependencies by tasks.registering<DetermineSpigotDependencies> {
         dependsOn(patchSpigot)
         apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
         serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
-        outputDir.set(cache.resolve(SPIGOT_JARS_PATH))
+    }
 
-        downloader.set(downloadService)
+    val spigotDependencies = determineSpigotDependencies.flatMap { determine ->
+        project.resolveWithRepos(
+            determine.dependencies.map { deps -> deps.path.readLines() },
+            determine.repositories.map { repos -> repos.path.readLines() },
+            SPIGOT_DEPENDENCIES
+        )
     }
 
     val remapSpigotAt by tasks.registering<RemapSpigotAt> {
@@ -179,15 +183,14 @@ open class SpigotTasks(
         spigotAt.set(extension.craftBukkit.atFile)
     }
 
-    @Suppress("DuplicatedCode")
     val remapSpigotSources by tasks.registering<RemapSources> {
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
         mappings.set(patchMappings.flatMap { it.outputMappings })
-        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        vanillaJar.set(serverJar)
         mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
-        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
+        spigotDeps.from(spigotDependencies)
         additionalAts.set(extension.paper.additionalAts.fileExists(project))
     }
 

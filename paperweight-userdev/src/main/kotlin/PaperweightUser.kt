@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.userdev
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
@@ -53,8 +52,6 @@ abstract class PaperweightUser : Plugin<Project> {
     abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
-        target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
-
         val cleanCache by target.tasks.registering<Delete> {
             group = "paperweight"
             description = "Delete the project setup cache and task outputs."
@@ -77,7 +74,6 @@ abstract class PaperweightUser : Plugin<Project> {
                     parameters {
                         cache.set(target.layout.cache)
                         bundleZip.set(devBundleZip)
-                        downloadService.set(target.download)
                     }
                 }
                 .get()

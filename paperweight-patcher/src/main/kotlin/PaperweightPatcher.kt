@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.patcher
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherPrepareForDownstream
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
@@ -37,6 +36,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -53,8 +53,6 @@ class PaperweightPatcher : Plugin<Project> {
         Git.checkForGit()
 
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class)
-
-        target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
         target.tasks.register<Delete>("cleanCache") {
             group = "paperweight"
@@ -147,7 +145,7 @@ class PaperweightPatcher : Plugin<Project> {
                 for (patchTask in upstream.patchTasks) {
                     patchTask.patchTask {
                         sourceMcDevJar.convention(target, upstreamData.map { it.decompiledJar })
-                        mcLibrariesDir.convention(target, upstreamData.map { it.libSourceDir })
+                        mcLibrariesSources.from(target.downloadMinecraftLibrariesSources(upstreamData.map { it.serverLibsFile.readLines() }))
                     }
                 }
             }
@@ -169,7 +167,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.mcVersion },
                 upstreamData.map { it.vanillaJar },
                 upstreamData.map { it.decompiledJar },
-                upstreamData.map { it.libFile },
+                upstreamData.map { it.serverLibsFile },
                 upstreamData.map { it.accessTransform }
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
@@ -184,7 +182,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
-                upstreamData.map { it.libFile },
+                upstreamData.map { it.serverLibsFile },
                 mergedReobfPackagesToFix,
                 patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate

@@ -24,7 +24,6 @@ package io.papermc.paperweight.util
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.*
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
@@ -48,9 +47,15 @@ import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.DocsType
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -106,10 +111,6 @@ inline fun <reified T : Task> TaskContainer.configureTask(name: String, noinline
         register(name, configure)
     }
 }
-
-@Suppress("UNCHECKED_CAST")
-val Project.download: Provider<DownloadService>
-    get() = gradle.sharedServices.registrations.getByName("download").service as Provider<DownloadService>
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")
@@ -272,5 +273,13 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
         )
 }
 
+fun AttributeContainer.sourcesAttributes(objects: ObjectFactory) {
+    attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+    attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
+    attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+}
+
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
+fun <P : Property<*>> P.withFinalizeValueOnRead(): P = apply { finalizeValueOnRead() }
 fun <P : Property<*>> P.withDisallowUnsafeRead(): P = apply { disallowUnsafeRead() }

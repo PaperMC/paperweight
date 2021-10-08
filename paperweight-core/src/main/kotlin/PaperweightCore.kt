@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.core
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
@@ -45,8 +44,6 @@ class PaperweightCore : Plugin<Project> {
 
         val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)
 
-        target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
-
         target.tasks.register<Delete>("cleanCache") {
             group = "paper"
             description = "Delete the project setup cache and task outputs."
@@ -68,7 +65,7 @@ class PaperweightCore : Plugin<Project> {
         devBundleTasks.configure(
             ext.serverProject,
             ext.minecraftVersion,
-            tasks.downloadServerJar.map { it.outputJar.path },
+            tasks.serverJar.map { it.path },
             tasks.decompileJar.map { it.outputJar.path },
             tasks.inspectVanillaJar.map { it.serverLibraries.path },
             tasks.mergeAdditionalAts.map { it.outputFile.path }
@@ -88,13 +85,11 @@ class PaperweightCore : Plugin<Project> {
 
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
-            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+            vanillaJar.set(tasks.serverJar)
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
-            mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.outputDir })
-            mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
             mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
@@ -154,7 +149,7 @@ class PaperweightCore : Plugin<Project> {
             ) ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                originalJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+                originalJar.set(tasks.serverJar)
                 patchedJar.set(reobfJar.flatMap { it.outputJar })
                 mcVersion.set(target.ext.minecraftVersion)
             }
@@ -193,14 +188,14 @@ class PaperweightCore : Plugin<Project> {
             // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
             classpathJars.from(allTasks.applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
             classpathJars.from(allTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
-            classpathJars.from(allTasks.downloadServerJar.flatMap { it.outputJar }.get()) // pure vanilla jar
+            classpathJars.from(allTasks.serverJar) // pure vanilla jar
 
             spigotApiDir.set(allTasks.patchSpigotApi.flatMap { it.outputDir }.get())
             spigotServerDir.set(allTasks.patchSpigotServer.flatMap { it.outputDir }.get())
             spigotDecompJar.set(allTasks.spigotDecompileJar.flatMap { it.outputJar }.get())
 
             // library class imports
-            mcLibrarySourcesDir.set(allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }.get())
+            mcLibrariesSources.from(allTasks.minecraftLibrariesSources)
             devImports.set(extension.paper.devImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)

@@ -41,6 +41,15 @@ const val DEV_BUNDLE_CONFIG = "paperweightDevelopmentBundle"
 const val MOJANG_MAPPED_SERVER_CONFIG = "mojangMappedServer"
 const val REOBF_CONFIG = "reobf"
 
+const val PAPERWEIGHT_DOWNLOAD = "paperweightDownload"
+const val MINECRAFT_LIBRARIES = "minecraftLibraries"
+const val MINECRAFT_LIBRARIES_SOURCES = "minecraftLibrariesSources"
+const val MINECRAFT_MANIFEST = "minecraftManifest"
+const val MINECRAFT_VERSION_MANIFEST = "minecraftVersionManifest"
+const val MOJANG_SERVER_MAPPINGS = "mojangServerMappings"
+const val VANILLA_SERVER_JAR = "vanillaServerJar"
+const val SPIGOT_DEPENDENCIES = "spigotDependencies"
+
 const val PARAM_MAPPINGS_REPO_NAME = "paperweightParamMappingsRepository"
 const val DECOMPILER_REPO_NAME = "paperweightDecompilerRepository"
 const val REMAPPER_REPO_NAME = "paperweightRemapperRepository"
@@ -53,14 +62,7 @@ const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"
 const val PAPERWEIGHT_PREPARE_DOWNSTREAM = "prepareForDownstream"
 const val PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY = "paperweightDownstreamDataFile"
 
-private const val JARS_PATH = "$PAPER_PATH/jars"
-const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
-const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
-
-const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
-
 private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
-const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
 const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
 
 const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
@@ -76,9 +78,6 @@ const val SPIGOT_NAMESPACE = "spigot"
 const val DEOBF_NAMESPACE = "mojang+yarn"
 
 private const val DATA_PATH = "$PAPER_PATH/data"
-const val MC_MANIFEST = "$DATA_PATH/McManifest.json"
-const val VERSION_JSON = "$DATA_PATH/McVersion.json"
-const val MC_LIBRARIES = "$DATA_PATH/McLibraries.txt"
 const val SERVER_LIBRARIES = "$DATA_PATH/ServerLibraries.txt"
 
 private const val SETUP_CACHE = "$PAPER_PATH/setupCache"
@@ -96,3 +95,4 @@ const val RELOCATION_EXTENSION = "relocation"
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"
+fun downloadConfigName(downloadName: String): String = "$PAPERWEIGHT_DOWNLOAD${downloadName.capitalize()}"
