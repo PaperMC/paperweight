@@ -23,14 +23,16 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
+import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.DefaultTask
+import net.fabricmc.lorenztiny.TinyMappingFormat
+import org.cadixdev.lorenz.MappingSet
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 
 @CacheableTask
-abstract class PatchMappings : DefaultTask() {
+abstract class PatchMappings : BaseTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -52,37 +54,56 @@ abstract class PatchMappings : DefaultTask() {
 
     @TaskAction
     fun run() {
-        appendPatch(inputMappings, outputMappings)
+        appendPatch(
+            inputMappings.path,
+            patch.pathOrNull,
+            outputMappings.path
+        )
     }
 
-    private fun appendPatch(input: RegularFileProperty, output: RegularFileProperty) {
-        val mappings = MappingFormats.TINY.read(
-            input.path,
+    private fun appendPatch(input: Path, patch: Path?, output: Path) {
+        val mappings = MappingFormats.TINY.readCommented(
+            input,
             fromNamespace.get(),
             toNamespace.get()
         )
-        patch.pathOrNull?.let { patchFile ->
-            val temp = createTempFile("patch", "tiny")
-            try {
-                val comment = commentRegex()
-                // tiny format doesn't allow comments, so we manually remove them
-                // The tiny mappings reader also doesn't have a InputStream or Reader input...
-                patchFile.useLines { lines ->
-                    temp.bufferedWriter().use { writer ->
-                        for (line in lines) {
-                            val newLine = comment.replace(line, "")
-                            if (newLine.isNotBlank()) {
-                                writer.appendLine(newLine)
-                            }
+        patch?.let {
+            MappingFormats.TINY.readCommented(
+                it,
+                fromNamespace.get(),
+                toNamespace.get(),
+                mappings
+            )
+        }
+
+        MappingFormats.TINY.write(mappings, output, fromNamespace.get(), toNamespace.get())
+    }
+
+    private fun TinyMappingFormat.readCommented(
+        mappings: Path,
+        fromNamespace: String,
+        toNamespace: String,
+        into: MappingSet? = null
+    ): MappingSet {
+        val temp = createTempFile("patch", "tiny")
+        try {
+            val comment = commentRegex()
+            // tiny format doesn't allow comments, so we manually remove them
+            // The tiny mappings reader also doesn't have a InputStream or Reader input...
+            mappings.useLines { lines ->
+                temp.bufferedWriter().use { writer ->
+                    for (line in lines) {
+                        val newLine = comment.replace(line, "")
+                        if (newLine.isNotBlank()) {
+                            writer.appendLine(newLine)
                         }
                     }
                 }
-                MappingFormats.TINY.read(mappings, temp, fromNamespace.get(), toNamespace.get())
-            } finally {
-                temp.deleteForcefully()
             }
+            return into?.let { read(it, temp, fromNamespace, toNamespace) }
+                ?: read(temp, fromNamespace, toNamespace)
+        } finally {
+            temp.deleteForcefully()
         }
-
-        MappingFormats.TINY.write(mappings, output.path, fromNamespace.get(), toNamespace.get())
     }
 }

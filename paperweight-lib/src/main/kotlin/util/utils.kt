@@ -116,7 +116,7 @@ fun commentRegex(): Regex {
 }
 
 val Project.isBaseExecution: Boolean
-    get() = providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM)
+    get() = providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
         .forUseAtConfigurationTime()
         .orElse(provider { "false" })
         .map { it == "false" }

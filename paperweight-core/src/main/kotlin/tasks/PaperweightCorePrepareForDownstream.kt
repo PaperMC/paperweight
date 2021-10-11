@@ -40,7 +40,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class PaperweightCoreUpstreamData : DefaultTask() {
+abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
 
     @get:InputFile
     abstract val vanillaJar: RegularFileProperty
@@ -79,6 +79,9 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
     @get:Input
     abstract val reobfPackagesToFix: ListProperty<String>
 
+    @get:InputFile
+    abstract val reobfMappingsPatch: RegularFileProperty
+
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
 
@@ -112,6 +115,7 @@ abstract class PaperweightCoreUpstreamData : DefaultTask() {
             notchToSpigotMappings.path,
             sourceMappings.path,
             reobfPackagesToFix.get(),
+            reobfMappingsPatch.path,
             vanillaJarIncludes.get(),
             determineMavenDep(paramMappingsUrl, paramMappingsConfig),
             atFile.path

@@ -24,50 +24,45 @@ package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
-import kotlin.collections.set
 import kotlin.io.path.*
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.internal.StartParameterInternal
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.build.NestedRootBuildRunner
 
-abstract class PaperweightPatcherUpstreamData : BaseTask() {
+abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {
 
-    @get:InputDirectory
-    abstract val projectDir: DirectoryProperty
+    @get:InputFile
+    abstract val upstreamDataFile: RegularFileProperty
 
-    @get:Internal
-    abstract val workDir: DirectoryProperty
+    @get:Input
+    abstract val reobfPackagesToFix: ListProperty<String>
+
+    @get:InputFile
+    abstract val reobfMappingsPatch: RegularFileProperty
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
 
     override fun init() {
         super.init()
-        // nested build does its own up-to-date checking
         outputs.upToDateWhen { false }
     }
 
     @TaskAction
     fun run() {
-        val params = NestedRootBuildRunner.createStartParameterForNewBuild(services)
-        params.projectDir = projectDir.get().asFile
+        val upstreamData = readUpstreamData(upstreamDataFile)
 
-        val upstreamDataFile = dataFile.path
-        upstreamDataFile.deleteForcefully() // We won't be the ones to create this file
+        val ourData = upstreamData.copy(
+            reobfPackagesToFix = reobfPackagesToFix.get(),
+            reobfMappingsPatch = reobfMappingsPatch.path,
+        )
 
-        params.setTaskNames(listOf(PAPERWEIGHT_PREPARE_DOWNSTREAM))
-
-        params.projectProperties[UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
-        params.projectProperties[PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY] = upstreamDataFile.absolutePathString()
-
-        params.systemPropertiesArgs[PAPERWEIGHT_DEBUG] = System.getProperty(PAPERWEIGHT_DEBUG, "false")
-
-        NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
+        dataFile.path.parent.createDirectories()
+        dataFile.path.bufferedWriter().use { writer ->
+            gson.toJson(ourData, writer)
+        }
     }
 }
