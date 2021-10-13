@@ -89,10 +89,6 @@ open class DefaultPaperRepoPatcherUpstream(name: String, objects: ObjectFactory,
             serverOutputDir.convention(minimalConfig.serverOutputDir)
         }
 
-        cloneTask {
-            initializeSubmodules.convention(true)
-        }
-
         withStandardPatcher(paperAction)
     }
 }

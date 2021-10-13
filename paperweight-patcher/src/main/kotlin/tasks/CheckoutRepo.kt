@@ -67,7 +67,7 @@ abstract class CheckoutRepo : DefaultTask() {
             url.finalizeValueOnRead()
             ref.finalizeValueOnRead()
             shallowClone.convention(true).finalizeValueOnRead()
-            initializeSubmodules.convention(false).finalizeValueOnRead()
+            initializeSubmodules.convention(true).finalizeValueOnRead()
             initializeSubmodulesShallow.convention(false).finalizeValueOnRead()
 
             outputDir.convention(workDir.dir(repoName)).finalizeValueOnRead()
