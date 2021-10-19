@@ -23,7 +23,6 @@
 package io.papermc.paperweight.patcher
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherPrepareForDownstream
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
@@ -170,7 +169,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.mcVersion },
                 upstreamData.map { it.vanillaJar },
                 upstreamData.map { it.decompiledJar },
-                upstreamData.map { it.libFile ?: throw PaperweightException("No libs file?") },
+                upstreamData.map { it.libFile },
                 upstreamData.map { it.accessTransform }
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
@@ -185,7 +184,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
-                upstreamData.flatMap { provider { it.libFile } },
+                upstreamData.map { it.libFile },
                 mergedReobfPackagesToFix,
                 patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate

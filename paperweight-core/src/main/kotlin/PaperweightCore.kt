@@ -34,7 +34,6 @@ import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
@@ -78,11 +77,11 @@ class PaperweightCore : Plugin<Project> {
             reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
 
             paramMappingsCoordinates.set(
-                target.provider { determineArtifactCoordinates(target.configurations.named(PARAM_MAPPINGS_CONFIG).get()).single() }
+                target.provider {
+                    determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
+                }
             )
-            paramMappingsUrl.set(
-                target.provider { target.repositories.named<MavenArtifactRepository>(PARAM_MAPPINGS_REPO_NAME).get().url.toString() }
-            )
+            paramMappingsUrl.set(ext.paramMappingsRepo)
         }
 
         target.createPatchRemapTask(tasks)
