@@ -59,7 +59,7 @@ abstract class DownloadTask : DefaultTask() {
 }
 
 @CacheableTask
-abstract class DownloadMcLibraries : DefaultTask() {
+abstract class DownloadMcLibraries : BaseTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -71,14 +71,19 @@ abstract class DownloadMcLibraries : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
-    @get:OutputDirectory
-    abstract val sourcesOutputDir: DirectoryProperty
-
     @get:Internal
     abstract val downloader: Property<DownloadService>
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
+
+    @get:Input
+    abstract val sources: Property<Boolean>
+
+    override fun init() {
+        super.init()
+        sources.convention(false)
+    }
 
     @TaskAction
     fun run() {
@@ -86,9 +91,9 @@ abstract class DownloadMcLibraries : DefaultTask() {
             downloader,
             workerExecutor,
             outputDir.path,
-            sourcesOutputDir.path,
             mcRepo.get(),
-            mcLibrariesFile.path
+            mcLibrariesFile.path.readLines(),
+            sources.get()
         )
     }
 }
@@ -96,25 +101,31 @@ abstract class DownloadMcLibraries : DefaultTask() {
 fun downloadMinecraftLibraries(
     download: Provider<DownloadService>,
     workerExecutor: WorkerExecutor,
-    out: Path,
-    sourcesOut: Path?,
+    targetDir: Path,
     mcRepo: String,
-    mcLibrariesFile: Path
+    mcLibraries: List<String>,
+    sources: Boolean
 ): WorkQueue {
-    val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
-    out.deleteRecursively(excludes)
-    sourcesOut?.deleteRecursively(excludes)
+    val excludes = listOf(targetDir.fileSystem.getPathMatcher("glob:*.etag"))
+    targetDir.deleteRecursively(excludes)
 
     val mcRepos = listOf(mcRepo)
 
     val queue = workerExecutor.noIsolation()
-    mcLibrariesFile.useLines { lines ->
-        lines.forEach { line ->
+
+    for (lib in mcLibraries) {
+        if (sources) {
+            queue.submit(DownloadSourcesToDirAction::class) {
+                repos.set(mcRepos)
+                artifact.set(lib)
+                target.set(targetDir)
+                downloader.set(download)
+            }
+        } else {
             queue.submit(DownloadWorker::class) {
                 repos.set(mcRepos)
-                artifact.set(line)
-                target.set(out)
-                sourcesTarget.set(sourcesOut)
+                artifact.set(lib)
+                target.set(targetDir)
                 downloadToDir.set(true)
                 downloader.set(download)
             }
@@ -253,7 +264,6 @@ interface DownloadParams : WorkParameters {
     val repos: ListProperty<String>
     val artifact: Property<String>
     val target: RegularFileProperty
-    val sourcesTarget: RegularFileProperty
     val downloadToDir: Property<Boolean>
     val downloader: Property<DownloadService>
 }
@@ -266,15 +276,33 @@ abstract class DownloadWorker : WorkAction<DownloadParams> {
 
         if (parameters.downloadToDir.get()) {
             artifact.downloadToDir(parameters.downloader.get(), target, parameters.repos.get())
-            parameters.sourcesTarget.pathOrNull?.let { sourceDir ->
-                try {
-                    val sourceArtifact = artifact.copy(classifier = "sources")
-                    sourceArtifact.downloadToDir(parameters.downloader.get(), sourceDir, parameters.repos.get())
-                } catch (ignored: Exception) {
-                }
-            }
         } else {
             artifact.downloadToFile(parameters.downloader.get(), target, parameters.repos.get())
+        }
+    }
+}
+
+abstract class DownloadSourcesToDirAction : WorkAction<DownloadSourcesToDirAction.Params> {
+
+    interface Params : WorkParameters {
+        val repos: ListProperty<String>
+        val artifact: Property<String>
+        val target: RegularFileProperty
+        val downloader: Property<DownloadService>
+    }
+
+    override fun execute() {
+        val sourceArtifact = MavenArtifact.parse(parameters.artifact.get())
+            .copy(classifier = "sources")
+
+        try {
+            sourceArtifact.downloadToDir(
+                parameters.downloader.get(),
+                parameters.target.path,
+                parameters.repos.get()
+            )
+        } catch (ignored: Exception) {
+            // Ignore failures because not every artifact we attempt to download actually has sources
         }
     }
 }

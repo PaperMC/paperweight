@@ -44,7 +44,23 @@ open class VanillaTasks(
         mcLibrariesFile.set(setupMcLibraries.flatMap { it.outputFile })
         mcRepo.set(MC_LIBRARY_URL)
         outputDir.set(cache.resolve(MINECRAFT_JARS_PATH))
-        sourcesOutputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+
+        downloader.set(downloadService)
+    }
+
+    val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
+        inputJar.set(downloadServerJar.flatMap { it.outputJar })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        mcLibraries.set(setupMcLibraries.flatMap { it.outputFile })
+
+        serverLibraries.set(cache.resolve(SERVER_LIBRARIES))
+    }
+
+    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
+        mcLibrariesFile.set(inspectVanillaJar.flatMap { it.serverLibraries })
+        mcRepo.set(MC_LIBRARY_URL)
+        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        sources.set(true)
 
         downloader.set(downloadService)
     }

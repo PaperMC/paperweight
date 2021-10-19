@@ -142,23 +142,12 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         )
     }
 
-    private fun hashLibraries(jars: Path, sources: Path): String =
-        hashFiles(
-            sequenceOf(jars, sources)
-                .filter { it.isDirectory() }
-                .flatMap { it.listDirectoryEntries("*.jar") }
-                .toList()
-        )
-
     private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
-    private val minecraftLibrarySources = cache.resolve(MINECRAFT_SOURCES_PATH)
     private fun downloadMinecraftLibraries(context: Context) {
         writeMinecraftLibrariesFile()
-        val jars = minecraftLibraryJars
-        val sources = minecraftLibrarySources
 
         val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
-        val hash = { hash(hashLibraries(jars, sources), minecraftLibrariesFile) }
+        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar"), minecraftLibrariesFile) }
         val upToDate = hashesFile.isRegularFile() && hashesFile.readText() == hash()
         if (upToDate) return
 
@@ -166,10 +155,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         downloadMinecraftLibraries(
             download = parameters.downloadService,
             workerExecutor = context.workerExecutor,
-            out = jars,
-            sourcesOut = null, // sources, // we don't use sources jars for anything in userdev currently
+            targetDir = minecraftLibraryJars,
             mcRepo = MC_LIBRARY_URL,
-            mcLibrariesFile = minecraftLibrariesFile
+            mcLibraries = devBundleConfig.buildData.vanillaServerLibraries,
+            sources = false
         ).await()
         hashesFile.parent.createDirectories()
         hashesFile.writeText(hash())
@@ -184,7 +173,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         val mappingsFile = mojangPlusYarnMappings
 
         val hashFile = cache.resolve(paperSetupOutput("generateMappings", "hashes"))
-        val hash = { hash(hashLibraries(minecraftLibraryJars, minecraftLibrarySources), mojangServerMappings, filteredVanillaServerJar) }
+        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar"), mojangServerMappings, filteredVanillaServerJar) }
         val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
         if (upToDate) return
 
@@ -212,7 +201,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                hashLibraries(minecraftLibraryJars, minecraftLibrarySources),
+                minecraftLibraryJars.listDirectoryEntries("*.jar"),
                 mojangPlusYarnMappings,
                 filteredVanillaServerJar,
                 devBundleConfig.remap.args,
@@ -292,7 +281,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                hashLibraries(minecraftLibraryJars, minecraftLibrarySources),
+                minecraftLibraryJars.listDirectoryEntries("*.jar"),
                 accessTransformedServerJar,
                 devBundleConfig.decompile.args,
                 output

@@ -102,7 +102,7 @@ open class AllTasks(
         caseOnlyClassNameChanges.set(cleanupMappings.flatMap { it.caseOnlyNameChanges })
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-        mcLibrariesDir.set(downloadMcLibraries.flatMap { it.sourcesOutputDir })
+        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
         devImports.set(extension.paper.devImports.fileExists(project))
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 

@@ -95,7 +95,7 @@ class PaperweightCore : Plugin<Project> {
             mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.inspectVanillaJar.flatMap { it.serverLibraries })
             mcLibrariesDir.set(tasks.downloadMcLibraries.flatMap { it.outputDir })
-            mcLibrariesSourcesDir.set(tasks.downloadMcLibraries.flatMap { it.sourcesOutputDir })
+            mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
             mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
@@ -201,7 +201,7 @@ class PaperweightCore : Plugin<Project> {
             spigotDecompJar.set(allTasks.spigotDecompileJar.flatMap { it.outputJar }.get())
 
             // library class imports
-            mcLibrarySourcesDir.set(allTasks.downloadMcLibraries.flatMap { it.sourcesOutputDir }.get())
+            mcLibrarySourcesDir.set(allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }.get())
             devImports.set(extension.paper.devImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
