@@ -52,14 +52,6 @@ open class SpigotTasks(
         additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings.fileExists(project))
     }
 
-    val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
-        inputJar.set(downloadServerJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
-        mcLibraries.set(setupMcLibraries.flatMap { it.outputFile })
-
-        serverLibraries.set(cache.resolve(SERVER_LIBRARIES))
-    }
-
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
         memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })

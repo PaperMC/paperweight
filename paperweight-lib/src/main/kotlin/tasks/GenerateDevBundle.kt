@@ -300,6 +300,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             accessTransformFile = "$targetDir/$atFileName",
             mojangMappedPaperclipFile = "$targetDir/$mojangMappedPaperclipFileName",
             vanillaJarIncludes = vanillaJarIncludes.get(),
+            vanillaServerLibraries = vanillaServerLibraries.get(),
             libraryDependencies = determineLibraries(vanillaServerLibraries.get()),
             libraryRepositories = libraryRepositories.get(),
             relocations = relocations()
@@ -367,6 +368,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         val accessTransformFile: String,
         val mojangMappedPaperclipFile: String,
         val vanillaJarIncludes: List<String>,
+        val vanillaServerLibraries: List<String>,
         val libraryDependencies: Set<String>,
         val libraryRepositories: List<String>,
         val relocations: List<Relocation>
