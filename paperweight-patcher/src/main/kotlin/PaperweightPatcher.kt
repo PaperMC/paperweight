@@ -25,6 +25,7 @@ package io.papermc.paperweight.patcher
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.patcher.tasks.CheckoutRepo
+import io.papermc.paperweight.patcher.tasks.PaperweightPatcherPrepareForDownstream
 import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
 import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
 import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
@@ -40,7 +41,6 @@ import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.Transformer
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
@@ -68,22 +68,42 @@ class PaperweightPatcher : Plugin<Project> {
         target.configurations.create(PAPERCLIP_CONFIG)
 
         val workDirProp = target.providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
-        val dataFileProp = target.providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
-            .orElse(target.providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM)).forUseAtConfigurationTime()
+        val dataFileProp = target.providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).forUseAtConfigurationTime()
 
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
-        val downstreamData = target.tasks.register(PAPERWEIGHT_PREPARE_DOWNSTREAM)
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
+
+        val mergeReobfMappingsPatches by target.tasks.registering<PatchMappings> {
+            patch.set(patcher.reobfMappingsPatch.fileExists(target))
+            outputMappings.convention(defaultOutput("tiny"))
+
+            fromNamespace.set(DEOBF_NAMESPACE)
+            toNamespace.set(SPIGOT_NAMESPACE)
+        }
+
+        val patchReobfMappings by target.tasks.registering<PatchMappings> {
+            inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
+            patch.set(mergeReobfMappingsPatches.flatMap { it.outputMappings })
+            outputMappings.set(target.layout.cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+
+            fromNamespace.set(DEOBF_NAMESPACE)
+            toNamespace.set(SPIGOT_NAMESPACE)
+        }
+
+        val prepareForDownstream = target.tasks.register<PaperweightPatcherPrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
+            dataFile.fileProvider(dataFileProp.map { File(it) })
+            reobfMappingsPatch.set(mergeReobfMappingsPatches.flatMap { it.outputMappings })
+        }
 
         val upstreamDataTaskRef = AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>(null)
 
         patcher.upstreams.all {
-            val taskPair = target.createUpstreamTask(this, patcher, workDirProp, dataFileProp, upstreamDataTaskRef)
+            val taskPair = target.createUpstreamTask(this, patcher, workDirProp, upstreamDataTaskRef)
 
             patchTasks.all {
                 val createdPatchTask = target.createPatchTask(this, patcher, taskPair, applyPatches)
-                downstreamData {
+                prepareForDownstream {
                     dependsOn(createdPatchTask)
                 }
                 target.rebuildPatchTask(this, rebuildPatches)
@@ -110,17 +130,29 @@ class PaperweightPatcher : Plugin<Project> {
             }
 
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
+            val upstreamData = upstreamDataTask.map { readUpstreamData(it.dataFile) }
+
+            mergeReobfMappingsPatches {
+                inputMappings.pathProvider(upstreamData.map { it.reobfMappingsPatch })
+            }
+            val mergedReobfPackagesToFix = upstreamData.zip(patcher.reobfPackagesToFix) { data, pkgs ->
+                data.reobfPackagesToFix + pkgs
+            }
+
+            prepareForDownstream {
+                upstreamDataFile.set(upstreamDataTask.flatMap { it.dataFile })
+                reobfPackagesToFix.set(mergedReobfPackagesToFix)
+            }
 
             for (upstream in patcher.upstreams) {
                 for (patchTask in upstream.patchTasks) {
                     patchTask.patchTask {
-                        sourceMcDevJar.convention(target, upstreamDataTask.mapUpstreamData { it.decompiledJar })
-                        mcLibrariesDir.convention(target, upstreamDataTask.mapUpstreamData { it.libSourceDir })
+                        sourceMcDevJar.convention(target, upstreamData.map { it.decompiledJar })
+                        mcLibrariesDir.convention(target, upstreamData.map { it.libSourceDir })
                     }
                 }
             }
 
-            val upstreamData = upstreamDataTask.readUpstreamData()
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
 
@@ -142,7 +174,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.accessTransform }
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
-                reobfMappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
+                reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
 
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
@@ -154,10 +186,9 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
                 upstreamData.flatMap { provider { it.libFile } },
-                upstreamData.flatMap { provider { it.reobfPackagesToFix } }
-            ) {
-                mappingsFile.set(generateReobfMappings.flatMap { it.reobfMappings })
-            } ?: return@afterEvaluate
+                mergedReobfPackagesToFix,
+                patchReobfMappings.flatMap { it.outputMappings }
+            ) ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                 originalJar.pathProvider(upstreamData.map { it.vanillaJar })
@@ -169,30 +200,17 @@ class PaperweightPatcher : Plugin<Project> {
         }
     }
 
-    private fun TaskProvider<PaperweightPatcherUpstreamData>.readUpstreamData(): Provider<UpstreamData> =
-        flatMap { it.dataFile.flatMap { dataFile -> it.project.provider { readUpstreamData(dataFile) } } }
-
-    private fun <O> TaskProvider<PaperweightPatcherUpstreamData>.mapUpstreamData(
-        transform: Transformer<O, UpstreamData?>
-    ): Provider<O> = readUpstreamData().map(transform)
-
     private fun Project.createUpstreamTask(
         upstream: PatcherUpstream,
         ext: PaperweightPatcherExtension,
         workDirProp: Provider<String>,
-        dataFileProp: Provider<String>,
         upstreamDataTaskRef: AtomicReference<TaskProvider<PaperweightPatcherUpstreamData>>
     ): Pair<TaskProvider<CheckoutRepo>?, TaskProvider<PaperweightPatcherUpstreamData>> {
         val workDirFromProp = layout.dir(workDirProp.map { File(it) }).orElse(ext.upstreamsDir)
-        val dataFileFromProp = layout.file(dataFileProp.map { File(it) })
 
         val upstreamData = tasks.configureTask<PaperweightPatcherUpstreamData>(upstream.upstreamDataTaskName) {
             workDir.convention(workDirFromProp)
-            if (dataFileFromProp.isPresent) {
-                dataFile.convention(dataFileFromProp)
-            } else {
-                dataFile.convention(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
-            }
+            dataFile.convention(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
         }
 
         val cloneTask = (upstream as? RepoPatcherUpstream)?.let { repo ->
@@ -207,7 +225,6 @@ class PaperweightPatcher : Plugin<Project> {
             upstreamData {
                 dependsOn(cloneTask)
                 projectDir.convention(cloneTask.flatMap { it.outputDir })
-                reobfPackagesToFix.convention(ext.reobfPackagesToFix)
             }
 
             return@let cloneTask

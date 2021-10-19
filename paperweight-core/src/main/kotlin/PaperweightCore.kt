@@ -25,7 +25,7 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
-import io.papermc.paperweight.core.tasks.PaperweightCoreUpstreamData
+import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
@@ -87,7 +87,7 @@ class PaperweightCore : Plugin<Project> {
 
         target.createPatchRemapTask(tasks)
 
-        target.tasks.register<PaperweightCoreUpstreamData>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
+        target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
@@ -100,6 +100,7 @@ class PaperweightCore : Plugin<Project> {
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
             reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
+            reobfMappingsPatch.set(ext.paper.reobfMappingsPatch)
             vanillaJarIncludes.set(ext.vanillaJarIncludes)
             paramMappingsUrl.set(ext.paramMappingsRepo)
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
@@ -107,9 +108,7 @@ class PaperweightCore : Plugin<Project> {
 
             dataFile.set(
                 target.layout.file(
-                    providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
-                        .orElse(providers.gradleProperty(PAPERWEIGHT_PREPARE_DOWNSTREAM))
-                        .map { File(it) }
+                    providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).map { File(it) }
                 )
             )
         }
@@ -151,10 +150,9 @@ class PaperweightCore : Plugin<Project> {
                 tasks.decompileJar.flatMap { it.outputJar },
                 ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES),
-                ext.paper.reobfPackagesToFix
-            ) {
-                mappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
-            } ?: return@afterEvaluate
+                ext.paper.reobfPackagesToFix,
+                tasks.patchReobfMappings.flatMap { it.outputMappings }
+            ) ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                 originalJar.set(tasks.downloadServerJar.flatMap { it.outputJar })

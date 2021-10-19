@@ -22,9 +22,9 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.file.RegularFile
 
 data class UpstreamData(
     val vanillaJar: Path,
@@ -37,18 +37,21 @@ data class UpstreamData(
     val mappings: Path,
     val notchToSpigotMappings: Path,
     val sourceMappings: Path,
-    val reobfPackagesToFix: List<String>?,
+    val reobfPackagesToFix: List<String>,
+    val reobfMappingsPatch: Path,
     val vanillaIncludes: List<String>,
     val paramMappings: MavenDep,
     val accessTransform: Path
 )
 
-fun readUpstreamData(inputFile: RegularFile): UpstreamData? {
-    return inputFile.convertToPathOrNull()?.let { file ->
+fun readUpstreamData(inputFile: Any): UpstreamData = inputFile.convertToPath().let { file ->
+    try {
         if (file.isRegularFile()) {
             gson.fromJson(file)
         } else {
-            null
+            throw PaperweightException("Upstream data file does not exist.")
         }
+    } catch (ex: Exception) {
+        throw PaperweightException("Failed to read upstream data.", ex)
     }
 }

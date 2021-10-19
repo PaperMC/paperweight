@@ -28,6 +28,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
@@ -44,7 +45,7 @@ fun Project.setupServerProject(
     mcDevSourceDir: Path,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
-    reobfConfig: RemapJar.() -> Unit
+    reobfMappings: Provider<RegularFile>,
 ): ServerTasks? {
     if (!projectDir.exists()) {
         return null
@@ -79,13 +80,13 @@ fun Project.setupServerProject(
     addMcDevSourcesRoot(mcDevSourceDir)
 
     plugins.apply("com.github.johnrengelman.shadow")
-    return createBuildTasks(parent, packagesToFix, reobfConfig)
+    return createBuildTasks(parent, packagesToFix, reobfMappings)
 }
 
 private fun Project.createBuildTasks(
     parent: Project,
     packagesToFix: Provider<List<String>?>,
-    reobfConfig: RemapJar.() -> Unit
+    reobfMappings: Provider<RegularFile>
 ): ServerTasks {
     val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
 
@@ -102,7 +103,7 @@ private fun Project.createBuildTasks(
 
         inputJar.set(fixJarForReobf.flatMap { it.outputJar })
 
-        reobfConfig()
+        mappingsFile.set(reobfMappings)
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
