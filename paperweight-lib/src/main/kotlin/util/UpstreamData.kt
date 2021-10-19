@@ -33,7 +33,7 @@ data class UpstreamData(
     val mcVersion: String,
     val libDir: Path,
     val libSourceDir: Path,
-    val libFile: Path?,
+    val libFile: Path,
     val mappings: Path,
     val notchToSpigotMappings: Path,
     val sourceMappings: Path,

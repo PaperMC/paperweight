@@ -36,7 +36,6 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -63,7 +62,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
 
-    @get:Optional
     @get:InputFile
     abstract val mcLibrariesFile: RegularFileProperty
 
@@ -110,7 +108,7 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             mcVersion.get(),
             mcLibrariesDir.path,
             mcLibrariesSourcesDir.path,
-            mcLibrariesFile.pathOrNull,
+            mcLibrariesFile.path,
             mappings.path,
             notchToSpigotMappings.path,
             sourceMappings.path,

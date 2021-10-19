@@ -168,12 +168,15 @@ abstract class PaperweightUser : Plugin<Project> {
         devBundleConfig: GenerateDevBundle.DevBundleConfig
     ) = repositories {
         maven(devBundleConfig.buildData.paramMappings.url) {
+            name = PARAM_MAPPINGS_REPO_NAME
             content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
         }
         maven(devBundleConfig.remap.dep.url) {
+            name = REMAPPER_REPO_NAME
             content { onlyForConfigurations(REMAPPER_CONFIG) }
         }
         maven(devBundleConfig.decompile.dep.url) {
+            name = DECOMPILER_REPO_NAME
             content { onlyForConfigurations(DECOMPILER_CONFIG) }
         }
         for (repo in devBundleConfig.buildData.libraryRepositories) {
