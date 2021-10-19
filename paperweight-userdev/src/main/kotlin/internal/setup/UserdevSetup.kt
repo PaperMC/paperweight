@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.userdev.internal.setup
 
-import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
@@ -132,22 +131,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         )
     }
 
-    private val minecraftLibrariesFile: Path = cache.resolve(MC_LIBRARIES)
-    private fun writeMinecraftLibrariesFile() {
-        setupMinecraftLibraries(
-            minecraftVersionManifest["libraries"].array.map { lib ->
-                lib["name"].string
-            },
-            minecraftLibrariesFile
-        )
-    }
-
     private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
     private fun downloadMinecraftLibraries(context: Context) {
-        writeMinecraftLibrariesFile()
-
         val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
-        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar"), minecraftLibrariesFile) }
+        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar")) }
         val upToDate = hashesFile.isRegularFile() && hashesFile.readText() == hash()
         if (upToDate) return
 
