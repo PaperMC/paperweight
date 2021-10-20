@@ -34,13 +34,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.*
 
@@ -70,8 +64,8 @@ abstract class RemapPatches : BaseTask() {
     @get:InputFile
     abstract val spigotDecompJar: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val mcLibrarySourcesDir: DirectoryProperty
+    @get:InputFiles
+    abstract val mcLibrariesSources: ConfigurableFileCollection
 
     @get:InputFile
     abstract val devImports: RegularFileProperty
@@ -176,7 +170,7 @@ abstract class RemapPatches : BaseTask() {
                     patches = patchesToSkip + patchesToRemap,
                     decompJar = spigotDecompJar.path,
                     importsFile = devImports.path,
-                    librariesDir = mcLibrarySourcesDir.path,
+                    librarySources = mcLibrariesSources.asFileTree,
                     targetDir = tempInputDir.resolve("src/main/java")
                 )
 

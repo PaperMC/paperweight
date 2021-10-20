@@ -25,7 +25,6 @@ package io.papermc.paperweight.userdev.internal.setup
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -37,7 +36,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.jvm.toolchain.JavaLauncher
@@ -63,7 +61,6 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     interface Parameters : BuildServiceParameters {
         val bundleZip: RegularFileProperty
         val cache: RegularFileProperty
-        val downloadService: Property<DownloadService>
     }
 
     private val cache: Path
@@ -77,34 +74,33 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private val devBundleChanged = extractDevBundle.first
     val devBundleConfig = extractDevBundle.second
 
-    private val minecraftVersionManifest: JsonObject by lazy {
-        val minecraftManifestJson = download(
-            "minecraft manifest",
+    private lateinit var minecraftVersionManifest: JsonObject
+    private fun initMinecraftVersionManifest(context: Context) {
+        val minecraftManifestJson = context.project.downloadFileNow(
             MC_MANIFEST_URL,
-            cache.resolve(MC_MANIFEST)
+            MINECRAFT_MANIFEST
         )
         val minecraftManifest = gson.fromJson<MinecraftManifest>(minecraftManifestJson)
 
-        val minecraftVersionManifestJson = download(
-            "minecraft version manifest",
+        val minecraftVersionManifestJson = context.project.downloadFileNow(
             minecraftManifest.versions.first { it.id == devBundleConfig.minecraftVersion }.url,
-            cache.resolve(VERSION_JSON)
+            MINECRAFT_VERSION_MANIFEST
         )
-        gson.fromJson(minecraftVersionManifestJson)
+        minecraftVersionManifest = gson.fromJson(minecraftVersionManifestJson)
     }
 
-    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
-    private fun downloadVanillaServerJar() {
-        download(
-            "vanilla minecraft server jar",
+    private lateinit var vanillaServerJar: Path
+    private fun downloadVanillaServerJar(context: Context) {
+        initMinecraftVersionManifest(context)
+        vanillaServerJar = context.project.downloadFileNow(
             minecraftVersionManifest["downloads"]["server"]["url"].string,
-            vanillaServerJar
+            VANILLA_SERVER_JAR
         )
     }
 
     private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
-    private fun filterVanillaServerJar() {
-        downloadVanillaServerJar()
+    private fun filterVanillaServerJar(context: Context) {
+        downloadVanillaServerJar(context)
         val filteredJar = filteredVanillaServerJar
 
         val hashFile = filteredJar.resolveSibling(filteredJar.nameWithoutExtension + ".hashes")
@@ -122,52 +118,39 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hashFile.writeText(hash())
     }
 
-    private val mojangServerMappings: Path = cache.resolve(SERVER_MAPPINGS)
-    private fun downloadMojangServerMappings() {
-        download(
-            "mojang server mappings",
+    private lateinit var mojangServerMappings: Path
+    private fun downloadMojangServerMappings(context: Context) {
+        initMinecraftVersionManifest(context)
+        mojangServerMappings = context.project.downloadFileNow(
             minecraftVersionManifest["downloads"]["server_mappings"]["url"].string,
-            mojangServerMappings
+            MOJANG_SERVER_MAPPINGS
         )
     }
 
-    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
+    private lateinit var minecraftLibraryJars: List<Path>
     private fun downloadMinecraftLibraries(context: Context) {
-        val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
-        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar")) }
-        val upToDate = hashesFile.isRegularFile() && hashesFile.readText() == hash()
-        if (upToDate) return
-
-        LOGGER.lifecycle(":downloading minecraft libraries")
-        downloadMinecraftLibraries(
-            download = parameters.downloadService,
-            workerExecutor = context.workerExecutor,
-            targetDir = minecraftLibraryJars,
-            mcRepo = MC_LIBRARY_URL,
-            mcLibraries = devBundleConfig.buildData.vanillaServerLibraries,
-            sources = false
-        ).await()
-        hashesFile.parent.createDirectories()
-        hashesFile.writeText(hash())
+        minecraftLibraryJars = context.project
+            .downloadMinecraftLibraries(devBundleConfig.buildData.vanillaServerLibraries)
+            .map { it.toPath() }
     }
 
     private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
     private fun generateMappings(context: Context) {
         downloadMinecraftLibraries(context)
-        downloadMojangServerMappings()
-        filterVanillaServerJar()
+        downloadMojangServerMappings(context)
+        filterVanillaServerJar(context)
 
         val mappingsFile = mojangPlusYarnMappings
 
         val hashFile = cache.resolve(paperSetupOutput("generateMappings", "hashes"))
-        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar"), mojangServerMappings, filteredVanillaServerJar) }
+        val hash = { hash(minecraftLibraryJars, mojangServerMappings, filteredVanillaServerJar) }
         val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
         if (upToDate) return
 
         LOGGER.lifecycle(":generating mappings")
         generateMappings(
             vanillaJarPath = filteredVanillaServerJar,
-            libraryPaths = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            libraryPaths = minecraftLibraryJars,
             vanillaMappingsPath = mojangServerMappings,
             paramMappingsPath = context.project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile }.convertToPath(),
             outputMappingsPath = mappingsFile,
@@ -188,7 +171,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                minecraftLibraryJars.listDirectoryEntries("*.jar"),
+                minecraftLibraryJars,
                 mojangPlusYarnMappings,
                 filteredVanillaServerJar,
                 devBundleConfig.remap.args,
@@ -206,7 +189,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             mappingsFile = mojangPlusYarnMappings,
             fromNamespace = OBF_NAMESPACE,
             toNamespace = DEOBF_NAMESPACE,
-            remapClasspath = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            remapClasspath = minecraftLibraryJars,
             remapper = context.project.configurations.named(REMAPPER_CONFIG).get(),
             outputJar = output,
             launcher = context.defaultJavaLauncher,
@@ -268,7 +251,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                minecraftLibraryJars.listDirectoryEntries("*.jar"),
+                minecraftLibraryJars,
                 accessTransformedServerJar,
                 devBundleConfig.decompile.args,
                 output
@@ -284,7 +267,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             workingDir = cache,
             executable = context.project.configurations.named(DECOMPILER_CONFIG).get(),
             inputJar = accessTransformedServerJar,
-            libraries = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            libraries = minecraftLibraryJars,
             outputJar = output,
             javaLauncher = context.defaultJavaLauncher
         )
@@ -426,23 +409,4 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
     private fun hashDirectory(dir: Path): String =
         Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
-
-    private fun download(
-        downloadName: String,
-        remote: String,
-        destination: Path
-    ): Path {
-        val hashFile = destination.resolveSibling(destination.name + ".hashes")
-
-        val upToDate = hashFile.isRegularFile() &&
-            hashFile.readText() == hash(remote, destination)
-        if (upToDate) return destination
-
-        LOGGER.lifecycle(":downloading $downloadName")
-        destination.parent.createDirectories()
-        parameters.downloadService.get().download(remote, destination)
-        hashFile.writeText(hash(remote, destination))
-
-        return destination
-    }
 }

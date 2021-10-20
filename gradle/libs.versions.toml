@@ -7,7 +7,6 @@ hypo = "1.2.1"
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 
-httpclient = "org.apache.httpcomponents:httpclient:4.5.13"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
 
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }

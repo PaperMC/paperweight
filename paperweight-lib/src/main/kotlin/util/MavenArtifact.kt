@@ -22,10 +22,7 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
-import java.nio.file.Path
-import kotlin.io.path.*
 
 data class MavenArtifact(
     private val group: String,
@@ -46,6 +43,7 @@ data class MavenArtifact(
     val file: String
         get() = "$artifact-$version$classifierText.$ext"
 
+    /*
     fun downloadToFile(downloadService: DownloadService, targetFile: Path, repos: List<String>) {
         targetFile.parent.createDirectories()
 
@@ -70,6 +68,7 @@ data class MavenArtifact(
         downloadToFile(downloadService, out, repos)
         return out
     }
+     */
 
     override fun toString(): String {
         return buildString(50) {

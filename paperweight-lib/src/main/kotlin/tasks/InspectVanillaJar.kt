@@ -26,13 +26,8 @@ import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.*
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
@@ -49,9 +44,8 @@ abstract class InspectVanillaJar : BaseTask() {
     @get:Classpath
     abstract val libraries: ConfigurableFileCollection
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mcLibraries: RegularFileProperty
+    @get:Input
+    abstract val mcLibraries: ListProperty<String>
 
     @get:OutputFile
     abstract val loggerFile: RegularFileProperty
@@ -124,11 +118,9 @@ abstract class InspectVanillaJar : BaseTask() {
     }
 
     private fun checkLibraries(): Set<MavenArtifact> {
-        val mcLibs = mcLibraries.path.useLines { lines ->
-            lines.map { MavenArtifact.parse(it) }
-                .map { it.file to it }
-                .toMap()
-        }
+        val mcLibs = mcLibraries.get()
+            .map { MavenArtifact.parse(it) }
+            .associateBy { it.file }
 
         val serverLibs = mutableSetOf<MavenArtifact>()
 

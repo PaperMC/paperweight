@@ -26,16 +26,12 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import kotlin.io.path.*
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
@@ -63,9 +59,8 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:InputFile
     abstract val devImports: RegularFileProperty
 
-    @get:Optional
-    @get:InputDirectory
-    abstract val mcLibrariesDir: DirectoryProperty
+    @get:InputFiles
+    abstract val mcLibrariesSources: ConfigurableFileCollection
 
     @get:Input
     abstract val ignoreGitIgnore: Property<Boolean>
@@ -125,7 +120,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDir = mcLibrariesDir.pathOrNull,
+                librarySources = mcLibrariesSources.asFileTree,
                 targetDir = srcDir,
                 printOutput = printOutput.get()
             )

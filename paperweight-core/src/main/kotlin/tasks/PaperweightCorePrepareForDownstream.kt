@@ -27,14 +27,12 @@ import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -52,12 +50,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
 
     @get:Input
     abstract val mcVersion: Property<String>
-
-    @get:InputDirectory
-    abstract val mcLibrariesDir: DirectoryProperty
-
-    @get:InputDirectory
-    abstract val mcLibrariesSourcesDir: DirectoryProperty
 
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
@@ -106,8 +98,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             remappedJar.path,
             decompiledJar.path,
             mcVersion.get(),
-            mcLibrariesDir.path,
-            mcLibrariesSourcesDir.path,
             mcLibrariesFile.path,
             mappings.path,
             notchToSpigotMappings.path,

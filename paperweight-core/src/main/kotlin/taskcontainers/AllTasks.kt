@@ -53,7 +53,7 @@ open class AllTasks(
 
     val copyResources by tasks.registering<CopyResources> {
         inputJar.set(applyMergedAt.flatMap { it.outputJar })
-        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        vanillaJar.set(serverJar)
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta"))
 
         outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
@@ -63,7 +63,7 @@ open class AllTasks(
         executable.from(project.configurations.named(DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(minecraftLibraries)
 
         outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
     }
@@ -102,7 +102,7 @@ open class AllTasks(
         caseOnlyClassNameChanges.set(cleanupMappings.flatMap { it.caseOnlyNameChanges })
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        mcLibrariesSources.from(minecraftLibrariesSources)
         devImports.set(extension.paper.devImports.fileExists(project))
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 

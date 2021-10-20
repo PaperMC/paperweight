@@ -54,9 +54,6 @@ fun RepositoryContentDescriptor.includeFromDependencyNotation(dependencyNotation
     when {
         split.size == 1 -> includeGroup(split[0])
         split.size == 2 -> includeModule(split[0], split[1])
-        split.size >= 3 -> {
-            includeModule(split[0], split[1])
-            includeVersion(split[0], split[1], split[2])
-        }
+        split.size >= 3 -> includeVersion(split[0], split[1], split[2])
     }
 }
