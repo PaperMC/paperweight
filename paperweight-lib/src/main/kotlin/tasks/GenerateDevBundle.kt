@@ -382,6 +382,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 1
+        const val currentDataVersion = 2
     }
 }
