@@ -105,6 +105,14 @@ open class SpigotTasks(
         outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
 
+    val cleanupSourceMappings by tasks.registering<CleanupSourceMappings> {
+        sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
+        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        inputMappings.set(patchMappings.flatMap { it.outputMappings })
+
+        outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_SOURCE_MAPPINGS))
+    }
+
     val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
         inputZip.set(spigotRemapJar.flatMap { it.outputJar })
         excludesFile.set(extension.craftBukkit.excludesFile)
@@ -183,7 +191,7 @@ open class SpigotTasks(
     val remapSpigotSources by tasks.registering<RemapSources> {
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
-        mappings.set(patchMappings.flatMap { it.outputMappings })
+        mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })
         vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
         mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })

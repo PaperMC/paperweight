@@ -28,40 +28,15 @@ import dev.denwav.hypo.asm.hydrate.SuperConstructorHydrator
 import dev.denwav.hypo.core.HypoContext
 import dev.denwav.hypo.hydrate.HydrationManager
 import dev.denwav.hypo.mappings.ChangeChain
-import dev.denwav.hypo.mappings.ChangeRegistry
-import dev.denwav.hypo.mappings.LorenzUtil
 import dev.denwav.hypo.mappings.MappingsCompletionManager
-import dev.denwav.hypo.mappings.MergeResult
-import dev.denwav.hypo.mappings.MergeableMappingsChange
-import dev.denwav.hypo.mappings.changes.AbstractMappingsChange
-import dev.denwav.hypo.mappings.changes.MemberReference
-import dev.denwav.hypo.mappings.changes.RemoveMappingChange
-import dev.denwav.hypo.mappings.contributors.ChangeContributor
 import dev.denwav.hypo.mappings.contributors.CopyMappingsDown
 import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
 import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
-import dev.denwav.hypo.model.data.ClassData
-import dev.denwav.hypo.model.data.types.PrimitiveType
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.util.Collections
 import javax.inject.Inject
-import kotlin.collections.HashMap
-import kotlin.collections.MutableList
-import kotlin.collections.MutableMap
-import kotlin.collections.asSequence
-import kotlin.collections.joinToString
-import kotlin.collections.listOf
-import kotlin.collections.mutableListOf
-import kotlin.collections.plusAssign
-import kotlin.collections.set
-import kotlin.collections.toList
-import kotlin.collections.withIndex
 import kotlin.io.path.*
-import org.cadixdev.lorenz.MappingSet
-import org.cadixdev.lorenz.model.ClassMapping
-import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -87,9 +62,6 @@ abstract class CleanupMappings : JavaLauncherTask() {
     @get:OutputFile
     abstract val outputMappings: RegularFileProperty
 
-    @get:OutputFile
-    abstract val caseOnlyNameChanges: RegularFileProperty
-
     @get:Internal
     abstract val jvmargs: ListProperty<String>
 
@@ -100,7 +72,6 @@ abstract class CleanupMappings : JavaLauncherTask() {
         super.init()
 
         jvmargs.convention(listOf("-Xmx1G"))
-        caseOnlyNameChanges.convention(defaultOutput("caseOnlyClassNameChanges", "json"))
     }
 
     @TaskAction
@@ -116,133 +87,18 @@ abstract class CleanupMappings : JavaLauncherTask() {
             sourceJar.set(this@CleanupMappings.sourceJar.path)
 
             outputMappings.set(this@CleanupMappings.outputMappings.path)
-            caseOnlyNameChanges.set(this@CleanupMappings.caseOnlyNameChanges.path)
         }
     }
 
-    object ParamIndexesForSource : ChangeContributor {
+    abstract class CleanupMappingsAction : WorkAction<CleanupMappingsAction.Parameters> {
 
-        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-            if (currentClass == null || classMapping == null) {
-                return
-            }
+        interface Parameters : WorkParameters {
+            val inputMappings: RegularFileProperty
+            val libraries: ConfigurableFileCollection
+            val sourceJar: RegularFileProperty
 
-            for (methodMapping in classMapping.methodMappings) {
-                val method = LorenzUtil.findMethod(currentClass, methodMapping) ?: continue
-
-                var methodRef: MemberReference? = null
-
-                var lvtIndex = if (method.isStatic) 0 else 1
-                if (method.isConstructor && currentClass.outerClass() != null && !currentClass.isStaticInnerClass) {
-                    lvtIndex += 1
-                }
-                for ((sourceIndex, param) in method.params().withIndex()) {
-                    if (methodMapping.hasParameterMapping(lvtIndex)) {
-                        if (methodRef == null) {
-                            methodRef = MemberReference.of(methodMapping)
-                        }
-                        registry.submitChange(ParamIndexChange(methodRef, lvtIndex, sourceIndex))
-                    }
-                    lvtIndex++
-                    if (param === PrimitiveType.LONG || param === PrimitiveType.DOUBLE) {
-                        lvtIndex++
-                    }
-                }
-            }
+            val outputMappings: RegularFileProperty
         }
-
-        override fun name(): String = "ParamIndexesForSource"
-
-        class ParamIndexChange(
-            target: MemberReference,
-            fromIndex: Int,
-            toIndex: Int
-        ) : AbstractMappingsChange(target), MergeableMappingsChange<ParamIndexChange> {
-
-            private val indexMap: MutableMap<Int, Int> = HashMap()
-
-            init {
-                indexMap[fromIndex] = toIndex
-            }
-
-            override fun applyChange(input: MappingSet, ref: MemberReference) {
-                val classMapping = input.getOrCreateClassMapping(ref.className())
-                val methodMapping = classMapping.getOrCreateMethodMapping(ref.name(), ref.desc())
-
-                val paramsMap = LorenzUtil.getParamsMap(methodMapping)
-                val params = paramsMap.values.toList()
-                paramsMap.clear()
-
-                for (param in params) {
-                    methodMapping.createParameterMapping(indexMap[param.index] ?: param.index, param.deobfuscatedName)
-                }
-            }
-
-            override fun mergeWith(that: ParamIndexChange): MergeResult<ParamIndexChange> {
-                for (fromIndex in this.indexMap.keys) {
-                    if (that.indexMap.containsKey(fromIndex)) {
-                        return MergeResult.failure("Cannot merge 2 param mappings changes with matching fromIndexes")
-                    }
-                }
-                for (toIndex in this.indexMap.values) {
-                    if (that.indexMap.containsValue(toIndex)) {
-                        return MergeResult.failure("Cannot merge 2 param mappings changes with matching toIndex")
-                    }
-                }
-
-                this.indexMap += that.indexMap
-                return MergeResult.success(this)
-            }
-
-            override fun toString(): String {
-                return "Move param mappings for ${target()} for index pairs [${indexMap.entries.joinToString(", ") { "${it.key}:${it.value}" }}]"
-            }
-        }
-    }
-
-    object RemoveLambdaMappings : ChangeContributor {
-
-        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-            if (currentClass == null || classMapping == null) {
-                return
-            }
-
-            for (methodMapping in classMapping.methodMappings) {
-                if (methodMapping.deobfuscatedName.startsWith("lambda$")) {
-                    registry.submitChange(RemoveMappingChange.of(MemberReference.of(methodMapping)))
-                }
-            }
-        }
-
-        override fun name(): String = "RemoveLambdaMappings"
-    }
-
-    class FindCaseOnlyClassNameChanges(private val changes: MutableList<ClassNameChange>) : ChangeContributor {
-        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-            if (classMapping !is TopLevelClassMapping) {
-                return
-            }
-            val obfName = classMapping.obfuscatedName
-            val deobfName = classMapping.deobfuscatedName
-
-            if (obfName != deobfName && obfName.equals(deobfName, ignoreCase = true)) {
-                changes += ClassNameChange(obfName, deobfName)
-            }
-        }
-
-        override fun name(): String = "ParamIndexesForSource"
-    }
-
-    interface CleanupMappingsParams : WorkParameters {
-        val inputMappings: RegularFileProperty
-        val libraries: ConfigurableFileCollection
-        val sourceJar: RegularFileProperty
-
-        val outputMappings: RegularFileProperty
-        val caseOnlyNameChanges: RegularFileProperty
-    }
-
-    abstract class CleanupMappingsAction : WorkAction<CleanupMappingsParams> {
 
         override fun execute() {
             val libs = parameters.libraries.files.asSequence()
@@ -257,8 +113,6 @@ abstract class CleanupMappings : JavaLauncherTask() {
                 DEOBF_NAMESPACE
             )
 
-            val caseOnlyChanges = Collections.synchronizedList(mutableListOf<ClassNameChange>())
-
             val cleanedMappings = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.sourceJar.path)))
                 .withContextProviders(AsmClassDataProvider.of(libs))
@@ -270,10 +124,9 @@ abstract class CleanupMappings : JavaLauncherTask() {
                         .hydrate(hypoContext)
 
                     ChangeChain.create()
-                        .addLink(RemoveUnusedMappings.create(), RemoveLambdaMappings)
+                        .addLink(RemoveUnusedMappings.create())
                         .addLink(PropagateMappingsUp.create())
                         .addLink(CopyMappingsDown.create())
-                        .addLink(ParamIndexesForSource, FindCaseOnlyClassNameChanges(caseOnlyChanges))
                         .applyChain(mappings, MappingsCompletionManager.create(hypoContext))
                 }
 
@@ -283,10 +136,6 @@ abstract class CleanupMappings : JavaLauncherTask() {
                 SPIGOT_NAMESPACE,
                 DEOBF_NAMESPACE
             )
-
-            parameters.caseOnlyNameChanges.path.bufferedWriter(Charsets.UTF_8).use { writer ->
-                gson.toJson(caseOnlyChanges, writer)
-            }
         }
     }
 }

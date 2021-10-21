@@ -99,7 +99,7 @@ open class AllTasks(
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
-        caseOnlyClassNameChanges.set(cleanupMappings.flatMap { it.caseOnlyNameChanges })
+        caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
