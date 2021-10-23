@@ -263,13 +263,12 @@ fun toHex(hash: ByteArray): String {
 }
 
 fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLauncher> {
-    return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain)
-        .orElse(
-            launcherFor {
-                // If the java plugin isn't applied, or no toolchain value was set
-                languageVersion.set(JavaLanguageVersion.of(16))
-            }
-        )
+    return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain).orElse(
+        launcherFor {
+            // If the java plugin isn't applied, or no toolchain value was set
+            languageVersion.set(JavaLanguageVersion.of(16))
+        }
+    )
 }
 
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
