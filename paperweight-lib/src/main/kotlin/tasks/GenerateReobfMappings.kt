@@ -196,7 +196,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             val fieldMappings = MappingFormats.TINY.read(parameters.sourceMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
             val spigotFieldMappings = filterFieldMappings(notchToSpigot).reverse().merge(fieldMappings)
 
-            val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse()
+            val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse2()
 
             val cleanedOutputMappings = HypoContext.builder()
                 .withConfig(HypoConfig.builder().setRequireFullClasspath(false).withParallelism(1).build())
