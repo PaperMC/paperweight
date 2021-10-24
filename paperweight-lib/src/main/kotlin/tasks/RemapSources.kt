@@ -77,19 +77,11 @@ abstract class RemapSources : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val spigotApiDir: DirectoryProperty
 
-    @get:Optional
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val additionalAts: RegularFileProperty
-
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
 
-    @get:OutputFile
-    abstract val sourcesOutputZip: RegularFileProperty
-
-    @get:OutputFile
-    abstract val testsOutputZip: RegularFileProperty
+    @get:OutputDirectory
+    abstract val remapOutputDir: DirectoryProperty
 
     @get:Internal
     abstract val jvmargs: ListProperty<String>
@@ -104,73 +96,62 @@ abstract class RemapSources : JavaLauncherTask() {
         super.init()
 
         jvmargs.convention(listOf("-Xmx2G"))
-        sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
-        testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
+        remapOutputDir.convention(project, defaultOutput("output").path)
         generatedAt.convention(defaultOutput("at"))
         spigotRecompiledClasses.convention(defaultOutput("spigotRecompiledClasses", "txt"))
     }
 
     @TaskAction
     fun run() {
-        val srcOut = findOutputDir(sourcesOutputZip.path).apply { createDirectories() }
-        val testOut = findOutputDir(testsOutputZip.path).apply { createDirectories() }
+        val srcOut = remapOutputDir.path.resolve("src/main/java")
+        val testOut = remapOutputDir.path.resolve("src/test/java")
 
-        try {
-            val queue = workerExecutor.processIsolation {
-                forkOptions.jvmArgs(jvmargs.get())
-                forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
-            }
-
-            val srcDir = spigotServerDir.path.resolve("src/main/java")
-
-            // Remap sources
-            queue.submit(RemapAction::class) {
-                classpath.from(vanillaRemappedSpigotJar.path)
-                classpath.from(mojangMappedVanillaJar.path)
-                classpath.from(vanillaJar.path)
-                classpath.from(spigotApiDir.dir("src/main/java").path)
-                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
-                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
-
-                mappings.set(this@RemapSources.mappings.path)
-                inputDir.set(srcDir)
-
-                cacheDir.set(this@RemapSources.layout.cache)
-
-                outputDir.set(srcOut)
-                generatedAtOutput.set(generatedAt.path)
-            }
-
-            val testSrc = spigotServerDir.path.resolve("src/test/java")
-
-            // Remap tests
-            queue.submit(RemapAction::class) {
-                classpath.from(vanillaRemappedSpigotJar.path)
-                classpath.from(mojangMappedVanillaJar.path)
-                classpath.from(vanillaJar.path)
-                classpath.from(spigotApiDir.dir("src/main/java").path)
-                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
-                classpath.from(srcDir)
-                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
-
-                mappings.set(this@RemapSources.mappings.path)
-                inputDir.set(testSrc)
-
-                cacheDir.set(this@RemapSources.layout.cache)
-
-                outputDir.set(testOut)
-            }
-
-            queue.await()
-
-            zip(srcOut, sourcesOutputZip)
-            zip(testOut, testsOutputZip)
-
-            writeSpigotRecompiledFiles(srcOut)
-        } finally {
-            srcOut.deleteRecursively()
-            testOut.deleteRecursively()
+        val queue = workerExecutor.processIsolation {
+            forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
+
+        val srcDir = spigotServerDir.path.resolve("src/main/java")
+
+        // Remap sources
+        queue.submit(RemapAction::class) {
+            classpath.from(vanillaRemappedSpigotJar.path)
+            classpath.from(mojangMappedVanillaJar.path)
+            classpath.from(vanillaJar.path)
+            classpath.from(spigotApiDir.dir("src/main/java").path)
+            classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
+
+            mappings.set(this@RemapSources.mappings.path)
+            inputDir.set(srcDir)
+
+            cacheDir.set(this@RemapSources.layout.cache)
+
+            outputDir.set(srcOut)
+            generatedAtOutput.set(generatedAt.path)
+        }
+
+        val testSrc = spigotServerDir.path.resolve("src/test/java")
+
+        // Remap tests
+        queue.submit(RemapAction::class) {
+            classpath.from(vanillaRemappedSpigotJar.path)
+            classpath.from(mojangMappedVanillaJar.path)
+            classpath.from(vanillaJar.path)
+            classpath.from(spigotApiDir.dir("src/main/java").path)
+            classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
+            classpath.from(srcDir)
+
+            mappings.set(this@RemapSources.mappings.path)
+            inputDir.set(testSrc)
+
+            cacheDir.set(this@RemapSources.layout.cache)
+
+            outputDir.set(testOut)
+        }
+
+        queue.await()
+
+        writeSpigotRecompiledFiles(srcOut)
     }
 
     private fun writeSpigotRecompiledFiles(srcOut: Path) {
@@ -201,8 +182,6 @@ abstract class RemapSources : JavaLauncherTask() {
                 SPIGOT_NAMESPACE,
                 DEOBF_NAMESPACE
             )
-
-            val additionalAt = parameters.additionalAts.pathOrNull?.let { AccessTransformFormats.FML.read(it) }
 
             val processAt = AccessTransformSet.create()
             val generatedAtOutPath = parameters.generatedAtOutput.pathOrNull
@@ -236,14 +215,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
                     merc.rewrite(parameters.inputDir.path, tempOut)
 
-                    if (additionalAt != null) {
-                        merc.processors.clear()
-                        merc.processors += AccessTransformerRewriter.create(additionalAt)
-
-                        merc.rewrite(tempOut, parameters.outputDir.path)
-                    } else {
-                        tempOut.copyRecursivelyTo(parameters.outputDir.path)
-                    }
+                    tempOut.copyRecursivelyTo(parameters.outputDir.path)
                 } finally {
                     tempOut.deleteRecursively()
                 }
@@ -258,12 +230,11 @@ abstract class RemapSources : JavaLauncherTask() {
     interface RemapParams : WorkParameters {
         val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
-        val inputDir: RegularFileProperty
-        val additionalAts: RegularFileProperty
+        val inputDir: DirectoryProperty
 
         val cacheDir: RegularFileProperty
         val generatedAtOutput: RegularFileProperty
-        val outputDir: RegularFileProperty
+        val outputDir: DirectoryProperty
     }
 
     object ExplicitThisAdder : SourceRewriter {

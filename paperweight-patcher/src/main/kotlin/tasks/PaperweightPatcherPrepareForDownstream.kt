@@ -37,6 +37,9 @@ import org.gradle.api.tasks.UntrackedTask
 abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {
 
     @get:InputFile
+    abstract val remappedJar: RegularFileProperty
+
+    @get:InputFile
     abstract val upstreamDataFile: RegularFileProperty
 
     @get:Input
@@ -53,6 +56,7 @@ abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {
         val upstreamData = readUpstreamData(upstreamDataFile)
 
         val ourData = upstreamData.copy(
+            remappedJar = remappedJar.path,
             reobfPackagesToFix = reobfPackagesToFix.get(),
             reobfMappingsPatch = reobfMappingsPatch.path,
         )

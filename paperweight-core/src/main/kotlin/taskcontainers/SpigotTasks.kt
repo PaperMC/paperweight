@@ -192,7 +192,6 @@ open class SpigotTasks(
         mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(fixSpigotJar.flatMap { it.outputJar })
         spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
-        additionalAts.set(extension.paper.additionalAts.fileExists(project))
     }
 
     val remapGeneratedAt by tasks.registering<RemapAccessTransform> {

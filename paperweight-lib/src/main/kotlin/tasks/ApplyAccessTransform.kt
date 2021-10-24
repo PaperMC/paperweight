@@ -58,13 +58,18 @@ import org.objectweb.asm.Opcodes
 fun applyAccessTransform(
     inputJarPath: Path,
     outputJarPath: Path,
-    atFilePath: Path,
+    atFilePath: Path?,
     jvmArgs: List<String> = listOf("-Xmx1G"),
     workerExecutor: WorkerExecutor,
     launcher: JavaLauncher
-): WorkQueue {
+): WorkQueue? {
     ensureParentExists(outputJarPath)
     ensureDeleted(outputJarPath)
+
+    if(atFilePath == null) {
+        inputJarPath.copyRecursivelyTo(outputJarPath)
+        return null
+    }
 
     val queue = workerExecutor.processIsolation {
         forkOptions.jvmArgs(jvmArgs)
@@ -86,6 +91,7 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
     @get:Classpath
     abstract val inputJar: RegularFileProperty
 
+    @get:Optional
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
@@ -111,7 +117,7 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
         applyAccessTransform(
             inputJarPath = inputJar.path,
             outputJarPath = outputJar.path,
-            atFilePath = atFile.path,
+            atFilePath = atFile.pathOrNull,
             jvmArgs = jvmargs.get(),
             workerExecutor = workerExecutor,
             launcher = launcher.get()

@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
@@ -72,6 +73,9 @@ class PaperweightPatcher : Plugin<Project> {
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
         val generateReobfMappings by target.tasks.registering(GenerateReobfMappings::class)
+        val applyJarAt by target.tasks.registering(ApplyAccessTransform::class)
+        val decompileAtJar by target.tasks.registering(RunForgeFlower::class)
+        val applySourceAt by target.tasks.registering(ApplySourceAccessTransform::class)
 
         val mergeReobfMappingsPatches by target.tasks.registering<PatchMappings> {
             patch.set(patcher.reobfMappingsPatch.fileExists(target))
@@ -100,10 +104,28 @@ class PaperweightPatcher : Plugin<Project> {
         patcher.upstreams.all {
             val taskPair = target.createUpstreamTask(this, patcher, workDirProp, upstreamDataTaskRef)
 
+            val (cloneTask, _) = taskPair
+            applySourceAt {
+                dependsOn(cloneTask)
+            }
+
             patchTasks.all {
                 val createdPatchTask = target.createPatchTask(this, patcher, taskPair, applyPatches)
                 prepareForDownstream {
                     dependsOn(createdPatchTask)
+                }
+                val upstreamSourceDir: DirectoryProperty = target.objects.directoryProperty()
+                applySourceAt {
+                    if (cloneTask != null) {
+                        upstreamSourceDir.convention(cloneTask.flatMap { it.outputDir.dir(upstreamDirPath) })
+                    } else {
+                        upstreamSourceDir.convention(upstreamDir)
+                    }
+                    if(isServerTask.get()) {
+                        serverDir.convention(upstreamSourceDir)
+                    } else {
+                        apiDir.convention(upstreamSourceDir)
+                    }
                 }
                 target.rebuildPatchTask(this, rebuildPatches)
             }
@@ -138,7 +160,29 @@ class PaperweightPatcher : Plugin<Project> {
                 data.reobfPackagesToFix + pkgs
             }
 
+            applyJarAt {
+                inputJar.pathProvider(upstreamData.map { it.remappedJar })
+                atFile.set(patcher.additionalAts.fileExists(target))
+            }
+
+            decompileAtJar {
+                executable.from(project.configurations.named(DECOMPILER_CONFIG))
+
+                inputJar.pathProvider(upstreamData.map { it.remappedJar })
+                libraries.from(upstreamData.map { it.libDir })
+
+                outputJar.set(target.layout.cache.resolve(FINAL_DECOMPILE_JAR))
+            }
+
+            applySourceAt {
+                accessTransforms.set(patcher.additionalAts.fileExists(target))
+                vanillaJar.pathProvider(upstreamData.map { it.vanillaJar })
+                mojangMappedVanillaJar.pathProvider(upstreamData.map { it.remappedJar })
+                spigotDeps.from(upstreamData.map { it.spigotDependencies })
+            }
+
             prepareForDownstream {
+                remappedJar.set(applyJarAt.flatMap { it.outputJar })
                 upstreamDataFile.set(upstreamDataTask.flatMap { it.dataFile })
                 reobfPackagesToFix.set(mergedReobfPackagesToFix)
             }
@@ -146,7 +190,9 @@ class PaperweightPatcher : Plugin<Project> {
             for (upstream in patcher.upstreams) {
                 for (patchTask in upstream.patchTasks) {
                     patchTask.patchTask {
-                        sourceMcDevJar.convention(target, upstreamData.map { it.decompiledJar })
+                        transformedSources.convention(target, applySourceAt.map { it.sourcesOutputZip.path })
+                        transformedTests.convention(target, applySourceAt.map { it.testsOutputZip.path })
+                        sourceMcDevJar.convention(target, decompileAtJar.map { it.outputJar.path })
                         mcLibrariesDir.convention(target, upstreamData.map { it.libSourceDir })
                     }
                 }
@@ -169,7 +215,7 @@ class PaperweightPatcher : Plugin<Project> {
                 patcher.serverProject,
                 upstreamData.map { it.mcVersion },
                 upstreamData.map { it.vanillaJar },
-                upstreamData.map { it.decompiledJar },
+                decompileAtJar.map { it.outputJar.path },
                 upstreamData.map { it.libFile },
                 upstreamData.map { it.accessTransform }
             ) {
@@ -183,7 +229,7 @@ class PaperweightPatcher : Plugin<Project> {
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
-                upstreamData.map { it.decompiledJar },
+                decompileAtJar.map { it.outputJar.path },
                 patcher.mcDevSourceDir.path,
                 upstreamData.map { it.libFile },
                 mergedReobfPackagesToFix,
@@ -268,7 +314,8 @@ class PaperweightPatcher : Plugin<Project> {
             mcDevSources.set(ext.mcDevSourceDir)
 
             bareDirectory.convention(config.isBareDirectory)
-            importMcDev.convention(config.importMcDev)
+            importMcDev.convention(config.isServerTask)
+            applyAccessTransforms.convention(config.isServerTask)
             devImports.convention(ext.devImports.fileExists(project))
         }
 

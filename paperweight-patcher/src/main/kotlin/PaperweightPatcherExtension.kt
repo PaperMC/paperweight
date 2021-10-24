@@ -54,6 +54,7 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val reobfMappingsPatch: RegularFileProperty = objects.fileFrom(buildDataDir, "reobf-mappings-patch.tiny")
+    val additionalAts: RegularFileProperty = objects.fileProperty().convention(buildDataDir.file("paper.at"))
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
     val decompileRepo: Property<String> = objects.property()

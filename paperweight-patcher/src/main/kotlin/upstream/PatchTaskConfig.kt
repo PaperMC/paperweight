@@ -38,7 +38,7 @@ interface PatchTaskConfig : Named {
     val outputDir: DirectoryProperty
 
     val isBareDirectory: Property<Boolean>
-    val importMcDev: Property<Boolean>
+    val isServerTask: Property<Boolean>
 
     val patchTaskName: String
     val rebuildTaskName: String

@@ -47,9 +47,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputFile
     abstract val remappedJar: RegularFileProperty
 
-    @get:InputFile
-    abstract val decompiledJar: RegularFileProperty
-
     @get:Input
     abstract val mcVersion: Property<String>
 
@@ -98,6 +95,9 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputFile
     abstract val spigotRecompiledClasses: RegularFileProperty
 
+    @get:InputDirectory
+    abstract val spigotDeps: DirectoryProperty
+
     @TaskAction
     fun run() {
         val dataFilePath = dataFile.path
@@ -107,7 +107,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
         val data = UpstreamData(
             vanillaJar.path,
             remappedJar.path,
-            decompiledJar.path,
             mcVersion.get(),
             mcLibrariesDir.path,
             mcLibrariesSourcesDir.path,
@@ -121,6 +120,7 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             determineMavenDep(paramMappingsUrl, paramMappingsConfig),
             atFile.path,
             spigotRecompiledClasses.path,
+            spigotDeps.path
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)

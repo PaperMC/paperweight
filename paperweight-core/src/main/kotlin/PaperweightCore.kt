@@ -90,7 +90,6 @@ class PaperweightCore : Plugin<Project> {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.extractFromBundler.flatMap { it.serverJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
-            decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
             mcLibrariesDir.set(tasks.extractFromBundler.flatMap { it.serverLibraryJars })
@@ -105,6 +104,7 @@ class PaperweightCore : Plugin<Project> {
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
             atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
             spigotRecompiledClasses.set(tasks.remapSpigotSources.flatMap { it.spigotRecompiledClasses })
+            spigotDeps.set(tasks.downloadSpigotDependencies.flatMap { it.outputDir })
 
             dataFile.set(
                 target.layout.file(

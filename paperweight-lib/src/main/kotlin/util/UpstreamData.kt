@@ -29,7 +29,6 @@ import kotlin.io.path.*
 data class UpstreamData(
     val vanillaJar: Path,
     val remappedJar: Path,
-    val decompiledJar: Path,
     val mcVersion: String,
     val libDir: Path,
     val libSourceDir: Path,
@@ -43,6 +42,7 @@ data class UpstreamData(
     val paramMappings: MavenDep,
     val accessTransform: Path,
     val spigotRecompiledClasses: Path,
+    val spigotDependencies: Path
 )
 
 fun readUpstreamData(inputFile: Any): UpstreamData = inputFile.convertToPath().let { file ->

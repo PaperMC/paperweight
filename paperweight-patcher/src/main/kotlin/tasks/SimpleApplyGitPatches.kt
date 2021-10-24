@@ -55,6 +55,9 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Input
     abstract val importMcDev: Property<Boolean>
 
+    @get:Input
+    abstract val applyAccessTransforms: Property<Boolean>
+
     @get:Optional
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
@@ -62,6 +65,14 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputFile
     abstract val devImports: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val transformedSources: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
+    abstract val transformedTests: RegularFileProperty
 
     @get:Optional
     @get:InputDirectory
@@ -82,6 +93,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     override fun init() {
         upstreamBranch.convention("master")
         importMcDev.convention(false)
+        applyAccessTransforms.convention(false)
         printOutput.convention(true).finalizeValueOnRead()
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
     }
@@ -117,6 +129,21 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         git.disableAutoGpgSigningInRepo()
 
         val srcDir = output.resolve("src/main/java")
+        val testDir = output.resolve("src/test/java")
+
+        if(transformedSources.isPresent && applyAccessTransforms.get()) {
+            fs.copy {
+                from(archives.zipTree(transformedSources.path))
+                into(srcDir)
+            }
+        }
+
+        if(transformedTests.isPresent && applyAccessTransforms.get()) {
+            fs.copy {
+                from(archives.zipTree(transformedTests.path))
+                into(testDir)
+            }
+        }
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
 

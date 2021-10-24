@@ -262,7 +262,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             atFilePath = at,
             workerExecutor = context.workerExecutor,
             launcher = context.defaultJavaLauncher
-        ).await()
+        )?.await()
         hashFile.writeText(hash())
     }
 

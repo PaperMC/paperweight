@@ -98,6 +98,15 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
+    val applySourceAts by tasks.registering<ApplySourceAccessTransform> {
+        serverDir.set(remapSpigotSources.flatMap { it.remapOutputDir })
+        apiDir.set(patchSpigotApi.flatMap { it.outputDir })
+        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
+        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
+        accessTransforms.set(extension.paper.additionalAts.fileExists(project))
+    }
+
     @Suppress("DuplicatedCode")
     val applyServerPatches by tasks.registering<ApplyPaperPatches> {
         group = "paper"
@@ -109,8 +118,8 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
-        remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
-        remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
+        remappedSource.set(applySourceAts.flatMap { it.sourcesOutputZip })
+        remappedTests.set(applySourceAts.flatMap { it.testsOutputZip })
         caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
