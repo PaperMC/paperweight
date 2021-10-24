@@ -1,7 +1,7 @@
 # noinspection EditorConfigKeyCorrectness
 [*.{kt,kts}]
 max_line_length = 150
-ij_kotlin_imports_layout = ascii
+ij_kotlin_imports_layout = *
 no-wildcard-imports = no-wildcard-imports
 ij_continuation_indent_size = 4
 ij_kotlin_packages_to_use_import_on_demand = io.papermc.paperweight.util.**, io.papermc.paperweight.tasks.*, org.gradle.kotlin.dsl.*, kotlin.io.path.*
