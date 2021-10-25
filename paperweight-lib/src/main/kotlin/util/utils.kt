@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.*
+import dev.denwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
@@ -48,6 +49,7 @@ import org.cadixdev.lorenz.model.ClassMapping
 import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -273,3 +275,10 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
 
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
 fun <P : Property<*>> P.withDisallowUnsafeRead(): P = apply { disallowUnsafeRead() }
+
+fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> =
+    files.asSequence()
+        .map { f -> f.toPath() }
+        .filter { p -> p.isLibraryJar }
+        .map { p -> ClassProviderRoot.fromJar(p) }
+        .toList()

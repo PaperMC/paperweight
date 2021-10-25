@@ -294,12 +294,6 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
         }
 
         override fun execute() {
-            val libs = parameters.libraries.files.asSequence()
-                .map { f -> f.toPath() }
-                .filter { p -> p.isLibraryJar }
-                .map { p -> ClassProviderRoot.fromJar(p) }
-                .toList()
-
             val mappings = MappingFormats.TINY.read(
                 parameters.inputMappings.path,
                 SPIGOT_NAMESPACE,
@@ -310,7 +304,7 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
 
             val cleanedMappings = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.sourceJar.path)))
-                .withContextProviders(AsmClassDataProvider.of(libs))
+                .withContextProvider(AsmClassDataProvider.of(parameters.libraries.toJarClassProviderRoots()))
                 .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
                 .build().use { hypoContext ->
                     HydrationManager.createDefault()

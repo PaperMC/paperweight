@@ -161,15 +161,9 @@ abstract class GenerateMappings : JavaLauncherTask() {
                     .build()
             ).merge()
 
-            val libs = parameters.libraries.files.asSequence()
-                .map { f -> f.toPath() }
-                .filter { p -> p.isLibraryJar }
-                .map { p -> ClassProviderRoot.fromJar(p) }
-                .toList()
-
             val filledMerged = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.vanillaJar.path)))
-                .withContextProviders(AsmClassDataProvider.of(libs))
+                .withContextProvider(AsmClassDataProvider.of(parameters.libraries.toJarClassProviderRoots()))
                 .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
                 .build().use { hypoContext ->
                     HydrationManager.createDefault()
