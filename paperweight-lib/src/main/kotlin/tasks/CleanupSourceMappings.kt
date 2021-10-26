@@ -217,7 +217,7 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
             }
         }
 
-        override fun name(): String = "ParamIndexesForSource"
+        override fun name(): String = "FindCaseOnlyClassNameChanges"
     }
 
     class ChangeObfClassName(
