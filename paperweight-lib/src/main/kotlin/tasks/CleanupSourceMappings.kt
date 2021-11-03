@@ -29,6 +29,7 @@ import dev.denwav.hypo.core.HypoContext
 import dev.denwav.hypo.hydrate.HydrationManager
 import dev.denwav.hypo.mappings.ChangeChain
 import dev.denwav.hypo.mappings.ChangeRegistry
+import dev.denwav.hypo.mappings.ClassMappingsChange
 import dev.denwav.hypo.mappings.LorenzUtil
 import dev.denwav.hypo.mappings.MappingsCompletionManager
 import dev.denwav.hypo.mappings.MergeResult
@@ -216,7 +217,69 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
             }
         }
 
-        override fun name(): String = "ParamIndexesForSource"
+        override fun name(): String = "FindCaseOnlyClassNameChanges"
+    }
+
+    class ChangeObfClassName(
+        private val targetClass: String,
+        private val newFullObfuscatedName: String
+    ) : ClassMappingsChange {
+        override fun targetClass(): String = targetClass
+
+        override fun applyChange(input: MappingSet) {
+            val classMapping = LorenzUtil.getClassMapping(input, targetClass) ?: return
+            LorenzUtil.removeClassMapping(classMapping)
+
+            val newMap = input.getOrCreateClassMapping(newFullObfuscatedName)
+            copyMapping(classMapping, newMap)
+        }
+
+        private fun copyMapping(from: ClassMapping<*, *>, to: ClassMapping<*, *>) {
+            to.deobfuscatedName = from.deobfuscatedName
+
+            for (methodMapping in from.methodMappings) {
+                methodMapping.copy(to)
+            }
+            for (fieldMapping in from.fieldMappings) {
+                fieldMapping.copy(to)
+            }
+            for (innerClassMapping in from.innerClassMappings) {
+                innerClassMapping.copy(to)
+            }
+        }
+    }
+
+    companion object {
+        const val TEMP_SUFFIX = "paperweight-remove-anon-renames-temp-suffix"
+    }
+
+    object RemoveAnonymousClassRenames : ChangeContributor {
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (classMapping == null) return
+
+            val obf = classMapping.obfuscatedName.toIntOrNull()
+            val deobf = classMapping.deobfuscatedName.toIntOrNull()
+
+            if (obf != null && deobf != null && obf != deobf) {
+                val newName = classMapping.fullObfuscatedName.substringBeforeLast('$') + '$' + classMapping.deobfuscatedName + TEMP_SUFFIX
+                registry.submitChange(ChangeObfClassName(classMapping.fullObfuscatedName, newName))
+            }
+        }
+
+        override fun name(): String = "RemoveAnonymousClassRenames"
+    }
+
+    object CleanupAfterRemoveAnonymousClassRenames : ChangeContributor {
+        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
+            if (classMapping == null) return
+
+            if (classMapping.fullObfuscatedName.endsWith(TEMP_SUFFIX)) {
+                val newName = classMapping.fullObfuscatedName.substringBefore(TEMP_SUFFIX)
+                registry.submitChange(ChangeObfClassName(classMapping.fullObfuscatedName, newName))
+            }
+        }
+
+        override fun name(): String = "CleanupAfterRemoveAnonymousClassRenames"
     }
 
     abstract class CleanupSourceMappingsAction : WorkAction<CleanupSourceMappingsAction.Parameters> {
@@ -231,12 +294,6 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
         }
 
         override fun execute() {
-            val libs = parameters.libraries.files.asSequence()
-                .map { f -> f.toPath() }
-                .filter { p -> p.isLibraryJar }
-                .map { p -> ClassProviderRoot.fromJar(p) }
-                .toList()
-
             val mappings = MappingFormats.TINY.read(
                 parameters.inputMappings.path,
                 SPIGOT_NAMESPACE,
@@ -247,7 +304,7 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
 
             val cleanedMappings = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.sourceJar.path)))
-                .withContextProviders(AsmClassDataProvider.of(libs))
+                .withContextProvider(AsmClassDataProvider.of(parameters.libraries.toJarClassProviderRoots()))
                 .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
                 .build().use { hypoContext ->
                     HydrationManager.createDefault()
@@ -259,6 +316,8 @@ abstract class CleanupSourceMappings : JavaLauncherTask() {
                         .addLink(RemoveLambdaMappings)
                         .addLink(ParamIndexesForSource)
                         .addLink(FindCaseOnlyClassNameChanges(caseOnlyChanges))
+                        .addLink(RemoveAnonymousClassRenames)
+                        .addLink(CleanupAfterRemoveAnonymousClassRenames)
                         .applyChain(mappings, MappingsCompletionManager.create(hypoContext))
                 }
 
