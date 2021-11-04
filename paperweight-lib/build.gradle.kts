@@ -10,9 +10,7 @@ dependencies {
     implementation(libs.bundles.asm)
 
     implementation(libs.bundles.hypo)
-    implementation(libs.slf4j.log4j2.impl) {
-        isTransitive = false // we get slf4j-api from hypo, gradle provides log4j
-    }
+    implementation(libs.slf4j.jdk14) // slf4j impl for hypo
     implementation(libs.bundles.cadix)
 
     implementation(libs.lorenzTiny)
