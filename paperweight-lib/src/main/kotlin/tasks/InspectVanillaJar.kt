@@ -74,7 +74,7 @@ abstract class InspectVanillaJar : BaseTask() {
 
         var visitor: ClassVisitor
         visitor = LoggerFields.Visitor(null, loggers)
-        visitor = SyntheticMethods.Visitor(null, synthMethods)
+        visitor = SyntheticMethods.Visitor(visitor, synthMethods)
 
         inputJar.path.openZip().use { inJar ->
             val rootMatcher = inJar.getPathMatcher("glob:/*.class")
@@ -159,7 +159,7 @@ abstract class InspectVanillaJar : BaseTask() {
     }
 }
 
-abstract class BaseClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM8, classVisitor), AsmUtil {
+abstract class BaseClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM9, classVisitor), AsmUtil {
     protected var currentClass: String? = null
 
     override fun visit(
