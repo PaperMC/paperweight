@@ -237,7 +237,7 @@ object SyntheticMethods {
             val ret = super.visitMethod(access, name, descriptor, signature, exceptions)
             val className = currentClass ?: return ret
 
-            if (Opcodes.ACC_SYNTHETIC !in access || Opcodes.ACC_BRIDGE in access || name.contains('$')) {
+            if (Opcodes.ACC_SYNTHETIC !in access || Opcodes.ACC_BRIDGE in access || Opcodes.ACC_PRIVATE in access || name.contains('$')) {
                 return ret
             }
 
