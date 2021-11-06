@@ -33,12 +33,12 @@ import org.objectweb.asm.tree.VarInsnNode
 
 object SyntheticUtil : AsmUtil {
 
-    fun findBaseMethod(node: MethodNode, className: String): MethodDesc {
+    fun findBaseMethod(node: MethodNode, className: String, methods: List<MethodNode> = emptyList()): MethodDesc {
         if (node.access !in Opcodes.ACC_SYNTHETIC) {
             return MethodDesc(node.name, node.desc)
         }
 
-        return checkMethodNode(node, className) ?: MethodDesc(node.name, node.desc)
+        return checkMethodNode(node, className, methods) ?: MethodDesc(node.name, node.desc)
     }
 
     private enum class State {
@@ -49,7 +49,7 @@ object SyntheticUtil : AsmUtil {
     }
 
     // This tries to match the behavior of SpecialSource2's SyntheticFinder.addSynthetics() method
-    private fun checkMethodNode(node: MethodNode, className: String): MethodDesc? {
+    private fun checkMethodNode(node: MethodNode, className: String, methods: List<MethodNode>): MethodDesc? {
         var state = State.IN_PARAMS
         var nextLvt = 0
 
@@ -107,6 +107,12 @@ object SyntheticUtil : AsmUtil {
         // The descriptors need to be the same size
         if (Type.getArgumentTypes(node.desc).size != Type.getArgumentTypes(invoke.desc).size) {
             return null
+        }
+
+        for (otherMethod in methods) {
+            if (node.name == otherMethod.name && invoke.desc == otherMethod.desc && otherMethod.signature != null) {
+                return null
+            }
         }
 
         // Add this method as a synthetic accessor for insn.name

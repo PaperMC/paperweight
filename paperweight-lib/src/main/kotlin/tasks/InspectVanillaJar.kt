@@ -36,9 +36,8 @@ import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.ClassNode
 
 @CacheableTask
 abstract class InspectVanillaJar : BaseTask() {
@@ -72,9 +71,7 @@ abstract class InspectVanillaJar : BaseTask() {
         val loggers = mutableListOf<LoggerFields.Data>()
         val synthMethods = mutableListOf<SyntheticMethods.Data>()
 
-        var visitor: ClassVisitor
-        visitor = LoggerFields.Visitor(null, loggers)
-        visitor = SyntheticMethods.Visitor(visitor, synthMethods)
+        val loggerFieldsVisitor = LoggerFields.Visitor(null, loggers)
 
         inputJar.path.openZip().use { inJar ->
             val rootMatcher = inJar.getPathMatcher("glob:/*.class")
@@ -83,9 +80,12 @@ abstract class InspectVanillaJar : BaseTask() {
             inJar.walk().use { stream ->
                 stream.filter { p -> !p.isDirectory() }
                     .filter { p -> rootMatcher.matches(p) || nmsMatcher.matches(p) }
-                    .map { p -> p.readBytes() }
-                    .forEach { data ->
-                        ClassReader(data).accept(visitor, 0)
+                    .map { p -> ClassReader(p.readBytes()) }
+                    .forEach { reader ->
+                        reader.accept(loggerFieldsVisitor, 0)
+                        val classNode = ClassNode()
+                        reader.accept(classNode, 0)
+                        SyntheticMethods.addSynths(synthMethods, classNode)
                     }
             }
         }
@@ -221,46 +221,20 @@ object LoggerFields {
  * existing mapping. We need to make a note of all of the synthetic methods which match SpecialSource2's checks so we
  * can handle it in our generated mappings.
  */
-object SyntheticMethods {
-    class Visitor(
-        classVisitor: ClassVisitor?,
-        private val methods: MutableList<Data>
-    ) : BaseClassVisitor(classVisitor) {
+object SyntheticMethods : AsmUtil {
+    fun addSynths(synths: MutableList<Data>, classNode: ClassNode) {
+        for (methodNode in classNode.methods) {
+            if (Opcodes.ACC_SYNTHETIC !in methodNode.access ||
+                Opcodes.ACC_BRIDGE in methodNode.access ||
+                Opcodes.ACC_PRIVATE in methodNode.access ||
+                methodNode.name.contains('$')
+            ) continue
 
-        override fun visitMethod(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            exceptions: Array<out String>?
-        ): MethodVisitor? {
-            val ret = super.visitMethod(access, name, descriptor, signature, exceptions)
-            val className = currentClass ?: return ret
+            val (baseName, baseDesc) = SyntheticUtil.findBaseMethod(methodNode, classNode.name, classNode.methods)
 
-            if (Opcodes.ACC_SYNTHETIC !in access || Opcodes.ACC_BRIDGE in access || Opcodes.ACC_PRIVATE in access || name.contains('$')) {
-                return ret
-            }
-
-            return SynthMethodVisitor(access, name, descriptor, signature, exceptions, className, methods)
-        }
-    }
-
-    private class SynthMethodVisitor(
-        access: Int,
-        name: String,
-        descriptor: String,
-        signature: String?,
-        exceptions: Array<out String>?,
-        private val className: String,
-        private val methods: MutableList<Data>
-    ) : MethodNode(Opcodes.ASM9, access, name, descriptor, signature, exceptions) {
-
-        override fun visitEnd() {
-            val (baseName, baseDesc) = SyntheticUtil.findBaseMethod(this, className)
-
-            if (baseName != name || baseDesc != desc) {
+            if (baseName != methodNode.name || baseDesc != methodNode.desc) {
                 // Add this method as a synthetic for baseName
-                methods += Data(className, baseDesc, name, baseName)
+                synths += Data(classNode.name, baseDesc, methodNode.name, baseName)
             }
         }
     }
