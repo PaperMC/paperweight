@@ -238,22 +238,24 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
     abstract class GenerateReobfMappingsAction : WorkAction<GenerateReobfMappingsParams> {
 
         override fun execute() {
-            val baseMappings = MappingFormats.TINY.read(
+            val spigotToMojang = MappingFormats.TINY.read(
                 parameters.inputMappings.path,
                 SPIGOT_NAMESPACE,
                 DEOBF_NAMESPACE
             )
-
-            val notchToSpigot = MappingFormats.TINY.read(
+            val obfToSpigot = MappingFormats.TINY.read(
                 parameters.notchToSpigotMappings.path,
                 OBF_NAMESPACE,
                 SPIGOT_NAMESPACE
             )
+            val obfToMojang = MappingFormats.TINY.read(
+                parameters.sourceMappings.path,
+                OBF_NAMESPACE,
+                DEOBF_NAMESPACE
+            )
 
-            val fieldMappings = MappingFormats.TINY.read(parameters.sourceMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
-            val spigotFieldMappings = filterFieldMappings(notchToSpigot).reverse().merge(fieldMappings)
-
-            val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse()
+            val spigotFieldMappings = filterFieldMappings(obfToSpigot).reverse().merge(obfToMojang)
+            val outputMappings = copyFieldMappings(spigotToMojang, spigotFieldMappings).reverse()
 
             val spigotRecompiles = parameters.spigotRecompiles.path.readLines().toSet()
 
@@ -304,37 +306,54 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
         private fun copyFieldMappings(baseMappings: MappingSet, fieldMappings: MappingSet): MappingSet {
             val output = MappingSet.create()
 
-            for (topLevelClassMapping in baseMappings.topLevelClassMappings) {
-                val fieldClassMapping = fieldMappings.getTopLevelClassMapping(topLevelClassMapping.obfuscatedName).get()
-                val newClassMapping = output.createTopLevelClassMapping(topLevelClassMapping.obfuscatedName, topLevelClassMapping.deobfuscatedName)
-                copyFieldMappings(topLevelClassMapping, fieldClassMapping, newClassMapping)
+            val names = (fieldMappings.topLevelClassMappings + baseMappings.topLevelClassMappings).map { it.obfuscatedName }.toSet()
+
+            for (className in names) {
+                val fieldClassMapping = fieldMappings.getTopLevelClassMapping(className).orNull
+                val baseClassMapping = baseMappings.getTopLevelClassMapping(className).orNull
+                val newClassMapping = output.createTopLevelClassMapping(
+                    baseClassMapping?.obfuscatedName ?: fieldClassMapping?.obfuscatedName,
+                    baseClassMapping?.deobfuscatedName ?: fieldClassMapping?.deobfuscatedName
+                )
+                copyFieldMappings(baseClassMapping, fieldClassMapping, newClassMapping)
             }
 
             return output
         }
 
         private fun copyFieldMappings(
-            baseClassMapping: ClassMapping<*, *>,
-            fieldClassMapping: ClassMapping<*, *>,
+            baseClassMapping: ClassMapping<*, *>?,
+            fieldClassMapping: ClassMapping<*, *>?,
             targetMappings: ClassMapping<*, *>
         ) {
-            for (innerClassMapping in baseClassMapping.innerClassMappings) {
-                val fieldInnerClassMapping = fieldClassMapping.getInnerClassMapping(innerClassMapping.obfuscatedName).get()
-                val newClassMapping = targetMappings.createInnerClassMapping(innerClassMapping.obfuscatedName, innerClassMapping.deobfuscatedName)
-                copyFieldMappings(innerClassMapping, fieldInnerClassMapping, newClassMapping)
+            val innerNames = ((baseClassMapping?.innerClassMappings ?: emptyList()) + (fieldClassMapping?.innerClassMappings ?: emptyList()))
+                .map { it.obfuscatedName }.toSet()
+
+            for (innerName in innerNames) {
+                val fieldInnerClassMapping = fieldClassMapping?.getInnerClassMapping(innerName)?.orNull
+                val baseInnerClassMapping = baseClassMapping?.getInnerClassMapping(innerName)?.orNull
+                val newInnerClassMapping = targetMappings.createInnerClassMapping(
+                    baseInnerClassMapping?.obfuscatedName ?: fieldInnerClassMapping?.obfuscatedName,
+                    baseInnerClassMapping?.deobfuscatedName ?: fieldInnerClassMapping?.deobfuscatedName
+                )
+                copyFieldMappings(baseInnerClassMapping, fieldInnerClassMapping, newInnerClassMapping)
             }
 
-            for (methodMapping in baseClassMapping.methodMappings) {
-                methodMapping.copy(targetMappings)
+            if (baseClassMapping != null) {
+                for (methodMapping in baseClassMapping.methodMappings) {
+                    methodMapping.copy(targetMappings)
+                }
             }
 
-            for (fieldMapping in fieldClassMapping.fieldMappings) {
-                when (val name = fieldMapping.obfuscatedName) {
-                    "if", "do" -> targetMappings.createFieldMapping(
-                        FieldSignature(name + "_", fieldMapping.type.orNull),
-                        fieldMapping.deobfuscatedName
-                    )
-                    else -> fieldMapping.copy(targetMappings)
+            if (fieldClassMapping != null) {
+                for (fieldMapping in fieldClassMapping.fieldMappings) {
+                    when (val name = fieldMapping.obfuscatedName) {
+                        "if", "do" -> targetMappings.createFieldMapping(
+                            FieldSignature(name + "_", fieldMapping.type.orNull),
+                            fieldMapping.deobfuscatedName
+                        )
+                        else -> fieldMapping.copy(targetMappings)
+                    }
                 }
             }
         }

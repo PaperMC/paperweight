@@ -24,14 +24,10 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import kotlin.collections.Map
-import kotlin.collections.MutableMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.component3
 import kotlin.collections.component4
-import kotlin.collections.hashMapOf
-import kotlin.collections.iterator
 import kotlin.collections.set
 import kotlin.io.path.*
 import org.cadixdev.bombe.type.signature.FieldSignature
