@@ -46,6 +46,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import kotlin.io.path.*
+import org.cadixdev.bombe.type.ObjectType
 import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
@@ -84,6 +85,10 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val spigotRecompiledClasses: RegularFileProperty
+
     override fun init() {
         super.init()
 
@@ -102,6 +107,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             notchToSpigotMappings.set(this@GenerateReobfMappings.notchToSpigotMappings)
             sourceMappings.set(this@GenerateReobfMappings.sourceMappings)
             inputJar.set(this@GenerateReobfMappings.inputJar)
+            spigotRecompiles.set(spigotRecompiledClasses.path)
 
             reobfMappings.set(this@GenerateReobfMappings.reobfMappings)
         }
@@ -169,11 +175,62 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
         }
     }
 
+    class RemoveRecompiledThisMappings(private val recompiledClasses: Set<String>) : ChangeContributor {
+        override fun contribute(
+            currentClass: ClassData?,
+            classMapping: ClassMapping<*, *>?,
+            context: HypoContext,
+            registry: ChangeRegistry
+        ) {
+            if (currentClass == null || classMapping == null) {
+                return
+            }
+            val outers = currentClass.outerClasses()
+            if (outers.isEmpty() || currentClass.isStaticInnerClass) {
+                return
+            }
+            if (currentClass.rootClass().name() !in recompiledClasses) {
+                return
+            }
+
+            for (idx in outers.indices) {
+                val field = classMapping.fieldsByName["this$$idx"] ?: continue
+                val type = (field.type.orNull as? ObjectType)?.className ?: continue
+                val outer = outers[idx]
+                if (outer.name() == type) {
+                    registry.submitChange(RemoveMappingChange.of(MemberReference.of(field)))
+                }
+            }
+        }
+
+        private fun ClassData.rootClass(): ClassData =
+            allOuterClasses().getOrNull(0) ?: this
+
+        private fun ClassData.allOuterClasses(list: MutableList<ClassData> = ArrayList()): List<ClassData> {
+            val outer = outerClass() ?: return list.reversed()
+            list.add(outer)
+            return outer.allOuterClasses(list)
+        }
+
+        // gets outer classes we expect to find synthetic fields for
+        private fun ClassData.outerClasses(list: MutableList<ClassData> = ArrayList()): List<ClassData> {
+            val outer = outerClass() ?: return list.reversed()
+            list.add(outer)
+            if (outer.isStaticInnerClass) {
+                return list.reversed()
+            }
+            return outer.outerClasses(list)
+        }
+
+        override fun name(): String = "RemoveRecompiledThisMappings"
+    }
+
     interface GenerateReobfMappingsParams : WorkParameters {
         val inputMappings: RegularFileProperty
         val notchToSpigotMappings: RegularFileProperty
         val sourceMappings: RegularFileProperty
         val inputJar: RegularFileProperty
+        val spigotRecompiles: RegularFileProperty
 
         val reobfMappings: RegularFileProperty
     }
@@ -198,6 +255,8 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
             val outputMappings = copyFieldMappings(baseMappings, spigotFieldMappings).reverse()
 
+            val spigotRecompiles = parameters.spigotRecompiles.path.readLines().toSet()
+
             val cleanedOutputMappings = HypoContext.builder()
                 .withConfig(HypoConfig.builder().setRequireFullClasspath(false).withParallelism(1).build())
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.inputJar.path)))
@@ -214,6 +273,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
                         .addLink(PropagateOuterClassMappings(outputMappings))
                         .addLink(PropagateMappingsUp.create())
                         .addLink(CopyMappingsDown.create())
+                        .addLink(RemoveRecompiledThisMappings(spigotRecompiles))
                         .applyChain(outputMappings, MappingsCompletionManager.create(hypoContext))
                 }
 
