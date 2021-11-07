@@ -104,6 +104,7 @@ class PaperweightCore : Plugin<Project> {
             paramMappingsUrl.set(ext.paramMappingsRepo)
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
             atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
+            spigotRecompiledClasses.set(tasks.remapSpigotSources.flatMap { it.spigotRecompiledClasses })
 
             dataFile.set(
                 target.layout.file(

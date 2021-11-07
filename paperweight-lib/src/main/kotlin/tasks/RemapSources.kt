@@ -25,8 +25,10 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
+import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.mercury.Mercury
@@ -94,6 +96,9 @@ abstract class RemapSources : JavaLauncherTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    @get:OutputFile
+    abstract val spigotRecompiledClasses: RegularFileProperty
+
     override fun init() {
         super.init()
 
@@ -101,6 +106,7 @@ abstract class RemapSources : JavaLauncherTask() {
         sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
         testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
         generatedAt.convention(defaultOutput("at"))
+        spigotRecompiledClasses.convention(defaultOutput("spigotRecompiledClasses", "txt"))
     }
 
     @TaskAction
@@ -158,10 +164,33 @@ abstract class RemapSources : JavaLauncherTask() {
 
             zip(srcOut, sourcesOutputZip)
             zip(testOut, testsOutputZip)
+
+            writeSpigotRecompiledFiles(srcOut)
         } finally {
             srcOut.deleteRecursively()
             testOut.deleteRecursively()
         }
+    }
+
+    private fun writeSpigotRecompiledFiles(srcOut: Path) {
+        // Write list of java files spigot recompiles
+        val spigotRecompiled = Files.walk(srcOut).use { stream ->
+            stream.asSequence().mapNotNull {
+                if (!it.isRegularFile()) {
+                    return@mapNotNull null
+                }
+                if (!it.fileName.pathString.endsWith(".java")) {
+                    return@mapNotNull null
+                }
+                val path = srcOut.relativize(it).pathString
+                if (!path.startsWith("net/minecraft")) {
+                    return@mapNotNull null
+                }
+                path.replace(".java", "")
+            }.sorted().joinToString("\n")
+        }
+        spigotRecompiledClasses.path.parent.createDirectories()
+        spigotRecompiledClasses.path.writeText(spigotRecompiled)
     }
 
     abstract class RemapAction : WorkAction<RemapParams> {

@@ -95,6 +95,9 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputFile
     abstract val atFile: RegularFileProperty
 
+    @get:InputFile
+    abstract val spigotRecompiledClasses: RegularFileProperty
+
     @TaskAction
     fun run() {
         val dataFilePath = dataFile.path
@@ -116,7 +119,8 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             reobfMappingsPatch.path,
             vanillaJarIncludes.get(),
             determineMavenDep(paramMappingsUrl, paramMappingsConfig),
-            atFile.path
+            atFile.path,
+            spigotRecompiledClasses.path,
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)

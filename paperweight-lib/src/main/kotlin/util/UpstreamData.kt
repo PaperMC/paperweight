@@ -41,7 +41,8 @@ data class UpstreamData(
     val reobfMappingsPatch: Path,
     val vanillaIncludes: List<String>,
     val paramMappings: MavenDep,
-    val accessTransform: Path
+    val accessTransform: Path,
+    val spigotRecompiledClasses: Path,
 )
 
 fun readUpstreamData(inputFile: Any): UpstreamData = inputFile.convertToPath().let { file ->

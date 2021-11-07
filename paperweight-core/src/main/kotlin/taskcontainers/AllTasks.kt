@@ -145,6 +145,7 @@ open class AllTasks(
         inputMappings.set(patchMappings.flatMap { it.outputMappings })
         notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
+        spigotRecompiledClasses.set(remapSpigotSources.flatMap { it.spigotRecompiledClasses })
 
         reobfMappings.set(cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
     }

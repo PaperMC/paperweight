@@ -160,6 +160,7 @@ class PaperweightPatcher : Plugin<Project> {
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
                 inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
+                spigotRecompiledClasses.pathProvider(upstreamData.map { it.spigotRecompiledClasses })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
