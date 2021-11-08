@@ -46,7 +46,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.cadixdev.bombe.type.ObjectType
 import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
@@ -175,7 +174,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
         }
     }
 
-    class RemoveRecompiledThisMappings(private val recompiledClasses: Set<String>) : ChangeContributor {
+    class RemoveRecompiledSyntheticMemberMappings(private val recompiledClasses: Set<String>) : ChangeContributor {
         override fun contribute(
             currentClass: ClassData?,
             classMapping: ClassMapping<*, *>?,
@@ -185,19 +184,18 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             if (currentClass == null || classMapping == null) {
                 return
             }
-            val outers = currentClass.outerClasses()
-            if (outers.isEmpty() || currentClass.isStaticInnerClass) {
-                return
-            }
             if (currentClass.rootClass().name() !in recompiledClasses) {
                 return
             }
 
-            for (idx in outers.indices) {
-                val field = classMapping.fieldsByName["this$$idx"] ?: continue
-                val type = (field.type.orNull as? ObjectType)?.className ?: continue
-                val outer = outers[idx]
-                if (outer.name() == type) {
+            for (method in currentClass.methods()) {
+                if (method.isSynthetic) {
+                    registry.submitChange(RemoveMappingChange.of(MemberReference.of(method)))
+                }
+            }
+
+            for (field in currentClass.fields()) {
+                if (field.isSynthetic) {
                     registry.submitChange(RemoveMappingChange.of(MemberReference.of(field)))
                 }
             }
@@ -212,17 +210,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             return outer.allOuterClasses(list)
         }
 
-        // gets outer classes we expect to find synthetic fields for
-        private fun ClassData.outerClasses(list: MutableList<ClassData> = ArrayList()): List<ClassData> {
-            val outer = outerClass() ?: return list.reversed()
-            list.add(outer)
-            if (outer.isStaticInnerClass) {
-                return list.reversed()
-            }
-            return outer.outerClasses(list)
-        }
-
-        override fun name(): String = "RemoveRecompiledThisMappings"
+        override fun name(): String = "RemoveRecompiledSyntheticMemberMappings"
     }
 
     interface GenerateReobfMappingsParams : WorkParameters {
@@ -275,7 +263,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
                         .addLink(PropagateOuterClassMappings(outputMappings))
                         .addLink(PropagateMappingsUp.create())
                         .addLink(CopyMappingsDown.create())
-                        .addLink(RemoveRecompiledThisMappings(spigotRecompiles))
+                        .addLink(RemoveRecompiledSyntheticMemberMappings(spigotRecompiles))
                         .applyChain(outputMappings, MappingsCompletionManager.create(hypoContext))
                 }
 
