@@ -73,7 +73,7 @@ open class AllTasks(
         description = "Setup the Paper-API project"
 
         if (project.isBaseExecution) {
-            outputs.upToDateWhen { false }
+            doNotTrackState("$name should always run when requested as part of the base execution.")
         }
         printOutput.set(project.isBaseExecution)
 
@@ -92,7 +92,7 @@ open class AllTasks(
         description = "Setup the Paper-Server project"
 
         if (project.isBaseExecution) {
-            outputs.upToDateWhen { false }
+            doNotTrackState("$name should always run when requested as part of the base execution.")
         }
         printOutput.set(project.isBaseExecution)
 

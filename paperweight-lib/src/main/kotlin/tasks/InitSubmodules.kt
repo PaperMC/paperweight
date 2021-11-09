@@ -27,15 +27,13 @@ import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Git tracks the state")
 abstract class InitSubmodules : DefaultTask() {
 
     @get:Inject
     abstract val layout: ProjectLayout
-
-    init {
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun run() {

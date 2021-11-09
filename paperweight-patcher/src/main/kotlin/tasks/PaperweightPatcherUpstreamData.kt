@@ -34,8 +34,10 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.build.NestedRootBuildRunner
 
+@UntrackedTask(because = "Nested build does it's own up-to-date checking")
 abstract class PaperweightPatcherUpstreamData : BaseTask() {
 
     @get:InputDirectory
@@ -46,12 +48,6 @@ abstract class PaperweightPatcherUpstreamData : BaseTask() {
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
-
-    override fun init() {
-        super.init()
-        // nested build does its own up-to-date checking
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun run() {

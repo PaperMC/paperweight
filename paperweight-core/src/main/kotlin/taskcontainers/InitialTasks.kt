@@ -51,7 +51,7 @@ open class InitialTasks(
         url.set(MC_MANIFEST_URL)
         outputFile.set(cache.resolve(MC_MANIFEST))
 
-        outputs.upToDateWhen { false }
+        doNotTrackState("The Minecraft manifest is a changing resource")
 
         downloader.set(downloadService)
     }

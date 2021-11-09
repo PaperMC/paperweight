@@ -37,7 +37,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "SimpleRebuildGitPatches should always run when requested")
 abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
 
     @get:InputDirectory
@@ -62,7 +64,6 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
                 .map { it.toBoolean() }
                 .orElse(true)
         )
-        outputs.upToDateWhen { false }
     }
 
     @TaskAction
