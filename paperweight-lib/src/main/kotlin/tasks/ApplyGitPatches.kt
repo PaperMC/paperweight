@@ -172,9 +172,14 @@ fun ControllableOutputTask.applyGitPatches(
     }
 }
 
+fun Git.disableAutoGpgSigningInRepo() {
+    invoke("config", "commit.gpgSign", "false").executeSilently(silenceErr = true)
+    invoke("config", "tag.gpgSign", "false").executeSilently(silenceErr = true)
+}
+
 fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String) {
     git("init", "--quiet").executeSilently(silenceErr = true)
-    git("config", "commit.gpgsign", "false").executeSilently(silenceErr = true)
+    git.disableAutoGpgSigningInRepo()
     git("remote", "remove", "upstream").runSilently(silenceErr = true)
     git("remote", "add", "upstream", upstream.toUri().toString()).executeSilently(silenceErr = true)
     git("fetch", "upstream", "--prune").executeSilently(silenceErr = true)

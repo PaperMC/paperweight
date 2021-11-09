@@ -105,7 +105,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
             Git(up).let { upstreamGit ->
                 upstreamGit("init", "--quiet").executeSilently(silenceErr = true)
                 upstreamGit("checkout", "-b", upstreamBranch.get()).executeSilently(silenceErr = true)
-                upstreamGit("config", "commit.gpgsign", "false").executeSilently(silenceErr = true)
+                upstreamGit.disableAutoGpgSigningInRepo()
                 upstreamGit("add", ".").executeSilently(silenceErr = true)
                 upstreamGit("commit", "-m", "Initial Source", "--author=Initial <auto@mated.null>").executeSilently(silenceErr = true)
             }
@@ -114,7 +114,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         val git = Git(output)
         checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
 
-        git("config", "commit.gpgsign", "false").executeSilently()
+        git.disableAutoGpgSigningInRepo()
 
         val srcDir = output.resolve("src/main/java")
 
