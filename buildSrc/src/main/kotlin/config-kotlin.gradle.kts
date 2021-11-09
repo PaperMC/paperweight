@@ -7,11 +7,12 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint")
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).apply {
+            languageVersion.set(JavaLanguageVersion.of(8))
+        }
     }
-    withSourcesJar()
 }
 
 repositories {

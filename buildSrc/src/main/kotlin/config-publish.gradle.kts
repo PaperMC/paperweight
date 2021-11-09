@@ -23,7 +23,7 @@ fun ShadowJar.configureStandard() {
     mergeServiceFiles()
 }
 
-val sourcesJar by tasks.existing
+val kotlinSourcesJar by tasks.existing
 
 val shadowJar by tasks.existing(ShadowJar::class) {
     configureStandard()
@@ -130,7 +130,7 @@ fun MavenPublication.pluginConfig(versionName: String) {
     artifactId = "$baseName.gradle.plugin"
     version = versionName
 
-    artifact(sourcesJar)
+    artifact(kotlinSourcesJar)
 
     withoutBuildIdentifier()
     pom {
