@@ -250,7 +250,7 @@ class PaperweightPatcher : Plugin<Project> {
             group = "paperweight"
 
             if (isBaseExecution) {
-                outputs.upToDateWhen { false }
+                doNotTrackState("$name should always run when requested as part of the base execution.")
             }
             printOutput.set(isBaseExecution)
 

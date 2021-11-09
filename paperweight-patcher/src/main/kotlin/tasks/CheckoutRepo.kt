@@ -31,7 +31,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Git tracks the state")
 abstract class CheckoutRepo : DefaultTask() {
 
     @get:Input
@@ -59,8 +61,6 @@ abstract class CheckoutRepo : DefaultTask() {
     abstract val outputDir: DirectoryProperty
 
     init {
-        outputs.upToDateWhen { false }
-
         @Suppress("LeakingThis")
         run {
             repoName.finalizeValueOnRead()

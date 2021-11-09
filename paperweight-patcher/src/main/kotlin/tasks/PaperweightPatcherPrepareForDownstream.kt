@@ -31,7 +31,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "PaperweightPatcherPrepareForDownstream should always run when requested")
 abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {
 
     @get:InputFile
@@ -45,11 +47,6 @@ abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {
 
     @get:OutputFile
     abstract val dataFile: RegularFileProperty
-
-    override fun init() {
-        super.init()
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun run() {
