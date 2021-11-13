@@ -27,10 +27,12 @@ import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetup.HashFunction
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.stream.Collectors
 import kotlin.io.path.*
 import org.gradle.api.Project
@@ -69,6 +71,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private val cache: Path
         get() = parameters.cache.path
 
+    private val paperweightHash: String = hashPaperweightJar()
+
     val extractedBundle: Path = cache.resolve(paperSetupOutput("extractDevBundle", "dir"))
     private val extractDevBundle = extractDevBundle(
         extractedBundle,
@@ -77,7 +81,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private val devBundleChanged = extractDevBundle.first
     val devBundleConfig = extractDevBundle.second
 
-    private val minecraftVersionManifest: JsonObject by lazy {
+    private val minecraftVersionManifest: JsonObject by lazy { setupMinecraftVersionManifest() }
+    private fun setupMinecraftVersionManifest(): JsonObject {
         val minecraftManifestJson = download(
             "minecraft manifest",
             MC_MANIFEST_URL,
@@ -90,21 +95,44 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             minecraftManifest.versions.first { it.id == devBundleConfig.minecraftVersion }.url,
             cache.resolve(VERSION_JSON)
         )
-        gson.fromJson(minecraftVersionManifestJson)
+        return gson.fromJson(minecraftVersionManifestJson)
     }
 
-    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
+    private val serverBundlerJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
     private fun downloadVanillaServerJar() {
         download(
             "vanilla minecraft server jar",
             minecraftVersionManifest["downloads"]["server"]["url"].string,
-            vanillaServerJar
+            serverBundlerJar
         )
+    }
+
+    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("vanillaServerJar", "jar"))
+    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
+    private fun extractFromServerBundler() {
+        downloadVanillaServerJar()
+
+        val hashFunction = buildHashFunction(serverBundlerJar, vanillaServerJar) {
+            add(minecraftLibraryJars.filesMatchingRecursive("*.jar"))
+        }
+        val hashFile = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
+        if (hashFunction.upToDate(hashFile)) {
+            return
+        }
+
+        LOGGER.lifecycle(":extracting libraries and server from downloaded jar")
+        ServerBundler.extractFromBundler(
+            serverBundlerJar,
+            vanillaServerJar,
+            minecraftLibraryJars,
+            null
+        )
+        hashFunction.writeHash(hashFile)
     }
 
     private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
     private fun filterVanillaServerJar() {
-        downloadVanillaServerJar()
+        extractFromServerBundler()
         val filteredJar = filteredVanillaServerJar
 
         val hashFile = filteredJar.resolveSibling(filteredJar.nameWithoutExtension + ".hashes")
@@ -131,43 +159,23 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         )
     }
 
-    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
-    private fun downloadMinecraftLibraries(context: Context) {
-        val hashesFile = cache.resolve(paperSetupOutput("libraries", "hashes"))
-        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar")) }
-        val upToDate = hashesFile.isRegularFile() && hashesFile.readText() == hash()
-        if (upToDate) return
-
-        LOGGER.lifecycle(":downloading minecraft libraries")
-        downloadMinecraftLibraries(
-            download = parameters.downloadService,
-            workerExecutor = context.workerExecutor,
-            targetDir = minecraftLibraryJars,
-            mcRepo = MC_LIBRARY_URL,
-            mcLibraries = devBundleConfig.buildData.vanillaServerLibraries,
-            sources = false
-        ).await()
-        hashesFile.parent.createDirectories()
-        hashesFile.writeText(hash())
-    }
-
     private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
     private fun generateMappings(context: Context) {
-        downloadMinecraftLibraries(context)
+        extractFromServerBundler()
         downloadMojangServerMappings()
         filterVanillaServerJar()
 
         val mappingsFile = mojangPlusYarnMappings
 
         val hashFile = cache.resolve(paperSetupOutput("generateMappings", "hashes"))
-        val hash = { hash(minecraftLibraryJars.listDirectoryEntries("*.jar"), mojangServerMappings, filteredVanillaServerJar) }
+        val hash = { hash(minecraftLibraryJars.filesMatchingRecursive("*.jar"), mojangServerMappings, filteredVanillaServerJar) }
         val upToDate = hashFile.isRegularFile() && hashFile.readText() == hash()
         if (upToDate) return
 
         LOGGER.lifecycle(":generating mappings")
         generateMappings(
             vanillaJarPath = filteredVanillaServerJar,
-            libraryPaths = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            libraryPaths = minecraftLibraryJars.filesMatchingRecursive("*.jar"),
             vanillaMappingsPath = mojangServerMappings,
             paramMappingsPath = context.project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile }.convertToPath(),
             outputMappingsPath = mappingsFile,
@@ -188,10 +196,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                minecraftLibraryJars.listDirectoryEntries("*.jar"),
+                minecraftLibraryJars.filesMatchingRecursive("*.jar"),
                 mojangPlusYarnMappings,
                 filteredVanillaServerJar,
-                devBundleConfig.remap.args,
+                devBundleConfig.buildData.minecraftRemapArgs,
                 output
             )
         }
@@ -199,14 +207,14 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         if (upToDate) return
 
         LOGGER.lifecycle(":remapping minecraft server jar")
-        runTinyRemapper(
-            argsList = devBundleConfig.remap.args,
+        TinyRemapper.run(
+            argsList = devBundleConfig.buildData.minecraftRemapArgs,
             logFile = logFile,
             inputJar = filteredVanillaServerJar,
             mappingsFile = mojangPlusYarnMappings,
             fromNamespace = OBF_NAMESPACE,
             toNamespace = DEOBF_NAMESPACE,
-            remapClasspath = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            remapClasspath = minecraftLibraryJars.filesMatchingRecursive("*.jar"),
             remapper = context.project.configurations.named(REMAPPER_CONFIG).get(),
             outputJar = output,
             launcher = context.defaultJavaLauncher,
@@ -268,7 +276,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         val hash = {
             hash(
-                minecraftLibraryJars.listDirectoryEntries("*.jar"),
+                minecraftLibraryJars.filesMatchingRecursive("*.jar"),
                 accessTransformedServerJar,
                 devBundleConfig.decompile.args,
                 output
@@ -284,7 +292,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             workingDir = cache,
             executable = context.project.configurations.named(DECOMPILER_CONFIG).get(),
             inputJar = accessTransformedServerJar,
-            libraries = minecraftLibraryJars.listDirectoryEntries("*.jar"),
+            libraries = minecraftLibraryJars.filesMatchingRecursive("*.jar"),
             outputJar = output,
             javaLauncher = context.defaultJavaLauncher
         )
@@ -417,11 +425,11 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         }
     }
 
-    private fun hashFiles(files: List<Path>): String = files
+    private fun hashFiles(files: List<Path>): String = files.asSequence()
         .filter { it.isRegularFile() }
         .sortedBy { it.pathString }
         .joinToString("\n") {
-            "${it.name}:${toHex(it.hashFile(digestSha256()))}"
+            "${it.fileName.pathString}:${toHex(it.hashFile(digestSha256()))}"
         }
 
     private fun hashDirectory(dir: Path): String =
@@ -444,5 +452,50 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hashFile.writeText(hash(remote, destination))
 
         return destination
+    }
+
+    private fun buildHashFunction(
+        vararg things: Any,
+        op: HashFunctionBuilder.() -> Unit = {}
+    ): HashFunction = HashFunction {
+        val builder = HashFunctionBuilder.create()
+        builder.op()
+        if (builder.includePaperweightHash) {
+            builder.add(paperweightHash)
+        }
+        builder.addAll(*things)
+
+        hash(builder)
+    }
+
+    private interface HashFunctionBuilder : MutableList<Any> {
+        var includePaperweightHash: Boolean
+
+        fun addAll(vararg things: Any): Boolean {
+            return addAll(things.toList())
+        }
+
+        companion object {
+            fun create(): HashFunctionBuilder = HashFunctionBuilderImpl()
+        }
+
+        private class HashFunctionBuilderImpl(
+            override var includePaperweightHash: Boolean = true,
+        ) : HashFunctionBuilder, MutableList<Any> by ArrayList()
+    }
+
+    private fun interface HashFunction : () -> String {
+        fun writeHash(hashFile: Path) {
+            hashFile.parent.createDirectories()
+            hashFile.writeText(this())
+        }
+
+        fun upToDate(hashFile: Path): Boolean =
+            hashFile.isRegularFile() && hashFile.readText() == this()
+    }
+
+    private fun hashPaperweightJar(): String {
+        val userdevShadowJar = Paths.get(UserdevSetup::class.java.protectionDomain.codeSource.location.toURI())
+        return hash(userdevShadowJar)
     }
 }

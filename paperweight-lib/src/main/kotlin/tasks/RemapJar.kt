@@ -35,76 +35,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
-val tinyRemapperArgsList: List<String> = listOf(
-    "{input}",
-    "{output}",
-    "{mappings}",
-    "{from}",
-    "{to}",
-    "{classpath}",
-    "--fixpackageaccess",
-    "--renameinvalidlocals",
-    "--threads=1",
-    "--rebuildsourcefilenames"
-)
-
-private fun List<String>.createTinyRemapperArgs(
-    input: String,
-    output: String,
-    mappings: String,
-    from: String,
-    to: String,
-    classpath: Array<String>
-): List<String> {
-    val result = mutableListOf<String>()
-    for (arg in this) {
-        val mapped = when (arg) {
-            "{input}" -> input
-            "{output}" -> output
-            "{mappings}" -> mappings
-            "{from}" -> from
-            "{to}" -> to
-            "{classpath}" -> classpath
-            else -> arg
-        }
-        when (mapped) {
-            is String -> result += mapped
-            is Array<*> -> mapped.mapTo(result) { it as? String ?: throw PaperweightException("Expected String! Got: '$it'.") }
-            else -> throw PaperweightException("Don't know what to do with '$mapped'!")
-        }
-    }
-    return result
-}
-
-fun runTinyRemapper(
-    argsList: List<String>,
-    logFile: Path,
-    inputJar: Path,
-    mappingsFile: Path,
-    fromNamespace: String,
-    toNamespace: String,
-    remapClasspath: List<Path>,
-    remapper: FileCollection,
-    outputJar: Path,
-    launcher: JavaLauncher,
-    workingDir: Path,
-    jvmArgs: List<String> = listOf("-Xmx1G")
-) {
-    ensureDeleted(logFile)
-
-    val args = argsList.createTinyRemapperArgs(
-        inputJar.absolutePathString(),
-        outputJar.absolutePathString(),
-        mappingsFile.absolutePathString(),
-        fromNamespace,
-        toNamespace,
-        remapClasspath.map { it.absolutePathString() }.toTypedArray()
-    )
-
-    ensureParentExists(logFile)
-    launcher.runJar(remapper, workingDir, logFile, jvmArgs = jvmArgs, args = args.toTypedArray())
-}
-
 @CacheableTask
 abstract class RemapJar : JavaLauncherTask() {
 
@@ -127,35 +57,152 @@ abstract class RemapJar : JavaLauncherTask() {
     @get:Classpath
     abstract val remapper: ConfigurableFileCollection
 
+    @get:Input
+    abstract val remapperArgs: ListProperty<String>
+
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
     @get:Internal
-    abstract val jvmargs: ListProperty<String>
+    abstract val jvmArgs: ListProperty<String>
 
     override fun init() {
         super.init()
 
         outputJar.convention(defaultOutput())
-        jvmargs.convention(listOf("-Xmx1G"))
+        jvmArgs.convention(listOf("-Xmx1G"))
+        remapperArgs.convention(TinyRemapper.createArgsList())
     }
 
     @TaskAction
     fun run() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        runTinyRemapper(
-            tinyRemapperArgsList,
-            logFile,
-            inputJar.path,
-            mappingsFile.path,
-            fromNamespace.get(),
-            toNamespace.get(),
-            remapClasspath.files.map { it.toPath() },
-            remapper,
-            outputJar.path,
-            launcher.get(),
-            layout.cache,
-            jvmargs.get()
+        TinyRemapper.run(
+            argsList = remapperArgs.get(),
+            logFile = logFile,
+            inputJar = inputJar.path,
+            mappingsFile = mappingsFile.path,
+            fromNamespace = fromNamespace.get(),
+            toNamespace = toNamespace.get(),
+            remapClasspath = remapClasspath.files.map { it.toPath() },
+            remapper = remapper,
+            outputJar = outputJar.path,
+            launcher = launcher.get(),
+            workingDir = layout.cache,
+            jvmArgs = jvmArgs.get()
         )
+    }
+}
+
+object TinyRemapper {
+    private const val minecraftLvPattern = "\\$\\$\\d+"
+    private const val fixPackageAccessArg = "--fixpackageaccess"
+    private const val rebuildSourceFileNamesArg = "--rebuildsourcefilenames"
+    private const val renameInvalidLocalsArg = "--renameinvalidlocals"
+    private fun invalidLvNamePatternArg(pattern: String) = "--invalidlvnamepattern=$pattern"
+    private fun threadsArg(num: Int) = "--threads=$num"
+
+    private val baseArgs: List<String> = listOf(
+        "{input}",
+        "{output}",
+        "{mappings}",
+        "{from}",
+        "{to}",
+        "{classpath}",
+    )
+
+    val minecraftRemapArgs: List<String> = createArgsList(
+        fixPackageAccess = true,
+        renameInvalidLocals = true,
+        invalidLvNamePattern = minecraftLvPattern,
+        rebuildSourceFileNames = true,
+    )
+
+    val pluginRemapArgs: List<String> = createArgsList()
+
+    fun createArgsList(
+        fixPackageAccess: Boolean = false,
+        renameInvalidLocals: Boolean = false,
+        invalidLvNamePattern: String? = null,
+        threads: Int = 1,
+        rebuildSourceFileNames: Boolean = false,
+    ): List<String> {
+        val args = baseArgs.toMutableList()
+
+        args += threadsArg(threads)
+
+        if (fixPackageAccess) {
+            args += fixPackageAccessArg
+        }
+        if (renameInvalidLocals) {
+            args += renameInvalidLocalsArg
+        }
+        invalidLvNamePattern?.let { pattern ->
+            args += invalidLvNamePatternArg(pattern)
+        }
+        if (rebuildSourceFileNames) {
+            args += rebuildSourceFileNamesArg
+        }
+
+        return args
+    }
+
+    private fun List<String>.expandArgs(
+        input: String,
+        output: String,
+        mappings: String,
+        fromNamespace: String,
+        toNamespace: String,
+        classpath: Array<String>,
+    ): List<String> {
+        val args = mutableListOf<String>()
+
+        for (arg in this) {
+            val mapped = when (arg) {
+                "{input}" -> input
+                "{output}" -> output
+                "{mappings}" -> mappings
+                "{from}" -> fromNamespace
+                "{to}" -> toNamespace
+                "{classpath}" -> classpath
+                else -> arg
+            }
+            when (mapped) {
+                is String -> args += mapped
+                is Array<*> -> mapped.mapTo(args) { it as? String ?: throw PaperweightException("Expected String! Got: '$it'.") }
+                else -> throw PaperweightException("Don't know what to do with '$mapped'!")
+            }
+        }
+
+        return args
+    }
+
+    fun run(
+        argsList: List<String>,
+        logFile: Path,
+        inputJar: Path,
+        mappingsFile: Path,
+        fromNamespace: String,
+        toNamespace: String,
+        remapClasspath: List<Path>,
+        remapper: FileCollection,
+        outputJar: Path,
+        launcher: JavaLauncher,
+        workingDir: Path,
+        jvmArgs: List<String> = listOf("-Xmx1G"),
+    ) {
+        ensureDeleted(logFile)
+
+        val args = argsList.expandArgs(
+            input = inputJar.absolutePathString(),
+            output = outputJar.absolutePathString(),
+            mappings = mappingsFile.absolutePathString(),
+            fromNamespace = fromNamespace,
+            toNamespace = toNamespace,
+            classpath = remapClasspath.map { it.absolutePathString() }.toTypedArray(),
+        )
+
+        ensureParentExists(logFile)
+        launcher.runJar(remapper, workingDir, logFile, jvmArgs = jvmArgs, args = args.toTypedArray())
     }
 }

@@ -44,16 +44,9 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val memberMappings: RegularFileProperty
 
-    @get:Optional
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val fieldMappings: RegularFileProperty
-
-    // TODO remove support after 1.16.5 support is no longer needed
-    @get:Optional
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val packageMappings: RegularFileProperty
 
     @get:Input
     abstract val mcVersion: Property<String>
@@ -105,11 +98,7 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
         val memberMappingsPath = memberMappings.path.absolutePathString()
         val accessTransformersPath = accessTransformers.path.absolutePathString()
 
-        val finalMappingsPath = if (mcVersion.get().startsWith("1.17")) {
-            fieldMappings.path.absolutePathString()
-        } else {
-            packageMappings.path.absolutePathString()
-        }
+        val finalMappingsPath = fieldMappings.path.absolutePathString()
 
         val work = layout.projectDirectory.file(workDirName.get())
 

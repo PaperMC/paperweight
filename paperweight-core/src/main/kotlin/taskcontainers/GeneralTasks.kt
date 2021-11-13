@@ -47,7 +47,7 @@ open class GeneralTasks(
     }
 
     val filterVanillaJar by tasks.registering<FilterJar> {
-        inputJar.set(downloadServerJar.flatMap { it.outputJar })
+        inputJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(extension.vanillaJarIncludes)
     }
 }

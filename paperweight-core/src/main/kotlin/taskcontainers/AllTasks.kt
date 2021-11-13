@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
@@ -30,6 +31,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -39,6 +41,7 @@ open class AllTasks(
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
+    downloadService: Provider<DownloadService> = project.download
 ) : SpigotTasks(project) {
 
     val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
@@ -53,7 +56,7 @@ open class AllTasks(
 
     val copyResources by tasks.registering<CopyResources> {
         inputJar.set(applyMergedAt.flatMap { it.outputJar })
-        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta"))
 
         outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
@@ -63,7 +66,7 @@ open class AllTasks(
         executable.from(project.configurations.named(DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
         outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
     }
@@ -84,6 +87,15 @@ open class AllTasks(
         unneededFiles.value(listOf("README.md"))
 
         outputDir.set(extension.paper.paperApiDir)
+    }
+
+    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
+        mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
+        mcRepo.set(MC_LIBRARY_URL)
+        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        sources.set(true)
+
+        downloader.set(downloadService)
     }
 
     @Suppress("DuplicatedCode")

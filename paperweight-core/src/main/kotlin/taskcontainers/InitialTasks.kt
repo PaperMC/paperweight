@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
@@ -69,17 +68,6 @@ open class InitialTasks(
     }
     private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<JsonObject>(it) }
 
-    val setupMcLibraries by tasks.registering<SetupMcLibraries> {
-        dependencies.set(
-            versionManifest.map { version ->
-                version["libraries"].array.map { library ->
-                    library["name"].string
-                }
-            }
-        )
-        outputFile.set(cache.resolve(MC_LIBRARIES))
-    }
-
     val downloadMappings by tasks.registering<DownloadTask> {
         url.set(
             versionManifest.map { version ->
@@ -99,5 +87,12 @@ open class InitialTasks(
         )
 
         downloader.set(downloadService)
+    }
+
+    val extractFromBundler by tasks.registering<ExtractFromBundler> {
+        bundlerJar.set(downloadServerJar.flatMap { it.outputJar })
+
+        serverLibrariesTxt.set(cache.resolve(SERVER_LIBRARIES))
+        serverLibraryJars.set(cache.resolve(MINECRAFT_JARS_PATH))
     }
 }

@@ -22,13 +22,11 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -37,37 +35,11 @@ open class VanillaTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-    downloadService: Provider<DownloadService> = project.download,
 ) : GeneralTasks(project) {
-
-    val downloadMcLibraries by tasks.registering<DownloadMcLibraries> {
-        mcLibrariesFile.set(setupMcLibraries.flatMap { it.outputFile })
-        mcRepo.set(MC_LIBRARY_URL)
-        outputDir.set(cache.resolve(MINECRAFT_JARS_PATH))
-
-        downloader.set(downloadService)
-    }
-
-    val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
-        inputJar.set(downloadServerJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
-        mcLibraries.set(setupMcLibraries.flatMap { it.outputFile })
-
-        serverLibraries.set(cache.resolve(SERVER_LIBRARIES))
-    }
-
-    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
-        mcLibrariesFile.set(inspectVanillaJar.flatMap { it.serverLibraries })
-        mcRepo.set(MC_LIBRARY_URL)
-        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
-        sources.set(true)
-
-        downloader.set(downloadService)
-    }
 
     val generateMappings by tasks.registering<GenerateMappings> {
         vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
         paramMappings.fileProvider(project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile })
@@ -81,10 +53,11 @@ open class VanillaTasks(
         fromNamespace.set(OBF_NAMESPACE)
         toNamespace.set(DEOBF_NAMESPACE)
         remapper.from(project.configurations.named(REMAPPER_CONFIG))
+        remapperArgs.set(TinyRemapper.minecraftRemapArgs)
     }
 
     val fixJar by tasks.registering<FixJar> {
         inputJar.set(remapJar.flatMap { it.outputJar })
-        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
     }
 }

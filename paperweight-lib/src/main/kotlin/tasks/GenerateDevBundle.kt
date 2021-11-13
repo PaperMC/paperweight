@@ -283,7 +283,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverProject.get().version}",
             buildData = createBuildDataConfig(dataTargetDir),
             decompile = createDecompileRunner(),
-            remap = createRemapRunner(),
+            remapper = createRemapDep(),
             patchDir = patchTargetDir
         )
     }
@@ -300,17 +300,18 @@ abstract class GenerateDevBundle : DefaultTask() {
             accessTransformFile = "$targetDir/$atFileName",
             mojangMappedPaperclipFile = "$targetDir/$mojangMappedPaperclipFileName",
             vanillaJarIncludes = vanillaJarIncludes.get(),
-            vanillaServerLibraries = vanillaServerLibraries.get(),
-            libraryDependencies = determineLibraries(vanillaServerLibraries.get()),
+            libraryDependencies = determineLibraries(serverProject.get(), vanillaServerLibraries.get()),
             libraryRepositories = libraryRepositories.get(),
-            relocations = relocations()
+            relocations = relocations(),
+            minecraftRemapArgs = TinyRemapper.minecraftRemapArgs,
+            pluginRemapArgs = TinyRemapper.pluginRemapArgs,
         )
     }
 
-    private fun determineLibraries(vanillaServerLibraries: List<String>): Set<String> {
+    private fun determineLibraries(serverProject: Project, vanillaServerLibraries: List<String>): Set<String> {
         val new = arrayListOf<String>()
 
-        for (dependency in serverProject.get().configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).get().dependencies) {
+        for (dependency in serverProject.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).get().dependencies) {
             // don't want project dependencies
             if (dependency is ExternalModuleDependency) {
                 val version = sequenceOf(
@@ -344,12 +345,8 @@ abstract class GenerateDevBundle : DefaultTask() {
         )
     }
 
-    private fun createRemapRunner(): Runner {
-        return Runner(
-            dep = determineMavenDep(remapperUrl, remapperConfig),
-            args = tinyRemapperArgsList
-        )
-    }
+    private fun createRemapDep(): MavenDep =
+        determineMavenDep(remapperUrl, remapperConfig)
 
     data class DevBundleConfig(
         val minecraftVersion: String,
@@ -358,7 +355,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         val mojangApiCoordinates: String,
         val buildData: BuildData,
         val decompile: Runner,
-        val remap: Runner,
+        val remapper: MavenDep,
         val patchDir: String
     )
 
@@ -368,10 +365,11 @@ abstract class GenerateDevBundle : DefaultTask() {
         val accessTransformFile: String,
         val mojangMappedPaperclipFile: String,
         val vanillaJarIncludes: List<String>,
-        val vanillaServerLibraries: List<String>,
         val libraryDependencies: Set<String>,
         val libraryRepositories: List<String>,
-        val relocations: List<Relocation>
+        val relocations: List<Relocation>,
+        val minecraftRemapArgs: List<String>,
+        val pluginRemapArgs: List<String>,
     )
 
     data class Runner(val dep: MavenDep, val args: List<String>)
@@ -382,6 +380,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 2
+        const val currentDataVersion = 3
     }
 }

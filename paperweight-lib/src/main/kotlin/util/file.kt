@@ -32,6 +32,7 @@ import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
 import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import kotlin.io.path.*
@@ -123,6 +124,17 @@ fun Path.copyRecursivelyTo(target: Path) {
                 f.copyTo(targetPath)
             }
         }
+    }
+}
+
+fun Path.filesMatchingRecursive(
+    glob: String = "*",
+): List<Path> {
+    val matcher = fileSystem.getPathMatcher("glob:$glob")
+    return Files.walk(this).use { stream ->
+        stream.filter {
+            it.isRegularFile() && matcher.matches(it.fileName)
+        }.collect(Collectors.toList())
     }
 }
 

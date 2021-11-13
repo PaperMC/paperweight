@@ -46,6 +46,7 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.RecordComponentNode
 
 fun fixJar(
     workerExecutor: WorkerExecutor,
@@ -156,6 +157,7 @@ abstract class FixJar : JavaLauncherTask() {
         private fun processClassFile(file: Path, outFile: Path, classNodeCache: ClassNodeCache) {
             val node = classNodeCache.findClass(file.toString()) ?: error("No ClassNode found for known entry: ${file.name}")
 
+            RecordFixer(node).visitNode()
             ParameterAnnotationFixer(node).visitNode()
             OverrideAnnotationAdder(node, classNodeCache).visitNode()
 
@@ -190,6 +192,10 @@ class ParameterAnnotationFixer(private val node: ClassNode) : AsmUtil {
 
         val innerNode = node.innerClasses.firstOrNull { it.name == node.name } ?: return null
         if (innerNode.innerName == null || (Opcodes.ACC_STATIC or Opcodes.ACC_INTERFACE) in innerNode.access) {
+            return null
+        }
+        if (innerNode.outerName == null) {
+            println("Cannot process method local class: ${innerNode.name}")
             return null
         }
 
@@ -296,5 +302,23 @@ class OverrideAnnotationAdder(private val node: ClassNode, private val classNode
         val result = hashSetOf<String>()
         collectSuperMethods(node, result)
         return result
+    }
+}
+
+class RecordFixer(private val node: ClassNode) : AsmUtil {
+    fun visitNode() {
+        if (Opcodes.ACC_RECORD !in node.access && node.superName == "java/lang/Record") {
+            val (staticFields, nonStaticFields) = node.fields.partition { Opcodes.ACC_STATIC in it.access }
+
+            node.fields = staticFields
+            if (node.recordComponents == null) {
+                node.recordComponents = arrayListOf()
+            }
+            node.recordComponents.addAll(
+                nonStaticFields.map {
+                    RecordComponentNode(it.name, it.desc, it.signature)
+                }
+            )
+        }
     }
 }

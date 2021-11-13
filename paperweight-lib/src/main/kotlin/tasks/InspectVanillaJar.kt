@@ -24,14 +24,10 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -45,21 +41,11 @@ abstract class InspectVanillaJar : BaseTask() {
     @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:Classpath
-    abstract val libraries: ConfigurableFileCollection
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mcLibraries: RegularFileProperty
-
     @get:OutputFile
     abstract val loggerFile: RegularFileProperty
 
     @get:OutputFile
     abstract val syntheticMethods: RegularFileProperty
-
-    @get:OutputFile
-    abstract val serverLibraries: RegularFileProperty
 
     override fun init() {
         loggerFile.convention(defaultOutput("$name-loggerFields", "txt"))
@@ -90,8 +76,6 @@ abstract class InspectVanillaJar : BaseTask() {
             }
         }
 
-        val serverLibs = checkLibraries()
-
         loggerFile.path.bufferedWriter(Charsets.UTF_8).use { writer ->
             loggers.sort()
             for (loggerField in loggers) {
@@ -115,47 +99,6 @@ abstract class InspectVanillaJar : BaseTask() {
                 writer.newLine()
             }
         }
-
-        serverLibraries.path.bufferedWriter(Charsets.UTF_8).use { writer ->
-            serverLibs.map { it.toString() }.sorted().forEach { artifact ->
-                writer.appendLine(artifact)
-            }
-        }
-    }
-
-    private fun checkLibraries(): Set<MavenArtifact> {
-        val mcLibs = mcLibraries.path.useLines { lines ->
-            lines.map { MavenArtifact.parse(it) }
-                .map { it.file to it }
-                .toMap()
-        }
-
-        val serverLibs = mutableSetOf<MavenArtifact>()
-
-        val libs = libraries.files.asSequence()
-            .map { f -> f.toPath() }
-            .filter { p -> p.isLibraryJar }
-            .toList()
-
-        inputJar.path.openZip().use { jar ->
-            for (libFile in libs) {
-                val artifact = mcLibs[libFile.name] ?: continue
-
-                libFile.openZip().use lib@{ libFs ->
-                    val containsClass = libFs.walk().use { stream ->
-                        stream.filter { p -> p.name.endsWith(".class") }
-                            .anyMatch { p -> jar.getPath(p.absolutePathString()).exists() }
-                    }
-
-                    if (containsClass) {
-                        serverLibs += artifact
-                        return@lib
-                    }
-                }
-            }
-        }
-
-        return serverLibs
     }
 }
 

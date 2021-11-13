@@ -34,6 +34,8 @@ import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.atlas.AtlasTransformerContext
 import org.cadixdev.bombe.analysis.InheritanceProvider
+import org.cadixdev.bombe.asm.analysis.ClassProviderInheritanceProvider
+import org.cadixdev.bombe.asm.jar.ClassProvider
 import org.cadixdev.bombe.jar.JarClassEntry
 import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
@@ -122,6 +124,20 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
 
             Atlas().apply {
                 install {
+                    // Replace the inheritance provider to set ASM9 opcodes
+                    val inheritanceProvider = AtlasTransformerContext::class.java.getDeclaredField("inheritanceProvider")
+                    inheritanceProvider.isAccessible = true
+                    val classProvider = ClassProviderInheritanceProvider::class.java.getDeclaredField("provider")
+                    classProvider.isAccessible = true
+                    inheritanceProvider.set(
+                        it,
+                        ClassProviderInheritanceProvider(
+                            Opcodes.ASM9,
+                            classProvider.get(inheritanceProvider.get(it)) as ClassProvider
+                        )
+                    )
+                    // End replace inheritance provider
+
                     AtJarEntryTransformer(it, at)
                 }
                 run(parameters.inputJar.path, parameters.outputJar.path)
@@ -152,7 +168,7 @@ class AccessTransformerVisitor(
     private val at: AccessTransformSet,
     private val inheritanceProvider: InheritanceProvider,
     writer: ClassWriter
-) : ClassVisitor(Opcodes.ASM7, writer) {
+) : ClassVisitor(Opcodes.ASM9, writer) {
 
     private lateinit var classTransform: AccessTransformSet.Class
 

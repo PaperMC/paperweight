@@ -109,6 +109,7 @@ abstract class PaperweightUser : Plugin<Project> {
             toNamespace.set(SPIGOT_NAMESPACE)
 
             remapper.from(project.configurations.named(REMAPPER_CONFIG))
+            remapperArgs.set(target.provider { devBundleConfig.buildData.pluginRemapArgs })
         }
 
         target.configurations.create(REOBF_CONFIG) {
@@ -171,7 +172,7 @@ abstract class PaperweightUser : Plugin<Project> {
             name = PARAM_MAPPINGS_REPO_NAME
             content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
         }
-        maven(devBundleConfig.remap.dep.url) {
+        maven(devBundleConfig.remapper.url) {
             name = REMAPPER_REPO_NAME
             content { onlyForConfigurations(REMAPPER_CONFIG) }
         }
@@ -225,7 +226,7 @@ abstract class PaperweightUser : Plugin<Project> {
         target.configurations.create(REMAPPER_CONFIG) {
             isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
             defaultDependencies {
-                for (dep in devBundleConfig.remap.dep.coordinates) {
+                for (dep in devBundleConfig.remapper.coordinates) {
                     add(target.dependencies.create(dep))
                 }
             }

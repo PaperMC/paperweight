@@ -107,7 +107,9 @@ private fun Project.createBuildTasks(
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
+
         remapper.from(parent.configurations.named(REMAPPER_CONFIG))
+        remapperArgs.set(TinyRemapper.minecraftRemapArgs)
 
         outputJar.set(buildDir.resolve("libs/${shadowJar.get().archiveBaseName.get()}-reobf.jar"))
     }

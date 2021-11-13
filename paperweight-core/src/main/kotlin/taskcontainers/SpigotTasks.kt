@@ -52,6 +52,10 @@ open class SpigotTasks(
         additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings.fileExists(project))
     }
 
+    val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
+        inputJar.set(extractFromBundler.flatMap { it.serverJar })
+    }
+
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
         memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
@@ -73,7 +77,6 @@ open class SpigotTasks(
         accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
         fieldMappings.set(generateSpigotMappings.flatMap { it.spigotFieldMappings })
-        packageMappings.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.flatMap { project.provider { it.packageMappings } }))
 
         mcVersion.set(extension.minecraftVersion)
 
@@ -89,7 +92,7 @@ open class SpigotTasks(
 
     val cleanupMappings by tasks.registering<CleanupMappings> {
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
@@ -107,7 +110,7 @@ open class SpigotTasks(
 
     val cleanupSourceMappings by tasks.registering<CleanupSourceMappings> {
         sourceJar.set(spigotRemapJar.flatMap { it.outputJar })
-        libraries.from(downloadMcLibraries.map { it.outputDir.asFileTree })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
         inputMappings.set(patchMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_SOURCE_MAPPINGS))
@@ -192,7 +195,7 @@ open class SpigotTasks(
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
         mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })
-        vanillaJar.set(downloadServerJar.flatMap { it.outputJar })
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
         vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
         spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
