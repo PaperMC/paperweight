@@ -187,18 +187,16 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun Project.checkForDevBundle() {
-        val hasDevBundle = try {
+        val hasDevBundle = runCatching {
             !configurations.getByName(DEV_BUNDLE_CONFIG).isEmpty
-        } catch (ex: Exception) {
-            if (System.getProperty(PAPERWEIGHT_DEBUG, "false").toBoolean()) {
-                logger.lifecycle("Failed to resolve dev bundle", ex)
-            }
-            false // Failed to resolve, probably due to missing repo
         }
-        if (!hasDevBundle) {
+        if (hasDevBundle.isFailure || !hasDevBundle.getOrThrow()) {
             val message = "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration, as" +
                 " well as a repository to resolve it from in order to function. Use the paperweightDevBundle extension function to do this easily."
-            throw PaperweightException(message)
+            throw PaperweightException(
+                message,
+                hasDevBundle.exceptionOrNull()?.let { PaperweightException("Failed to resolve dev bundle", it) }
+            )
         }
     }
 
