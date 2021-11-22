@@ -208,12 +208,11 @@ abstract class RemapSources : JavaLauncherTask() {
 
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
+                merc.isGracefulClasspathChecks = true
                 merc.classPath.addAll(parameters.classpath.map { it.toPath() })
 
                 if (generatedAtOutPath != null) {
                     merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
-                } else {
-                    merc.isGracefulClasspathChecks = true
                 }
 
                 merc.process(parameters.inputDir.path)
@@ -238,7 +237,6 @@ abstract class RemapSources : JavaLauncherTask() {
                     if (additionalAt != null) {
                         merc.processors.clear()
                         merc.processors += AccessTransformerRewriter.create(additionalAt)
-                        merc.isGracefulClasspathChecks = true
 
                         merc.rewrite(tempOut, parameters.outputDir.path)
                     } else {
@@ -355,7 +353,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
                     val methodDec = parentNode as? MethodDeclaration ?: return@also
 
-                    var methodClass = methodDec.resolveBinding().declaringClass
+                    var methodClass = methodDec.resolveBinding()?.declaringClass ?: return // silently return if binding does not resolve
                     if (methodClass.isAnonymous) {
                         val name = getNameNode(referringClass) ?: return
                         thisExpr.qualifier = rewrite.createCopyTarget(name) as Name

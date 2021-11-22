@@ -197,6 +197,11 @@ abstract class DownloadSpigotDependencies : BaseTask() {
             "log4j-api",
             "2.14.1"
         )
+        depList += MavenArtifact(
+            "org.jetbrains",
+            "annotations",
+            "23.0.0"
+        )
         val repoList = arrayListOf<String>()
         // Maven Central is implicit
         repoList += "https://repo.maven.apache.org/maven2/"

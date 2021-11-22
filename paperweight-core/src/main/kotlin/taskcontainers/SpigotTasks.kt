@@ -186,6 +186,10 @@ open class SpigotTasks(
         spigotAt.set(extension.craftBukkit.atFile)
     }
 
+    val fixSpigotJar by tasks.registering<FixSpigotJar> {
+        inputJar.set(filterSpigotExcludes.flatMap { it.outputZip })
+    }
+
     @Suppress("DuplicatedCode")
     val remapSpigotSources by tasks.registering<RemapSources> {
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
@@ -193,7 +197,7 @@ open class SpigotTasks(
         mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
-        vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
+        vanillaRemappedSpigotJar.set(fixSpigotJar.flatMap { it.outputJar })
         spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
         additionalAts.set(extension.paper.additionalAts.fileExists(project))
     }
