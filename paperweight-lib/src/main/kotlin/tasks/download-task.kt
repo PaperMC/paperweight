@@ -186,6 +186,17 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
     private fun parsePom(pomFile: Path): MavenSetup {
         val depList = arrayListOf<MavenArtifact>()
+        // todo dum
+        depList += MavenArtifact(
+            "com.google.code.findbugs",
+            "jsr305",
+            "3.0.2"
+        )
+        depList += MavenArtifact(
+            "org.apache.logging.log4j",
+            "log4j-api",
+            "2.14.1"
+        )
         val repoList = arrayListOf<String>()
         // Maven Central is implicit
         repoList += "https://repo.maven.apache.org/maven2/"

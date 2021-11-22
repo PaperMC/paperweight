@@ -41,35 +41,21 @@ abstract class AddAdditionalSpigotMappings : BaseTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val classSrg: RegularFileProperty
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val memberSrg: RegularFileProperty
-
     @get:Optional
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val additionalClassEntriesSrg: RegularFileProperty
 
-    @get:Optional
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val additionalMemberEntriesSrg: RegularFileProperty
-
     @get:OutputFile
     abstract val outputClassSrg: RegularFileProperty
 
-    @get:OutputFile
-    abstract val outputMemberSrg: RegularFileProperty
-
     override fun init() {
         outputClassSrg.convention(defaultOutput("class.csrg"))
-        outputMemberSrg.convention(defaultOutput("member.csrg"))
     }
 
     @TaskAction
     fun run() {
         addLines(classSrg.path, additionalClassEntriesSrg.pathOrNull, outputClassSrg.path)
-        addLines(memberSrg.path, additionalMemberEntriesSrg.pathOrNull, outputMemberSrg.path)
     }
 
     private fun addLines(inFile: Path, appendFile: Path?, outputFile: Path) {

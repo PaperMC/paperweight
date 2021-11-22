@@ -47,9 +47,7 @@ open class SpigotTasks(
     val addAdditionalSpigotMappings by tasks.registering<AddAdditionalSpigotMappings> {
         dependsOn(initSubmodules)
         classSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
-        memberSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.memberMappings }))
         additionalClassEntriesSrg.set(extension.paper.additionalSpigotClassMappings.fileExists(project))
-        additionalMemberEntriesSrg.set(extension.paper.additionalSpigotMemberMappings.fileExists(project))
     }
 
     val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
@@ -58,7 +56,6 @@ open class SpigotTasks(
 
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
-        memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
 
         loggerFields.set(inspectVanillaJar.flatMap { it.loggerFile })
         syntheticMethods.set(inspectVanillaJar.flatMap { it.syntheticMethods })
@@ -67,16 +64,15 @@ open class SpigotTasks(
 
         outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
         notchToSpigotMappings.set(cache.resolve(OBF_SPIGOT_MAPPINGS))
-        spigotFieldMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
+        spigotMemberMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
     }
 
     val spigotRemapJar by tasks.registering<SpigotRemapJar> {
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
-        memberMappings.set(addAdditionalSpigotMappings.flatMap { it.outputMemberSrg })
         accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
 
-        fieldMappings.set(generateSpigotMappings.flatMap { it.spigotFieldMappings })
+        memberMappings.set(generateSpigotMappings.flatMap { it.spigotMemberMappings })
 
         mcVersion.set(extension.minecraftVersion)
 

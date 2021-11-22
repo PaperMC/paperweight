@@ -65,7 +65,7 @@ const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
 
 const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
 const val OBF_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/official-spigot.tiny"
-const val SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn+fields.csrg"
+const val SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn+fields.csrg" // todo this name is wrong
 const val CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-cleaned.tiny"
 const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patched.tiny"
 const val PATCHED_SPIGOT_MOJANG_YARN_SOURCE_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patched-source.tiny"

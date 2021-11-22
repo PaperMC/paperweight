@@ -44,10 +44,6 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val memberMappings: RegularFileProperty
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val fieldMappings: RegularFileProperty
-
     @get:Input
     abstract val mcVersion: Property<String>
 
@@ -95,12 +91,14 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
         val membersJarPath = membersJarFile.absolutePathString()
 
         val classMappingPath = classMappings.path.absolutePathString()
-        val memberMappingsPath = memberMappings.path.absolutePathString()
         val accessTransformersPath = accessTransformers.path.absolutePathString()
 
-        val finalMappingsPath = fieldMappings.path.absolutePathString()
+        val spigotMembersPath = memberMappings.path.absolutePathString()
 
         val work = layout.projectDirectory.file(workDirName.get())
+
+        val spigotEmptyMappings = layout.cache.resolve("spigot-empty-package-mappings.csrg")
+        spigotEmptyMappings.writeText("")
 
         try {
             try {
@@ -126,7 +124,7 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
                     objects.fileCollection().from(specialSource2Jar),
                     workingDir = work,
                     logFile = logFile,
-                    args = doReplacements(memberMapCommand.get(), classJarPath, memberMappingsPath, membersJarPath)
+                    args = doReplacements(memberMapCommand.get(), classJarPath, spigotMembersPath, membersJarPath)
                 )
             } catch (e: Exception) {
                 throw PaperweightException("Failed to apply member mappings", e)
@@ -143,7 +141,7 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
                         finalMapCommand.get(),
                         membersJarPath,
                         accessTransformersPath,
-                        finalMappingsPath,
+                        spigotEmptyMappings.absolutePathString(),
                         outputJarPath
                     )
                 )
@@ -153,6 +151,7 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
         } finally {
             classJarFile.deleteForcefully()
             membersJarFile.deleteForcefully()
+            spigotEmptyMappings.deleteForcefully()
         }
     }
 

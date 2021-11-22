@@ -61,10 +61,6 @@ abstract class GenerateSpigotMappings : DefaultTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
-    abstract val memberMappings: RegularFileProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
     abstract val loggerFields: RegularFileProperty
 
     @get:InputFile
@@ -82,17 +78,15 @@ abstract class GenerateSpigotMappings : DefaultTask() {
     abstract val outputMappings: RegularFileProperty
 
     @get:OutputFile
-    abstract val spigotFieldMappings: RegularFileProperty
+    abstract val spigotMemberMappings: RegularFileProperty
 
     @TaskAction
     fun run() {
-        val classMappingSet = MappingFormats.CSRG.createReader(classMappings.path).use { it.read() }
-        val memberMappingSet = MappingFormats.CSRG.createReader(memberMappings.path).use { it.read() }
-        val mergedMappingSet = MappingSetMerger.create(classMappingSet, memberMappingSet).merge()
+        val spigotClassMappings = MappingFormats.CSRG.createReader(classMappings.path).use { it.read() }
 
         for (line in loggerFields.path.readLines(Charsets.UTF_8)) {
             val (className, fieldName) = line.split(' ')
-            val classMapping = mergedMappingSet.getClassMapping(className).orElse(null) ?: continue
+            val classMapping = spigotClassMappings.getClassMapping(className).orElse(null) ?: continue
             classMapping.getOrCreateFieldMapping(fieldName, "Lorg/apache/logging/log4j/Logger;").deobfuscatedName = "LOGGER"
         }
 
@@ -112,7 +106,7 @@ abstract class GenerateSpigotMappings : DefaultTask() {
         }
 
         val notchToSpigotSet = MappingSetMerger.create(
-            mergedMappingSet,
+            spigotClassMappings,
             sourceMappings,
             MergeConfig.builder()
                 .withMergeHandler(SpigotMappingsMergerHandler(synths))
@@ -135,8 +129,8 @@ abstract class GenerateSpigotMappings : DefaultTask() {
             DEOBF_NAMESPACE
         )
 
-        val fieldSourceMappings = extractFieldMappings(sourceMappings, classMappingSet)
-        MappingFormats.CSRG.write(fieldSourceMappings, spigotFieldMappings.path)
+        val spigotMembers = extractMemberMappings(sourceMappings, spigotClassMappings)
+        MappingFormats.CSRG.write(spigotMembers, spigotMemberMappings.path)
     }
 }
 
@@ -361,32 +355,46 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
     }
 }
 
-private fun extractFieldMappings(mappings: MappingSet, spigotClassMappings: MappingSet): MappingSet {
+private fun extractMemberMappings(mappings: MappingSet, spigotClassMappings: MappingSet): MappingSet {
     val newMappings = MappingSet.create()
 
     for (topLevelClassMapping in mappings.topLevelClassMappings) {
         val name = spigotClassMappings.getTopLevelClassMapping(topLevelClassMapping.obfuscatedName).orElse(topLevelClassMapping).deobfuscatedName
         val newClassMappings = newMappings.createTopLevelClassMapping(name, name)
-        extractFieldMappings(topLevelClassMapping, newClassMappings, spigotClassMappings)
+        extractMemberMappings(topLevelClassMapping, newClassMappings, spigotClassMappings)
     }
 
     return newMappings
 }
 
-private fun extractFieldMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *>, spigotClassMappings: MappingSet) {
+private fun extractMemberMappings(old: ClassMapping<*, *>, new: ClassMapping<*, *>, spigotClassMappings: MappingSet) {
     for (innerClassMapping in old.innerClassMappings) {
         val name = spigotClassMappings.getClassMapping(innerClassMapping.fullObfuscatedName)
             .map { it.deobfuscatedName }
             .orElse(innerClassMapping.obfuscatedName)
         val newClassMappings = new.createInnerClassMapping(name, name)
-        extractFieldMappings(innerClassMapping, newClassMappings, spigotClassMappings)
+        extractMemberMappings(innerClassMapping, newClassMappings, spigotClassMappings)
     }
 
     for (fieldMapping in old.fieldMappings) {
         val fieldName = when (val name = fieldMapping.obfuscatedName) {
-            "if", "do" -> name + "_"
+            "if", "do" -> name + "_" // todo check if this still applies the same
             else -> name
         }
         new.createFieldMapping(FieldSignature(fieldName, fieldMapping.type.get()), fieldMapping.deobfuscatedName)
+    }
+
+    for (methodMapping in old.methodMappings) {
+        if (methodMapping.deobfuscatedName.contains("$") ||
+            methodMapping.deobfuscatedName == "<init>" ||
+            methodMapping.deobfuscatedName == "<clinit>"
+        ) {
+            continue
+        }
+
+        val desc = spigotClassMappings.deobfuscate(methodMapping.descriptor)
+        new.createMethodMapping(MethodSignature(methodMapping.obfuscatedName, desc)).also {
+            it.deobfuscatedName = methodMapping.deobfuscatedName
+        }
     }
 }
