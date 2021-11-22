@@ -56,7 +56,7 @@ open class VanillaTasks(
         remapperArgs.set(TinyRemapper.minecraftRemapArgs)
     }
 
-    val fixJar by tasks.registering<FixJar> {
+    val fixJar by tasks.registering<FixJarTask> {
         inputJar.set(remapJar.flatMap { it.outputJar })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
     }

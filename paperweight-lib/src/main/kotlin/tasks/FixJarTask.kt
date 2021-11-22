@@ -23,7 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import java.nio.file.FileSystem
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -40,7 +39,6 @@ import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
-import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
@@ -64,7 +62,7 @@ fun fixJar(
         forkOptions.executable(launcher.executablePath.path.absolutePathString())
     }
 
-    queue.submit(FixJar.FixJarAction::class) {
+    queue.submit(FixJarTask.FixJarAction::class) {
         inputJar.set(inputJarPath)
         vanillaJar.set(vanillaJarPath)
         outputJar.set(outputJarPath)
@@ -74,7 +72,7 @@ fun fixJar(
 }
 
 @CacheableTask
-abstract class FixJar : JavaLauncherTask() {
+abstract class FixJarTask : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty
@@ -122,66 +120,19 @@ abstract class FixJar : JavaLauncherTask() {
             parameters.vanillaJar.path.openZip().use { vanillaJar ->
                 parameters.outputJar.path.writeZip().use { out ->
                     parameters.inputJar.path.openZip().use { jarFile ->
-                        processJars(jarFile, vanillaJar, out, FixJarClassProcessor)
+                        FixJar.processJars(jarFile, vanillaJar, out, FixJarClassProcessor)
                     }
                 }
             }
         }
-    }
-}
 
-private fun processJars(jarFile: FileSystem, fallbackJar: FileSystem?, output: FileSystem, processor: ClassProcessor) {
-    val classNodeCache = ClassNodeCache(jarFile, fallbackJar)
-
-    jarFile.walk().use { stream ->
-        stream.forEach { file ->
-            processFile(file, output, classNodeCache, processor)
+        private object FixJarClassProcessor : FixJar.ClassProcessor {
+            override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
+                SpongeRecordFixer.fix(node, classNodeCache, true, true)
+                ParameterAnnotationFixer(node).visitNode()
+                OverrideAnnotationAdder(node, classNodeCache).visitNode()
+            }
         }
-    }
-}
-
-private fun processFile(file: Path, output: FileSystem, classNodeCache: ClassNodeCache, processor: ClassProcessor) {
-    val outFile = output.getPath(file.absolutePathString())
-
-    if (file.isDirectory()) {
-        outFile.createDirectories()
-        return
-    }
-
-    if (!file.name.endsWith(".class")) {
-        file.copyTo(outFile)
-        return
-    }
-
-    processClass(file, outFile, classNodeCache, processor)
-}
-
-private fun processClass(file: Path, outFile: Path, classNodeCache: ClassNodeCache, processor: ClassProcessor) {
-    val node = classNodeCache.findClass(file.toString()) ?: error("No ClassNode found for known entry: ${file.name}")
-
-    processor.processClass(node, classNodeCache)
-
-    val writer = ClassWriter(0)
-    node.accept(writer)
-
-    outFile.writeBytes(writer.toByteArray())
-}
-
-private interface ClassProcessor {
-    fun processClass(node: ClassNode, classNodeCache: ClassNodeCache)
-}
-
-private object FixJarClassProcessor : ClassProcessor {
-    override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
-        SpongeRecordFixer.fix(node, classNodeCache)
-        ParameterAnnotationFixer(node).visitNode()
-        OverrideAnnotationAdder(node, classNodeCache).visitNode()
-    }
-}
-
-private object FixSpigotJarClassProcessor : ClassProcessor {
-    override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
-        SpongeRecordFixer.fix(node, classNodeCache)
     }
 }
 
@@ -335,59 +286,6 @@ class RecordFixer(private val node: ClassNode) : AsmUtil {
                     RecordComponentNode(it.name, it.desc, it.signature)
                 }
             )
-        }
-    }
-}
-
-@CacheableTask
-abstract class FixSpigotJar : JavaLauncherTask() {
-    @get:Classpath
-    abstract val inputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val jvmArgs: ListProperty<String>
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    override fun init() {
-        super.init()
-
-        jvmArgs.convention(listOf("-Xmx512m"))
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    fun run() {
-        ensureParentExists(outputJar.path)
-        ensureDeleted(outputJar.path)
-
-        val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs(jvmArgs.get())
-            forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
-        }
-
-        queue.submit(Action::class) {
-            inputJar.set(this@FixSpigotJar.inputJar.path)
-            outputJar.set(this@FixSpigotJar.outputJar.path)
-        }
-    }
-
-    abstract class Action : WorkAction<Action.Params> {
-        interface Params : WorkParameters {
-            val inputJar: RegularFileProperty
-            val outputJar: RegularFileProperty
-        }
-
-        override fun execute() {
-            parameters.outputJar.path.writeZip().use { out ->
-                parameters.inputJar.path.openZip().use { input ->
-                    processJars(input, null, out, FixSpigotJarClassProcessor)
-                }
-            }
         }
     }
 }

@@ -40,26 +40,35 @@ public final class SpongeRecordFixer {
     private SpongeRecordFixer() {
     }
 
-    public static void fix(final ClassNode classNode, final ClassNodeCache classNodeCache) {
-        new Fixer(classNode, classNodeCache).fix();
+    public static void fix(
+            final ClassNode classNode,
+            final ClassNodeCache classNodeCache,
+            final boolean fixComponents,
+            final boolean fixSignatures
+    ) {
+        new Fixer(classNode, classNodeCache, fixComponents, fixSignatures).fix();
     }
 
     private static class Fixer {
         private final ClassNodeCache classNodeCache;
         private Map<String, RecordComponentNode> components;
         private TypeParameterCollector paramCollector;
-        private boolean isRecord;
-        private boolean patchComponents = true;
-        private boolean patchSignature = true;
-        private ClassNode node;
+        private final boolean patchComponents;
+        private final boolean patchSignature;
+        private final ClassNode node;
 
-        public Fixer(ClassNode parent, ClassNodeCache classNodeCache) {
+        public Fixer(ClassNode parent, ClassNodeCache classNodeCache, boolean fixComponents, boolean fixSignatures) {
             this.node = parent;
             this.classNodeCache = classNodeCache;
+            this.patchComponents = fixComponents;
+            this.patchSignature = fixSignatures;
         }
 
         void fix() {
-            this.isRecord = "java/lang/Record".equals(this.node.superName);
+            if (!"java/lang/Record".equals(this.node.superName)) {
+                return;
+            }
+
             // todo: validate type parameters from superinterfaces
             // this would need to get signature information from bytecode + runtime classes
 
@@ -79,7 +88,7 @@ public final class SpongeRecordFixer {
             for (FieldNode field : this.node.fields) {
                 // We want any fields that are final and not static. Proguard sometimes increases the visibility of record component fields to be higher than private.
                 // These fields still need to have record components generated, so we need to ignore ACC_PRIVATE.
-                if (isRecord && patchComponents && (field.access & (Opcodes.ACC_FINAL | Opcodes.ACC_STATIC)) == Opcodes.ACC_FINAL) {
+                if (patchComponents && (field.access & (Opcodes.ACC_FINAL | Opcodes.ACC_STATIC)) == Opcodes.ACC_FINAL) {
                     // Make sure the visibility gets set back to private
                     field.access = field.access & ~(Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED) | Opcodes.ACC_PRIVATE;
                     // Manually add the record component back if this class doesn't have any
@@ -88,7 +97,7 @@ public final class SpongeRecordFixer {
                     components.put(field.name + field.desc, new RecordComponentNode(field.name, field.desc, field.signature));
                 }
 
-                if (isRecord && field.signature != null && patchSignature) { // signature implies non-primitive type
+                if (field.signature != null && patchSignature) { // signature implies non-primitive type
                     if (paramCollector == null) paramCollector = new TypeParameterCollector();
                     paramCollector.baseType = Type.getType(field.desc);
                     paramCollector.param = TypeParameterCollector.FIELD;
@@ -97,7 +106,7 @@ public final class SpongeRecordFixer {
             }
 
             for (MethodNode method : this.node.methods) {
-                if (isRecord && method.signature != null && patchSignature) { // signature implies non-primitive type
+                if (method.signature != null && patchSignature) { // signature implies non-primitive type
                     if (paramCollector == null) paramCollector = new TypeParameterCollector();
                     paramCollector.baseType = Type.getType(method.desc);
                     paramCollector.param = TypeParameterCollector.FIELD; // start out before parameters come in
@@ -108,14 +117,14 @@ public final class SpongeRecordFixer {
                 }
             }
 
-            if (isRecord && !hasRecordComponents && components != null) {
+            if (!hasRecordComponents && components != null) {
                 List<RecordComponentNode> nodes = new ArrayList<>(this.components.size());
                 for (RecordComponentNode entry : this.components.values()) {
                     nodes.add(entry);
                 }
                 this.node.recordComponents = nodes;
             }
-            if (isRecord && patchSignature && paramCollector != null && !paramCollector.typeParameters.isEmpty()) {
+            if (patchSignature && paramCollector != null && !paramCollector.typeParameters.isEmpty()) {
                 // Proguard also strips the Signature attribute, so we have to reconstruct that, to a point where this class is accepted by
                 // javac when on the classpath. This requires every type parameter referenced to have been declared within the class.
                 // Records are implicitly static and have a defined superclass of java/lang/Record, so there can be type parameters in play from:

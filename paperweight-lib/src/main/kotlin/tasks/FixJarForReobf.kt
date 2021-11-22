@@ -23,7 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import java.nio.file.FileSystem
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -40,7 +39,6 @@ import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
-import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
@@ -109,51 +107,18 @@ abstract class FixJarForReobf : JavaLauncherTask() {
 
             output.writeZip().use { out ->
                 parameters.inputJar.path.openZip().use { jarFile ->
-                    processJars(jarFile, out, packages)
+                    FixJar.processJars(jarFile, out, FixForReobfProcessor(packages))
                 }
             }
         }
 
-        private fun processJars(jarFile: FileSystem, output: FileSystem, packages: List<String>) {
-            val classNodeCache = ClassNodeCache(jarFile)
+        class FixForReobfProcessor(private val packages: List<String>) : FixJar.ClassProcessor {
+            override fun shouldProcess(file: Path): Boolean =
+                packages.any { file.toString().startsWith(it) }
 
-            jarFile.walk().use { stream ->
-                stream.forEach { file ->
-                    processFile(file, output, packages, classNodeCache)
-                }
+            override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
+                FieldAccessNormalizer(node, classNodeCache).visitNode()
             }
-        }
-
-        private fun processFile(file: Path, output: FileSystem, packages: List<String>, classNodeCache: ClassNodeCache) {
-            val outFile = output.getPath(file.toString())
-
-            if (file.isDirectory()) {
-                outFile.createDirectories()
-                return
-            }
-
-            if (!file.name.endsWith(".class")) {
-                file.copyTo(outFile)
-                return
-            }
-
-            if (packages.none { file.toString().startsWith(it) }) {
-                file.copyTo(outFile)
-                return
-            }
-
-            processClassFile(file, outFile, classNodeCache)
-        }
-
-        private fun processClassFile(file: Path, outFile: Path, classNodeCache: ClassNodeCache) {
-            val node = classNodeCache.findClass(file.toString()) ?: error("No ClassNode found for known entry: ${file.name}")
-
-            FieldAccessNormalizer(node, classNodeCache).visitNode()
-
-            val writer = ClassWriter(0)
-            node.accept(writer)
-
-            outFile.writeBytes(writer.toByteArray())
         }
 
         private fun normalize(input: List<String>): List<String> {
