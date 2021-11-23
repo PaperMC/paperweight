@@ -339,6 +339,8 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
         target: ClassMapping<*, *>,
         context: MergeContext
     ): MergeResult<MethodMapping?> {
+        return super.addRightMethodMapping(right, target, context)
+        /* todo
         // Check if spigot changes this method automatically
         val synthMethods = synths[right.parentClass.fullObfuscatedName]?.get(right.obfuscatedDescriptor)
         val newName = synthMethods?.get(right.obfuscatedName) ?: return emptyMergeResult()
@@ -352,6 +354,7 @@ class SpigotMappingsMergerHandler(private val synths: Synths) : MappingSetMerger
             newMapping.deobfuscatedName = newName
         }
         return MergeResult(newMapping)
+         */
     }
 }
 
