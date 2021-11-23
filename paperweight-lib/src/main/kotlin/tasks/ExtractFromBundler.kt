@@ -78,10 +78,10 @@ object ServerBundler {
 
     private fun extractServerJar(bundlerFs: FileSystem, serverJar: Path) {
         val versionId = gson.fromJson<JsonObject>(bundlerFs.getPath("version.json"))["id"].asString
-        val versions = bundlerFs.getPath("META-INF/versions.list").readLines()
+        val versions = bundlerFs.getPath("/META-INF/versions.list").readLines()
             .map { it.split('\t') }
             .associate { it[1] to it[2] }
-        val serverJarPath = bundlerFs.getPath("META-INF/versions/${versions[versionId]}")
+        val serverJarPath = bundlerFs.getPath("/META-INF/versions/${versions[versionId]}")
 
         serverJar.parent.createDirectories()
         serverJarPath.copyTo(serverJar, overwrite = true)
@@ -90,11 +90,11 @@ object ServerBundler {
     private fun extractLibraryJars(bundlerFs: FileSystem, serverLibraryJars: Path) {
         serverLibraryJars.deleteRecursively()
         serverLibraryJars.parent.createDirectories()
-        bundlerFs.getPath("META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
+        bundlerFs.getPath("/META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
     }
 
     private fun writeLibrariesTxt(bundlerFs: FileSystem, serverLibrariesTxt: Path) {
-        val libs = bundlerFs.getPath("META-INF/libraries.list").readLines()
+        val libs = bundlerFs.getPath("/META-INF/libraries.list").readLines()
             .map { it.split('\t')[1] }
 
         serverLibrariesTxt.parent.createDirectories()
