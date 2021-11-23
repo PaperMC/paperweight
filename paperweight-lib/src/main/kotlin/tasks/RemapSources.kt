@@ -38,6 +38,7 @@ import org.cadixdev.mercury.SourceRewriter
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.cadixdev.mercury.extra.AccessAnalyzerProcessor
 import org.cadixdev.mercury.remapper.MercuryRemapper
+import org.eclipse.jdt.core.JavaCore
 import org.eclipse.jdt.core.dom.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -208,6 +209,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
+                merc.sourceCompatibility = JavaCore.VERSION_16
                 merc.isGracefulClasspathChecks = true
                 merc.classPath.addAll(parameters.classpath.map { it.toPath() })
 

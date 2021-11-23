@@ -17,7 +17,8 @@ kotlin {
 
 repositories {
     mavenCentral()
-    maven("https://oss.sonatype.org/content/repositories/snapshots/") {
+    //maven("https://oss.sonatype.org/content/repositories/snapshots/") {
+    maven("https://papermc.io/repo/repository/maven-snapshots/") {
         mavenContent {
             includeModule("org.cadixdev", "mercury")
         }
