@@ -45,8 +45,6 @@ import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
-import org.cadixdev.lorenz.model.ClassMapping
-import org.cadixdev.lorenz.model.MemberMapping
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.FileCollection
@@ -81,7 +79,7 @@ inline fun <reified T> Gson.fromJson(any: Any): T = when (any) {
 }
 
 val ProjectLayout.cache: Path
-    get() = projectDirectory.file(".gradle/$CACHE_PATH").path
+    get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 fun ProjectLayout.initSubmodules() {
@@ -237,9 +235,6 @@ fun findOutputDir(baseFile: Path): Path {
     } while (dir.exists())
     return dir
 }
-
-val MemberMapping<*, *>.parentClass: ClassMapping<*, *>
-    get() = parent as ClassMapping<*, *>
 
 private val emptyMergeResult = MergeResult(null)
 fun <T> emptyMergeResult(): MergeResult<T?> {
