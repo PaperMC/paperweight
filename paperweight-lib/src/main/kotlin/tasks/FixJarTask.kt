@@ -40,10 +40,8 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.MethodNode
 
 fun fixJar(
     workerExecutor: WorkerExecutor,
@@ -128,89 +126,9 @@ abstract class FixJarTask : JavaLauncherTask() {
         private object FixJarClassProcessor : FixJar.ClassProcessor {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
                 SpongeRecordFixer.fix(node, classNodeCache, true, true)
-                ParameterAnnotationFixer(node).visitNode()
                 OverrideAnnotationAdder(node, classNodeCache).visitNode()
             }
         }
-    }
-}
-
-/*
- * This was adapted from code originally written by Pokechu22 in MCInjector
- * Link: https://github.com/ModCoderPack/MCInjector/pull/3
- */
-class ParameterAnnotationFixer(private val node: ClassNode) : AsmUtil {
-
-    fun visitNode() {
-        val expected = expectedSyntheticParams() ?: return
-
-        for (method in node.methods) {
-            if (method.name == "<init>") {
-                processConstructor(method, expected)
-            }
-        }
-    }
-
-    private fun expectedSyntheticParams(): List<Type>? {
-        if (Opcodes.ACC_ENUM in node.access) {
-            return listOf(Type.getObjectType("java/lang/String"), Type.INT_TYPE)
-        }
-
-        val innerNode = node.innerClasses.firstOrNull { it.name == node.name } ?: return null
-        if (innerNode.innerName == null || (Opcodes.ACC_STATIC or Opcodes.ACC_INTERFACE) in innerNode.access) {
-            return null
-        }
-        if (innerNode.outerName == null) {
-            println("Cannot process method local class: ${innerNode.name}")
-            return null
-        }
-
-        return listOf(Type.getObjectType(innerNode.outerName))
-    }
-
-    private fun processConstructor(method: MethodNode, synthParams: List<Type>) {
-        val params = Type.getArgumentTypes(method.desc).asList()
-
-        if (!params.beginsWith(synthParams)) {
-            return
-        }
-
-        method.visibleParameterAnnotations = process(params.size, synthParams.size, method.visibleParameterAnnotations)
-        method.invisibleParameterAnnotations =
-            process(params.size, synthParams.size, method.invisibleParameterAnnotations)
-
-        method.visibleParameterAnnotations?.let {
-            method.visibleAnnotableParameterCount = it.size
-        }
-        method.invisibleParameterAnnotations?.let {
-            method.invisibleAnnotableParameterCount = it.size
-        }
-    }
-
-    private fun process(
-        paramCount: Int,
-        synthCount: Int,
-        annotations: Array<List<AnnotationNode>>?
-    ): Array<List<AnnotationNode>>? {
-        if (annotations == null) {
-            return null
-        }
-        if (paramCount == annotations.size) {
-            return annotations.copyOfRange(synthCount, paramCount)
-        }
-        return annotations
-    }
-
-    private fun <T> List<T>.beginsWith(other: List<T>): Boolean {
-        if (this.size < other.size) {
-            return false
-        }
-        for (i in other.indices) {
-            if (this[i] != other[i]) {
-                return false
-            }
-        }
-        return true
     }
 }
 
