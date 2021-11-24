@@ -48,12 +48,7 @@ abstract class FilterSpigotExcludes : ZippedTask() {
                 if (line.startsWith('#') || line.isBlank()) {
                     continue
                 }
-                val file = if (line.contains('/')) {
-                    rootDir.resolve("$line.class")
-                } else {
-                    rootDir.resolve("net/minecraft/server/$line.class")
-                }
-                file.deleteForcefully()
+                rootDir.resolve("$line.class").deleteForcefully()
             }
         }
     }

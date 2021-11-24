@@ -33,12 +33,8 @@ import dev.denwav.hypo.mappings.ChangeRegistry
 import dev.denwav.hypo.mappings.ClassMappingsChange
 import dev.denwav.hypo.mappings.MappingsCompletionManager
 import dev.denwav.hypo.mappings.changes.MemberReference
-import dev.denwav.hypo.mappings.changes.RemoveClassMappingChange
 import dev.denwav.hypo.mappings.changes.RemoveMappingChange
-import dev.denwav.hypo.mappings.changes.RemoveParameterMappingChange
 import dev.denwav.hypo.mappings.contributors.ChangeContributor
-import dev.denwav.hypo.mappings.contributors.CopyMappingsDown
-import dev.denwav.hypo.mappings.contributors.PropagateMappingsUp
 import dev.denwav.hypo.mappings.contributors.RemoveUnusedMappings
 import dev.denwav.hypo.model.ClassProviderRoot
 import dev.denwav.hypo.model.data.ClassData
@@ -46,7 +42,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.cadixdev.bombe.type.signature.FieldSignature
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.model.ClassMapping
 import org.gradle.api.file.RegularFileProperty
@@ -112,39 +107,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
         }
     }
 
-    object RemoveAllParameterMappings : ChangeContributor {
-        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-            if (classMapping == null) {
-                return
-            }
-            for (methodMapping in classMapping.methodMappings) {
-                val params = methodMapping.parameterMappings
-                if (params.isEmpty()) {
-                    continue
-                }
-                val ref = MemberReference.of(methodMapping)
-                for (parameterMapping in params) {
-                    registry.submitChange(RemoveParameterMappingChange.of(ref, parameterMapping.index))
-                }
-            }
-        }
-
-        override fun name() = "RemoveAllParameterMappings"
-    }
-
-    object RemoveObfSpigotMappings : ChangeContributor {
-        override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-            if (classMapping == null) {
-                return
-            }
-            if (!classMapping.fullDeobfuscatedName.contains("/")) {
-                registry.submitChange(RemoveClassMappingChange.of(classMapping.fullObfuscatedName))
-            }
-        }
-
-        override fun name() = "RemoveObfSpigotMappings"
-    }
-
+    // https://github.com/PaperMC/paperweight/issues/18
     class PropagateOuterClassMappings(private val mappings: MappingSet) : ChangeContributor {
 
         override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
@@ -242,8 +205,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
                 DEOBF_NAMESPACE
             )
 
-            val spigotFieldMappings = filterFieldMappings(obfToSpigot).reverse().merge(obfToMojang)
-            val outputMappings = copyFieldMappings(spigotToMojang, spigotFieldMappings).reverse()
+            val outputMappings = mergeSpigotWithMojangMemberMappings(obfToSpigot, obfToMojang, spigotToMojang)
 
             val spigotRecompiles = parameters.spigotRecompiles.path.readLines().toSet()
 
@@ -259,11 +221,8 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
                     ChangeChain.create()
                         .addLink(RemoveUnusedMappings.create())
-                        .addLink(RemoveAllParameterMappings, RemoveObfSpigotMappings)
-                        .addLink(PropagateOuterClassMappings(outputMappings))
-                        .addLink(PropagateMappingsUp.create())
-                        .addLink(CopyMappingsDown.create())
                         .addLink(RemoveRecompiledSyntheticMemberMappings(spigotRecompiles))
+                        .addLink(PropagateOuterClassMappings(outputMappings))
                         .applyChain(outputMappings, MappingsCompletionManager.create(hypoContext))
                 }
 
@@ -275,72 +234,79 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             )
         }
 
-        private fun filterFieldMappings(mappings: MappingSet): MappingSet {
-            class RemoveFieldMappings : ChangeContributor {
-                override fun contribute(currentClass: ClassData?, classMapping: ClassMapping<*, *>?, context: HypoContext, registry: ChangeRegistry) {
-                    classMapping?.fieldMappings?.forEach { fieldMapping ->
-                        registry.submitChange(RemoveMappingChange.of(MemberReference.of(fieldMapping)))
-                    }
-                }
-
-                override fun name(): String = "RemoveFieldMappings"
-            }
-
-            return HypoContext.builder().build().use { context ->
-                ChangeChain.create().addLink(RemoveFieldMappings()).applyChain(mappings, MappingsCompletionManager.create(context))
-            }
-        }
-
-        private fun copyFieldMappings(baseMappings: MappingSet, fieldMappings: MappingSet): MappingSet {
+        private fun mergeSpigotWithMojangMemberMappings(obfToSpigot: MappingSet, obfToMojang: MappingSet, spigotToMojang: MappingSet): MappingSet {
             val output = MappingSet.create()
 
-            val names = (fieldMappings.topLevelClassMappings + baseMappings.topLevelClassMappings).map { it.obfuscatedName }.toSet()
+            for (mojangClassMapping in obfToMojang.topLevelClassMappings) {
+                val spigotClassMapping = obfToSpigot.getTopLevelClassMapping(mojangClassMapping.obfuscatedName).orNull
+                val paperMojangClassMapping = spigotClassMapping?.deobfuscatedName?.let { spigotToMojang.getTopLevelClassMapping(it) }?.orNull
 
-            for (className in names) {
-                val fieldClassMapping = fieldMappings.getTopLevelClassMapping(className).orNull
-                val baseClassMapping = baseMappings.getTopLevelClassMapping(className).orNull
-                val newClassMapping = output.createTopLevelClassMapping(
-                    baseClassMapping?.obfuscatedName ?: fieldClassMapping?.obfuscatedName,
-                    baseClassMapping?.deobfuscatedName ?: fieldClassMapping?.deobfuscatedName
-                )
-                copyFieldMappings(baseClassMapping, fieldClassMapping, newClassMapping)
+                val fromClassName = mojangClassMapping.deobfuscatedName
+                val toClassName = if (spigotClassMapping != null && spigotClassMapping.obfuscatedName != spigotClassMapping.deobfuscatedName) {
+                    spigotClassMapping.deobfuscatedName
+                } else {
+                    mojangClassMapping.deobfuscatedName
+                }
+
+                // package-info and nullability annotations don't need to be reobfed
+                if (fromClassName.endsWith("package-info") || fromClassName.endsWith("NonnullByDefault")) {
+                    continue
+                }
+
+                val newClassMapping = output.createTopLevelClassMapping(fromClassName, toClassName)
+                mergeSpigotWithMojangMemberMappings(spigotClassMapping, mojangClassMapping, paperMojangClassMapping, newClassMapping)
             }
 
             return output
         }
 
-        private fun copyFieldMappings(
-            baseClassMapping: ClassMapping<*, *>?,
-            fieldClassMapping: ClassMapping<*, *>?,
+        private fun mergeSpigotWithMojangMemberMappings(
+            spigotClassMapping: ClassMapping<*, *>?,
+            mojangClassMapping: ClassMapping<*, *>,
+            paperMojangClassMapping: ClassMapping<*, *>?,
             targetMappings: ClassMapping<*, *>
         ) {
-            val innerNames = ((baseClassMapping?.innerClassMappings ?: emptyList()) + (fieldClassMapping?.innerClassMappings ?: emptyList()))
-                .map { it.obfuscatedName }.toSet()
+            for (mojangInnerClassMapping in mojangClassMapping.innerClassMappings) {
+                val spigotInnerClassMapping = spigotClassMapping?.getInnerClassMapping(mojangInnerClassMapping.obfuscatedName)?.orNull
+                val paperMojangInnerClassMapping = spigotInnerClassMapping?.deobfuscatedName
+                    ?.let { paperMojangClassMapping?.getInnerClassMapping(it) }?.orNull
 
-            for (innerName in innerNames) {
-                val fieldInnerClassMapping = fieldClassMapping?.getInnerClassMapping(innerName)?.orNull
-                val baseInnerClassMapping = baseClassMapping?.getInnerClassMapping(innerName)?.orNull
-                val newInnerClassMapping = targetMappings.createInnerClassMapping(
-                    baseInnerClassMapping?.obfuscatedName ?: fieldInnerClassMapping?.obfuscatedName,
-                    baseInnerClassMapping?.deobfuscatedName ?: fieldInnerClassMapping?.deobfuscatedName
+                val fromInnerClassName = mojangInnerClassMapping.deobfuscatedName
+                val toInnerClassName = spigotInnerClassMapping?.deobfuscatedName ?: mojangInnerClassMapping.deobfuscatedName
+
+                val newInnerClassMapping = targetMappings.createInnerClassMapping(fromInnerClassName, toInnerClassName)
+                mergeSpigotWithMojangMemberMappings(
+                    spigotInnerClassMapping,
+                    mojangInnerClassMapping,
+                    paperMojangInnerClassMapping,
+                    newInnerClassMapping
                 )
-                copyFieldMappings(baseInnerClassMapping, fieldInnerClassMapping, newInnerClassMapping)
             }
 
-            if (baseClassMapping != null) {
-                for (methodMapping in baseClassMapping.methodMappings) {
-                    methodMapping.copy(targetMappings)
+            for (fieldMapping in mojangClassMapping.fieldMappings) {
+                targetMappings.createFieldMapping(fieldMapping.deobfuscatedSignature, fieldMapping.obfuscatedName)
+            }
+            for (methodMapping in mojangClassMapping.methodMappings) {
+                targetMappings.createMethodMapping(methodMapping.deobfuscatedSignature, methodMapping.obfuscatedName)
+            }
+
+            // Pick up any changes made through mappings patches
+            if (paperMojangClassMapping != null) {
+                for (fieldMapping in paperMojangClassMapping.fieldMappings) {
+                    val obfName = mojangClassMapping.fieldMappings
+                        .firstOrNull { it.deobfuscatedSignature == fieldMapping.deobfuscatedSignature }?.obfuscatedName ?: continue
+                    val deobfFieldType = fieldMapping.deobfuscatedSignature.type.orNull ?: continue
+
+                    targetMappings.getOrCreateFieldMapping(fieldMapping.deobfuscatedName, deobfFieldType).also {
+                        it.deobfuscatedName = obfName
+                    }
                 }
-            }
+                for (methodMapping in paperMojangClassMapping.methodMappings) {
+                    val obfName = mojangClassMapping.methodMappings
+                        .firstOrNull { it.deobfuscatedSignature == methodMapping.deobfuscatedSignature }?.obfuscatedName ?: continue
 
-            if (fieldClassMapping != null) {
-                for (fieldMapping in fieldClassMapping.fieldMappings) {
-                    when (val name = fieldMapping.obfuscatedName) {
-                        "if", "do" -> targetMappings.createFieldMapping(
-                            FieldSignature(name + "_", fieldMapping.type.orNull),
-                            fieldMapping.deobfuscatedName
-                        )
-                        else -> fieldMapping.copy(targetMappings)
+                    targetMappings.getOrCreateMethodMapping(methodMapping.deobfuscatedSignature).also {
+                        it.deobfuscatedName = obfName
                     }
                 }
             }
