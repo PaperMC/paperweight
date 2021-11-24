@@ -125,7 +125,6 @@ abstract class FixJarTask : JavaLauncherTask() {
 
         private object FixJarClassProcessor : FixJar.ClassProcessor {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
-                SpongeRecordFixer.fix(node, classNodeCache, true, true)
                 OverrideAnnotationAdder(node, classNodeCache).visitNode()
             }
         }
