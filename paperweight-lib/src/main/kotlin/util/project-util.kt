@@ -28,6 +28,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
@@ -55,7 +56,7 @@ fun Project.setupServerProject(
 
     extensions.create<RelocationExtension>(RELOCATION_EXTENSION, objects)
 
-    configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
+    val vanillaServer: Configuration by configurations.creating {
         withDependencies {
             dependencies {
                 // update mc-dev sources on dependency resolution
@@ -66,7 +67,14 @@ fun Project.setupServerProject(
                 )
 
                 add(create(parent.files(remappedJar)))
+            }
+        }
+    }
 
+    configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
+        extendsFrom(vanillaServer)
+        withDependencies {
+            dependencies {
                 val libs = libsFile.convertToPathOrNull()
                 if (libs != null && libs.exists()) {
                     libs.forEachLine { line ->
