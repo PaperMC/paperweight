@@ -24,7 +24,6 @@ package io.papermc.paperweight.tasks
 
 import com.google.gson.JsonObject
 import io.papermc.paperweight.util.*
-import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
@@ -70,31 +69,32 @@ object ServerBundler {
         serverLibrariesTxt: Path?,
     ) {
         bundlerJar.openZip().use { bundlerFs ->
-            extractServerJar(bundlerFs, serverJar)
-            extractLibraryJars(bundlerFs, serverLibraryJars)
-            serverLibrariesTxt?.let { writeLibrariesTxt(bundlerFs, it) }
+            val root = bundlerFs.rootDirectories.first()
+            extractServerJar(root, serverJar)
+            extractLibraryJars(root, serverLibraryJars)
+            serverLibrariesTxt?.let { writeLibrariesTxt(root, it) }
         }
     }
 
-    private fun extractServerJar(bundlerFs: FileSystem, serverJar: Path) {
-        val versionId = gson.fromJson<JsonObject>(bundlerFs.getPath("version.json"))["id"].asString
-        val versions = bundlerFs.getPath("/META-INF/versions.list").readLines()
+    private fun extractServerJar(bundlerZip: Path, serverJar: Path) {
+        val versionId = gson.fromJson<JsonObject>(bundlerZip.resolve("version.json"))["id"].asString
+        val versions = bundlerZip.resolve("META-INF/versions.list").readLines()
             .map { it.split('\t') }
             .associate { it[1] to it[2] }
-        val serverJarPath = bundlerFs.getPath("/META-INF/versions/${versions[versionId]}")
+        val serverJarPath = bundlerZip.resolve("META-INF/versions/${versions[versionId]}")
 
         serverJar.parent.createDirectories()
         serverJarPath.copyTo(serverJar, overwrite = true)
     }
 
-    private fun extractLibraryJars(bundlerFs: FileSystem, serverLibraryJars: Path) {
+    private fun extractLibraryJars(bundlerZip: Path, serverLibraryJars: Path) {
         serverLibraryJars.deleteRecursively()
         serverLibraryJars.parent.createDirectories()
-        bundlerFs.getPath("/META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
+        bundlerZip.resolve("META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
     }
 
-    private fun writeLibrariesTxt(bundlerFs: FileSystem, serverLibrariesTxt: Path) {
-        val libs = bundlerFs.getPath("/META-INF/libraries.list").readLines()
+    private fun writeLibrariesTxt(bundlerZip: Path, serverLibrariesTxt: Path) {
+        val libs = bundlerZip.resolve("META-INF/libraries.list").readLines()
             .map { it.split('\t')[1] }
 
         serverLibrariesTxt.parent.createDirectories()

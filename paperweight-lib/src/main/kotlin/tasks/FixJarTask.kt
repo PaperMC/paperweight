@@ -44,7 +44,6 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
-import org.objectweb.asm.tree.RecordComponentNode
 
 fun fixJar(
     workerExecutor: WorkerExecutor,
@@ -269,23 +268,5 @@ class OverrideAnnotationAdder(private val node: ClassNode, private val classNode
         val result = hashSetOf<String>()
         collectSuperMethods(node, result)
         return result
-    }
-}
-
-class RecordFixer(private val node: ClassNode) : AsmUtil {
-    fun visitNode() {
-        if (Opcodes.ACC_RECORD !in node.access && node.superName == "java/lang/Record") {
-            val (staticFields, nonStaticFields) = node.fields.partition { Opcodes.ACC_STATIC in it.access }
-
-            node.fields = staticFields
-            if (node.recordComponents == null) {
-                node.recordComponents = arrayListOf()
-            }
-            node.recordComponents.addAll(
-                nonStaticFields.map {
-                    RecordComponentNode(it.name, it.desc, it.signature)
-                }
-            )
-        }
     }
 }

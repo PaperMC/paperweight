@@ -50,21 +50,14 @@ open class SpigotTasks(
         additionalClassEntriesSrg.set(extension.paper.additionalSpigotClassMappings.fileExists(project))
     }
 
-    val inspectVanillaJar by tasks.registering<InspectVanillaJar> {
-        inputJar.set(extractFromBundler.flatMap { it.serverJar })
-    }
-
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
-
-        loggerFields.set(inspectVanillaJar.flatMap { it.loggerFile })
-        syntheticMethods.set(inspectVanillaJar.flatMap { it.syntheticMethods })
 
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
         notchToSpigotMappings.set(cache.resolve(OBF_SPIGOT_MAPPINGS))
-        spigotMemberMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_FIELDS_MAPPINGS))
+        spigotMemberMappings.set(cache.resolve(SPIGOT_MEMBER_MAPPINGS))
     }
 
     val spigotRemapJar by tasks.registering<SpigotRemapJar> {
