@@ -23,6 +23,7 @@
 package io.papermc.paperweight.taskcontainers
 
 import io.papermc.paperweight.extension.RelocationExtension
+import io.papermc.paperweight.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -30,20 +31,17 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
 class DevBundleTasks(
     private val project: Project,
     tasks: TaskContainer = project.tasks,
 ) {
-    val generateMojangMappedPaperclipPatch by tasks.registering<GeneratePaperclipPatch>()
-
-    val mojangMappedPaperclipJar by tasks.registering<Jar> {
-        archiveClassifier.set("mojang-mapped-paperclip")
-        configurePaperclipJar(project, generateMojangMappedPaperclipPatch)
+    val serverBundlerForDevBundle by tasks.registering<CreateBundlerJar> {
+        paperclip.from(project.configurations.named(PAPERCLIP_CONFIG))
     }
 
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
@@ -56,25 +54,37 @@ class DevBundleTasks(
     }
 
     fun configure(
+        bundlerJarName: String,
+        mainClassName: Property<String>,
         serverProj: Provider<Project>,
         minecraftVer: Provider<String>,
-        vanillaJar: Provider<Path?>,
         decompileJar: Provider<Path?>,
         serverLibrariesTxt: Provider<Path?>,
+        serverLibrariesListFile: Provider<Path?>,
+        vanillaBundlerJarFile: Provider<Path?>,
         accessTransformFile: Provider<Path?>,
+        versionJsonFile: Provider<Path>,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
-        generateMojangMappedPaperclipPatch {
-            // FIXME
-//            originalJar.pathProvider(vanillaJar)
-//            patchedJar.set(serverProj.flatMap { proj -> proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar } })
-            mcVersion.set(minecraftVer)
+        serverBundlerForDevBundle {
+            mainClass.set(mainClassName)
+            serverLibrariesList.pathProvider(serverLibrariesListFile)
+            vanillaBundlerJar.pathProvider(vanillaBundlerJarFile)
+            versionArtifacts {
+                registerVersionArtifact(
+                    bundlerJarName,
+                    versionJsonFile,
+                    serverProj.flatMap { proj ->
+                        proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar }
+                    }
+                )
+            }
         }
 
         generateDevelopmentBundle {
             sourceDir.set(serverProj.map { it.layout.projectDirectory.dir("src/main/java") })
             minecraftVersion.set(minecraftVer)
-            mojangMappedPaperclipFile.set(mojangMappedPaperclipJar.flatMap { it.archiveFile })
+            mojangMappedPaperclipFile.set(serverBundlerForDevBundle.flatMap { it.outputZip })
             vanillaServerLibraries.set(
                 serverLibrariesTxt.map { txt ->
                     txt.readLines(Charsets.UTF_8).filter { it.isNotBlank() }

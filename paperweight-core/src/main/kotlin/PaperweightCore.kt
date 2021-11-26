@@ -76,24 +76,6 @@ class PaperweightCore : Plugin<Project> {
         val tasks = AllTasks(target)
 
         val devBundleTasks = DevBundleTasks(target)
-        devBundleTasks.configure(
-            ext.serverProject,
-            ext.minecraftVersion,
-            tasks.extractFromBundler.map { it.serverJar.path },
-            tasks.decompileJar.map { it.outputJar.path },
-            tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
-            tasks.mergeAdditionalAts.map { it.outputFile.path }
-        ) {
-            vanillaJarIncludes.set(ext.vanillaJarIncludes)
-            reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
-
-            paramMappingsCoordinates.set(
-                target.provider {
-                    determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
-                }
-            )
-            paramMappingsUrl.set(ext.paramMappingsRepo)
-        }
 
         val bundlerJarTasks = BundlerJarTasks(
             target,
@@ -171,6 +153,29 @@ class PaperweightCore : Plugin<Project> {
                 ext.paper.reobfPackagesToFix,
                 tasks.patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
+
+            devBundleTasks.configure(
+                ext.bundlerJarName.get(),
+                ext.mainClass,
+                ext.serverProject,
+                ext.minecraftVersion,
+                tasks.decompileJar.map { it.outputJar.path },
+                tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
+                tasks.extractFromBundler.map { it.serverLibrariesList.path },
+                tasks.downloadServerJar.map { it.outputJar.path },
+                tasks.mergeAdditionalAts.map { it.outputFile.path },
+                tasks.extractFromBundler.map { it.versionJson.path }
+            ) {
+                vanillaJarIncludes.set(ext.vanillaJarIncludes)
+                reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
+
+                paramMappingsCoordinates.set(
+                    target.provider {
+                        determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
+                    }
+                )
+                paramMappingsUrl.set(ext.paramMappingsRepo)
+            }
 
             bundlerJarTasks.configureBundlerTasks(
                 tasks.extractFromBundler,

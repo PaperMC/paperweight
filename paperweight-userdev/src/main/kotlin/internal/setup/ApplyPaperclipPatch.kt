@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.setup
 
+import com.google.gson.JsonObject
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -44,8 +45,18 @@ fun patchPaperclip(
         jvmArgs = listOf("-Dpaperclip.patchonly=true"),
         args = arrayOf()
     )
-    val patched = work.resolve("cache").listDirectoryEntries()
-        .find { it.name.startsWith("patched") } ?: error("Can't find patched jar!")
-    patched.copyTo(outputJar, overwrite = true)
+    paperclip.openZip().use { fs ->
+        val root = fs.rootDirectories.single()
+
+        val serverVersionJson = root.resolve("version.json")
+        val versionId = gson.fromJson<JsonObject>(serverVersionJson)["id"].asString
+        val versions = root.resolve("/META-INF/versions.list").readLines()
+            .map { it.split('\t') }
+            .associate { it[1] to it[2] }
+
+        val serverJarPath = work.resolve("versions/${versions[versionId]}")
+        outputJar.parent.createDirectories()
+        serverJarPath.copyTo(outputJar, overwrite = true)
+    }
     work.deleteRecursively()
 }

@@ -128,7 +128,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             null,
             null,
             null,
-            null
+            null,
         )
         hashFunction.writeHash(hashFile)
     }
@@ -352,6 +352,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hashFile.writeText(hash())
     }
 
+    /*
     private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
     private fun filterMojangMappedPaperJar(context: Context) {
         patchDecompiledSources(context)
@@ -370,6 +371,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hashFile.parent.createDirectories()
         hashFile.writeText(hash())
     }
+     */
 
     private var setupCompleted = false
 
@@ -379,7 +381,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             return
         }
 
-        filterMojangMappedPaperJar(context)
+        patchDecompiledSources(context)
+        applyMojangMappedPaperclipPatch(context)
+
+        // filterMojangMappedPaperJar(context)
 
         val didInstall = installToIvyRepo(
             cache.resolve(IVY_REPOSITORY),
@@ -388,7 +393,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
                 devBundleConfig.apiCoordinates +
                 devBundleConfig.mojangApiCoordinates,
             patchedSourcesJar,
-            filteredMojangMappedPaperJar
+            mojangMappedPaperJar
         )
         if (didInstall) {
             LOGGER.lifecycle(":installed server artifacts to cache")

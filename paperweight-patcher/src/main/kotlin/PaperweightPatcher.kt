@@ -165,6 +165,7 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
+            /* FIXME
             devBundleTasks.configure(
                 patcher.serverProject,
                 upstreamData.map { it.mcVersion },
@@ -179,6 +180,7 @@ class PaperweightPatcher : Plugin<Project> {
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
             }
+             */
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,

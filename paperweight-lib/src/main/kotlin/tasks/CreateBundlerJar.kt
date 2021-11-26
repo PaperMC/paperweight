@@ -38,6 +38,7 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 import org.gradle.kotlin.dsl.*
 
 abstract class CreateBundlerJar : ZippedTask() {
@@ -63,6 +64,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     val versionArtifacts: NamedDomainObjectContainer<VersionArtifact> = createVersionArtifactContainer()
 
     @get:Classpath
+    @get:Optional
     abstract val libraryArtifacts: Property<Configuration>
 
     @get:InputFile
@@ -110,7 +112,7 @@ abstract class CreateBundlerJar : ZippedTask() {
         val libraries = mutableListOf<FileEntry<ModuleId>>()
         val changedLibraries = mutableListOf<LibraryChange>()
 
-        val serverLibraryEntries = FileEntry.parse(serverLibrariesList.path, ModuleId.Companion::parse)
+        val serverLibraryEntries = FileEntry.parse(serverLibrariesList.path, ModuleId::parse)
 
         val outputDir = rootDir.resolve("META-INF/libraries")
 
@@ -169,10 +171,12 @@ abstract class CreateBundlerJar : ZippedTask() {
     }
 
     private fun collectDependencies(): Set<ResolvedArtifactResult> {
-        return libraryArtifacts.get().incoming.artifacts.artifacts.filterTo(HashSet()) {
-            val id = it.id.componentIdentifier
-            id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
-        }
+        return libraryArtifacts.map { config ->
+            config.incoming.artifacts.artifacts.filterTo(HashSet()) {
+                val id = it.id.componentIdentifier
+                id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
+            }
+        }.getOrElse(hashSetOf<ResolvedArtifactResult>())
     }
 
     private fun ResolvedArtifactResult.copyTo(path: Path): Path {

@@ -26,6 +26,8 @@ import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
@@ -93,10 +95,22 @@ class BundlerJarTasks(
         vanillaBundlerJar.set(downloadServerJar.flatMap { it.outputJar })
 
         versionArtifacts {
-            register(bundlerJarName.get()) {
-                id.set(extractFromBundler.flatMap { it.versionJson }.map { gson.fromJson<JsonObject>(it)["id"].asString })
-                file.set(serverJar)
-            }
+            registerVersionArtifact(
+                bundlerJarName.get(),
+                extractFromBundler.map { it.versionJson.path },
+                serverJar
+            )
+        }
+    }
+
+    companion object {
+        fun NamedDomainObjectContainer<CreateBundlerJar.VersionArtifact>.registerVersionArtifact(
+            name: String,
+            versionJson: Provider<Path>,
+            serverJar: Provider<RegularFile>
+        ) = register(name) {
+            id.set(versionJson.map { gson.fromJson<JsonObject>(it)["id"].asString })
+            file.set(serverJar)
         }
     }
 }

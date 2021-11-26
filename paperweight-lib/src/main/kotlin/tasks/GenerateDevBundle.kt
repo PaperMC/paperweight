@@ -295,7 +295,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun createCoordinatesFor(project: Project): String =
-        sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), project.version).joinToString(":")
+        sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
 
     private fun relocations(): List<Relocation> = gson.fromJson(relocations.get())
 
