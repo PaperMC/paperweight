@@ -22,26 +22,21 @@
 
 package io.papermc.paperweight.core
 
-import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
+import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.CreateBundlerJar
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.RegularFile
-import org.gradle.api.plugins.JavaPlugin
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
@@ -99,6 +94,12 @@ class PaperweightCore : Plugin<Project> {
             )
             paramMappingsUrl.set(ext.paramMappingsRepo)
         }
+
+        val bundlerJarTasks = BundlerJarTasks(
+            target,
+            ext.bundlerJarName,
+            ext.mainClass
+        )
 
         target.createPatchRemapTask(tasks)
 
@@ -171,8 +172,9 @@ class PaperweightCore : Plugin<Project> {
                 tasks.patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
 
-            target.createBundlerJarTasks(
-                tasks,
+            bundlerJarTasks.configureBundlerTasks(
+                tasks.extractFromBundler,
+                tasks.downloadServerJar,
                 serverProj,
                 shadowJar,
                 reobfJar
@@ -230,58 +232,6 @@ class PaperweightCore : Plugin<Project> {
             devImports.set(extension.paper.devImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
-        }
-    }
-
-    private fun Project.createBundlerJarTasks(
-        allTasks: AllTasks,
-        serverProject: Project,
-        shadowJar: TaskProvider<out AbstractArchiveTask>,
-        reobfJar: TaskProvider<RemapJar>,
-    ) {
-        createBundlerJarTask(
-            allTasks,
-            serverProject,
-            shadowJar.flatMap { it.archiveFile }
-        )
-        createBundlerJarTask(
-            allTasks,
-            serverProject,
-            reobfJar.flatMap { it.outputJar },
-            "reobf",
-        )
-    }
-
-    private fun Project.createBundlerJarTask(
-        allTasks: AllTasks,
-        serverProject: Project,
-        serverJar: Provider<RegularFile>,
-        classifier: String = "",
-    ): TaskProvider<CreateBundlerJar> {
-        val taskName = "create${classifier.capitalize()}BundlerJar"
-        return tasks.register<CreateBundlerJar>(taskName) {
-            paperclip.from(configurations.named(PAPERCLIP_CONFIG))
-
-            mainClass.set(ext.mainClass)
-
-            libraryArtifacts.set(serverProject.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
-            serverLibrariesList.set(allTasks.extractFromBundler.flatMap { it.serverLibrariesList })
-            vanillaBundlerJar.set(allTasks.downloadServerJar.flatMap { it.outputJar })
-
-            versionArtifacts {
-                register(ext.bundlerJarName.get()) {
-                    id.set(allTasks.extractFromBundler.flatMap { it.versionJson }.map { gson.fromJson<JsonObject>(it)["id"].asString })
-                    file.set(serverJar)
-                }
-            }
-
-            val jarName = listOfNotNull(
-                project.name,
-                "bundler",
-                classifier.takeIf { it.isNotBlank() },
-                project.version,
-            ).joinToString("-") + ".jar"
-            outputZip.set(layout.buildDirectory.file("libs/$jarName"))
         }
     }
 }
