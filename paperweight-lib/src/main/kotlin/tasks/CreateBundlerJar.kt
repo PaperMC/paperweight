@@ -26,24 +26,25 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
+import org.gradle.kotlin.dsl.*
 
 abstract class CreateBundlerJar : ZippedTask() {
 
     interface VersionArtifact {
         @get:Input
-        val bundlerJarName: Property<String>
+        val name: String
 
         @get:Input
         val id: Property<String>
@@ -59,18 +60,19 @@ abstract class CreateBundlerJar : ZippedTask() {
     abstract val mainClass: Property<String>
 
     @get:Nested
-    abstract val versionArtifacts: ListProperty<VersionArtifact>
+    val versionArtifacts: NamedDomainObjectContainer<VersionArtifact> = createVersionArtifactContainer()
 
     @get:Classpath
-    abstract val configuration: Property<Configuration>
+    abstract val libraryArtifacts: Property<Configuration>
 
     @get:InputFile
     abstract val serverLibrariesList: RegularFileProperty
 
     @get:Classpath
-    abstract val bundlerJar: RegularFileProperty
+    abstract val vanillaBundlerJar: RegularFileProperty
 
-    private val digest = digestSha256()
+    private fun createVersionArtifactContainer(): NamedDomainObjectContainer<VersionArtifact> =
+        objects.domainObjectContainer(VersionArtifact::class) { objects.newInstance(it) }
 
     override fun run(rootDir: Path) {
         paperclip.singleFile.toPath().openZip().use { zip ->
@@ -99,7 +101,7 @@ abstract class CreateBundlerJar : ZippedTask() {
         rootDir.resolve("META-INF/main-class").writeText(mainClass.get())
 
         // copy version.json file
-        bundlerJar.path.openZip().use { fs ->
+        vanillaBundlerJar.path.openZip().use { fs ->
             fs.getPath("/version.json").copyTo(rootDir.resolve("version.json"))
         }
     }
@@ -128,20 +130,16 @@ abstract class CreateBundlerJar : ZippedTask() {
                     changedLibraries += LibraryChange(serverLibrary.id, serverLibrary.path, newId, newPath)
 
                     val jarFile = dep.copyTo(outputDir.resolve(newPath))
-                    val jarData = jarFile.readBytes()
-                    val newHash = digest.digest(jarData)
 
-                    libraries += FileEntry(toHex(newHash), newId, newPath)
+                    libraries += FileEntry(jarFile.sha256asHex(), newId, newPath)
                 }
             } else {
                 // New dependency
                 val id = dep.module
                 val path = id.toPath()
                 val jarFile = dep.copyTo(outputDir.resolve(path))
-                val jarData = jarFile.readBytes()
-                val hash = digest.digest(jarData)
 
-                libraries += FileEntry(toHex(hash), id, path)
+                libraries += FileEntry(jarFile.sha256asHex(), id, path)
             }
         }
 
@@ -154,29 +152,24 @@ abstract class CreateBundlerJar : ZippedTask() {
     }
 
     private fun handleVersions(rootDir: Path): List<FileEntry<String>> {
-        val digest = digestSha256()
-
         val outputDir = rootDir.resolve("META-INF/versions")
 
-        return versionArtifacts.get().map { versionArtifact ->
+        return versionArtifacts.map { versionArtifact ->
             val id = versionArtifact.id.get()
-            val versionPath = "$id/${versionArtifact.bundlerJarName.get()}-$id.jar"
+            val versionPath = "$id/${versionArtifact.name}-$id.jar"
 
             val inputFile = versionArtifact.file.path
-
-            val inputFileData = inputFile.readBytes()
-            val hash = digest.digest(inputFileData)
 
             val outputFile = outputDir.resolve(versionPath)
             outputFile.parent.createDirectories()
             inputFile.copyTo(outputFile)
 
-            FileEntry(toHex(hash), id, versionPath)
+            FileEntry(inputFile.sha256asHex(), id, versionPath)
         }
     }
 
     private fun collectDependencies(): Set<ResolvedArtifactResult> {
-        return configuration.get().incoming.artifacts.artifacts.filterTo(HashSet()) {
+        return libraryArtifacts.get().incoming.artifacts.artifacts.filterTo(HashSet()) {
             val id = it.id.componentIdentifier
             id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
         }

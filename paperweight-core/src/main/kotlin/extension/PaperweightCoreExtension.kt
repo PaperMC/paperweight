@@ -24,6 +24,7 @@ package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.util.Locale
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -41,6 +42,9 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     val minecraftVersion: Property<String> = objects.property()
     val serverProject: Property<Project> = objects.property()
 
+    val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
+    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
+
     val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
 
     val paramMappingsRepo: Property<String> = objects.property()
@@ -54,7 +58,7 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     @Suppress("MemberVisibilityCanBePrivate")
     val craftBukkit = CraftBukkitExtension(objects, workDir)
     val spigot = SpigotExtension(objects, workDir)
-    val paper = PaperExtension(project, objects, layout)
+    val paper = PaperExtension(objects, layout)
 
     @Suppress("unused")
     fun craftBukkit(action: Action<in CraftBukkitExtension>) {

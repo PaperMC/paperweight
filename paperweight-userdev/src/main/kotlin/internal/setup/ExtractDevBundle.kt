@@ -37,7 +37,7 @@ fun extractDevBundle(
     devBundle: Path
 ): Pair<Boolean, GenerateDevBundle.DevBundleConfig> {
     val hashFile = destinationDirectory.resolve("current.sha256")
-    val newDevBundleHash = toHex(devBundle.hashFile(digestSha256()))
+    val newDevBundleHash = toHex(devBundle.hashFile(digestSha256))
 
     if (destinationDirectory.exists()) {
         val currentDevBundleHash = if (hashFile.isRegularFile()) hashFile.readText(Charsets.UTF_8) else ""

@@ -112,9 +112,6 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
                 throw PaperweightException("Error creating patch between ${parameters.originalJar.path} and ${parameters.patchedJar.path}", e)
             }
 
-            // Add the SHA-256 hashes for the files
-            val digestSha256 = digestSha256()
-
             // Vanilla's URL uses a SHA1 hash of the vanilla server jar
             val digestSha1 = try {
                 MessageDigest.getInstance("SHA1")
@@ -123,6 +120,7 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
             }
 
             val originalSha1 = digestSha1.digest(originalBytes)
+            // Add the SHA-256 hashes for the files
             val originalSha256 = digestSha256.digest(originalBytes)
             val patchedSha256 = digestSha256.digest(patchedBytes)
 

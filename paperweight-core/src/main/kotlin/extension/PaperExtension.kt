@@ -23,20 +23,14 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
-import java.util.Locale
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-open class PaperExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
-
-    val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
-    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
+open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
@@ -50,7 +44,6 @@ open class PaperExtension(project: Project, objects: ObjectFactory, layout: Proj
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
     val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
-    val additionalSpigotMemberMappings: RegularFileProperty = objects.fileProperty()
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()

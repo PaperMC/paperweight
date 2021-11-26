@@ -36,9 +36,12 @@ import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 
@@ -152,9 +155,10 @@ class PaperweightCore : Plugin<Project> {
 
             val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
+            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
 
             tasks.generateReobfMappings {
-                inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
+                inputJar.set(shadowJar.flatMap { it.archiveFile })
             }
 
             val (_, reobfJar) = serverProj.setupServerProject(
@@ -167,23 +171,12 @@ class PaperweightCore : Plugin<Project> {
                 tasks.patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
 
-            val createBundlerJar by target.tasks.registering<CreateBundlerJar> {
-                paperclip.from(target.configurations.named(PAPERCLIP_CONFIG))
-
-                mainClass.set(ext.paper.mainClass)
-
-                configuration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
-                serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
-                bundlerJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-
-                versionArtifacts.add(
-                    target.objects.newInstance(CreateBundlerJar.VersionArtifact::class).apply {
-                        bundlerJarName.set(ext.paper.bundlerJarName)
-                        id.set(tasks.extractFromBundler.flatMap { it.versionJson }.map { gson.fromJson<JsonObject>(it)["id"].asString })
-                        file.set(reobfJar.flatMap { it.outputJar })
-                    }
-                )
-            }
+            target.createBundlerJarTasks(
+                tasks,
+                serverProj,
+                shadowJar,
+                reobfJar
+            )
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
                 // FIXME
@@ -237,6 +230,58 @@ class PaperweightCore : Plugin<Project> {
             devImports.set(extension.paper.devImports)
 
             outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
+        }
+    }
+
+    private fun Project.createBundlerJarTasks(
+        allTasks: AllTasks,
+        serverProject: Project,
+        shadowJar: TaskProvider<out AbstractArchiveTask>,
+        reobfJar: TaskProvider<RemapJar>,
+    ) {
+        createBundlerJarTask(
+            allTasks,
+            serverProject,
+            shadowJar.flatMap { it.archiveFile }
+        )
+        createBundlerJarTask(
+            allTasks,
+            serverProject,
+            reobfJar.flatMap { it.outputJar },
+            "reobf",
+        )
+    }
+
+    private fun Project.createBundlerJarTask(
+        allTasks: AllTasks,
+        serverProject: Project,
+        serverJar: Provider<RegularFile>,
+        classifier: String = "",
+    ): TaskProvider<CreateBundlerJar> {
+        val taskName = "create${classifier.capitalize()}BundlerJar"
+        return tasks.register<CreateBundlerJar>(taskName) {
+            paperclip.from(configurations.named(PAPERCLIP_CONFIG))
+
+            mainClass.set(ext.mainClass)
+
+            libraryArtifacts.set(serverProject.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+            serverLibrariesList.set(allTasks.extractFromBundler.flatMap { it.serverLibrariesList })
+            vanillaBundlerJar.set(allTasks.downloadServerJar.flatMap { it.outputJar })
+
+            versionArtifacts {
+                register(ext.bundlerJarName.get()) {
+                    id.set(allTasks.extractFromBundler.flatMap { it.versionJson }.map { gson.fromJson<JsonObject>(it)["id"].asString })
+                    file.set(serverJar)
+                }
+            }
+
+            val jarName = listOfNotNull(
+                project.name,
+                "bundler",
+                classifier.takeIf { it.isNotBlank() },
+                project.version,
+            ).joinToString("-") + ".jar"
+            outputZip.set(layout.buildDirectory.file("libs/$jarName"))
         }
     }
 }

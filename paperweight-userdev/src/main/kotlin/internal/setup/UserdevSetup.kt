@@ -424,7 +424,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         return hashFiles(paths) + if (strings.isEmpty()) {
             ""
         } else {
-            "\n" + strings.sorted().joinToString("\n") { toHex(it.byteInputStream().hash(digestSha256())) }
+            "\n" + strings.sorted().joinToString("\n") { toHex(it.byteInputStream().hash(digestSha256)) }
         }
     }
 
@@ -432,7 +432,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         .filter { it.isRegularFile() }
         .sortedBy { it.pathString }
         .joinToString("\n") {
-            "${it.fileName.pathString}:${toHex(it.hashFile(digestSha256()))}"
+            "${it.fileName.pathString}:${toHex(it.hashFile(digestSha256))}"
         }
 
     private fun hashDirectory(dir: Path): String =

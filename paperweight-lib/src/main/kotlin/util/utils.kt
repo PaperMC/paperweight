@@ -245,10 +245,12 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
-fun digestSha256(): MessageDigest = try {
-    MessageDigest.getInstance("SHA-256")
-} catch (e: NoSuchAlgorithmException) {
-    throw PaperweightException("Could not create SHA-256 hasher", e)
+val digestSha256: MessageDigest by lazy {
+    try {
+        MessageDigest.getInstance("SHA-256")
+    } catch (e: NoSuchAlgorithmException) {
+        throw PaperweightException("Could not create SHA-256 hasher", e)
+    }
 }
 
 fun toHex(hash: ByteArray): String {
