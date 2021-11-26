@@ -254,7 +254,7 @@ fun digestSha256(): MessageDigest = try {
 fun toHex(hash: ByteArray): String {
     val sb: StringBuilder = StringBuilder(hash.size * 2)
     for (aHash in hash) {
-        sb.append("%02X".format(aHash.toInt() and 0xFF))
+        sb.append("%02x".format(aHash.toInt() and 0xFF))
     }
     return sb.toString()
 }
@@ -263,7 +263,7 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
     return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain).orElse(
         launcherFor {
             // If the java plugin isn't applied, or no toolchain value was set
-            languageVersion.set(JavaLanguageVersion.of(16))
+            languageVersion.set(JavaLanguageVersion.of(17))
         }
     )
 }

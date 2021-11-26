@@ -191,8 +191,9 @@ class PaperweightPatcher : Plugin<Project> {
             ) ?: return@afterEvaluate
 
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                originalJar.pathProvider(upstreamData.map { it.vanillaJar })
-                patchedJar.set(reobfJar.flatMap { it.outputJar })
+                // FIXME
+//                originalJar.pathProvider(upstreamData.map { it.vanillaJar })
+//                patchedJar.set(reobfJar.flatMap { it.outputJar })
                 mcVersion.set(upstreamData.map { it.mcVersion })
             }
 

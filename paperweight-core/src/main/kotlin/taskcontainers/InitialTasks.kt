@@ -92,7 +92,10 @@ open class InitialTasks(
     val extractFromBundler by tasks.registering<ExtractFromBundler> {
         bundlerJar.set(downloadServerJar.flatMap { it.outputJar })
 
-        serverLibrariesTxt.set(cache.resolve(SERVER_LIBRARIES))
+        versionJson.set(cache.resolve(SERVER_VERSION_JSON))
+        serverLibrariesTxt.set(cache.resolve(SERVER_LIBRARIES_TXT))
+        serverLibrariesList.set(cache.resolve(SERVER_LIBRARIES_LIST))
+        serverVersionsList.set(cache.resolve(SERVER_VERSIONS_LIST))
         serverLibraryJars.set(cache.resolve(MINECRAFT_JARS_PATH))
     }
 }

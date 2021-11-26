@@ -25,7 +25,6 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import io.sigpipe.jbsdiff.Diff
-import java.io.IOException
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -40,6 +39,7 @@ import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -48,11 +48,19 @@ import org.gradle.workers.WorkerExecutor
 @CacheableTask
 abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
 
-    @get:Classpath
-    abstract val originalJar: RegularFileProperty
+    data class PatchPair(
+        @get:Input
+        val kind: Property<String>,
+        @get:Input
+        val inputPath: Property<String>,
+        @get:Classpath
+        val originalJar: RegularFileProperty,
+        @get:Classpath
+        val patchedJar: RegularFileProperty
+    )
 
-    @get:Classpath
-    abstract val patchedJar: RegularFileProperty
+    @get:Nested
+    abstract val patches: ListProperty<PatchPair>
 
     @get:Input
     abstract val mcVersion: Property<String>
@@ -75,11 +83,13 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
             forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 
-        queue.submit(PaperclipAction::class) {
-            dir.set(rootDir.toAbsolutePath().toString())
-            patchedJar.set(this@GeneratePaperclipPatch.patchedJar.path)
-            originalJar.set(this@GeneratePaperclipPatch.originalJar.path)
-            mcVersion.set(this@GeneratePaperclipPatch.mcVersion)
+        for (patchPair in patches.get()) {
+            queue.submit(PaperclipAction::class) {
+                dir.set(rootDir.toAbsolutePath().toString())
+                patchedJar.set(patchPair.patchedJar.path)
+                originalJar.set(patchPair.originalJar.path)
+                mcVersion.set(this@GeneratePaperclipPatch.mcVersion)
+            }
         }
 
         queue.await()
@@ -89,30 +99,11 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
         override fun execute() {
             val rootDir = Path(parameters.dir.get())
             val patchFile = rootDir.resolve("paperMC.patch")
-            val propFile = rootDir.resolve("patch.properties")
-            val protocol = rootDir.resolve("META-INF/$PROTOCOL_FILE")
-
-            try {
-                parameters.patchedJar.path.openZip().use { zipFs ->
-                    val protocolPath = zipFs.getPath("META-INF", PROTOCOL_FILE)
-                    if (protocolPath.notExists()) {
-                        protocol.deleteForcefully()
-                        return@use
-                    }
-
-                    protocol.parent.createDirectories()
-                    protocolPath.copyTo(protocol, overwrite = true)
-                }
-            } catch (e: IOException) {
-                throw PaperweightException("Failed to read $parameters.patchedJar contents", e)
-            }
 
             // Read the files into memory
-            println("Reading jars into memory")
             val originalBytes = parameters.originalJar.path.readBytes()
             val patchedBytes = parameters.patchedJar.path.readBytes()
 
-            println("Creating Paperclip patch")
             try {
                 patchFile.outputStream().use { patchOutput ->
                     Diff.diff(originalBytes, patchedBytes, patchOutput)
@@ -131,7 +122,6 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
                 throw PaperweightException("Could not create SHA1 hasher", e)
             }
 
-            println("Hashing files")
             val originalSha1 = digestSha1.digest(originalBytes)
             val originalSha256 = digestSha256.digest(originalBytes)
             val patchedSha256 = digestSha256.digest(patchedBytes)
@@ -143,13 +133,12 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
             prop["sourceUrl"] = "https://launcher.mojang.com/v1/objects/" + toHex(originalSha1).toLowerCase() + "/server.jar"
             prop["version"] = parameters.mcVersion.get()
 
-            println("Writing properties file")
-            propFile.bufferedWriter().use { writer ->
-                prop.store(
-                    writer,
-                    "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory."
-                )
-            }
+//            propFile.bufferedWriter().use { writer ->
+//                prop.store(
+//                    writer,
+//                    "Default Paperclip launch values. Can be overridden by placing a paperclip.properties file in the server directory."
+//                )
+//            }
         }
     }
 
@@ -158,9 +147,5 @@ abstract class GeneratePaperclipPatch : JavaLauncherZippedTask() {
         val patchedJar: RegularFileProperty
         val originalJar: RegularFileProperty
         val mcVersion: Property<String>
-    }
-
-    companion object {
-        const val PROTOCOL_FILE = "io.papermc.paper.daemon.protocol"
     }
 }

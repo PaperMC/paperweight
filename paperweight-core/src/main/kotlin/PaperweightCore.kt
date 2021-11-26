@@ -22,18 +22,21 @@
 
 package io.papermc.paperweight.core
 
+import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.CreateBundlerJar
 import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
@@ -43,7 +46,7 @@ class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
         Git.checkForGit()
 
-        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)
+        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -159,14 +162,33 @@ class PaperweightCore : Plugin<Project> {
                 tasks.copyResources.flatMap { it.outputJar },
                 tasks.decompileJar.flatMap { it.outputJar },
                 ext.mcDevSourceDir.path,
-                cache.resolve(SERVER_LIBRARIES),
+                cache.resolve(SERVER_LIBRARIES_TXT),
                 ext.paper.reobfPackagesToFix,
                 tasks.patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
 
+            val createBundlerJar by target.tasks.registering<CreateBundlerJar> {
+                paperclip.from(target.configurations.named(PAPERCLIP_CONFIG))
+
+                mainClass.set(ext.paper.mainClass)
+
+                configuration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+                serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
+                bundlerJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+
+                versionArtifacts.add(
+                    target.objects.newInstance(CreateBundlerJar.VersionArtifact::class).apply {
+                        bundlerJarName.set(ext.paper.bundlerJarName)
+                        id.set(tasks.extractFromBundler.flatMap { it.versionJson }.map { gson.fromJson<JsonObject>(it)["id"].asString })
+                        file.set(reobfJar.flatMap { it.outputJar })
+                    }
+                )
+            }
+
             val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                originalJar.set(tasks.extractFromBundler.flatMap { it.serverJar })
-                patchedJar.set(reobfJar.flatMap { it.outputJar })
+                // FIXME
+//                originalJar.set(tasks.extractFromBundler.flatMap { it.serverJar })
+//                patchedJar.set(reobfJar.flatMap { it.outputJar })
                 mcVersion.set(target.ext.minecraftVersion)
             }
 

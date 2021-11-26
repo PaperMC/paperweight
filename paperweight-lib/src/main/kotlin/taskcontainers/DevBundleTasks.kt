@@ -65,8 +65,9 @@ class DevBundleTasks(
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
         generateMojangMappedPaperclipPatch {
-            originalJar.pathProvider(vanillaJar)
-            patchedJar.set(serverProj.flatMap { proj -> proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar } })
+            // FIXME
+//            originalJar.pathProvider(vanillaJar)
+//            patchedJar.set(serverProj.flatMap { proj -> proj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar } })
             mcVersion.set(minecraftVer)
         }
 

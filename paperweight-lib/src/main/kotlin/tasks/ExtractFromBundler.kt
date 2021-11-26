@@ -49,6 +49,15 @@ abstract class ExtractFromBundler : BaseTask() {
     @get:OutputDirectory
     abstract val serverLibraryJars: DirectoryProperty
 
+    @get:OutputFile
+    abstract val versionJson: RegularFileProperty
+
+    @get:OutputFile
+    abstract val serverLibrariesList: RegularFileProperty
+
+    @get:OutputFile
+    abstract val serverVersionsList: RegularFileProperty
+
     override fun init() {
         super.init()
         serverJar.set(defaultOutput())
@@ -60,7 +69,10 @@ abstract class ExtractFromBundler : BaseTask() {
             bundlerJar.path,
             serverJar.path,
             serverLibraryJars.path,
-            serverLibrariesTxt.path
+            serverLibrariesTxt.path,
+            serverLibrariesList.path,
+            serverVersionsList.path,
+            versionJson.path
         )
     }
 }
@@ -71,21 +83,31 @@ object ServerBundler {
         serverJar: Path,
         serverLibraryJars: Path,
         serverLibrariesTxt: Path?,
+        serverLibrariesList: Path?,
+        serverVersionsList: Path?,
+        versionJson: Path?
     ) {
         bundlerJar.openZip().use { bundlerFs ->
             val root = bundlerFs.rootDirectories.first()
-            extractServerJar(root, serverJar)
+            extractServerJar(root, serverJar, versionJson)
             extractLibraryJars(root, serverLibraryJars)
             serverLibrariesTxt?.let { writeLibrariesTxt(root, it) }
+            serverLibrariesList?.let { root.resolve("META-INF/libraries.list").copyTo(it, overwrite = true) }
+            serverVersionsList?.let { root.resolve("META-INF/versions.list").copyTo(it, overwrite = true) }
         }
     }
 
-    private fun extractServerJar(bundlerZip: Path, serverJar: Path) {
-        val versionId = gson.fromJson<JsonObject>(bundlerZip.resolve("version.json"))["id"].asString
-        val versions = bundlerZip.resolve("META-INF/versions.list").readLines()
+    private fun extractServerJar(bundlerZip: Path, serverJar: Path, outputVersionJson: Path?) {
+        val serverVersionJson = bundlerZip.resolve("version.json")
+        outputVersionJson?.let { output ->
+            serverVersionJson.copyTo(output, overwrite = true)
+        }
+
+        val versionId = gson.fromJson<JsonObject>(serverVersionJson)["id"].asString
+        val versions = bundlerZip.resolve("/META-INF/versions.list").readLines()
             .map { it.split('\t') }
             .associate { it[1] to it[2] }
-        val serverJarPath = bundlerZip.resolve("META-INF/versions/${versions[versionId]}")
+        val serverJarPath = bundlerZip.resolve("/META-INF/versions/${versions[versionId]}")
 
         serverJar.parent.createDirectories()
         serverJarPath.copyTo(serverJar, overwrite = true)
@@ -94,7 +116,7 @@ object ServerBundler {
     private fun extractLibraryJars(bundlerZip: Path, serverLibraryJars: Path) {
         serverLibraryJars.deleteRecursively()
         serverLibraryJars.parent.createDirectories()
-        bundlerZip.resolve("META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
+        bundlerZip.resolve("/META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
     }
 
     private fun writeLibrariesTxt(bundlerZip: Path, serverLibrariesTxt: Path) {

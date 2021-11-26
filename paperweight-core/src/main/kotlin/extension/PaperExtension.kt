@@ -23,14 +23,20 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
+import java.util.Locale
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
+open class PaperExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
+
+    val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
+    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
 
     @Suppress("MemberVisibilityCanBePrivate")
     val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")

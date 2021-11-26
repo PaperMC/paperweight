@@ -125,6 +125,9 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
             serverBundlerJar,
             vanillaServerJar,
             minecraftLibraryJars,
+            null,
+            null,
+            null,
             null
         )
         hashFunction.writeHash(hashFile)

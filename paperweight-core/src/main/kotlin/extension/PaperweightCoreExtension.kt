@@ -33,7 +33,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayout) {
+open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
@@ -54,7 +54,7 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
     @Suppress("MemberVisibilityCanBePrivate")
     val craftBukkit = CraftBukkitExtension(objects, workDir)
     val spigot = SpigotExtension(objects, workDir)
-    val paper = PaperExtension(objects, layout)
+    val paper = PaperExtension(project, objects, layout)
 
     @Suppress("unused")
     fun craftBukkit(action: Action<in CraftBukkitExtension>) {
