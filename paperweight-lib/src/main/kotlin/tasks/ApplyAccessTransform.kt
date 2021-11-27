@@ -214,14 +214,13 @@ class AccessTransformerVisitor(
     }
 }
 
-private const val RESET_ACCESS: Int = (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv()
 fun AccessTransform?.apply(currentModifier: Int): Int {
     if (this == null) {
         return currentModifier
     }
     var value = currentModifier
     if (this.access != AccessChange.NONE) {
-        value = value and RESET_ACCESS
+        value = value and AsmUtil.RESET_ACCESS
         value = value or this.access.modifier
     }
     when (this.final) {

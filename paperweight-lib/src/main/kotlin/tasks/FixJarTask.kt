@@ -123,9 +123,24 @@ abstract class FixJarTask : JavaLauncherTask() {
             }
         }
 
-        private object FixJarClassProcessor : FixJar.ClassProcessor {
+        private object FixJarClassProcessor : FixJar.ClassProcessor, AsmUtil {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
                 OverrideAnnotationAdder(node, classNodeCache).visitNode()
+
+                if (Opcodes.ACC_RECORD in node.access) {
+                    RecordFieldAccessFixer(node).visitNode()
+                }
+            }
+        }
+    }
+}
+
+// Fix proguard changing access of record fields
+class RecordFieldAccessFixer(private val node: ClassNode) : AsmUtil {
+    fun visitNode() {
+        for (field in node.fields) {
+            if (Opcodes.ACC_STATIC !in field.access && Opcodes.ACC_FINAL in field.access && Opcodes.ACC_PRIVATE !in field.access) {
+                field.access = field.access and AsmUtil.RESET_ACCESS or Opcodes.ACC_PRIVATE
             }
         }
     }

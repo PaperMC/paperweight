@@ -123,6 +123,10 @@ object SyntheticUtil : AsmUtil {
 data class MethodDesc(val name: String, val desc: String)
 
 interface AsmUtil {
+    companion object {
+        const val RESET_ACCESS: Int = (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv()
+    }
+
     operator fun Int.contains(value: Int): Boolean {
         return value and this != 0
     }
