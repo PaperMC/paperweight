@@ -77,8 +77,8 @@ class BundlerJarTasks(
             val jarName = listOfNotNull(
                 project.name,
                 "bundler",
-                classifier.takeIf { it.isNotBlank() },
                 project.version,
+                classifier.takeIf { it.isNotBlank() },
             ).joinToString("-") + ".jar"
             outputZip.set(layout.buildDirectory.file("libs/$jarName"))
         }
