@@ -31,11 +31,13 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
+@Suppress("MemberVisibilityCanBePrivate")
 class DevBundleTasks(
     private val project: Project,
     tasks: TaskContainer = project.tasks,
@@ -63,7 +65,7 @@ class DevBundleTasks(
         serverLibrariesListFile: Provider<Path?>,
         vanillaBundlerJarFile: Provider<Path?>,
         accessTransformFile: Provider<Path?>,
-        versionJsonFile: Provider<Path>,
+        versionJsonFile: Provider<RegularFile>,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
         serverBundlerForDevBundle {

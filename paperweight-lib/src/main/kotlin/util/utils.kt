@@ -50,10 +50,12 @@ import org.gradle.api.Task
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -164,6 +166,15 @@ fun Any.convertToPath(): Path {
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }
 }
+fun Any.convertToFileProvider(layout: ProjectLayout, providers: ProviderFactory): Provider<RegularFile> {
+    return when (this) {
+        is Path -> layout.file(providers.provider { toFile() })
+        is File -> layout.file(providers.provider { this })
+        is FileSystemLocation -> layout.file(providers.provider { asFile })
+        is Provider<*> -> flatMap { it.convertToFileProvider(layout, providers) }
+        else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
+    }
+}
 
 fun Any?.convertToPathOrNull(): Path? {
     if (this == null) {
@@ -249,7 +260,7 @@ val digestSha256: MessageDigest by lazy {
     try {
         MessageDigest.getInstance("SHA-256")
     } catch (e: NoSuchAlgorithmException) {
-        throw PaperweightException("Could not create SHA-256 hasher", e)
+        throw PaperweightException("Could not create SHA-256 digest", e)
     }
 }
 

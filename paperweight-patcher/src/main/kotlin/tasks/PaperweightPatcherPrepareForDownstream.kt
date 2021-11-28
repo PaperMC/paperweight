@@ -32,6 +32,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import util.data.readUpstreamData
 
 @UntrackedTask(because = "PaperweightPatcherPrepareForDownstream should always run when requested")
 abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {

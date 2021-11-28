@@ -30,6 +30,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup.HashFunction
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.MinecraftManifest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

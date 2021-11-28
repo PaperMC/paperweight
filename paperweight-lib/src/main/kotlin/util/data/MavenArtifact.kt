@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.util.data
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException

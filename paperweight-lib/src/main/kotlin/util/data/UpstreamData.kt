@@ -20,9 +20,10 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package util.data
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -43,6 +44,9 @@ data class UpstreamData(
     val paramMappings: MavenDep,
     val accessTransform: Path,
     val spigotRecompiledClasses: Path,
+    val bundlerVersionJson: Path,
+    val serverLibrariesTxt: Path,
+    val serverLibrariesList: Path
 )
 
 fun readUpstreamData(inputFile: Any): UpstreamData = inputFile.convertToPath().let { file ->

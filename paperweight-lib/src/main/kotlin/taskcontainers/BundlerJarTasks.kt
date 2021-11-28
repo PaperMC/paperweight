@@ -26,7 +26,6 @@ import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.nio.file.Path
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
@@ -36,77 +35,123 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
+@Suppress("MemberVisibilityCanBePrivate")
 class BundlerJarTasks(
     project: Project,
     private val bundlerJarName: Provider<String>,
     private val mainClassString: Provider<String>,
 ) {
-    val createBundlerJar = project.createBundlerJarTask()
-    val createReobfBundlerJar = project.createBundlerJarTask("reobf")
+    val createBundlerJar: TaskProvider<CreateBundlerJar>
+    val createPaperclipJar: TaskProvider<CreatePaperclipJar>
+
+    val createReobfBundlerJar: TaskProvider<CreateBundlerJar>
+    val createReobfPaperclipJar: TaskProvider<CreatePaperclipJar>
+
+    init {
+        val (createBundlerJar, createPaperclipJar) = project.createBundlerJarTask()
+        val (createReobfBundlerJar, createReobfPaperclipJar) = project.createBundlerJarTask("reobf")
+        this.createBundlerJar = createBundlerJar
+        this.createPaperclipJar = createPaperclipJar
+
+        this.createReobfBundlerJar = createReobfBundlerJar
+        this.createReobfPaperclipJar = createReobfPaperclipJar
+    }
 
     fun configureBundlerTasks(
-        extractFromBundler: TaskProvider<ExtractFromBundler>,
-        downloadServerJar: TaskProvider<DownloadServerJar>,
+        bundlerVersionJson: Provider<RegularFile>,
+        serverLibrariesList: Provider<RegularFile>,
+        vanillaJar: Provider<RegularFile>,
         serverProject: Project,
         shadowJar: TaskProvider<out AbstractArchiveTask>,
         reobfJar: TaskProvider<RemapJar>,
+        mcVersion: Provider<String>
     ) {
         createBundlerJar.configureWith(
-            extractFromBundler,
-            downloadServerJar,
+            bundlerVersionJson,
+            serverLibrariesList,
+            vanillaJar,
             serverProject,
             shadowJar.flatMap { it.archiveFile },
         )
         createReobfBundlerJar.configureWith(
-            extractFromBundler,
-            downloadServerJar,
+            bundlerVersionJson,
+            serverLibrariesList,
+            vanillaJar,
             serverProject,
             reobfJar.flatMap { it.outputJar },
         )
+
+        createPaperclipJar.configureWith(vanillaJar, createBundlerJar, mcVersion)
+        createReobfPaperclipJar.configureWith(vanillaJar, createReobfBundlerJar, mcVersion)
     }
 
     private fun Project.createBundlerJarTask(
         classifier: String = "",
-    ): TaskProvider<CreateBundlerJar> {
-        val taskName = "create${classifier.capitalize()}BundlerJar"
-        return tasks.register<CreateBundlerJar>(taskName) {
+    ): Pair<TaskProvider<CreateBundlerJar>, TaskProvider<CreatePaperclipJar>> {
+        val bundlerTaskName = "create${classifier.capitalize()}BundlerJar"
+        val paperclipTaskName = "create${classifier.capitalize()}PaperclipJar"
+
+        val bundlerJarTask = tasks.register<CreateBundlerJar>(bundlerTaskName) {
             group = "paperweight"
+            description = "Build a runnable bundler jar"
+
             paperclip.from(configurations.named(PAPERCLIP_CONFIG))
             mainClass.set(mainClassString)
 
-            val jarName = listOfNotNull(
-                project.name,
-                "bundler",
-                project.version,
-                classifier.takeIf { it.isNotBlank() },
-            ).joinToString("-") + ".jar"
-            outputZip.set(layout.buildDirectory.file("libs/$jarName"))
+            outputZip.set(layout.buildDirectory.file("libs/${jarName("bundler", classifier)}"))
         }
+        val paperclipJarTask = tasks.register<CreatePaperclipJar>(paperclipTaskName) {
+            group = "paperweight"
+            description = "Build a runnable paperclip jar"
+
+            outputZip.set(layout.buildDirectory.file("libs/${jarName("paperclip", classifier)}"))
+        }
+        return bundlerJarTask to paperclipJarTask
+    }
+
+    private fun Project.jarName(kind: String, classifier: String): String {
+        return listOfNotNull(
+            project.name,
+            kind,
+            project.version,
+            classifier.takeIf { it.isNotBlank() },
+        ).joinToString("-") + ".jar"
     }
 
     private fun TaskProvider<CreateBundlerJar>.configureWith(
-        extractFromBundler: TaskProvider<ExtractFromBundler>,
-        downloadServerJar: TaskProvider<DownloadServerJar>,
+        bundlerVersionJson: Provider<RegularFile>,
+        serverLibrariesListFile: Provider<RegularFile>,
+        vanillaJar: Provider<RegularFile>,
         serverProject: Project,
         serverJar: Provider<RegularFile>,
     ) = this {
         libraryArtifacts.set(serverProject.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
-        serverLibrariesList.set(extractFromBundler.flatMap { it.serverLibrariesList })
-        vanillaBundlerJar.set(downloadServerJar.flatMap { it.outputJar })
+        serverLibrariesList.set(serverLibrariesListFile)
+        vanillaBundlerJar.set(vanillaJar)
 
         versionArtifacts {
             registerVersionArtifact(
                 bundlerJarName.get(),
-                extractFromBundler.map { it.versionJson.path },
+                bundlerVersionJson,
                 serverJar
             )
         }
     }
 
+    private fun TaskProvider<CreatePaperclipJar>.configureWith(
+        vanillaJar: Provider<RegularFile>,
+        createBundlerJar: TaskProvider<CreateBundlerJar>,
+        mcVers: Provider<String>
+    ) = this {
+        originalBundlerJar.set(vanillaJar)
+        bundlerJar.set(createBundlerJar.flatMap { it.outputZip })
+        mcVersion.set(mcVers)
+    }
+
     companion object {
         fun NamedDomainObjectContainer<CreateBundlerJar.VersionArtifact>.registerVersionArtifact(
             name: String,
-            versionJson: Provider<Path>,
+            versionJson: Provider<RegularFile>,
             serverJar: Provider<RegularFile>
         ) = register(name) {
             id.set(versionJson.map { gson.fromJson<JsonObject>(it)["id"].asString })

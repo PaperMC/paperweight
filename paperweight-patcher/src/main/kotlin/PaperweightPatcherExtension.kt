@@ -30,6 +30,7 @@ import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.util.Locale
 import org.gradle.api.Action
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
@@ -45,7 +46,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
-open class PaperweightPatcherExtension(private val objects: ObjectFactory, layout: ProjectLayout, tasks: TaskContainer) {
+open class PaperweightPatcherExtension(project: Project, private val objects: ObjectFactory, layout: ProjectLayout, tasks: TaskContainer) {
 
     val serverProject: Property<Project> = objects.property()
 
@@ -55,6 +56,9 @@ open class PaperweightPatcherExtension(private val objects: ObjectFactory, layou
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val reobfMappingsPatch: RegularFileProperty = objects.fileFrom(buildDataDir, "reobf-mappings-patch.tiny")
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
+
+    val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
+    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
 
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()

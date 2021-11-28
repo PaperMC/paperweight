@@ -31,6 +31,7 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.MinecraftManifest
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider

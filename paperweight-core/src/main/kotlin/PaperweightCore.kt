@@ -104,17 +104,14 @@ class PaperweightCore : Plugin<Project> {
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
             atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
             spigotRecompiledClasses.set(tasks.remapSpigotSources.flatMap { it.spigotRecompiledClasses })
+            bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
+            serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
 
             dataFile.set(
                 target.layout.file(
                     providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).map { File(it) }
                 )
             )
-        }
-
-        val paperclipJar by target.tasks.registering<Jar> {
-            group = "paperweight"
-            description = "Build a runnable paperclip jar"
         }
 
         target.afterEvaluate {
@@ -164,7 +161,7 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
                 tasks.mergeAdditionalAts.map { it.outputFile.path },
-                tasks.extractFromBundler.map { it.versionJson.path }
+                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(ext.vanillaJarIncludes)
                 reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
@@ -178,21 +175,14 @@ class PaperweightCore : Plugin<Project> {
             }
 
             bundlerJarTasks.configureBundlerTasks(
-                tasks.extractFromBundler,
-                tasks.downloadServerJar,
+                tasks.extractFromBundler.flatMap { it.versionJson },
+                tasks.extractFromBundler.flatMap { it.serverLibrariesList },
+                tasks.downloadServerJar.flatMap { it.outputJar },
                 serverProj,
                 shadowJar,
-                reobfJar
+                reobfJar,
+                ext.minecraftVersion
             )
-
-            val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                // FIXME
-//                originalJar.set(tasks.extractFromBundler.flatMap { it.serverJar })
-//                patchedJar.set(reobfJar.flatMap { it.outputJar })
-                mcVersion.set(target.ext.minecraftVersion)
-            }
-
-            paperclipJar.configurePaperclipJar(target, generatePaperclipPatch)
         }
     }
 

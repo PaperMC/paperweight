@@ -38,6 +38,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import util.data.UpstreamData
 
 abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
 
@@ -98,6 +99,15 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputFile
     abstract val spigotRecompiledClasses: RegularFileProperty
 
+    @get:InputFile
+    abstract val bundlerVersionJson: RegularFileProperty
+
+    @get:InputFile
+    abstract val serverLibrariesTxt: RegularFileProperty
+
+    @get:InputFile
+    abstract val serverLibrariesList: RegularFileProperty
+
     @TaskAction
     fun run() {
         val dataFilePath = dataFile.path
@@ -121,6 +131,9 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             determineMavenDep(paramMappingsUrl, paramMappingsConfig),
             atFile.path,
             spigotRecompiledClasses.path,
+            bundlerVersionJson.path,
+            serverLibrariesTxt.path,
+            serverLibrariesList.path
         )
         dataFilePath.bufferedWriter(Charsets.UTF_8).use { writer ->
             gson.toJson(data, writer)

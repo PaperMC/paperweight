@@ -31,6 +31,7 @@ import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
 import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
+import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
@@ -46,13 +47,14 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
+import util.data.readUpstreamData
 
 class PaperweightPatcher : Plugin<Project> {
 
     override fun apply(target: Project) {
         Git.checkForGit()
 
-        val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class)
+        val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
@@ -109,12 +111,13 @@ class PaperweightPatcher : Plugin<Project> {
             }
         }
 
-        val paperclipJar by target.tasks.registering<Jar> {
-            group = "paperweight"
-            description = "Build a runnable paperclip jar"
-        }
-
         val devBundleTasks = DevBundleTasks(target)
+
+        val bundlerJarTasks = BundlerJarTasks(
+            target,
+            patcher.bundlerJarName,
+            patcher.mainClass
+        )
 
         target.afterEvaluate {
             target.repositories {
@@ -165,14 +168,17 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
-            /* FIXME
             devBundleTasks.configure(
+                patcher.bundlerJarName.get(),
+                patcher.mainClass,
                 patcher.serverProject,
                 upstreamData.map { it.mcVersion },
-                upstreamData.map { it.vanillaJar },
                 upstreamData.map { it.decompiledJar },
-                upstreamData.map { it.libFile },
-                upstreamData.map { it.accessTransform }
+                upstreamData.map { it.serverLibrariesTxt },
+                upstreamData.map { it.serverLibrariesList },
+                upstreamData.map { it.vanillaJar },
+                upstreamData.map { it.accessTransform },
+                upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
                 reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
@@ -180,7 +186,6 @@ class PaperweightPatcher : Plugin<Project> {
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
             }
-             */
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
@@ -192,14 +197,15 @@ class PaperweightPatcher : Plugin<Project> {
                 patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
 
-            val generatePaperclipPatch by target.tasks.registering<GeneratePaperclipPatch> {
-                // FIXME
-//                originalJar.pathProvider(upstreamData.map { it.vanillaJar })
-//                patchedJar.set(reobfJar.flatMap { it.outputJar })
-                mcVersion.set(upstreamData.map { it.mcVersion })
-            }
-
-            paperclipJar.configurePaperclipJar(target, generatePaperclipPatch)
+            bundlerJarTasks.configureBundlerTasks(
+                upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(target.layout, target.providers),
+                upstreamData.map { it.serverLibrariesList }.convertToFileProvider(target.layout, target.providers),
+                upstreamData.map { it.vanillaJar }.convertToFileProvider(target.layout, target.providers),
+                serverProj,
+                tasks.named("shadowJar", Jar::class),
+                reobfJar,
+                upstreamData.map { it.mcVersion }
+            )
         }
     }
 

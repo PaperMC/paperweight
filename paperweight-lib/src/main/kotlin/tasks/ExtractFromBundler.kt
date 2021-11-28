@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import com.google.gson.JsonObject
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
@@ -92,8 +93,8 @@ object ServerBundler {
             extractServerJar(root, serverJar, versionJson)
             extractLibraryJars(root, serverLibraryJars)
             serverLibrariesTxt?.let { writeLibrariesTxt(root, it) }
-            serverLibrariesList?.let { root.resolve("META-INF/libraries.list").copyTo(it, overwrite = true) }
-            serverVersionsList?.let { root.resolve("META-INF/versions.list").copyTo(it, overwrite = true) }
+            serverLibrariesList?.let { root.resolve(FileEntry.LIBRARIES_LIST).copyTo(it, overwrite = true) }
+            serverVersionsList?.let { root.resolve(FileEntry.VERSIONS_LIST).copyTo(it, overwrite = true) }
         }
     }
 
@@ -120,7 +121,7 @@ object ServerBundler {
     }
 
     private fun writeLibrariesTxt(bundlerZip: Path, serverLibrariesTxt: Path) {
-        val libs = bundlerZip.resolve("META-INF/libraries.list").readLines()
+        val libs = bundlerZip.resolve(FileEntry.LIBRARIES_LIST).readLines()
             .map { it.split('\t')[1] }
 
         serverLibrariesTxt.parent.createDirectories()

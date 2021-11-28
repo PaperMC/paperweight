@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.MavenArtifact
 import java.nio.file.Path
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory

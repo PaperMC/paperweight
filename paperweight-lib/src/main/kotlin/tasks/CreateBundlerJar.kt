@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.NamedDomainObjectContainer
@@ -34,13 +35,10 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
+@CacheableTask
 abstract class CreateBundlerJar : ZippedTask() {
 
     interface VersionArtifact {
@@ -67,6 +65,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     @get:Optional
     abstract val libraryArtifacts: Property<Configuration>
 
+    @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
     abstract val serverLibrariesList: RegularFileProperty
 
@@ -84,19 +83,17 @@ abstract class CreateBundlerJar : ZippedTask() {
         val versions = handleVersions(rootDir)
         val libraries = handleServerDependencies(rootDir)
 
-        val versionsFile = rootDir.resolve("META-INF/versions.list").also { it.parent.createDirectories() }
-        val librariesFile = rootDir.resolve("META-INF/libraries.list").also { it.parent.createDirectories() }
+        val versionsFile = rootDir.resolve(FileEntry.VERSIONS_LIST).also { it.parent.createDirectories() }
+        val librariesFile = rootDir.resolve(FileEntry.LIBRARIES_LIST).also { it.parent.createDirectories() }
 
         versionsFile.bufferedWriter().use { writer ->
             for (v in versions.sortedBy { it.id }) {
-                writer.append(v.toString())
-                writer.newLine()
+                writer.append(v.toString()).append('\n')
             }
         }
         librariesFile.bufferedWriter().use { writer ->
             for (l in libraries.sortedBy { it.id }) {
-                writer.append(l.toString())
-                writer.newLine()
+                writer.append(l.toString()).append('\n')
             }
         }
 
@@ -104,7 +101,7 @@ abstract class CreateBundlerJar : ZippedTask() {
 
         // copy version.json file
         vanillaBundlerJar.path.openZip().use { fs ->
-            fs.getPath("/version.json").copyTo(rootDir.resolve("version.json"))
+            fs.getPath("/").resolve(FileEntry.VERSION_JSON).copyTo(rootDir.resolve("version.json"))
         }
     }
 
@@ -146,7 +143,7 @@ abstract class CreateBundlerJar : ZippedTask() {
         }
 
         // This file will be used to check library changes in the generatePaperclipPatches step
-        rootDir.resolve("library-changes.json").bufferedWriter().use { writer ->
+        rootDir.resolve(LibraryChange.FILE_NAME).bufferedWriter().use { writer ->
             gson.toJson(changedLibraries, writer)
         }
 
@@ -196,62 +193,4 @@ abstract class CreateBundlerJar : ZippedTask() {
                 else -> throw PaperweightException("Unknown artifact result type: ${ident::class.java.name}")
             }
         }
-
-    data class LibraryChange(
-        val inputId: ModuleId,
-        val inputPath: String,
-        val outputId: ModuleId,
-        val outputPath: String
-    )
-
-    data class FileEntry<T>(
-        val hash: String,
-        val id: T,
-        val path: String
-    ) {
-        override fun toString(): String {
-            return "$hash\t$id\t$path"
-        }
-
-        companion object {
-            fun <T> parse(file: Path, transform: (String) -> T): List<FileEntry<T>> {
-                return file.readLines().mapNotNull { line ->
-                    if (line.isBlank() || line.startsWith("#")) {
-                        return@mapNotNull null
-                    }
-
-                    val (hash, id, path) = line.split("\t")
-                    FileEntry(hash, transform(id), path)
-                }
-            }
-        }
-    }
-
-    data class ModuleId(val group: String, val name: String, val version: String) : Comparable<ModuleId> {
-        fun toPath(): String {
-            val fileName = "$name-$version.jar"
-            return "${group.replace('.', '/')}/$name/$version/$fileName"
-        }
-
-        override fun compareTo(other: ModuleId): Int {
-            return comparator.compare(this, other)
-        }
-
-        override fun toString(): String {
-            return "$group:$name:$version"
-        }
-
-        companion object {
-            private val comparator = compareBy<ModuleId>({ it.group }, { it.name }, { it.version })
-
-            fun parse(text: String): ModuleId {
-                val (group, name, version) = text.split(":")
-                return ModuleId(group, name, version)
-            }
-
-            fun fromIdentifier(id: ModuleComponentIdentifier): ModuleId {
-                return ModuleId(id.group, id.module, id.version)
-            }
-        }
-    }
 }
