@@ -48,6 +48,7 @@ class DevBundleTasks(
 
     val paperclipForDevBundle by tasks.registering<CreatePaperclipJar> {
         bundlerJar.set(serverBundlerForDevBundle.flatMap { it.outputZip })
+        libraryChangesJson.set(serverBundlerForDevBundle.flatMap { it.libraryChangesJson })
     }
 
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
