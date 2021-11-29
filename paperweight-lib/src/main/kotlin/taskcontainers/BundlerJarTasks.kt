@@ -104,6 +104,7 @@ class BundlerJarTasks(
             group = "paperweight"
             description = "Build a runnable paperclip jar"
 
+            libraryChangesJson.set(bundlerJarTask.flatMap { it.libraryChangesJson })
             outputZip.set(layout.buildDirectory.file("libs/${jarName("paperclip", classifier)}"))
         }
         return bundlerJarTask to paperclipJarTask

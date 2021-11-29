@@ -27,8 +27,4 @@ data class LibraryChange(
     val inputPath: String,
     val outputId: ModuleId,
     val outputPath: String
-) {
-    companion object {
-        const val FILE_NAME = "library-changes.json"
-    }
-}
+)

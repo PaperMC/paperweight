@@ -72,8 +72,17 @@ abstract class CreateBundlerJar : ZippedTask() {
     @get:Classpath
     abstract val vanillaBundlerJar: RegularFileProperty
 
+    @get:OutputFile
+    abstract val libraryChangesJson: RegularFileProperty
+
     private fun createVersionArtifactContainer(): NamedDomainObjectContainer<VersionArtifact> =
         objects.domainObjectContainer(VersionArtifact::class) { objects.newInstance(it) }
+
+    override fun init() {
+        super.init()
+
+        libraryChangesJson.convention(defaultOutput("$name-library-changes", "json"))
+    }
 
     override fun run(rootDir: Path) {
         paperclip.singleFile.toPath().openZip().use { zip ->
@@ -143,7 +152,8 @@ abstract class CreateBundlerJar : ZippedTask() {
         }
 
         // This file will be used to check library changes in the generatePaperclipPatches step
-        rootDir.resolve(LibraryChange.FILE_NAME).bufferedWriter().use { writer ->
+        ensureParentExists(libraryChangesJson)
+        libraryChangesJson.path.bufferedWriter().use { writer ->
             gson.toJson(changedLibraries, writer)
         }
 
@@ -160,7 +170,7 @@ abstract class CreateBundlerJar : ZippedTask() {
             val inputFile = versionArtifact.file.path
 
             val outputFile = outputDir.resolve(versionPath)
-            outputFile.parent.createDirectories()
+            ensureParentExists(outputFile)
             inputFile.copyTo(outputFile)
 
             FileEntry(inputFile.sha256asHex(), id, versionPath)
@@ -177,7 +187,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     }
 
     private fun ResolvedArtifactResult.copyTo(path: Path): Path {
-        path.parent.createDirectories()
+        ensureParentExists(path)
         return file.toPath().copyTo(path, overwrite = true)
     }
 

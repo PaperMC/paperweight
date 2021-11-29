@@ -39,7 +39,10 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -57,6 +60,10 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
 
     @get:Input
     abstract val mcVersion: Property<String>
+
+    @get:PathSensitive(PathSensitivity.NONE)
+    @get:InputFile
+    abstract val libraryChangesJson: RegularFileProperty
 
     @get:Internal
     abstract val jvmargs: ListProperty<String>
@@ -117,10 +124,9 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
 
         // Copy all files, we will only replace the files which need to be patched
         newBundlerRoot.copyRecursivelyTo(rootDir)
-        rootDir.resolve(LibraryChange.FILE_NAME).deleteForcefully()
 
         // We will generate patches for library versions which have changed, assuming the changes will be small
-        val libraryChanges = gson.fromJson<List<LibraryChange>>(newBundlerRoot.resolve(LibraryChange.FILE_NAME))
+        val libraryChanges = gson.fromJson<List<LibraryChange>>(libraryChangesJson)
 
         val newVersions = FileEntry.parse(newBundlerRoot.resolve(FileEntry.VERSIONS_LIST))
         val newLibraries = FileEntry.parse(newBundlerRoot.resolve(FileEntry.LIBRARIES_LIST), ModuleId::parse)

@@ -97,12 +97,12 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
                 throw PaperweightException("Download failed, HTTP code: $code; URL: $source; Reason: $reason")
             }
 
-            val lastModified = handleResponse(response, time, target)
+            val lastModified = handleResponse(response, target)
             saveEtag(response, lastModified, target, etagFile)
         }
     }
 
-    private fun handleResponse(response: CloseableHttpResponse, time: Instant, target: Path): Instant {
+    private fun handleResponse(response: CloseableHttpResponse, target: Path): Instant {
         val lastModified = with(response.getLastHeader("Last-Modified")) {
             if (this == null) {
                 return@with Instant.EPOCH
