@@ -32,24 +32,23 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.apache.tools.ant.types.selectors.SelectorUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -68,6 +67,12 @@ abstract class GenerateDevBundle : DefaultTask() {
     abstract val mojangMappedPaperclipFile: RegularFileProperty
 
     @get:Input
+    abstract val serverVersion: Property<String>
+
+    @get:Input
+    abstract val serverCoordinates: Property<String>
+
+    @get:Input
     abstract val apiCoordinates: Property<String>
 
     @get:Input
@@ -82,8 +87,11 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:Input
     abstract val libraryRepositories: ListProperty<String>
 
-    @get:Internal
-    abstract val serverProject: Property<Project>
+    @get:Classpath
+    abstract val compileConfiguration: Property<Configuration>
+
+    @get:Classpath
+    abstract val runtimeConfiguration: Property<Configuration>
 
     @get:Input
     abstract val relocations: Property<String>
@@ -114,6 +122,9 @@ abstract class GenerateDevBundle : DefaultTask() {
 
     @get:OutputFile
     abstract val devBundleFile: RegularFileProperty
+
+    @get:Inject
+    abstract val layout: ProjectLayout
 
     @TaskAction
     fun run() {
@@ -150,7 +161,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun generatePatches(output: Path) {
-        val workingDir = project.layout.cache.resolve(paperTaskOutput("tmpdir"))
+        val workingDir = layout.cache.resolve(paperTaskOutput("tmpdir"))
         workingDir.createDirectories()
         sourceDir.path.copyRecursivelyTo(workingDir)
 
@@ -287,18 +298,15 @@ abstract class GenerateDevBundle : DefaultTask() {
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
         return DevBundleConfig(
             minecraftVersion = minecraftVersion.get(),
-            mappedServerCoordinates = createCoordinatesFor(serverProject.get()),
-            apiCoordinates = "${apiCoordinates.get()}:${serverProject.get().version}",
-            mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverProject.get().version}",
+            mappedServerCoordinates = serverCoordinates.get(),
+            apiCoordinates = "${apiCoordinates.get()}:$serverVersion",
+            mojangApiCoordinates = "${mojangApiCoordinates.get()}:$serverVersion",
             buildData = createBuildDataConfig(dataTargetDir),
             decompile = createDecompileRunner(),
             remapper = createRemapDep(),
             patchDir = patchTargetDir
         )
     }
-
-    private fun createCoordinatesFor(project: Project): String =
-        sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
 
     private fun relocations(): List<Relocation> = gson.fromJson(relocations.get())
 
@@ -309,8 +317,8 @@ abstract class GenerateDevBundle : DefaultTask() {
             accessTransformFile = "$targetDir/$atFileName",
             mojangMappedPaperclipFile = "$targetDir/$mojangMappedPaperclipFileName",
             vanillaJarIncludes = vanillaJarIncludes.get(),
-            compileDependencies = determineLibraries(serverProject.get(), vanillaServerLibraries.get()).sorted(),
-            runtimeDependencies = collectRuntimeDependencies(serverProject.get()).map { it.coordinates }.sorted(),
+            compileDependencies = determineLibraries(vanillaServerLibraries.get()).sorted(),
+            runtimeDependencies = collectRuntimeDependencies().map { it.coordinates }.sorted(),
             libraryRepositories = libraryRepositories.get(),
             relocations = relocations(),
             minecraftRemapArgs = TinyRemapper.minecraftRemapArgs,
@@ -318,25 +326,12 @@ abstract class GenerateDevBundle : DefaultTask() {
         )
     }
 
-    private fun determineLibraries(serverProject: Project, vanillaServerLibraries: List<String>): Set<String> {
-        val new = arrayListOf<ModuleId>()
-
-        for (dependency in serverProject.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).get().dependencies) {
-            // don't want project dependencies
-            if (dependency is ExternalModuleDependency) {
-                val version = sequenceOf(
-                    dependency.versionConstraint.strictVersion,
-                    dependency.versionConstraint.requiredVersion,
-                    dependency.versionConstraint.preferredVersion,
-                    dependency.version
-                ).filterNotNull().filter { it.isNotBlank() }.first()
-                new += ModuleId(
-                    dependency.group,
-                    dependency.name,
-                    version
-                )
+    private fun determineLibraries(vanillaServerLibraries: List<String>): Set<String> {
+        val new: MutableList<ModuleId> = compileConfiguration.get().incoming.artifacts.artifacts
+            .mapNotNullTo(ArrayList()) {
+                val module = it.id.componentIdentifier as? ModuleComponentIdentifier ?: return@mapNotNullTo null
+                ModuleId.fromIdentifier(module)
             }
-        }
 
         for (vanillaLib in vanillaServerLibraries) {
             val vanilla = ModuleId.parse(vanillaLib)
@@ -357,12 +352,9 @@ abstract class GenerateDevBundle : DefaultTask() {
     private val ResolvedArtifactResult.coordinates: String
         get() = ModuleId.fromIdentifier(id.componentIdentifier as ModuleComponentIdentifier).toString()
 
-    private fun collectRuntimeDependencies(
-        serverProject: Project
-    ): Set<ResolvedArtifactResult> = serverProject.configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
-        .incoming.artifacts.artifacts.filterTo(HashSet()) {
-            val id = it.id.componentIdentifier
-            id is ModuleComponentIdentifier
+    private fun collectRuntimeDependencies(): Set<ResolvedArtifactResult> =
+        runtimeConfiguration.get().incoming.artifacts.artifacts.filterTo(HashSet()) {
+            it.id.componentIdentifier is ModuleComponentIdentifier
         }
 
     private fun createDecompileRunner(): Runner {
@@ -409,5 +401,8 @@ abstract class GenerateDevBundle : DefaultTask() {
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
         const val currentDataVersion = 3
+
+        fun createCoordinatesFor(project: Project): String =
+            sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
     }
 }

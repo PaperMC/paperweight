@@ -169,9 +169,9 @@ class PaperweightPatcher : Plugin<Project> {
             }
 
             devBundleTasks.configure(
+                patcher.serverProject.get(),
                 patcher.bundlerJarName.get(),
                 patcher.mainClass,
-                patcher.serverProject,
                 upstreamData.map { it.mcVersion },
                 upstreamData.map { it.decompiledJar },
                 upstreamData.map { it.serverLibrariesTxt },
@@ -186,6 +186,7 @@ class PaperweightPatcher : Plugin<Project> {
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
             }
+            devBundleTasks.configureAfterEvaluate()
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,

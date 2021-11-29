@@ -153,9 +153,9 @@ class PaperweightCore : Plugin<Project> {
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(
+                ext.serverProject.get(),
                 ext.bundlerJarName.get(),
                 ext.mainClass,
-                ext.serverProject,
                 ext.minecraftVersion,
                 tasks.decompileJar.map { it.outputJar.path },
                 tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
@@ -174,6 +174,7 @@ class PaperweightCore : Plugin<Project> {
                 )
                 paramMappingsUrl.set(ext.paramMappingsRepo)
             }
+            devBundleTasks.configureAfterEvaluate()
 
             bundlerJarTasks.configureBundlerTasks(
                 tasks.extractFromBundler.flatMap { it.versionJson },
