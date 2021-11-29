@@ -24,6 +24,7 @@ package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.readUpstreamData
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -32,7 +33,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
-import util.data.readUpstreamData
 
 @UntrackedTask(because = "PaperweightPatcherPrepareForDownstream should always run when requested")
 abstract class PaperweightPatcherPrepareForDownstream : BaseTask() {

@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.tasks
 
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.UpstreamData
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
@@ -38,7 +39,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import util.data.UpstreamData
 
 abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
 

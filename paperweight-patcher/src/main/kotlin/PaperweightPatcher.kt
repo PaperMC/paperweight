@@ -36,6 +36,7 @@ import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import org.gradle.api.Plugin
@@ -47,7 +48,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
-import util.data.readUpstreamData
 
 class PaperweightPatcher : Plugin<Project> {
 
