@@ -46,6 +46,10 @@ class DevBundleTasks(
         paperclip.from(project.configurations.named(PAPERCLIP_CONFIG))
     }
 
+    val paperclipForDevBundle by tasks.registering<CreatePaperclipJar> {
+        bundlerJar.set(serverBundlerForDevBundle.flatMap { it.outputZip })
+    }
+
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "paperweight"
 
@@ -83,10 +87,15 @@ class DevBundleTasks(
             }
         }
 
+        paperclipForDevBundle {
+            originalBundlerJar.pathProvider(vanillaBundlerJarFile)
+            mcVersion.set(minecraftVer)
+        }
+
         generateDevelopmentBundle {
             sourceDir.set(serverProj.map { it.layout.projectDirectory.dir("src/main/java") })
             minecraftVersion.set(minecraftVer)
-            mojangMappedPaperclipFile.set(serverBundlerForDevBundle.flatMap { it.outputZip })
+            mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })
             vanillaServerLibraries.set(
                 serverLibrariesTxt.map { txt ->
                     txt.readLines(Charsets.UTF_8).filter { it.isNotBlank() }
