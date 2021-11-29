@@ -105,6 +105,7 @@ class PaperweightCore : Plugin<Project> {
             atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
             spigotRecompiledClasses.set(tasks.remapSpigotSources.flatMap { it.spigotRecompiledClasses })
             bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
+            serverLibrariesTxt.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
             serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
 
             dataFile.set(
