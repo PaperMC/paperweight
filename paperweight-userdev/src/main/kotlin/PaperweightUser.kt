@@ -32,6 +32,7 @@ import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
@@ -232,7 +233,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
+        val mojangMappedServerConfig = target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
             exclude("junit", "junit") // json-simple exposes junit for some reason
             defaultDependencies {
                 userdevSetup.get().createOrUpdateIvyRepository(
@@ -248,7 +249,33 @@ abstract class PaperweightUser : Plugin<Project> {
                 JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
             ).map(target.configurations::named).forEach { config ->
                 config {
-                    extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+                    extendsFrom(mojangMappedServerConfig)
+                }
+            }
+        }
+
+        target.configurations.create(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
+            defaultDependencies {
+                userdevSetup.get().createOrUpdateIvyRepository(
+                    UserdevSetup.Context(target, workerExecutor, javaToolchainService)
+                )
+
+                listOf(
+                    devBundleConfig.mappedServerCoordinates,
+                    devBundleConfig.apiCoordinates,
+                    devBundleConfig.mojangApiCoordinates
+                ).forEach { coordinate ->
+                    val dep = target.dependencies.create(coordinate).also {
+                        (it as ExternalModuleDependency).isTransitive = false
+                    }
+                    add(dep)
+                }
+
+                for (coordinates in userdevSetup.get().devBundleConfig.buildData.runtimeDependencies) {
+                    val dep = target.dependencies.create(coordinates).also {
+                        (it as ExternalModuleDependency).isTransitive = false
+                    }
+                    add(dep)
                 }
             }
         }

@@ -39,6 +39,7 @@ const val DECOMPILER_CONFIG = "decompiler"
 const val PAPERCLIP_CONFIG = "paperclip"
 const val DEV_BUNDLE_CONFIG = "paperweightDevelopmentBundle"
 const val MOJANG_MAPPED_SERVER_CONFIG = "mojangMappedServer"
+const val MOJANG_MAPPED_SERVER_RUNTIME_CONFIG = "mojangMappedServerRuntime"
 const val REOBF_CONFIG = "reobf"
 
 const val PARAM_MAPPINGS_REPO_NAME = "paperweightParamMappingsRepository"

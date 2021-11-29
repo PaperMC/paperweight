@@ -37,6 +37,8 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPlugin
@@ -306,7 +308,8 @@ abstract class GenerateDevBundle : DefaultTask() {
             accessTransformFile = "$targetDir/$atFileName",
             mojangMappedPaperclipFile = "$targetDir/$mojangMappedPaperclipFileName",
             vanillaJarIncludes = vanillaJarIncludes.get(),
-            libraryDependencies = determineLibraries(serverProject.get(), vanillaServerLibraries.get()),
+            compileDependencies = determineLibraries(serverProject.get(), vanillaServerLibraries.get()).sorted(),
+            runtimeDependencies = collectRuntimeDependencies(serverProject.get()).map { it.coordinates }.sorted(),
             libraryRepositories = libraryRepositories.get(),
             relocations = relocations(),
             minecraftRemapArgs = TinyRemapper.minecraftRemapArgs,
@@ -315,7 +318,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun determineLibraries(serverProject: Project, vanillaServerLibraries: List<String>): Set<String> {
-        val new = arrayListOf<String>()
+        val new = arrayListOf<Triple<String, String, String>>()
 
         for (dependency in serverProject.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).get().dependencies) {
             // don't want project dependencies
@@ -326,16 +329,22 @@ abstract class GenerateDevBundle : DefaultTask() {
                     dependency.versionConstraint.preferredVersion,
                     dependency.version
                 ).filterNotNull().filter { it.isNotBlank() }.first()
-                new += sequenceOf(
+                new += Triple(
                     dependency.group,
                     dependency.name,
                     version
-                ).joinToString(":")
+                )
             }
         }
 
-        val result = vanillaServerLibraries.toMutableSet()
-        result += new
+        for (vanillaLib in vanillaServerLibraries) {
+            val (group, name, version) = vanillaLib.split(":")
+            if (new.none { it.first == group && it.second == name }) {
+                new += Triple(group, name, version)
+            }
+        }
+
+        val result = new.map { "${it.first}:${it.second}:${it.third}" }.toMutableSet()
 
         // Remove relocated libraries
         val libs = relocations().mapNotNull { it.owningLibraryCoordinates }
@@ -343,6 +352,20 @@ abstract class GenerateDevBundle : DefaultTask() {
 
         return result
     }
+
+    private val ResolvedArtifactResult.coordinates: String
+        get() {
+            val id = (id.componentIdentifier as ModuleComponentIdentifier)
+            return "${id.group}:${id.module}:${id.version}"
+        }
+
+    private fun collectRuntimeDependencies(
+        serverProject: Project
+    ): Set<ResolvedArtifactResult> = serverProject.configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+        .incoming.artifacts.artifacts.filterTo(HashSet()) {
+            val id = it.id.componentIdentifier
+            id is ModuleComponentIdentifier
+        }
 
     private fun createDecompileRunner(): Runner {
         return Runner(
@@ -371,7 +394,8 @@ abstract class GenerateDevBundle : DefaultTask() {
         val accessTransformFile: String,
         val mojangMappedPaperclipFile: String,
         val vanillaJarIncludes: List<String>,
-        val libraryDependencies: Set<String>,
+        val compileDependencies: List<String>,
+        val runtimeDependencies: List<String>,
         val libraryRepositories: List<String>,
         val relocations: List<Relocation>,
         val minecraftRemapArgs: List<String>,

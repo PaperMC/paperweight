@@ -53,6 +53,11 @@ abstract class PaperweightUserExtension(
     /**
      * Provides a runnable Mojang mapped server jar, extracted from the current dev bundle.
      */
+    @Deprecated(
+        message = "As of 1.18, the dev bundle no longer contains a runnable server jar. Use the mojangMappedServerRuntime configuration instead.",
+        replaceWith = ReplaceWith("project.configurations.mojangMappedServerRuntime"),
+        level = DeprecationLevel.WARNING
+    )
     val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().pathProvider(
         setup.map {
             it.applyMojangMappedPaperclipPatch(
