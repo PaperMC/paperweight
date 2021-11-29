@@ -26,6 +26,7 @@ import io.papermc.paperweight.extension.Relocation
 import io.papermc.paperweight.extension.RelocationWrapper
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.*
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -318,7 +319,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun determineLibraries(serverProject: Project, vanillaServerLibraries: List<String>): Set<String> {
-        val new = arrayListOf<Triple<String, String, String>>()
+        val new = arrayListOf<ModuleId>()
 
         for (dependency in serverProject.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).get().dependencies) {
             // don't want project dependencies
@@ -329,7 +330,7 @@ abstract class GenerateDevBundle : DefaultTask() {
                     dependency.versionConstraint.preferredVersion,
                     dependency.version
                 ).filterNotNull().filter { it.isNotBlank() }.first()
-                new += Triple(
+                new += ModuleId(
                     dependency.group,
                     dependency.name,
                     version
@@ -338,13 +339,13 @@ abstract class GenerateDevBundle : DefaultTask() {
         }
 
         for (vanillaLib in vanillaServerLibraries) {
-            val (group, name, version) = vanillaLib.split(":")
-            if (new.none { it.first == group && it.second == name }) {
-                new += Triple(group, name, version)
+            val vanilla = ModuleId.parse(vanillaLib)
+            if (new.none { it.group == vanilla.group && it.name == vanilla.name }) {
+                new += vanilla
             }
         }
 
-        val result = new.map { "${it.first}:${it.second}:${it.third}" }.toMutableSet()
+        val result = new.map { it.toString() }.toMutableSet()
 
         // Remove relocated libraries
         val libs = relocations().mapNotNull { it.owningLibraryCoordinates }
@@ -354,10 +355,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private val ResolvedArtifactResult.coordinates: String
-        get() {
-            val id = (id.componentIdentifier as ModuleComponentIdentifier)
-            return "${id.group}:${id.module}:${id.version}"
-        }
+        get() = ModuleId.fromIdentifier(id.componentIdentifier as ModuleComponentIdentifier).toString()
 
     private fun collectRuntimeDependencies(
         serverProject: Project
