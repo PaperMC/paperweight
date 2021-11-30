@@ -48,7 +48,7 @@ class BundlerJarTasks(
     val createReobfPaperclipJar: TaskProvider<CreatePaperclipJar>
 
     init {
-        val (createBundlerJar, createPaperclipJar) = project.createBundlerJarTask()
+        val (createBundlerJar, createPaperclipJar) = project.createBundlerJarTask("mojmap")
         val (createReobfBundlerJar, createReobfPaperclipJar) = project.createBundlerJarTask("reobf")
         this.createBundlerJar = createBundlerJar
         this.createPaperclipJar = createPaperclipJar
