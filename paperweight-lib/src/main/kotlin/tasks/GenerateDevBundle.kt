@@ -299,8 +299,8 @@ abstract class GenerateDevBundle : DefaultTask() {
         return DevBundleConfig(
             minecraftVersion = minecraftVersion.get(),
             mappedServerCoordinates = serverCoordinates.get(),
-            apiCoordinates = "${apiCoordinates.get()}:$serverVersion",
-            mojangApiCoordinates = "${mojangApiCoordinates.get()}:$serverVersion",
+            apiCoordinates = "${apiCoordinates.get()}:${serverVersion.get()}",
+            mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverVersion.get()}",
             buildData = createBuildDataConfig(dataTargetDir),
             decompile = createDecompileRunner(),
             remapper = createRemapDep(),
