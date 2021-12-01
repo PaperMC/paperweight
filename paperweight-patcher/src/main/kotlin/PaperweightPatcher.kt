@@ -157,12 +157,13 @@ class PaperweightPatcher : Plugin<Project> {
 
             val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
+            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
 
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
-                inputJar.set(serverProj.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
+                inputJar.set(shadowJar.flatMap { it.archiveFile })
                 spigotRecompiledClasses.pathProvider(upstreamData.map { it.spigotRecompiledClasses })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
@@ -203,7 +204,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.serverLibrariesList }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.vanillaJar }.convertToFileProvider(target.layout, target.providers),
                 serverProj,
-                tasks.named("shadowJar", Jar::class),
+                shadowJar,
                 reobfJar,
                 upstreamData.map { it.mcVersion }
             )
