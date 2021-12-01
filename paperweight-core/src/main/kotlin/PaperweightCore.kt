@@ -87,7 +87,7 @@ class PaperweightCore : Plugin<Project> {
 
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
-            vanillaJar.set(tasks.extractFromBundler.flatMap { it.serverJar })
+            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
