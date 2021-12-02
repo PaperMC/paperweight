@@ -149,7 +149,7 @@ object McDev {
             lines.filterNot { it.startsWith("#") }
                 .mapNotNull {
                     val parts = it.split(" ")
-                    if (parts.size != 2 && parts[0] != "minecraft") {
+                    if (parts[0] != "minecraft") {
                         null
                     } else {
                         parts[1]
