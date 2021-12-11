@@ -83,19 +83,9 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private val devBundleChanged = extractDevBundle.first
     val devBundleConfig = extractDevBundle.second
 
-    private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> {
-        val minecraftManifestJson = download(
-            "minecraft manifest",
-            MC_MANIFEST_URL,
-            cache.resolve(MC_MANIFEST),
-            force
-        )
-        return DownloadResult(
-            minecraftManifestJson.path,
-            minecraftManifestJson.didDownload,
-            gson.fromJson(minecraftManifestJson.path)
-        )
-    }
+    private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> =
+        download("minecraft manifest", MC_MANIFEST_URL, cache.resolve(MC_MANIFEST), force)
+            .mapData { gson.fromJson(it.path) }
 
     private val minecraftVersionManifest: JsonObject by lazy { setupMinecraftVersionManifest() }
     private fun setupMinecraftVersionManifest(): JsonObject {
@@ -493,7 +483,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         hash(builder)
     }
 
-    private data class DownloadResult<D>(val path: Path, val didDownload: Boolean, val data: D)
+    private data class DownloadResult<D>(val path: Path, val didDownload: Boolean, val data: D) {
+        fun <N> mapData(mapper: (DownloadResult<D>) -> N): DownloadResult<N> =
+            DownloadResult(path, didDownload, mapper(this))
+    }
 
     private interface HashFunctionBuilder : MutableList<Any> {
         var includePaperweightHash: Boolean
