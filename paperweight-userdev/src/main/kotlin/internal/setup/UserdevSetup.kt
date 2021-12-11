@@ -26,11 +26,12 @@ import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
 import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup.HashFunction
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.data.MinecraftManifest
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -82,21 +83,34 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private val devBundleChanged = extractDevBundle.first
     val devBundleConfig = extractDevBundle.second
 
-    private val minecraftVersionManifest: JsonObject by lazy { setupMinecraftVersionManifest() }
-    private fun setupMinecraftVersionManifest(): JsonObject {
+    private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> {
         val minecraftManifestJson = download(
             "minecraft manifest",
             MC_MANIFEST_URL,
-            cache.resolve(MC_MANIFEST)
+            cache.resolve(MC_MANIFEST),
+            force
         )
-        val minecraftManifest = gson.fromJson<MinecraftManifest>(minecraftManifestJson)
+        return DownloadResult(
+            minecraftManifestJson.path,
+            minecraftManifestJson.didDownload,
+            gson.fromJson(minecraftManifestJson.path)
+        )
+    }
+
+    private val minecraftVersionManifest: JsonObject by lazy { setupMinecraftVersionManifest() }
+    private fun setupMinecraftVersionManifest(): JsonObject {
+        var minecraftManifest = downloadMinecraftManifest(devBundleChanged)
+        if (!minecraftManifest.didDownload && minecraftManifest.data.versions.none { it.id == devBundleConfig.minecraftVersion }) {
+            minecraftManifest = downloadMinecraftManifest(true)
+        }
 
         val minecraftVersionManifestJson = download(
             "minecraft version manifest",
-            minecraftManifest.versions.first { it.id == devBundleConfig.minecraftVersion }.url,
+            minecraftManifest.data.versions.firstOrNull { it.id == devBundleConfig.minecraftVersion }?.url
+                ?: throw PaperweightException("Could not find Minecraft version '${devBundleConfig.minecraftVersion}' in the downloaded manifest."),
             cache.resolve(VERSION_JSON)
         )
-        return gson.fromJson(minecraftVersionManifestJson)
+        return gson.fromJson(minecraftVersionManifestJson.path)
     }
 
     private val serverBundlerJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
@@ -438,7 +452,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
         .filter { it.isRegularFile() }
         .sortedBy { it.pathString }
         .joinToString("\n") {
-            "${it.fileName.pathString}:${toHex(it.hashFile(digestSha256))}"
+            "${it.fileName.pathString}:${it.sha256asHex()}"
         }
 
     private fun hashDirectory(dir: Path): String =
@@ -447,20 +461,22 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
     private fun download(
         downloadName: String,
         remote: String,
-        destination: Path
-    ): Path {
+        destination: Path,
+        forceDownload: Boolean = false,
+    ): DownloadResult<Unit> {
         val hashFile = destination.resolveSibling(destination.name + ".hashes")
 
-        val upToDate = hashFile.isRegularFile() &&
+        val upToDate = !forceDownload &&
+            hashFile.isRegularFile() &&
             hashFile.readText() == hash(remote, destination)
-        if (upToDate) return destination
+        if (upToDate) return DownloadResult(destination, false, Unit)
 
         LOGGER.lifecycle(":downloading $downloadName")
         destination.parent.createDirectories()
         parameters.downloadService.get().download(remote, destination)
         hashFile.writeText(hash(remote, destination))
 
-        return destination
+        return DownloadResult(destination, true, Unit)
     }
 
     private fun buildHashFunction(
@@ -476,6 +492,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters> {
 
         hash(builder)
     }
+
+    private data class DownloadResult<D>(val path: Path, val didDownload: Boolean, val data: D)
 
     private interface HashFunctionBuilder : MutableList<Any> {
         var includePaperweightHash: Boolean
