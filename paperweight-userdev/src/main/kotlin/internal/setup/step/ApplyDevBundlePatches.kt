@@ -22,6 +22,9 @@
 
 package io.papermc.paperweight.userdev.internal.setup
 
+import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
+import io.papermc.paperweight.userdev.internal.setup.util.hashDirectory
+import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.util.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,6 +36,16 @@ fun applyDevBundlePatches(
     outputJar: Path
 ) {
     Git.checkForGit()
+
+    val hashFile = outputJar.siblingHashesFile()
+    val hashFunction = buildHashFunction(decompiledJar, outputJar) {
+        include(hashDirectory(devBundlePatches))
+    }
+    if (hashFunction.upToDate(hashFile)) {
+        return
+    }
+
+    UserdevSetup.LOGGER.lifecycle(":applying patches to decompiled jar")
 
     val workDir = findOutputDir(outputJar)
 
@@ -54,6 +67,8 @@ fun applyDevBundlePatches(
 
         ensureDeleted(outputJar)
         zip(workDir, outputJar)
+
+        hashFunction.writeHash(hashFile)
     } finally {
         workDir.deleteRecursively()
     }

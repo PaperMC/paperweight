@@ -23,34 +23,64 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import com.google.gson.JsonObject
+import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
+import io.papermc.paperweight.userdev.internal.setup.util.siblingLogAndHashesFiles
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.Project
-import org.gradle.jvm.toolchain.JavaLauncher
 
 fun patchPaperclip(
-    project: Project,
-    launcher: JavaLauncher,
+    context: SetupHandler.Context,
     paperclip: Path,
     outputJar: Path,
-    logFile: Path
+    mojangJar: Path,
+    minecraftVersion: String,
+    bundler: Boolean = true,
 ) {
+    val (logFile, hashFile) = outputJar.siblingLogAndHashesFiles()
+
+    val hashFunction = buildHashFunction(paperclip, mojangJar, outputJar, minecraftVersion)
+    if (hashFunction.upToDate(hashFile)) {
+        return
+    }
+
+    UserdevSetup.LOGGER.lifecycle(":applying mojang mapped paperclip patch")
+
     val work = createTempDirectory()
     logFile.deleteForcefully()
-    launcher.runJar(
-        classpath = project.files(paperclip),
+
+    // Copy in mojang jar, so we don't download it twice
+    val cache = work.resolve("cache")
+    cache.createDirectories()
+    mojangJar.copyTo(cache.resolve("mojang_$minecraftVersion.jar"))
+
+    context.defaultJavaLauncher.runJar(
+        classpath = context.project.files(paperclip),
         workingDir = work,
         logFile = logFile,
         jvmArgs = listOf("-Dpaperclip.patchonly=true"),
         args = arrayOf()
     )
+
+    if (bundler) {
+        handleBundler(paperclip, work, outputJar)
+    } else {
+        handleOldPaperclip(work, outputJar)
+    }
+
+    work.deleteRecursively()
+
+    hashFunction.writeHash(hashFile)
+}
+
+private fun handleBundler(paperclip: Path, work: Path, outputJar: Path) {
     paperclip.openZip().use { fs ->
         val root = fs.rootDirectories.single()
 
-        val serverVersionJson = root.resolve("version.json")
+        val serverVersionJson = root.resolve(FileEntry.VERSION_JSON)
         val versionId = gson.fromJson<JsonObject>(serverVersionJson)["id"].asString
-        val versions = root.resolve("/META-INF/versions.list").readLines()
+        val versions = root.resolve(FileEntry.VERSIONS_LIST).readLines()
             .map { it.split('\t') }
             .associate { it[1] to it[2] }
 
@@ -58,5 +88,10 @@ fun patchPaperclip(
         outputJar.parent.createDirectories()
         serverJarPath.copyTo(outputJar, overwrite = true)
     }
-    work.deleteRecursively()
+}
+
+private fun handleOldPaperclip(work: Path, outputJar: Path) {
+    val patched = work.resolve("cache").listDirectoryEntries()
+        .find { it.name.startsWith("patched") } ?: error("Can't find patched jar!")
+    patched.copyTo(outputJar, overwrite = true)
 }

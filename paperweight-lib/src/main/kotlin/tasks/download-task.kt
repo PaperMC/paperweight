@@ -196,7 +196,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         depList += MavenArtifact(
             "org.apache.logging.log4j",
             "log4j-api",
-            "2.14.1"
+            "2.16.0"
         )
         depList += MavenArtifact(
             "org.jetbrains",
