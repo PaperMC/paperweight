@@ -37,6 +37,7 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
+import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
@@ -101,8 +102,6 @@ abstract class PaperweightUser : Plugin<Project> {
             group = "paperweight"
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
-            outputJar.convention(project.layout.buildDirectory.file("libs/${project.name}-${project.version}.jar"))
-
             mappingsFile.pathProvider(target.provider { userdevSetup.extractedBundle.resolve(devBundleConfig.buildData.reobfMappingsFile) })
             remapClasspath.from(target.provider { userdevSetup.mojangMappedPaperJar })
 
@@ -136,11 +135,14 @@ abstract class PaperweightUser : Plugin<Project> {
                         NameMatcher().find(arg, tasks.names) == cleanCache.name
                     }
                 }
-            if (cleaningCache) return@afterEvaluate
+            if (cleaningCache) {
+                return@afterEvaluate
+            }
 
             val jar = tasks.named<AbstractArchiveTask>("jar") {
                 archiveClassifier.set("dev")
             }
+
             val devJarTask = if (tasks.findByName("shadowJar") != null) {
                 tasks.named<AbstractArchiveTask>("shadowJar") {
                     archiveClassifier.set("dev-all")
@@ -148,8 +150,13 @@ abstract class PaperweightUser : Plugin<Project> {
             } else {
                 jar
             }
+
+            val archivesName = target.extensions.findByType(BasePluginExtension::class)?.archivesName
+                ?: target.provider { target.name }
+
             reobfJar {
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
+                outputJar.convention(archivesName.flatMap { layout.buildDirectory.file("libs/$it-${project.version}.jar") })
             }
 
             if (userdev.injectPaperRepository.get()) {
