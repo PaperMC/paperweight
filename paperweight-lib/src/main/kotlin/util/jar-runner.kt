@@ -50,14 +50,14 @@ fun JavaLauncher.runJar(
 
     val dir = workingDir.convertToPath()
 
-    val output = when {
-        logFile is OutputStream -> logFile
+    val (logFilePath, output) = when {
+        logFile is OutputStream -> Pair(null, logFile)
         logFile != null -> {
             val log = logFile.convertToPath()
             log.parent.createDirectories()
-            log.outputStream().buffered()
+            Pair(log, log.outputStream().buffered())
         }
-        else -> UselessOutputStream
+        else -> Pair(null, UselessOutputStream)
     }
 
     val processBuilder = ProcessBuilder(
@@ -80,9 +80,10 @@ fun JavaLauncher.runJar(
         redirect(process.inputStream, it)
         redirect(process.errorStream, it)
 
-        val e = process.waitFor()
-        if (e != 0) {
-            throw PaperweightException("Execution of ${classpath.asPath} failed with exit code $e")
+        val exit = process.waitFor()
+        if (exit != 0) {
+            val logMsg = logFilePath?.let { p -> " Log file: ${p.absolutePathString()}" } ?: ""
+            throw PaperweightException("Execution of '$mainClass' failed with exit code $exit.$logMsg Classpath: ${classpath.asPath}")
         }
     }
 }
