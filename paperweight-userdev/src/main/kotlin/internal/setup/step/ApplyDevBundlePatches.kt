@@ -33,7 +33,7 @@ import kotlin.io.path.*
 
 class ApplyDevBundlePatches(
     @Input private val decompiledJar: Path,
-    @Input private val devBundlePatches: Path,
+    private val devBundlePatches: Path,
     @Output private val outputJar: Path,
 ) : SetupStep {
     override val name: String = "apply patches to decompiled jar"
