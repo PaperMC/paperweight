@@ -33,6 +33,7 @@ fun installPaperServer(
     dependencies: List<String>,
     serverSourcesJar: Path,
     serverJar: Path,
+    mcVersion: String,
 ) {
     val didInstall = installToIvyRepo(
         cache.resolve(IVY_REPOSITORY),
@@ -43,6 +44,6 @@ fun installPaperServer(
     )
     if (didInstall) {
         UserdevSetup.LOGGER.lifecycle(":installed server artifacts to cache")
-        UserdevSetup.LOGGER.lifecycle(":done setting up paperweight userdev workspace")
+        UserdevSetup.LOGGER.lifecycle(":done setting up paperweight userdev workspace for minecraft {}", mcVersion)
     }
 }

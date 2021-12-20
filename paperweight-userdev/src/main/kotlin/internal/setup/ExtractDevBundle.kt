@@ -29,6 +29,21 @@ import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
+private val supported = mapOf(
+    2 to DevBundleV2.Config::class, // 1.17.1
+    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class,
+)
+
+data class ExtractedBundle<C>(
+    val changed: Boolean,
+    val config: C,
+    val dataVersion: Int,
+    val dir: Path,
+) {
+    constructor(bundleChanged: Boolean, pair: Pair<C, Int>, dir: Path) :
+        this(bundleChanged, pair.first, pair.second, dir)
+}
+
 fun extractDevBundle(
     destinationDirectory: Path,
     devBundle: Path
@@ -54,11 +69,6 @@ fun extractDevBundle(
     return ExtractedBundle(true, readDevBundle(destinationDirectory), destinationDirectory)
 }
 
-private val supported = mapOf(
-    2 to DevBundleV2.Config::class, // 1.17.1
-    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class,
-)
-
 private fun readDevBundle(
     extractedDevBundlePath: Path
 ): Pair<Any, Int> {
@@ -76,14 +86,4 @@ private fun readDevBundle(
         gson.fromJson(reader, configClass.java)
     }
     return config to dataVersion
-}
-
-data class ExtractedBundle<C>(
-    val changed: Boolean,
-    val config: C,
-    val dataVersion: Int,
-    val dir: Path,
-) {
-    constructor(bundleChanged: Boolean, pair: Pair<C, Int>, dir: Path) :
-        this(bundleChanged, pair.first, pair.second, dir)
 }

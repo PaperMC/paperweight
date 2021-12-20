@@ -22,27 +22,21 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.*
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
+import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 
-fun filterVanillaServerJar(
-    vanillaJar: Path,
-    outputJar: Path,
-    includes: List<String>,
-) {
-    val hashFunction = buildHashFunction(vanillaJar, outputJar, includes)
-    val hashFile = outputJar.siblingHashesFile()
-    if (hashFunction.upToDate(hashFile)) {
-        return
-    }
+class FilterVanillaJar(
+    @Input private val vanillaJar: Path,
+    @Input private val includes: List<String>,
+    @Output private val outputJar: Path,
+) : SetupStep {
+    override val name: String = "filter vanilla server jar"
 
-    UserdevSetup.LOGGER.lifecycle(":filtering vanilla server jar")
-    filterJar(
-        vanillaJar,
-        outputJar,
-        includes
-    )
-    hashFunction.writeHash(hashFile)
+    override val hashFile: Path = outputJar.siblingHashesFile()
+
+    override fun run(context: SetupHandler.Context) {
+        filterJar(vanillaJar, outputJar, includes)
+    }
 }

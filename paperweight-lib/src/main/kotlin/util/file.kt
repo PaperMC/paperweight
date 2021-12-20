@@ -171,3 +171,5 @@ fun InputStream.hash(digest: MessageDigest): ByteArray {
 fun Path.hashFile(digest: MessageDigest): ByteArray = inputStream().use { iS -> iS.hash(digest) }
 
 fun Path.sha256asHex(): String = toHex(hashFile(digestSha256))
+
+fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")

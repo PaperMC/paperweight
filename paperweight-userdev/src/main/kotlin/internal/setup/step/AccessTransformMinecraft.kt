@@ -22,32 +22,27 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.tasks.applyAccessTransform
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import java.nio.file.Path
 
-fun accessTransformMinecraftServerJar(
-    context: SetupHandler.Context,
-    at: Path,
-    inputJar: Path,
-    outputJar: Path,
-) {
-    val hashFile = outputJar.siblingHashesFile()
-    val hashFunction = buildHashFunction(inputJar, at, outputJar)
-    if (hashFunction.upToDate(hashFile)) {
-        return
-    }
+class AccessTransformMinecraft(
+    @Input private val at: Path,
+    @Input private val inputJar: Path,
+    @Output private val outputJar: Path,
+) : SetupStep {
+    override val name: String = "access transform minecraft server jar"
 
-    UserdevSetup.LOGGER.lifecycle(":access transforming minecraft server jar")
-    applyAccessTransform(
-        inputJarPath = inputJar,
-        outputJarPath = outputJar,
-        atFilePath = at,
-        workerExecutor = context.workerExecutor,
-        launcher = context.defaultJavaLauncher
-    ).await()
-    hashFunction.writeHash(hashFile)
+    override val hashFile: Path = outputJar.siblingHashesFile()
+
+    override fun run(context: SetupHandler.Context) {
+        applyAccessTransform(
+            inputJarPath = inputJar,
+            outputJarPath = outputJar,
+            atFilePath = at,
+            workerExecutor = context.workerExecutor,
+            launcher = context.defaultJavaLauncher
+        ).await()
+    }
 }

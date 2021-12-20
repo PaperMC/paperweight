@@ -24,43 +24,55 @@ package io.papermc.paperweight.userdev.internal.setup.step
 
 import io.papermc.paperweight.tasks.runForgeFlower
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
-import io.papermc.paperweight.userdev.internal.setup.util.siblingLogAndHashesFiles
+import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
+import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
+import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
 import io.papermc.paperweight.util.constants.DECOMPILER_CONFIG
 import java.nio.file.Path
+import org.gradle.api.artifacts.Configuration
 
-fun decompileMinecraftServerJar(
-    context: SetupHandler.Context,
-    inputJar: Path,
-    outputJar: Path,
-    cache: Path,
-    minecraftLibraryJars: () -> List<Path>,
-    decompileArgs: List<String>,
-) {
-    val (logFile, hashFile) = outputJar.siblingLogAndHashesFiles()
+class DecompileMinecraft(
+    @Input private val inputJar: Path,
+    @Output private val outputJar: Path,
+    private val cache: Path,
+    private val minecraftLibraryJars: () -> List<Path>,
+    @Input private val decompileArgs: List<String>,
+    private val decompiler: Configuration,
+) : SetupStep {
+    override val name: String = "decompile transformed minecraft server jar"
 
-    val decompiler = context.project.configurations.getByName(DECOMPILER_CONFIG)
-    // resolve decompiler
-    val decompilerFiles = decompiler.resolve().map { it.toPath() }
+    override val hashFile: Path = outputJar.siblingHashesFile()
 
-    val hashFunction = buildHashFunction(inputJar, outputJar, decompileArgs, decompilerFiles) {
-        include(minecraftLibraryJars())
+    override fun run(context: SetupHandler.Context) {
+        runForgeFlower(
+            argsList = decompileArgs,
+            logFile = outputJar.siblingLogFile(),
+            workingDir = cache,
+            executable = decompiler,
+            inputJar = inputJar,
+            libraries = minecraftLibraryJars(),
+            outputJar = outputJar,
+            javaLauncher = context.defaultJavaLauncher
+        )
     }
-    if (hashFunction.upToDate(hashFile)) {
-        return
+
+    override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
+        builder.include(minecraftLibraryJars())
+        builder.include(decompiler.map { it.toPath() })
+        builder.includePaperweightHash = false
     }
 
-    UserdevSetup.LOGGER.lifecycle(":decompiling transformed minecraft server jar")
-    runForgeFlower(
-        argsList = decompileArgs,
-        logFile = logFile,
-        workingDir = cache,
-        executable = decompiler,
-        inputJar = inputJar,
-        libraries = minecraftLibraryJars(),
-        outputJar = outputJar,
-        javaLauncher = context.defaultJavaLauncher
-    )
-    hashFunction.writeHash(hashFile)
+    companion object {
+        fun create(
+            context: SetupHandler.Context,
+            inputJar: Path,
+            outputJar: Path,
+            cache: Path,
+            minecraftLibraryJars: () -> List<Path>,
+            decompileArgs: List<String>,
+        ): DecompileMinecraft {
+            val decompiler = context.project.configurations.getByName(DECOMPILER_CONFIG).also { it.resolve() } // resolve decompiler
+            return DecompileMinecraft(inputJar, outputJar, cache, minecraftLibraryJars, decompileArgs, decompiler)
+        }
+    }
 }

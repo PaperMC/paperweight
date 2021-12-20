@@ -24,32 +24,27 @@ package io.papermc.paperweight.userdev.internal.setup.step
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import java.nio.file.Path
 
-fun fixMinecraftServerJar(
-    context: SetupHandler.Context,
-    inputJar: Path,
-    outputJar: Path,
-    vanillaServerJar: Path,
-    useLegacyParameterAnnotationFixer: Boolean = false,
-) {
-    val hashFile = outputJar.siblingHashesFile()
-    val hashFunction = buildHashFunction(inputJar, outputJar, vanillaServerJar)
-    if (hashFunction.upToDate(hashFile)) {
-        return
-    }
+class FixMinecraftJar(
+    @Input private val inputJar: Path,
+    @Output private val outputJar: Path,
+    @Input private val vanillaServerJar: Path,
+    private val useLegacyParameterAnnotationFixer: Boolean = false,
+) : SetupStep {
+    override val name: String = "fix minecraft server jar"
 
-    UserdevSetup.LOGGER.lifecycle(":fixing minecraft server jar")
-    fixJar(
-        workerExecutor = context.workerExecutor,
-        launcher = context.defaultJavaLauncher,
-        vanillaJarPath = vanillaServerJar,
-        inputJarPath = inputJar,
-        outputJarPath = outputJar,
-        useLegacyParameterAnnotationFixer = useLegacyParameterAnnotationFixer
-    ).await()
-    hashFunction.writeHash(hashFile)
+    override val hashFile: Path = outputJar.siblingHashesFile()
+
+    override fun run(context: SetupHandler.Context) {
+        fixJar(
+            workerExecutor = context.workerExecutor,
+            launcher = context.defaultJavaLauncher,
+            vanillaJarPath = vanillaServerJar,
+            inputJarPath = inputJar,
+            outputJarPath = outputJar,
+            useLegacyParameterAnnotationFixer = useLegacyParameterAnnotationFixer
+        ).await()
+    }
 }

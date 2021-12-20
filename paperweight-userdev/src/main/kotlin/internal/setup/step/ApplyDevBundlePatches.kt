@@ -20,9 +20,10 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup
+package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
+import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.hashDirectory
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.util.*
@@ -30,46 +31,44 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
 
-fun applyDevBundlePatches(
-    decompiledJar: Path,
-    devBundlePatches: Path,
-    outputJar: Path
-) {
-    Git.checkForGit()
+class ApplyDevBundlePatches(
+    @Input private val decompiledJar: Path,
+    @Input private val devBundlePatches: Path,
+    @Output private val outputJar: Path,
+) : SetupStep {
+    override val name: String = "apply patches to decompiled jar"
 
-    val hashFile = outputJar.siblingHashesFile()
-    val hashFunction = buildHashFunction(decompiledJar, outputJar) {
-        include(hashDirectory(devBundlePatches))
-    }
-    if (hashFunction.upToDate(hashFile)) {
-        return
-    }
+    override val hashFile: Path = outputJar.siblingHashesFile()
 
-    UserdevSetup.LOGGER.lifecycle(":applying patches to decompiled jar")
+    override fun run(context: SetupHandler.Context) {
+        Git.checkForGit()
 
-    val workDir = findOutputDir(outputJar)
+        val workDir = findOutputDir(outputJar)
 
-    try {
-        unzip(decompiledJar, workDir)
-        val git = Git(workDir)
+        try {
+            unzip(decompiledJar, workDir)
+            val git = Git(workDir)
 
-        Files.walk(devBundlePatches).use { stream ->
-            stream.forEach {
-                if (it.name.endsWith(".patch")) {
-                    git("apply", "--ignore-whitespace", it.absolutePathString()).executeOut()
-                } else if (it.isRegularFile()) {
-                    val destination = workDir.resolve(it.relativeTo(devBundlePatches))
-                    destination.parent.createDirectories()
-                    it.copyTo(destination, overwrite = true)
+            Files.walk(devBundlePatches).use { stream ->
+                stream.forEach {
+                    if (it.name.endsWith(".patch")) {
+                        git("apply", "--ignore-whitespace", it.absolutePathString()).executeOut()
+                    } else if (it.isRegularFile()) {
+                        val destination = workDir.resolve(it.relativeTo(devBundlePatches))
+                        destination.parent.createDirectories()
+                        it.copyTo(destination, overwrite = true)
+                    }
                 }
             }
+
+            ensureDeleted(outputJar)
+            zip(workDir, outputJar)
+        } finally {
+            workDir.deleteRecursively()
         }
+    }
 
-        ensureDeleted(outputJar)
-        zip(workDir, outputJar)
-
-        hashFunction.writeHash(hashFile)
-    } finally {
-        workDir.deleteRecursively()
+    override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
+        builder.include(hashDirectory(devBundlePatches))
     }
 }

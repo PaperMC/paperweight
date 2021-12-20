@@ -26,66 +26,52 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
+import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import org.gradle.api.artifacts.Configuration
 
-class RemapMinecraft(
-    @Input private val minecraftRemapArgs: List<String>,
+class GenerateMappingsStep(
+    private val vanillaSteps: VanillaSteps,
     @Input private val filteredVanillaJar: Path,
+    @Input private val paramMappings: Path,
     private val minecraftLibraryJars: () -> List<Path>,
-    @Input private val mappings: Path,
-    private val remapper: Configuration,
-    @Output private val outputJar: Path,
-    private val cache: Path,
+    @Output private val outputMappings: Path,
 ) : SetupStep {
-    override val name: String = "remap minecraft server jar"
+    override val name: String = "generate mappings"
 
-    override val hashFile: Path = outputJar.siblingHashesFile()
+    override val hashFile: Path = outputMappings.siblingHashesFile()
 
     override fun run(context: SetupHandler.Context) {
-        TinyRemapper.run(
-            argsList = minecraftRemapArgs,
-            logFile = outputJar.siblingLogFile(),
-            inputJar = filteredVanillaJar,
-            mappingsFile = mappings,
-            fromNamespace = OBF_NAMESPACE,
-            toNamespace = DEOBF_NAMESPACE,
-            remapClasspath = minecraftLibraryJars(),
-            remapper = remapper,
-            outputJar = outputJar,
-            launcher = context.defaultJavaLauncher,
-            workingDir = cache
-        )
+        generateMappings(
+            vanillaJarPath = filteredVanillaJar,
+            libraryPaths = minecraftLibraryJars(),
+            vanillaMappingsPath = vanillaSteps.serverMappings,
+            paramMappingsPath = paramMappings,
+            outputMappingsPath = outputMappings,
+            workerExecutor = context.workerExecutor,
+            launcher = context.defaultJavaLauncher
+        ).await()
     }
 
     override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-        builder.includePaperweightHash = false
         builder.include(minecraftLibraryJars())
-        builder.include(remapper.map { it.toPath() })
+        builder.include(vanillaSteps.serverMappings)
     }
 
     companion object {
         fun create(
             context: SetupHandler.Context,
-            minecraftRemapArgs: List<String>,
+            vanillaSteps: VanillaSteps,
             filteredVanillaJar: Path,
             minecraftLibraryJars: () -> List<Path>,
-            mappings: Path,
-            outputJar: Path,
-            cache: Path,
-        ): RemapMinecraft {
-            val remapper = context.project.configurations.getByName(REMAPPER_CONFIG).also { it.resolve() } // resolve remapper
-            return RemapMinecraft(
-                minecraftRemapArgs,
-                filteredVanillaJar,
-                minecraftLibraryJars,
-                mappings,
-                remapper,
-                outputJar,
-                cache,
-            )
+            outputMappings: Path,
+        ): GenerateMappingsStep {
+            vanillaSteps.downloadServerMappings()
+
+            // resolve param mappings
+            val paramMappings = context.project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile }.convertToPath()
+
+            return GenerateMappingsStep(vanillaSteps, filteredVanillaJar, paramMappings, minecraftLibraryJars, outputMappings)
         }
     }
 }

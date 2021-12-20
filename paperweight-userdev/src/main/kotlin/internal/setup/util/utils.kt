@@ -31,12 +31,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Collectors
 import kotlin.io.path.*
+import kotlin.system.measureTimeMillis
 
 private val paperweightHash: String by lazy { hashPaperweightJar() }
 
-fun Path.siblingLogFile(): Path = resolveSibling("$nameWithoutExtension.log")
+fun Path.siblingLogFile(): Path = withDifferentExtension("log")
 
-fun Path.siblingHashesFile(): Path = resolveSibling("$nameWithoutExtension.hashes")
+fun Path.siblingHashesFile(): Path = withDifferentExtension("hashes")
 
 fun Path.siblingLogAndHashesFiles() = Pair(siblingLogFile(), siblingHashesFile())
 
@@ -87,9 +88,12 @@ fun DownloadService.download(
         return DownloadResult(destination, false, Unit)
     }
 
-    UserdevSetup.LOGGER.lifecycle(":downloading $downloadName")
+    UserdevSetup.LOGGER.lifecycle(":executing 'download {}'", downloadName)
     destination.parent.createDirectories()
-    download(remote, destination)
+    val elapsed = measureTimeMillis {
+        download(remote, destination)
+    }
+    UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
     hashFile.writeText(hash(remote, destination))
 
     return DownloadResult(destination, true, Unit)
