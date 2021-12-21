@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.userdev
 
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.util.*
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
@@ -40,7 +40,7 @@ abstract class PaperweightUserExtension(
     project: Project,
     workerExecutor: WorkerExecutor,
     javaToolchainService: JavaToolchainService,
-    setup: Provider<UserdevSetup>,
+    setup: Provider<SetupHandler>,
     objects: ObjectFactory
 ) {
     /**
@@ -59,18 +59,13 @@ abstract class PaperweightUserExtension(
         level = DeprecationLevel.WARNING
     )
     val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().pathProvider(
-        setup.map {
-            it.applyMojangMappedPaperclipPatch(
-                UserdevSetup.Context(project, workerExecutor, javaToolchainService)
-            )
-            it.mojangMappedPaperJar
-        }
+        setup.map { it.serverJar(SetupHandler.Context(project, workerExecutor, javaToolchainService)) }
     ).withDisallowChanges().withDisallowUnsafeRead()
 
     /**
      * Provides the Minecraft version of the current dev bundle.
      */
     val minecraftVersion: Provider<String> = objects.property<String>().value(
-        setup.map { it.devBundleConfig.minecraftVersion }
+        setup.map { it.minecraftVersion }
     ).withDisallowChanges().withDisallowUnsafeRead()
 }

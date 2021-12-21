@@ -104,7 +104,7 @@ class DevBundleTasks(
 
             serverVersion.set(serverProj.version.toString())
             serverCoordinates.set(GenerateDevBundle.createCoordinatesFor(serverProj))
-            compileConfiguration.set(serverProj.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+            serverProject.set(serverProj)
             runtimeConfiguration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
 
             relocations.set(serverProj.the<RelocationExtension>().relocations.map { gson.toJson(it) })

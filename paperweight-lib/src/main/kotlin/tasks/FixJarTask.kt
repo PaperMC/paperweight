@@ -23,11 +23,13 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.ParameterAnnotationFixer
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Internal
@@ -49,7 +51,8 @@ fun fixJar(
     launcher: JavaLauncher,
     vanillaJarPath: Path,
     inputJarPath: Path,
-    outputJarPath: Path
+    outputJarPath: Path,
+    useLegacyParameterAnnotationFixer: Boolean = false,
 ): WorkQueue {
     ensureParentExists(outputJarPath)
     ensureDeleted(outputJarPath)
@@ -63,6 +66,7 @@ fun fixJar(
         inputJar.set(inputJarPath)
         vanillaJar.set(vanillaJarPath)
         outputJar.set(outputJarPath)
+        useLegacyParamAnnotationFixer.set(useLegacyParameterAnnotationFixer)
     }
 
     return queue
@@ -109,6 +113,7 @@ abstract class FixJarTask : JavaLauncherTask() {
         val inputJar: RegularFileProperty
         val vanillaJar: RegularFileProperty
         val outputJar: RegularFileProperty
+        val useLegacyParamAnnotationFixer: Property<Boolean>
     }
 
     abstract class FixJarAction : WorkAction<FixJarParams> {
@@ -117,14 +122,23 @@ abstract class FixJarTask : JavaLauncherTask() {
             parameters.vanillaJar.path.openZip().use { vanillaJar ->
                 parameters.outputJar.path.writeZip().use { out ->
                     parameters.inputJar.path.openZip().use { jarFile ->
-                        FixJar.processJars(jarFile, vanillaJar, out, FixJarClassProcessor)
+                        FixJar.processJars(
+                            jarFile,
+                            vanillaJar,
+                            out,
+                            FixJarClassProcessor(parameters.useLegacyParamAnnotationFixer.get())
+                        )
                     }
                 }
             }
         }
 
-        private object FixJarClassProcessor : FixJar.ClassProcessor, AsmUtil {
+        private class FixJarClassProcessor(private val legacy: Boolean) : FixJar.ClassProcessor, AsmUtil {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
+                if (legacy) {
+                    ParameterAnnotationFixer(node).visitNode()
+                }
+
                 OverrideAnnotationAdder(node, classNodeCache).visitNode()
 
                 if (Opcodes.ACC_RECORD in node.access) {

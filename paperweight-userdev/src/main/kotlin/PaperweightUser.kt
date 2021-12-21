@@ -26,13 +26,13 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
@@ -70,10 +70,6 @@ abstract class PaperweightUser : Plugin<Project> {
             val devBundleZip = target.configurations.named(DEV_BUNDLE_CONFIG).map { it.singleFile }.convertToPath()
             val serviceName = "paperweight-userdev:setupService:${devBundleZip.sha256asHex()}"
 
-            target.gradle.sharedServices.registrations.findByName(serviceName)?.let {
-                return@lazy it.service.get() as UserdevSetup
-            }
-
             target.gradle.sharedServices
                 .registerIfAbsent(serviceName, UserdevSetup::class) {
                     parameters {
@@ -84,7 +80,6 @@ abstract class PaperweightUser : Plugin<Project> {
                 }
                 .get()
         }
-        val devBundleConfig by lazy { userdevSetup.devBundleConfig }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
@@ -102,14 +97,14 @@ abstract class PaperweightUser : Plugin<Project> {
             group = "paperweight"
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
-            mappingsFile.pathProvider(target.provider { userdevSetup.extractedBundle.resolve(devBundleConfig.buildData.reobfMappingsFile) })
-            remapClasspath.from(target.provider { userdevSetup.mojangMappedPaperJar })
+            mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })
+            remapClasspath.from(target.provider { userdevSetup.serverJar })
 
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
 
             remapper.from(project.configurations.named(REMAPPER_CONFIG))
-            remapperArgs.set(target.provider { devBundleConfig.buildData.pluginRemapArgs })
+            remapperArgs.set(target.provider { userdevSetup.pluginRemapArgs })
         }
 
         target.configurations.create(REOBF_CONFIG) {
@@ -168,27 +163,24 @@ abstract class PaperweightUser : Plugin<Project> {
             // Print a friendly error message if the dev bundle is missing before we call anything else that will try and resolve it
             checkForDevBundle()
 
-            configureRepositories(userdevSetup, devBundleConfig)
+            configureRepositories(userdevSetup)
         }
     }
 
-    private fun Project.configureRepositories(
-        userdevSetup: UserdevSetup,
-        devBundleConfig: GenerateDevBundle.DevBundleConfig
-    ) = repositories {
-        maven(devBundleConfig.buildData.paramMappings.url) {
+    private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
+        maven(userdevSetup.paramMappings.url) {
             name = PARAM_MAPPINGS_REPO_NAME
             content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
         }
-        maven(devBundleConfig.remapper.url) {
+        maven(userdevSetup.remapper.url) {
             name = REMAPPER_REPO_NAME
             content { onlyForConfigurations(REMAPPER_CONFIG) }
         }
-        maven(devBundleConfig.decompile.dep.url) {
+        maven(userdevSetup.decompiler.url) {
             name = DECOMPILER_REPO_NAME
             content { onlyForConfigurations(DECOMPILER_CONFIG) }
         }
-        for (repo in devBundleConfig.buildData.libraryRepositories) {
+        for (repo in userdevSetup.libraryRepositories) {
             maven(repo)
         }
 
@@ -213,11 +205,9 @@ abstract class PaperweightUser : Plugin<Project> {
         target: Project,
         userdevSetup: Provider<UserdevSetup>
     ) {
-        val devBundleConfig by lazy { userdevSetup.get().devBundleConfig }
-
         target.configurations.create(DECOMPILER_CONFIG) {
             defaultDependencies {
-                for (dep in devBundleConfig.decompile.dep.coordinates) {
+                for (dep in userdevSetup.get().decompiler.coordinates) {
                     add(target.dependencies.create(dep))
                 }
             }
@@ -225,7 +215,7 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.configurations.create(PARAM_MAPPINGS_CONFIG) {
             defaultDependencies {
-                for (dep in devBundleConfig.buildData.paramMappings.coordinates) {
+                for (dep in userdevSetup.get().paramMappings.coordinates) {
                     add(target.dependencies.create(dep))
                 }
             }
@@ -234,7 +224,7 @@ abstract class PaperweightUser : Plugin<Project> {
         target.configurations.create(REMAPPER_CONFIG) {
             isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
             defaultDependencies {
-                for (dep in devBundleConfig.remapper.coordinates) {
+                for (dep in userdevSetup.get().remapper.coordinates) {
                     add(target.dependencies.create(dep))
                 }
             }
@@ -243,10 +233,11 @@ abstract class PaperweightUser : Plugin<Project> {
         val mojangMappedServerConfig = target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
             exclude("junit", "junit") // json-simple exposes junit for some reason
             defaultDependencies {
-                userdevSetup.get().createOrUpdateIvyRepository(
-                    UserdevSetup.Context(target, workerExecutor, javaToolchainService)
-                )
-                add(target.dependencies.create(devBundleConfig.mappedServerCoordinates))
+                val ctx = createContext(target)
+                userdevSetup.get().let { setup ->
+                    setup.createOrUpdateIvyRepository(ctx)
+                    setup.populateCompileConfiguration(ctx, this)
+                }
             }
         }
 
@@ -263,28 +254,15 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.configurations.create(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
             defaultDependencies {
-                userdevSetup.get().createOrUpdateIvyRepository(
-                    UserdevSetup.Context(target, workerExecutor, javaToolchainService)
-                )
-
-                listOf(
-                    devBundleConfig.mappedServerCoordinates,
-                    devBundleConfig.apiCoordinates,
-                    devBundleConfig.mojangApiCoordinates
-                ).forEach { coordinate ->
-                    val dep = target.dependencies.create(coordinate).also {
-                        (it as ExternalModuleDependency).isTransitive = false
-                    }
-                    add(dep)
-                }
-
-                for (coordinates in userdevSetup.get().devBundleConfig.buildData.runtimeDependencies) {
-                    val dep = target.dependencies.create(coordinates).also {
-                        (it as ExternalModuleDependency).isTransitive = false
-                    }
-                    add(dep)
+                val ctx = createContext(target)
+                userdevSetup.get().let { setup ->
+                    setup.createOrUpdateIvyRepository(ctx)
+                    setup.populateRuntimeConfiguration(ctx, this)
                 }
             }
         }
     }
+
+    private fun createContext(project: Project): SetupHandler.Context =
+        SetupHandler.Context(project, workerExecutor, javaToolchainService)
 }

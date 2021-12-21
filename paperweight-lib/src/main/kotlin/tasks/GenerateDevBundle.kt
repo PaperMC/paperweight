@@ -38,17 +38,20 @@ import org.apache.tools.ant.types.selectors.SelectorUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -87,8 +90,8 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:Input
     abstract val libraryRepositories: ListProperty<String>
 
-    @get:Classpath
-    abstract val compileConfiguration: Property<Configuration>
+    @get:Internal
+    abstract val serverProject: Property<Project>
 
     @get:Classpath
     abstract val runtimeConfiguration: Property<Configuration>
@@ -327,11 +330,24 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun determineLibraries(vanillaServerLibraries: List<String>): Set<String> {
-        val new: MutableList<ModuleId> = compileConfiguration.get().incoming.artifacts.artifacts
-            .mapNotNullTo(ArrayList()) {
-                val module = it.id.componentIdentifier as? ModuleComponentIdentifier ?: return@mapNotNullTo null
-                ModuleId.fromIdentifier(module)
+        val new = arrayListOf<ModuleId>()
+
+        // yes this is not configuration cache compatible, but the task isn't even without this,
+        // and what we want here are the dependencies declared in the server build file,
+        // not the runtime classpath, which would flatten transitive deps of the api for example.
+        for (dependency in serverProject.get().configurations.getByName(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME).dependencies) {
+            // don't want project dependencies
+            if (dependency !is ExternalModuleDependency) {
+                continue
             }
+            val version = listOfNotNull(
+                dependency.versionConstraint.strictVersion,
+                dependency.versionConstraint.requiredVersion,
+                dependency.versionConstraint.preferredVersion,
+                dependency.version
+            ).first { it.isNotBlank() }
+            new += ModuleId(dependency.group, dependency.name, version)
+        }
 
         for (vanillaLib in vanillaServerLibraries) {
             val vanilla = ModuleId.parse(vanillaLib)
