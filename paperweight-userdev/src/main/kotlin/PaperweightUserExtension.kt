@@ -23,7 +23,6 @@
 package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
@@ -41,7 +40,7 @@ abstract class PaperweightUserExtension(
     project: Project,
     workerExecutor: WorkerExecutor,
     javaToolchainService: JavaToolchainService,
-    setup: Provider<UserdevSetup>,
+    setup: Provider<SetupHandler>,
     objects: ObjectFactory
 ) {
     /**
