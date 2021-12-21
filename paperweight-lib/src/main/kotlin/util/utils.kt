@@ -38,7 +38,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Optional
@@ -256,13 +255,12 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
-val digestSha256: MessageDigest by lazy {
-    try {
-        MessageDigest.getInstance("SHA-256")
-    } catch (e: NoSuchAlgorithmException) {
-        throw PaperweightException("Could not create SHA-256 digest", e)
-    }
+private val threadLocalDigestSha256: ThreadLocal<MessageDigest> = ThreadLocal.withInitial {
+    MessageDigest.getInstance("SHA-256")
 }
+
+val digestSha256: MessageDigest
+    get() = threadLocalDigestSha256.get()
 
 fun toHex(hash: ByteArray): String {
     val sb: StringBuilder = StringBuilder(hash.size * 2)
