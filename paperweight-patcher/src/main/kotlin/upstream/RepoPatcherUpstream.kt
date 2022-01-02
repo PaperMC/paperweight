@@ -39,5 +39,9 @@ interface RepoPatcherUpstream : PatcherUpstream {
         return "https://github.com/$owner/$repo.git"
     }
 
+    fun gitlab(owner: String, repo: String): String {
+        return "https://gitlab.com/$owner/$repo.git"
+    }
+
     fun withStandardPatcher(action: Action<StandardPatcherConfig>)
 }
