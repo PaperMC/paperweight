@@ -168,6 +168,7 @@ fun ControllableOutputTask.applyGitPatches(
             }
         }
     } finally {
+        git("prune").run() // cleanup old git objects
         tempDir.deleteRecursively()
     }
 }
