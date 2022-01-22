@@ -151,6 +151,7 @@ class SetupHandlerImpl(
             generateSources(context)
             patchedSourcesJar
         } else {
+            vanillaSteps.downloadVanillaServerJar()
             StepExecutor.executeStep(context, createExtractFromBundlerStep())
             null
         }
