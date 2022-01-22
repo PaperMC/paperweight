@@ -31,16 +31,16 @@ fun installPaperServer(
     cache: Path,
     mappedServerCoordinates: String,
     dependencies: List<String>,
-    serverSourcesJar: Path,
     serverJar: Path,
+    serverSourcesJar: Path?,
     mcVersion: String,
 ) {
     val didInstall = installToIvyRepo(
         cache.resolve(IVY_REPOSITORY),
         mappedServerCoordinates,
         dependencies,
+        serverJar,
         serverSourcesJar,
-        serverJar
     )
     if (didInstall) {
         UserdevSetup.LOGGER.lifecycle(":installed server artifacts to cache")

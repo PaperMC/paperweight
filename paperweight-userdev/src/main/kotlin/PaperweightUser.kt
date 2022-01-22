@@ -28,6 +28,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
+import io.papermc.paperweight.userdev.internal.setup.util.genSources
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
@@ -76,6 +77,7 @@ abstract class PaperweightUser : Plugin<Project> {
                         cache.set(target.layout.cache)
                         bundleZip.set(devBundleZip)
                         downloadService.set(target.download)
+                        genSources.set(target.genSources)
                     }
                 }
                 .get()

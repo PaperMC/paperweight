@@ -32,6 +32,8 @@ import java.nio.file.Paths
 import java.util.stream.Collectors
 import kotlin.io.path.*
 import kotlin.system.measureTimeMillis
+import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 
 private val paperweightHash: String by lazy { hashPaperweightJar() }
 
@@ -149,3 +151,15 @@ private fun hashPaperweightJar(): String {
     val userdevShadowJar = Paths.get(PaperweightUser::class.java.protectionDomain.codeSource.location.toURI())
     return hash(userdevShadowJar)
 }
+
+// set by most CI
+val Project.ci: Provider<Boolean>
+    get() = providers.environmentVariable("CI")
+        .forUseAtConfigurationTime()
+        .map { it.toBoolean() }
+        .orElse(false)
+
+val Project.genSources: Provider<Boolean>
+    get() = ci.zip(providers.gradleProperty("paperweight.experimental.genSources").forUseAtConfigurationTime()) { ci, genSources ->
+        genSources?.toBoolean() ?: !ci
+    }

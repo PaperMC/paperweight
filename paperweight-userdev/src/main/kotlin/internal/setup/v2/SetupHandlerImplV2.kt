@@ -201,8 +201,8 @@ class SetupHandlerImplV2(
             cache,
             bundle.config.mappedServerCoordinates,
             deps,
-            patchedSourcesJar,
             filteredMojangMappedPaperJar,
+            patchedSourcesJar,
             minecraftVersion,
         )
 

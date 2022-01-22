@@ -50,8 +50,8 @@ fun installToIvyRepo(
     repo: Path,
     artifactCoordinates: String,
     dependencies: List<String>,
-    sourcesJar: Path,
-    binaryJar: Path
+    binaryJar: Path,
+    sourcesJar: Path?,
 ): Boolean {
     val (module, versionDir) = parseModuleLocation(artifactCoordinates, repo)
     val (_, name, version) = module
@@ -64,19 +64,38 @@ fun installToIvyRepo(
     val ivy = versionDir.resolve("ivy-$version.xml")
     val xml = writeIvyModule(module, dependencies.map { parseModule(it) })
 
-    val upToDate = sourcesDestination.isRegularFile() && jarDestination.isRegularFile() && ivy.isRegularFile() &&
-        sourcesDestination.sha256asHex() == sourcesJar.sha256asHex() &&
-        jarDestination.sha256asHex() == binaryJar.sha256asHex() &&
-        ivy.readText(Charsets.UTF_8) == xml
+    val upToDate = upToDate(sourcesDestination, jarDestination, ivy, sourcesJar, binaryJar, xml)
     if (upToDate) {
         return false
     }
 
-    sourcesJar.copyTo(sourcesDestination, overwrite = true)
+    if (sourcesJar == null) {
+        sourcesDestination.deleteIfExists()
+    } else {
+        sourcesJar.copyTo(sourcesDestination, overwrite = true)
+    }
     binaryJar.copyTo(jarDestination, overwrite = true)
     ivy.writeText(xml, Charsets.UTF_8)
 
     return true
+}
+
+private fun upToDate(
+    sourcesDest: Path,
+    binDest: Path,
+    ivyXml: Path,
+    sourcesIn: Path?,
+    binaryIn: Path,
+    xmlIn: String
+): Boolean {
+    val bin = binDest.isRegularFile() && binDest.sha256asHex() == binaryIn.sha256asHex()
+    val xml = ivyXml.isRegularFile() && ivyXml.readText(Charsets.UTF_8) == xmlIn
+    val sources = if (sourcesIn == null) {
+        sourcesDest.notExists()
+    } else {
+        sourcesDest.isRegularFile() && sourcesDest.sha256asHex() == sourcesIn.sha256asHex()
+    }
+    return bin && xml && sources
 }
 
 private val OUTPUT_FACTORY = XMLOutputFactory.newInstance()

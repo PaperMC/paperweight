@@ -168,7 +168,13 @@ class SetupHandlerImpl(
             return
         }
 
-        generateSources(context)
+        val source = if (service.parameters.genSources.get()) {
+            generateSources(context)
+            patchedSourcesJar
+        } else {
+            null
+        }
+
         applyMojangMappedPaperclipPatch(context)
 
         val deps = bundle.config.buildData.compileDependencies.toList() +
@@ -178,8 +184,8 @@ class SetupHandlerImpl(
             cache,
             bundle.config.mappedServerCoordinates,
             deps,
-            patchedSourcesJar,
             mojangMappedPaperJar,
+            source,
             minecraftVersion,
         )
 

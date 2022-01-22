@@ -48,6 +48,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         val bundleZip: RegularFileProperty
         val cache: RegularFileProperty
         val downloadService: Property<DownloadService>
+        val genSources: Property<Boolean>
     }
 
     private val extractDevBundle = extractDevBundle(
