@@ -61,28 +61,7 @@ class SetupHandlerImpl(
     private fun generateSources(context: SetupHandler.Context) {
         vanillaSteps.downloadVanillaServerJar()
 
-        val extractStep = object : SetupStep {
-            override val name: String = "extract libraries and server from downloaded jar"
-
-            override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
-
-            override fun run(context: SetupHandler.Context) {
-                ServerBundler.extractFromBundler(
-                    vanillaSteps.mojangJar,
-                    vanillaServerJar,
-                    minecraftLibraryJars,
-                    null,
-                    null,
-                    null,
-                    null,
-                )
-            }
-
-            override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-                builder.include(vanillaSteps.mojangJar, vanillaServerJar)
-                builder.include(minecraftLibraryJars())
-            }
-        }
+        val extractStep = createExtractFromBundlerStep()
 
         val filterVanillaJarStep = FilterVanillaJar(vanillaServerJar, bundle.config.buildData.vanillaJarIncludes, filteredVanillaServerJar)
 
@@ -172,6 +151,7 @@ class SetupHandlerImpl(
             generateSources(context)
             patchedSourcesJar
         } else {
+            StepExecutor.executeStep(context, createExtractFromBundlerStep())
             null
         }
 
@@ -250,4 +230,41 @@ class SetupHandlerImpl(
 
     override val libraryRepositories: List<String>
         get() = bundle.config.buildData.libraryRepositories
+
+    private fun createExtractFromBundlerStep(): ExtractFromBundlerStep = ExtractFromBundlerStep(
+        cache,
+        vanillaSteps,
+        vanillaServerJar,
+        minecraftLibraryJars,
+        ::minecraftLibraryJars
+    )
+
+    private class ExtractFromBundlerStep(
+        cache: Path,
+        private val vanillaSteps: VanillaSteps,
+        private val vanillaServerJar: Path,
+        private val minecraftLibraryJars: Path,
+        private val listMinecraftLibraryJars: () -> List<Path>,
+    ) : SetupStep {
+        override val name: String = "extract libraries and server from downloaded jar"
+
+        override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
+
+        override fun run(context: SetupHandler.Context) {
+            ServerBundler.extractFromBundler(
+                vanillaSteps.mojangJar,
+                vanillaServerJar,
+                minecraftLibraryJars,
+                null,
+                null,
+                null,
+                null,
+            )
+        }
+
+        override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
+            builder.include(vanillaSteps.mojangJar, vanillaServerJar)
+            builder.include(listMinecraftLibraryJars())
+        }
+    }
 }
