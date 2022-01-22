@@ -159,7 +159,9 @@ val Project.ci: Provider<Boolean>
         .map { it.toBoolean() }
         .orElse(false)
 
-val Project.genSources: Provider<Boolean>
-    get() = ci.zip(providers.gradleProperty("paperweight.experimental.genSources").forUseAtConfigurationTime()) { ci, genSources ->
-        genSources?.toBoolean() ?: !ci
+val Project.genSources: Boolean
+    get() {
+        val ci = ci.get()
+        val prop = providers.gradleProperty("paperweight.experimental.genSources").forUseAtConfigurationTime().orNull?.toBoolean()
+        return prop ?: !ci
     }
