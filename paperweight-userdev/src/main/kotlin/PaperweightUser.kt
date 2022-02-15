@@ -32,12 +32,15 @@ import io.papermc.paperweight.userdev.internal.setup.util.genSources
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
+import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
@@ -154,6 +157,19 @@ abstract class PaperweightUser : Plugin<Project> {
             reobfJar {
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
                 outputJar.convention(archivesName.flatMap { layout.buildDirectory.file("libs/$it-${project.version}.jar") })
+            }
+
+            if (tasks.findByName("publishToMavenLocal") != null) {
+                fun addReobfTo(target: NamedDomainObjectProvider<Configuration>) {
+                    target.get().let {
+                        it.outgoing.artifact(reobfJar.get().outputJar) {
+                            classifier = "reobf"
+                        }
+                        (components["java"] as AdhocComponentWithVariants).addVariantsFromConfiguration(it) {}
+                    }
+                }
+                addReobfTo(configurations.named("apiElements"))
+                addReobfTo(configurations.named("runtimeElements"))
             }
 
             if (userdev.injectPaperRepository.get()) {
