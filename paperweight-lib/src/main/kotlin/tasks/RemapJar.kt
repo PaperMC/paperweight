@@ -192,6 +192,7 @@ object TinyRemapper {
         jvmArgs: List<String> = listOf("-Xmx1G"),
     ) {
         ensureDeleted(logFile)
+        ensureDeleted(outputJar)
 
         val args = argsList.expandArgs(
             input = inputJar.absolutePathString(),
@@ -203,6 +204,7 @@ object TinyRemapper {
         )
 
         ensureParentExists(logFile)
+        ensureParentExists(outputJar)
         launcher.runJar(remapper, workingDir, logFile, jvmArgs = jvmArgs, args = args.toTypedArray())
     }
 }
