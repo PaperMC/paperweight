@@ -57,7 +57,7 @@ open class AllTasks(
     val copyResources by tasks.registering<CopyResources> {
         inputJar.set(applyMergedAt.flatMap { it.outputJar })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
-        includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
+        excludes.convention(listOf("**/*.class", "/META-INF/**"))
 
         outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
     }

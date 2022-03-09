@@ -42,7 +42,7 @@ abstract class CopyResources : BaseTask() {
     abstract val vanillaJar: RegularFileProperty
 
     @get:Input
-    abstract val includes: ListProperty<String>
+    abstract val excludes: ListProperty<String>
 
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
@@ -55,8 +55,8 @@ abstract class CopyResources : BaseTask() {
 
         fs.copy {
             from(archives.zipTree(vanillaJar)) {
-                for (inc in this@CopyResources.includes.get()) {
-                    include(inc)
+                for (inc in this@CopyResources.excludes.get()) {
+                    exclude(inc)
                 }
             }
             from(archives.zipTree(inputJar))
