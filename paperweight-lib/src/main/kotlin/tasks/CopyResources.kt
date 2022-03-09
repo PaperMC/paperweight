@@ -59,7 +59,6 @@ abstract class CopyResources : BaseTask() {
                     include(inc)
                 }
             }
-            into(target)
             from(archives.zipTree(inputJar))
             into(target)
         }
