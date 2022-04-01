@@ -209,7 +209,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
-                merc.sourceCompatibility = JavaCore.VERSION_16
+                merc.sourceCompatibility = JavaCore.VERSION_17
                 merc.isGracefulClasspathChecks = true
                 merc.classPath.addAll(parameters.classpath.map { it.toPath() })
 
