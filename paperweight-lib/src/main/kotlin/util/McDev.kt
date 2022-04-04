@@ -33,7 +33,6 @@ object McDev {
     private val logger: Logger = Logging.getLogger(McDev::class.java)
 
     private val bannedClasses = setOf(
-        "KeyedObject",
         "MCUtil",
         "ServerWorkerThread",
     )
