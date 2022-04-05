@@ -130,10 +130,10 @@ fun runForgeFlower(
         if (!quiltflower) {
             // FernFlower is weird with how it does directory output
             outputSiblingDir.resolve(inputJar.name).moveTo(outputJar, overwrite = true)
-            outputSiblingDir.deleteRecursively()
         }
     } finally {
         tempFile.deleteForcefully()
+        outputSiblingDir.deleteRecursively()
     }
 }
 
