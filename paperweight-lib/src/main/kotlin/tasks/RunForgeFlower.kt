@@ -66,7 +66,7 @@ private fun List<String>.createForgeFlowerArgs(
     quiltflower: Boolean,
 ): List<String> = mapNotNull {
     var s = it
-    if (it.startsWith(quiltflowerArgumentPrefix)) {
+    if (s.startsWith(quiltflowerArgumentPrefix)) {
         if (!quiltflower) {
             return@mapNotNull null
         }
