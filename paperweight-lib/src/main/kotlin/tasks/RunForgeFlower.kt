@@ -24,19 +24,20 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.jar.JarFile
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
+
+private const val quiltflowerArgumentPrefix = "quiltflower:"
+private fun quiltflowerOnly(arg: String) = quiltflowerArgumentPrefix + arg
 
 val forgeFlowerArgList: List<String> = listOf(
     "-ind=    ",
@@ -49,8 +50,8 @@ val forgeFlowerArgList: List<String> = listOf(
     "-jvn=0",
     "-isl=0",
     "-iib=1",
-    "-ovr=0", // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
-    // "pll=99999", // High line length to effectively disable formatting
+    quiltflowerOnly("-ovr=0"), // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
+    quiltflowerOnly("-pll=999999"), // High line length to effectively disable formatting
     "-log=TRACE",
     "-cfg",
     "{libraries}",
@@ -61,13 +62,21 @@ val forgeFlowerArgList: List<String> = listOf(
 private fun List<String>.createForgeFlowerArgs(
     libraries: String,
     input: String,
-    output: String
-): List<String> = map {
-    when (it) {
+    output: String,
+    quiltflower: Boolean,
+): List<String> = mapNotNull {
+    var s = it
+    if (it.startsWith(quiltflowerArgumentPrefix)) {
+        if (!quiltflower) {
+            return@mapNotNull null
+        }
+        s = s.substringAfter(quiltflowerArgumentPrefix)
+    }
+    when (s) {
         "{libraries}" -> libraries
         "{input}" -> input
         "{output}" -> output
-        else -> it
+        else -> s
     }
 }
 
@@ -82,11 +91,15 @@ fun runForgeFlower(
     javaLauncher: JavaLauncher,
     jvmArgs: List<String> = listOf("-Xmx4G")
 ) {
-    val target = outputJar.resolveSibling("${outputJar.name}.dir")
-    if (target.exists()) {
-        target.deleteRecursively()
+    val quiltflower = isQuiltflower(executable)
+
+    val outputSiblingDir = outputJar.resolveSibling("${outputJar.name}.dir")
+    if (!quiltflower) {
+        if (outputSiblingDir.exists()) {
+            outputSiblingDir.deleteRecursively()
+        }
+        outputSiblingDir.createDirectories()
     }
-    target.createDirectories()
 
     val libs = ArrayList(libraries)
     libs.sort()
@@ -101,22 +114,46 @@ fun runForgeFlower(
             }
         }
 
+        val output = if (quiltflower) outputJar else outputSiblingDir
         val argList = argsList.createForgeFlowerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
-            target.absolutePathString()
+            output.absolutePathString(),
+            quiltflower,
         )
 
+        outputJar.deleteForcefully()
         logFile.deleteForcefully()
 
         javaLauncher.runJar(executable, workingDir, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
 
-        // FernFlower is weird with how it does directory output
-        target.resolve(inputJar.name).moveTo(outputJar, overwrite = true)
-        target.deleteRecursively()
+        if (!quiltflower) {
+            // FernFlower is weird with how it does directory output
+            outputSiblingDir.resolve(inputJar.name).moveTo(outputJar, overwrite = true)
+            outputSiblingDir.deleteRecursively()
+        }
     } finally {
         tempFile.deleteForcefully()
     }
+}
+
+private fun isQuiltflower(fileCollection: FileCollection): Boolean = fileCollection.files.asSequence()
+    .map(File::toPath)
+    .filter { f -> f.name.endsWith(".jar") && f.isQuiltflowerJar() }
+    .any()
+
+private fun Path.isQuiltflowerJar(): Boolean {
+    if (!Files.isRegularFile(this)) {
+        return false
+    }
+
+    JarFile(toFile()).use { jar ->
+        if (jar.manifest.mainAttributes.getValue("Implementation-Name") == "Quiltflower") {
+            return true
+        }
+    }
+
+    return false
 }
 
 @CacheableTask
