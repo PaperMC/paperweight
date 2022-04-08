@@ -24,10 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarFile
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -35,9 +32,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
-
-private const val quiltflowerArgumentPrefix = "quiltflower:"
-private fun quiltflowerOnly(arg: String) = quiltflowerArgumentPrefix + arg
 
 val forgeFlowerArgList: List<String> = listOf(
     "-ind=    ",
@@ -50,8 +44,8 @@ val forgeFlowerArgList: List<String> = listOf(
     "-jvn=0",
     "-isl=0",
     "-iib=1",
-    quiltflowerOnly("-ovr=0"), // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
-    quiltflowerOnly("-pll=999999"), // High line length to effectively disable formatting
+    "-ovr=0", // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
+    "-pll=999999", // High line length to effectively disable formatter (only does anything on Quiltflower)
     "-log=TRACE",
     "-cfg",
     "{libraries}",
@@ -63,20 +57,12 @@ private fun List<String>.createForgeFlowerArgs(
     libraries: String,
     input: String,
     output: String,
-    quiltflower: Boolean,
-): List<String> = mapNotNull {
-    var s = it
-    if (s.startsWith(quiltflowerArgumentPrefix)) {
-        if (!quiltflower) {
-            return@mapNotNull null
-        }
-        s = s.substringAfter(quiltflowerArgumentPrefix)
-    }
-    when (s) {
+): List<String> = map {
+    when (it) {
         "{libraries}" -> libraries
         "{input}" -> input
         "{output}" -> output
-        else -> s
+        else -> it
     }
 }
 
@@ -108,7 +94,6 @@ fun runForgeFlower(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
             outputJar.absolutePathString(),
-            isQuiltflower(executable),
         )
 
         outputJar.deleteForcefully()
@@ -119,25 +104,6 @@ fun runForgeFlower(
     } finally {
         tempFile.deleteForcefully()
     }
-}
-
-private fun isQuiltflower(fileCollection: FileCollection): Boolean = fileCollection.files.asSequence()
-    .map(File::toPath)
-    .filter { f -> f.name.endsWith(".jar") && f.isQuiltflowerJar() }
-    .any()
-
-private fun Path.isQuiltflowerJar(): Boolean {
-    if (!Files.isRegularFile(this)) {
-        return false
-    }
-
-    JarFile(toFile()).use { jar ->
-        if (jar.manifest.mainAttributes.getValue("Implementation-Name") == "Quiltflower") {
-            return true
-        }
-    }
-
-    return false
 }
 
 @CacheableTask
