@@ -91,16 +91,6 @@ fun runForgeFlower(
     javaLauncher: JavaLauncher,
     jvmArgs: List<String> = listOf("-Xmx4G")
 ) {
-    val quiltflower = isQuiltflower(executable)
-
-    val outputSiblingDir = outputJar.resolveSibling("${outputJar.name}.dir")
-    if (!quiltflower) {
-        if (outputSiblingDir.exists()) {
-            outputSiblingDir.deleteRecursively()
-        }
-        outputSiblingDir.createDirectories()
-    }
-
     val libs = ArrayList(libraries)
     libs.sort()
     val tempFile = createTempFile("paperweight", "txt")
@@ -114,26 +104,20 @@ fun runForgeFlower(
             }
         }
 
-        val output = if (quiltflower) outputJar else outputSiblingDir
         val argList = argsList.createForgeFlowerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
-            output.absolutePathString(),
-            quiltflower,
+            outputJar.absolutePathString(),
+            isQuiltflower(executable),
         )
 
         outputJar.deleteForcefully()
         logFile.deleteForcefully()
+        outputJar.parent.createDirectories()
 
         javaLauncher.runJar(executable, workingDir, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
-
-        if (!quiltflower) {
-            // FernFlower is weird with how it does directory output
-            outputSiblingDir.resolve(inputJar.name).moveTo(outputJar, overwrite = true)
-        }
     } finally {
         tempFile.deleteForcefully()
-        outputSiblingDir.deleteRecursively()
     }
 }
 
