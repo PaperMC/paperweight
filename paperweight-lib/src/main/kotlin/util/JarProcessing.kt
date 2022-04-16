@@ -28,19 +28,19 @@ import kotlin.io.path.*
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 
-object FixJar {
+object JarProcessing {
     interface ClassProcessor {
         fun shouldProcess(file: Path): Boolean = true
         fun processClass(node: ClassNode, classNodeCache: ClassNodeCache)
     }
 
-    fun processJars(
+    fun processJar(
         jarFile: FileSystem,
         output: FileSystem,
         processor: ClassProcessor
-    ) = processJars(jarFile, null, output, processor)
+    ) = processJar(jarFile, null, output, processor)
 
-    fun processJars(
+    fun processJar(
         jarFile: FileSystem,
         fallbackJar: FileSystem?,
         output: FileSystem,

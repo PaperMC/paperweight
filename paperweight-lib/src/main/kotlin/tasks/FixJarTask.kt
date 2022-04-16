@@ -122,7 +122,7 @@ abstract class FixJarTask : JavaLauncherTask() {
             parameters.vanillaJar.path.openZip().use { vanillaJar ->
                 parameters.outputJar.path.writeZip().use { out ->
                     parameters.inputJar.path.openZip().use { jarFile ->
-                        FixJar.processJars(
+                        JarProcessing.processJar(
                             jarFile,
                             vanillaJar,
                             out,
@@ -133,7 +133,7 @@ abstract class FixJarTask : JavaLauncherTask() {
             }
         }
 
-        private class FixJarClassProcessor(private val legacy: Boolean) : FixJar.ClassProcessor, AsmUtil {
+        private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor, AsmUtil {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
                 if (legacy) {
                     ParameterAnnotationFixer(node).visitNode()
