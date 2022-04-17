@@ -133,7 +133,7 @@ abstract class FixJarTask : JavaLauncherTask() {
             }
         }
 
-        private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor, AsmUtil {
+        private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor.NodeBased, AsmUtil {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
                 if (legacy) {
                     ParameterAnnotationFixer(node).visitNode()

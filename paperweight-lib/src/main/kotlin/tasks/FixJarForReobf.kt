@@ -112,7 +112,7 @@ abstract class FixJarForReobf : JavaLauncherTask() {
             }
         }
 
-        class FixForReobfProcessor(private val packages: List<String>) : JarProcessing.ClassProcessor {
+        class FixForReobfProcessor(private val packages: List<String>) : JarProcessing.ClassProcessor.NodeBased {
             override fun shouldProcess(file: Path): Boolean =
                 packages.any { file.toString().startsWith(it) }
 

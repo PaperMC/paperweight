@@ -131,18 +131,27 @@ private abstract class LineMapJarAction : WorkAction<LineMapJarAction.Parameters
         }
     }
 
-    class LineMappingClassProcessor(private val lineMap: Map<String, NavigableMap<Int, Int>>) : JarProcessing.ClassProcessor, AsmUtil {
-        override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
+    class LineMappingClassProcessor(private val lineMap: Map<String, NavigableMap<Int, Int>>) : JarProcessing.ClassProcessor.VisitorBased {
+        override fun processClass(node: ClassNode, parent: ClassVisitor, classNodeCache: ClassNodeCache): ClassVisitor? {
             val map = lineMap[node.name.substringBefore('$')]
-                ?: return // No line maps for class?
-            node.accept(LineMappingVisitor(map))
+                ?: return null // No line maps for class?
+            return LineMappingVisitor(parent, map)
+        }
+
+        override fun shouldProcess(file: Path): Boolean {
+            val name = file.toString()
+                .substring(1) // remove leading /
+                .substringBefore(".class")
+                .substringBefore('$')
+            return name in lineMap
         }
     }
 }
 
 private class LineMappingVisitor(
+    parent: ClassVisitor?,
     private val lineMapping: NavigableMap<Int, Int>
-) : ClassVisitor(Opcodes.ASM9, null) {
+) : ClassVisitor(Opcodes.ASM9, parent) {
     override fun visitMethod(
         access: Int,
         name: String,

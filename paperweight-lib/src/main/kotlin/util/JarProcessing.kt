@@ -25,13 +25,21 @@ package io.papermc.paperweight.util
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 
 object JarProcessing {
     interface ClassProcessor {
         fun shouldProcess(file: Path): Boolean = true
-        fun processClass(node: ClassNode, classNodeCache: ClassNodeCache)
+
+        interface NodeBased : ClassProcessor {
+            fun processClass(node: ClassNode, classNodeCache: ClassNodeCache)
+        }
+
+        interface VisitorBased : ClassProcessor {
+            fun processClass(node: ClassNode, parent: ClassVisitor, classNodeCache: ClassNodeCache): ClassVisitor?
+        }
     }
 
     fun processJar(
@@ -78,11 +86,16 @@ object JarProcessing {
     private fun processClass(file: Path, outFile: Path, classNodeCache: ClassNodeCache, processor: ClassProcessor) {
         val node = classNodeCache.findClass(file.toString()) ?: error("No ClassNode found for known entry: ${file.name}")
 
-        processor.processClass(node, classNodeCache)
-
         val writer = ClassWriter(0)
-        node.accept(writer)
-
+        val visitor = when (processor) {
+            is ClassProcessor.VisitorBased -> processor.processClass(node, writer, classNodeCache) ?: writer
+            is ClassProcessor.NodeBased -> {
+                processor.processClass(node, classNodeCache)
+                writer
+            }
+            else -> error("Unknown class processor type: ${processor::class.java.name}")
+        }
+        node.accept(visitor)
         outFile.writeBytes(writer.toByteArray())
     }
 }
