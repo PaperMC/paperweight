@@ -58,8 +58,6 @@ open class AllTasks(
         inputJar.set(applyMergedAt.flatMap { it.outputJar })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
-
-        outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
     }
 
     val decompileJar by tasks.registering<RunForgeFlower> {
@@ -69,6 +67,12 @@ open class AllTasks(
         libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
         outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
+    }
+
+    val lineMapJar by tasks.registering<LineMapJar> {
+        inputJar.set(copyResources.flatMap { it.outputJar })
+        outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
+        decompiledJar.set(decompileJar.flatMap { it.outputJar })
     }
 
     val applyApiPatches by tasks.registering<ApplyGitPatches> {

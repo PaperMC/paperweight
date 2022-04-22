@@ -47,6 +47,10 @@ abstract class CopyResources : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    override fun init() {
+        outputJar.convention(defaultOutput())
+    }
+
     @TaskAction
     fun run() {
         val out = outputJar.path

@@ -88,7 +88,7 @@ class PaperweightCore : Plugin<Project> {
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatches)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-            remappedJar.set(tasks.copyResources.flatMap { it.outputJar })
+            remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
             mcVersion.set(target.ext.minecraftVersion)
             mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
@@ -144,7 +144,7 @@ class PaperweightCore : Plugin<Project> {
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
-                tasks.copyResources.flatMap { it.outputJar },
+                tasks.lineMapJar.flatMap { it.outputJar },
                 tasks.decompileJar.flatMap { it.outputJar },
                 ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES_TXT),

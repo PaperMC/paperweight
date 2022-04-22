@@ -30,12 +30,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
 val forgeFlowerArgList: List<String> = listOf(
@@ -49,8 +44,10 @@ val forgeFlowerArgList: List<String> = listOf(
     "-jvn=0",
     "-isl=0",
     "-iib=1",
+    "-bsm=1",
+    "-dcl=1",
     "-ovr=0", // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
-    // "pll=99999", // High line length to effectively disable formatting
+    "-pll=999999", // High line length to effectively disable formatter (only does anything on Quiltflower)
     "-log=TRACE",
     "-cfg",
     "{libraries}",
@@ -61,7 +58,7 @@ val forgeFlowerArgList: List<String> = listOf(
 private fun List<String>.createForgeFlowerArgs(
     libraries: String,
     input: String,
-    output: String
+    output: String,
 ): List<String> = map {
     when (it) {
         "{libraries}" -> libraries
@@ -82,12 +79,6 @@ fun runForgeFlower(
     javaLauncher: JavaLauncher,
     jvmArgs: List<String> = listOf("-Xmx4G")
 ) {
-    val target = outputJar.resolveSibling("${outputJar.name}.dir")
-    if (target.exists()) {
-        target.deleteRecursively()
-    }
-    target.createDirectories()
-
     val libs = ArrayList(libraries)
     libs.sort()
     val tempFile = createTempFile("paperweight", "txt")
@@ -104,16 +95,14 @@ fun runForgeFlower(
         val argList = argsList.createForgeFlowerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
-            target.absolutePathString()
+            outputJar.absolutePathString(),
         )
 
+        outputJar.deleteForcefully()
         logFile.deleteForcefully()
+        outputJar.parent.createDirectories()
 
         javaLauncher.runJar(executable, workingDir, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
-
-        // FernFlower is weird with how it does directory output
-        target.resolve(inputJar.name).moveTo(outputJar, overwrite = true)
-        target.deleteRecursively()
     } finally {
         tempFile.deleteForcefully()
     }

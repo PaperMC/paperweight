@@ -107,12 +107,12 @@ abstract class FixJarForReobf : JavaLauncherTask() {
 
             output.writeZip().use { out ->
                 parameters.inputJar.path.openZip().use { jarFile ->
-                    FixJar.processJars(jarFile, out, FixForReobfProcessor(packages))
+                    JarProcessing.processJar(jarFile, out, FixForReobfProcessor(packages))
                 }
             }
         }
 
-        class FixForReobfProcessor(private val packages: List<String>) : FixJar.ClassProcessor {
+        class FixForReobfProcessor(private val packages: List<String>) : JarProcessing.ClassProcessor.NodeBased {
             override fun shouldProcess(file: Path): Boolean =
                 packages.any { file.toString().startsWith(it) }
 
