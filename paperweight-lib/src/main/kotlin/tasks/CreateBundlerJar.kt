@@ -124,7 +124,11 @@ abstract class CreateBundlerJar : ZippedTask() {
 
         val dependencies = collectDependencies()
         for (dep in dependencies) {
-            val serverLibrary = serverLibraryEntries.firstOrNull { it.id.group == dep.module.group && it.id.name == dep.module.name && it.id.classifier == dep.module.classifier }
+            val serverLibrary = serverLibraryEntries.firstOrNull {
+                it.id.group == dep.module.group &&
+                    it.id.name == dep.module.name &&
+                    it.id.classifier == dep.module.classifier
+            }
             if (serverLibrary != null) {
                 if (serverLibrary.id.version == dep.module.version) {
                     // nothing to do
