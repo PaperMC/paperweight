@@ -22,11 +22,13 @@
 
 package io.papermc.paperweight.util.data
 
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier
 
-data class ModuleId(val group: String, val name: String, val version: String) : Comparable<ModuleId> {
+data class ModuleId(val group: String, val name: String, val version: String, val classifier: String? = null) : Comparable<ModuleId> {
     fun toPath(): String {
-        val fileName = "$name-$version.jar"
+        val fileName = listOfNotNull(name, version, classifier).joinToString("-") + ".jar"
         return "${group.replace('.', '/')}/$name/$version/$fileName"
     }
 
@@ -34,20 +36,27 @@ data class ModuleId(val group: String, val name: String, val version: String) : 
         return comparator.compare(this, other)
     }
 
-    override fun toString(): String {
-        return "$group:$name:$version"
-    }
+    override fun toString(): String = listOfNotNull(group, name, version, classifier).joinToString(":")
 
     companion object {
-        private val comparator = compareBy<ModuleId>({ it.group }, { it.name }, { it.version })
+        private val comparator = compareBy<ModuleId>({ it.group }, { it.name }, { it.version }, { it.classifier })
 
         fun parse(text: String): ModuleId {
-            val (group, name, version) = text.split(":")
-            return ModuleId(group, name, version)
+            val split = text.split(":")
+            val (group, name, version) = split
+            return ModuleId(group, name, version, split.getOrNull(3))
         }
 
-        fun fromIdentifier(id: ModuleComponentIdentifier): ModuleId {
-            return ModuleId(id.group, id.module, id.version)
+        fun fromIdentifier(id: ComponentArtifactIdentifier): ModuleId {
+            if (id is DefaultModuleComponentArtifactIdentifier) {
+                val idx = id.componentIdentifier
+                return ModuleId(idx.group, idx.module, idx.version, id.name.classifier)
+            }
+            val compId = id.componentIdentifier
+            if (compId is ModuleComponentIdentifier) {
+                return ModuleId(compId.group, compId.module, compId.version)
+            }
+            error("Could not create ModuleId from ComponentArtifactIdentifier $id")
         }
     }
 }

@@ -351,7 +351,7 @@ abstract class GenerateDevBundle : DefaultTask() {
 
         for (vanillaLib in vanillaServerLibraries) {
             val vanilla = ModuleId.parse(vanillaLib)
-            if (new.none { it.group == vanilla.group && it.name == vanilla.name }) {
+            if (new.none { it.group == vanilla.group && it.name == vanilla.name && it.classifier == vanilla.classifier }) {
                 new += vanilla
             }
         }
@@ -366,7 +366,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private val ResolvedArtifactResult.coordinates: String
-        get() = ModuleId.fromIdentifier(id.componentIdentifier as ModuleComponentIdentifier).toString()
+        get() = ModuleId.fromIdentifier(id).toString()
 
     private fun collectRuntimeDependencies(): Set<ResolvedArtifactResult> =
         runtimeConfiguration.get().incoming.artifacts.artifacts.filterTo(HashSet()) {

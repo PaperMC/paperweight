@@ -124,7 +124,7 @@ abstract class CreateBundlerJar : ZippedTask() {
 
         val dependencies = collectDependencies()
         for (dep in dependencies) {
-            val serverLibrary = serverLibraryEntries.firstOrNull { it.id.group == dep.module.group && it.id.name == dep.module.name }
+            val serverLibrary = serverLibraryEntries.firstOrNull { it.id.group == dep.module.group && it.id.name == dep.module.name && it.id.classifier == dep.module.classifier }
             if (serverLibrary != null) {
                 if (serverLibrary.id.version == dep.module.version) {
                     // nothing to do
@@ -194,7 +194,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     private val ResolvedArtifactResult.module: ModuleId
         get() {
             return when (val ident = id.componentIdentifier) {
-                is ModuleComponentIdentifier -> ModuleId.fromIdentifier(ident)
+                is ModuleComponentIdentifier -> ModuleId.fromIdentifier(id)
                 is ProjectComponentIdentifier -> {
                     val capability = variant.capabilities.single()
                     val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
