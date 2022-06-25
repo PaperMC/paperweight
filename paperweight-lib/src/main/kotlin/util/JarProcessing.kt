@@ -54,7 +54,7 @@ object JarProcessing {
         output: FileSystem,
         processor: ClassProcessor
     ) {
-        val classNodeCache = ClassNodeCache(jarFile, fallbackJar)
+        val classNodeCache = ClassNodeCache.create(jarFile, fallbackJar)
 
         jarFile.walk().use { stream ->
             stream.forEach { file ->
