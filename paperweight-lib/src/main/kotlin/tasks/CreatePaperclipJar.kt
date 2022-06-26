@@ -104,7 +104,7 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
         val originalJar = originalBundlerJar.path
         val vanillaSha256Hash = originalJar.sha256asHex()
         val vanillaSha1Hash = toHex(originalJar.hashFile(digestSha1))
-        val vanillaUrl = "https://launcher.mojang.com/v1/objects/$vanillaSha1Hash/server.jar"
+        val vanillaUrl = "https://piston-data.mojang.com/v1/objects/$vanillaSha1Hash/server.jar"
         val vanillaFileName = "mojang_${mcVersion.get()}.jar"
 
         val context = DownloadContext(vanillaSha256Hash, vanillaUrl, vanillaFileName)

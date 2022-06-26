@@ -29,7 +29,7 @@ const val PAPERWEIGHT_DEBUG = "paperweight.debug"
 
 const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
 
-const val MC_MANIFEST_URL = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
+const val MC_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 const val PAPER_MAVEN_REPO_URL = "https://repo.papermc.io/repository/maven-public/"
 
