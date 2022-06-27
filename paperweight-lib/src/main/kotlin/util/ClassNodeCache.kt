@@ -23,54 +23,26 @@
 package io.papermc.paperweight.util
 
 import java.nio.file.FileSystem
-import kotlin.io.path.*
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.Opcodes
+import java.nio.file.Path
 import org.objectweb.asm.tree.ClassNode
 
-class ClassNodeCache(private val jarFile: FileSystem, private val fallbackJar: FileSystem? = null) {
+interface ClassNodeCache {
+    fun findClass(name: String?): ClassNode?
 
-    private val classNodeMap = hashMapOf<String, ClassNode?>()
-
-    fun findClass(name: String?): ClassNode? {
-        if (name == null) {
-            return null
-        }
-        return classNodeMap.computeIfAbsent(normalize(name)) { fileName ->
-            val classData = findClassData(fileName) ?: return@computeIfAbsent null
-            val classReader = ClassReader(classData)
-            val node = ClassNode(Opcodes.ASM9)
-            classReader.accept(node, 0)
-            return@computeIfAbsent node
-        }
-    }
-
-    private fun findClassData(className: String): ByteArray? {
-        jarFile.getPath(className).let { remappedClass ->
-            if (remappedClass.exists()) {
-                return remappedClass.readBytes()
-            }
-        }
-        fallbackJar?.getPath(className)?.let { libraryClass ->
-            if (libraryClass.exists()) {
-                return libraryClass.readBytes()
-            }
-        }
-        return ClassLoader.getSystemResourceAsStream(className)?.readBytes() // JDK class
-    }
-
-    private fun normalize(name: String): String {
-        val workingName = name.removeSuffix(".class")
-
-        var startIndex = 0
-        var endIndex = workingName.length
-        if (workingName.startsWith('L')) {
-            startIndex = 1
-        }
-        if (workingName.endsWith(';')) {
-            endIndex--
+    companion object {
+        fun create(
+            jarFile: FileSystem,
+            vararg fallbackJars: FileSystem?
+        ): ClassNodeCache {
+            return ClassNodeCacheImpl(jarFile, fallbackJars.toList())
         }
 
-        return workingName.substring(startIndex, endIndex).replace('.', '/') + ".class"
+        fun create(
+            jarFile: FileSystem,
+            fallbackJars: List<FileSystem>,
+            fallbackDirs: List<Path>
+        ): ClassNodeCache {
+            return ClassNodeCacheImpl(jarFile, fallbackJars.toList(), fallbackDirs)
+        }
     }
 }
