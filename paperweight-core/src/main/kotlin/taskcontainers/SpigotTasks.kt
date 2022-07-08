@@ -180,7 +180,7 @@ open class SpigotTasks(
     }
 
     @Suppress("DuplicatedCode")
-    val remapSpigotSources by tasks.registering<RemapSources> {
+    val remapSpigotSources by tasks.registering<RemapSpigotSources> {
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
         spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
         mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })

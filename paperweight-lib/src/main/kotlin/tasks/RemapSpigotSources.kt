@@ -51,7 +51,7 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
 @CacheableTask
-abstract class RemapSources : JavaLauncherTask() {
+abstract class RemapSpigotSources : JavaLauncherTask() {
 
     @get:CompileClasspath
     abstract val vanillaJar: RegularFileProperty
@@ -124,18 +124,18 @@ abstract class RemapSources : JavaLauncherTask() {
             val srcDir = spigotServerDir.path.resolve("src/main/java")
 
             // Remap sources
-            queue.submit(RemapAction::class) {
+            queue.submit(RemapSpigotSourcesAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
-                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
+                additionalAts.set(this@RemapSpigotSources.additionalAts.pathOrNull)
 
-                mappings.set(this@RemapSources.mappings.path)
+                mappings.set(this@RemapSpigotSources.mappings.path)
                 inputDir.set(srcDir)
 
-                cacheDir.set(this@RemapSources.layout.cache)
+                cacheDir.set(this@RemapSpigotSources.layout.cache)
 
                 outputDir.set(srcOut)
                 generatedAtOutput.set(generatedAt.path)
@@ -144,19 +144,19 @@ abstract class RemapSources : JavaLauncherTask() {
             val testSrc = spigotServerDir.path.resolve("src/test/java")
 
             // Remap tests
-            queue.submit(RemapAction::class) {
+            queue.submit(RemapSpigotSourcesAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 classpath.from(srcDir)
-                additionalAts.set(this@RemapSources.additionalAts.pathOrNull)
+                additionalAts.set(this@RemapSpigotSources.additionalAts.pathOrNull)
 
-                mappings.set(this@RemapSources.mappings.path)
+                mappings.set(this@RemapSpigotSources.mappings.path)
                 inputDir.set(testSrc)
 
-                cacheDir.set(this@RemapSources.layout.cache)
+                cacheDir.set(this@RemapSpigotSources.layout.cache)
 
                 outputDir.set(testOut)
             }
@@ -194,7 +194,7 @@ abstract class RemapSources : JavaLauncherTask() {
         spigotRecompiledClasses.path.writeText(spigotRecompiled)
     }
 
-    abstract class RemapAction : WorkAction<RemapParams> {
+    abstract class RemapSpigotSourcesAction : WorkAction<RemapSpigotSourcesParams> {
         override fun execute() {
             val mappingSet = MappingFormats.TINY.read(
                 parameters.mappings.path,
@@ -255,7 +255,7 @@ abstract class RemapSources : JavaLauncherTask() {
         }
     }
 
-    interface RemapParams : WorkParameters {
+    interface RemapSpigotSourcesParams : WorkParameters {
         val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
         val inputDir: RegularFileProperty
