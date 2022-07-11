@@ -23,7 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import javax.inject.Inject
 import kotlin.io.path.*

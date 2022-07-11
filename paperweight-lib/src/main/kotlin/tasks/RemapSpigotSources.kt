@@ -77,11 +77,6 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val spigotApiDir: DirectoryProperty
 
-    @get:Optional
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val additionalAts: RegularFileProperty
-
     @get:OutputFile
     abstract val generatedAt: RegularFileProperty
 
