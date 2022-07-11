@@ -124,7 +124,7 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
             val srcDir = spigotServerDir.path.resolve("src/main/java")
 
             // Remap sources
-            queue.submit(RemapSpigotSourcesAction::class) {
+            queue.submit(RemapSpigotAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
@@ -144,7 +144,7 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
             val testSrc = spigotServerDir.path.resolve("src/test/java")
 
             // Remap tests
-            queue.submit(RemapSpigotSourcesAction::class) {
+            queue.submit(RemapSpigotAction::class) {
                 classpath.from(vanillaRemappedSpigotJar.path)
                 classpath.from(mojangMappedVanillaJar.path)
                 classpath.from(vanillaJar.path)
@@ -194,7 +194,7 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
         spigotRecompiledClasses.path.writeText(spigotRecompiled)
     }
 
-    abstract class RemapSpigotSourcesAction : WorkAction<RemapSpigotSourcesParams> {
+    abstract class RemapSpigotAction : WorkAction<RemapSpigotParams> {
         override fun execute() {
             val mappingSet = MappingFormats.TINY.read(
                 parameters.mappings.path,
@@ -255,7 +255,7 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
         }
     }
 
-    interface RemapSpigotSourcesParams : WorkParameters {
+    interface RemapSpigotParams : WorkParameters {
         val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
         val inputDir: RegularFileProperty
