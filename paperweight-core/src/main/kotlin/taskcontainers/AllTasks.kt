@@ -54,6 +54,12 @@ open class AllTasks(
         atFile.set(mergeAdditionalAts.flatMap { it.outputFile })
     }
 
+    val applySourceAt by tasks.registering<ApplySourceAccessTransforms> {
+        sourcesZip.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
+        testsZip.set(remapSpigotSources.flatMap { it.testsOutputZip })
+        transforms.set(extension.paper.additionalAts.fileExists(project))
+    }
+
     val copyResources by tasks.registering<CopyResources> {
         inputJar.set(applyMergedAt.flatMap { it.outputJar })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
@@ -113,8 +119,8 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
-        remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
-        remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
+        remappedSource.set(applySourceAt.flatMap { it.sourcesOutputZip })
+        remappedTests.set(applySourceAt.flatMap { it.testsOutputZip })
         caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })

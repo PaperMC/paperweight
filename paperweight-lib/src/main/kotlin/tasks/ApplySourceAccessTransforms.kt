@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Files
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.at.io.AccessTransformFormats
@@ -31,7 +32,6 @@ import org.cadixdev.mercury.Mercury
 import org.cadixdev.mercury.at.AccessTransformerRewriter
 import org.eclipse.jdt.core.JavaCore
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
@@ -43,9 +43,13 @@ import org.gradle.workers.WorkerExecutor
 @CacheableTask
 abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
 
-    @get:InputDirectory
+    @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val serverDir: DirectoryProperty
+    abstract val sourcesZip: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val testsZip: RegularFileProperty
 
     @get:Optional
     @get:InputFile
@@ -76,30 +80,34 @@ abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
     fun run() {
         val srcOut = findOutputDir(sourcesOutputZip.path).apply { createDirectories() }
         val testOut = findOutputDir(testsOutputZip.path).apply { createDirectories() }
+        val srcDir = Files.createTempDirectory(layout.cache, "transform-sources")
+        val testDir = Files.createTempDirectory(layout.cache, "transform-tests")
 
         try {
+            fs.copy {
+                from(archives.zipTree(sourcesZip.path))
+                into(srcDir)
+            }
+            fs.copy {
+                from(archives.zipTree(testsZip.path))
+                into(testDir)
+            }
+
             val queue = workerExecutor.processIsolation {
                 forkOptions.jvmArgs(jvmargs.get())
                 forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
             }
 
-            val srcDir = serverDir.path.resolve("src/main/java")
-            val testDir = serverDir.path.resolve("src/test/java")
-
-            queue.submit(ApplySourceAccessTransformsAction::class) {
-                transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)
-
+            queue.submit(ApplyTransformsAction::class) {
                 inputDir.set(srcDir)
-
+                transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)
                 outputDir.set(srcOut)
             }
 
-            queue.submit(ApplySourceAccessTransformsAction::class) {
+            queue.submit(ApplyTransformsAction::class) {
                 classpath.from(srcDir)
-                transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)
-
                 inputDir.set(testDir)
-
+                transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)
                 outputDir.set(testOut)
             }
 
@@ -108,12 +116,14 @@ abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
             zip(srcOut, sourcesOutputZip)
             zip(testOut, testsOutputZip)
         } finally {
+            srcDir.deleteRecursively()
+            testDir.deleteRecursively()
             srcOut.deleteRecursively()
             testOut.deleteRecursively()
         }
     }
 
-    interface ApplySourceAccessTransformsParams : WorkParameters {
+    interface ApplyTransformsParams : WorkParameters {
         val classpath: ConfigurableFileCollection
         val inputDir: RegularFileProperty
         val transforms: RegularFileProperty
@@ -121,7 +131,7 @@ abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
         val outputDir: RegularFileProperty
     }
 
-    abstract class ApplySourceAccessTransformsAction : WorkAction<ApplySourceAccessTransformsParams> {
+    abstract class ApplyTransformsAction : WorkAction<ApplyTransformsParams> {
         override fun execute() {
             val transforms = parameters.transforms.pathOrNull?.let { AccessTransformFormats.FML.read(it) }
 

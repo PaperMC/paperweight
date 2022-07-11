@@ -104,8 +104,8 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
         super.init()
 
         jvmargs.convention(listOf("-Xmx2G"))
-        sourcesOutputZip.convention(defaultOutput("$name-sources", "jar"))
-        testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
+        sourcesOutputZip.convention(defaultOutput("$name-sources", "zip"))
+        testsOutputZip.convention(defaultOutput("$name-tests", "zip"))
         generatedAt.convention(defaultOutput("at"))
         spigotRecompiledClasses.convention(defaultOutput("spigotRecompiledClasses", "txt"))
     }
@@ -130,7 +130,6 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
                 classpath.from(vanillaJar.path)
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
-                additionalAts.set(this@RemapSpigotSources.additionalAts.pathOrNull)
 
                 mappings.set(this@RemapSpigotSources.mappings.path)
                 inputDir.set(srcDir)
@@ -151,7 +150,6 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
                 classpath.from(spigotApiDir.dir("src/main/java").path)
                 classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 classpath.from(srcDir)
-                additionalAts.set(this@RemapSpigotSources.additionalAts.pathOrNull)
 
                 mappings.set(this@RemapSpigotSources.mappings.path)
                 inputDir.set(testSrc)
@@ -202,51 +200,35 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
                 DEOBF_NAMESPACE
             )
 
-            val additionalAt = parameters.additionalAts.pathOrNull?.let { AccessTransformFormats.FML.read(it) }
-
             val processAt = AccessTransformSet.create()
             val generatedAtOutPath = parameters.generatedAtOutput.pathOrNull
 
             // Remap any references Spigot maps to mojmap+yarn
-            Mercury().let { merc ->
-                merc.sourceCompatibility = JavaCore.VERSION_17
-                merc.isGracefulClasspathChecks = true
-                merc.classPath.addAll(parameters.classpath.map { it.toPath() })
+            Mercury().let { mercury ->
+                mercury.sourceCompatibility = JavaCore.VERSION_17
+                mercury.isGracefulClasspathChecks = true
+                mercury.classPath.addAll(parameters.classpath.map { it.toPath() })
 
                 if (generatedAtOutPath != null) {
-                    merc.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
+                    mercury.processors += AccessAnalyzerProcessor.create(processAt, mappingSet)
                 }
 
-                merc.process(parameters.inputDir.path)
+                mercury.process(parameters.inputDir.path)
 
-                val tempOut = Files.createTempDirectory(parameters.cacheDir.path, "remap")
-                try {
-                    merc.processors.clear()
-                    merc.processors.addAll(
-                        listOf(
-                            ExplicitThisAdder,
-                            MercuryRemapper.create(mappingSet),
-                            AccessTransformerRewriter.create(processAt)
-                        )
+                mercury.processors.clear()
+                mercury.processors.addAll(
+                    listOf(
+                        ExplicitThisAdder,
+                        MercuryRemapper.create(mappingSet),
+                        AccessTransformerRewriter.create(processAt)
                     )
+                )
 
-                    if (generatedAtOutPath != null) {
-                        merc.processors.add(AccessTransformerRewriter.create(processAt))
-                    }
-
-                    merc.rewrite(parameters.inputDir.path, tempOut)
-
-                    if (additionalAt != null) {
-                        merc.processors.clear()
-                        merc.processors += AccessTransformerRewriter.create(additionalAt)
-
-                        merc.rewrite(tempOut, parameters.outputDir.path)
-                    } else {
-                        tempOut.copyRecursivelyTo(parameters.outputDir.path)
-                    }
-                } finally {
-                    tempOut.deleteRecursively()
+                if (generatedAtOutPath != null) {
+                    mercury.processors.add(AccessTransformerRewriter.create(processAt))
                 }
+
+                mercury.rewrite(parameters.inputDir.path, parameters.outputDir.path)
             }
 
             if (generatedAtOutPath != null) {
@@ -259,7 +241,6 @@ abstract class RemapSpigotSources : JavaLauncherTask() {
         val classpath: ConfigurableFileCollection
         val mappings: RegularFileProperty
         val inputDir: RegularFileProperty
-        val additionalAts: RegularFileProperty
 
         val cacheDir: RegularFileProperty
         val generatedAtOutput: RegularFileProperty
