@@ -26,6 +26,7 @@ import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.mm.ResetSubmodules
 import io.papermc.paperweight.util.*
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -43,6 +44,8 @@ open class GeneralTasks(
     val initSubmodules by tasks.registering<InitSubmodules> {
         offlineMode.set(project.offlineMode())
     }
+
+    val resetSubmodules by tasks.registering<ResetSubmodules>()
 
     val buildDataInfo: Provider<BuildDataInfo> = project.contents(extension.craftBukkit.buildDataInfo) {
         gson.fromJson(it)

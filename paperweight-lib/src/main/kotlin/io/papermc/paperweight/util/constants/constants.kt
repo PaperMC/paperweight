@@ -117,6 +117,15 @@ const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
 
 const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 
+const val MM = "$PAPER_PATH/mm"
+const val INITIAL_PATCHES = "$MM/initial-patches"
+const val INITIAL_SPIGOT_PATCHES = "$INITIAL_PATCHES/spigot"
+const val INITIAL_PAPER_PATCHES = "$INITIAL_PATCHES/paper"
+const val NMS_PATCHES = "$MM/nms-patches"
+const val SPIGOT_NMS_PATCHES = "$NMS_PATCHES/spigot"
+const val PAPER_NMS_PATCHES = "$NMS_PATCHES/paper"
+const val DECOMPILED_SOURCE_FOLDER = "$MM/decompiled"
+
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"

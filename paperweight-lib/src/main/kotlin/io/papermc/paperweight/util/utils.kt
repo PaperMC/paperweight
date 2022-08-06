@@ -96,6 +96,7 @@ val ProjectLayout.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
+fun ProjectLayout.cacheFile(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").file(path)
 
 fun ProjectLayout.maybeInitSubmodules(offline: Boolean, logger: Logger) {
     if (offline) {
@@ -112,6 +113,12 @@ fun ProjectLayout.initSubmodules() {
 }
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
+
+fun ProjectLayout.resetSubmodules() {
+    Git.checkForGit()
+    Git(projectDirectory.path)("submodule", "deinit", "-f", ".").executeOut()
+    initSubmodules()
+}
 
 fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T?> {
     return flatMap { project.provider { it.takeIf { f -> f.path.exists() } } }

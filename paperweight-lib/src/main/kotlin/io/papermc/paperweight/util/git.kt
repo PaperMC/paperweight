@@ -105,7 +105,7 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
     }
 }
 
-class Command(private val processBuilder: ProcessBuilder, private val command: String) {
+class Command(private val processBuilder: ProcessBuilder, private val command: String, private val validExitCodes: Array<Int> = arrayOf(0)) {
 
     private var outStream: OutputStream = UselessOutputStream
     private var errStream: OutputStream = UselessOutputStream
@@ -159,7 +159,7 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
 
     fun execute() {
         val res = run()
-        if (res != 0) {
+        if (res !in validExitCodes) {
             throw PaperweightException("Command finished with $res exit code: $command")
         }
     }
