@@ -6,6 +6,7 @@ import java.nio.file.Files
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
@@ -20,15 +21,11 @@ abstract class MergeGitRepos : BaseTask() {
     @get:InputDirectory
     abstract val paperDir: DirectoryProperty
 
-    @get:InputDirectory
-    abstract val superDir: DirectoryProperty
-
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
         group = "mm"
-        outputDir.convention(superDir)
     }
 
     @TaskAction
@@ -39,10 +36,10 @@ abstract class MergeGitRepos : BaseTask() {
         val defaultBranch = paperGit("config", "init.defaultBranch").getText().trim()
         val currentBranch = paperGit("rev-parse", "--abbrev-ref", "HEAD").getText().trim()
 
-        superDir.path.deleteRecursively()
-        Files.createDirectories(superDir.path)
+        outputDir.path.deleteRecursively()
+        Files.createDirectories(outputDir.path)
 
-        Git(superDir).let { git ->
+        Git(outputDir).let { git ->
             git("init").execute()
             git("remote", "add", "bukkit", bukkitDir.path.absolutePathString()).execute()
             git("remote", "add", "craftbukkit", craftBukkitDir.path.absolutePathString()).execute()

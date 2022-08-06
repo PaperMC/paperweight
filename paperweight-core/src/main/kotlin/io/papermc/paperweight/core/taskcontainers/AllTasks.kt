@@ -287,6 +287,6 @@ open class AllTasks(
         bukkitDir.set(finalizeApiHistory.flatMap { it.outputDir })
         craftBukkitDir.set(finalizeServerHistory.flatMap { it.outputDir })
         paperDir.set(finalizePaperHistory.flatMap { it.outputDir })
-        superDir.set(objects.dirFrom(extension.workDir, "SuperPaper"))
+        outputDir.set(extension.superDir)
     }
 }
