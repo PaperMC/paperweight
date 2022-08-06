@@ -66,8 +66,11 @@ abstract class RemapCraftBukkitPatches : BaseTask() {
         }
 
         Git(craftBukkitDir).let { git ->
+            git("add", nmsPatches.absolutePathString()).execute()
+            git("stash").execute()
             git("reset", "--hard", "HEAD~1").execute()
-            git("add", "nms-patches/net").execute()
+            git("rm", "-r", nmsPatches.absolutePathString()).execute()
+            git("stash", "pop").execute()
             git("commit", "-m", "CB & Spigot NMS Patch Remap", "--author=Initial Source <auto@mated.null>").execute()
         }
     }

@@ -39,6 +39,9 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     @Suppress("MemberVisibilityCanBePrivate")
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
+    @Suppress("unused")
+    val superDir: DirectoryProperty = objects.dirFrom(workDir, "SuperPaper")
+
     val minecraftVersion: Property<String> = objects.property()
     val serverProject: Property<Project> = objects.property()
 
