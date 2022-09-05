@@ -42,6 +42,19 @@ import org.gradle.workers.WorkerExecutor
 @CacheableTask
 abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
 
+    @get:CompileClasspath
+    abstract val vanillaJar: RegularFileProperty
+
+    @get:CompileClasspath
+    abstract val mojangMappedVanillaJar: RegularFileProperty
+
+    @get:Optional
+    @get:CompileClasspath
+    abstract val vanillaRemappedSpigotJar: RegularFileProperty
+
+    @get:CompileClasspath
+    abstract val spigotDeps: ConfigurableFileCollection
+
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourcesZip: RegularFileProperty
@@ -79,8 +92,8 @@ abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
     fun run() {
         val srcOut = findOutputDir(sourcesOutputZip.path).apply { createDirectories() }
         val testOut = findOutputDir(testsOutputZip.path).apply { createDirectories() }
-        val srcDir = Files.createTempDirectory(layout.cache, "transform-sources")
-        val testDir = Files.createTempDirectory(layout.cache, "transform-tests")
+        val srcDir = Files.createTempDirectory(layout.cache, "sourcetransform")
+        val testDir = Files.createTempDirectory(layout.cache, "testtransform")
 
         try {
             fs.copy {
@@ -98,12 +111,26 @@ abstract class ApplySourceAccessTransforms : JavaLauncherTask() {
             }
 
             queue.submit(ApplyTransformsAction::class) {
+                vanillaRemappedSpigotJar.pathOrNull?.let {
+                    // The Spigot mapped jar is not required in some cases, such
+                    // as when used by paperweight-patcher
+                    classpath.from(vanillaRemappedSpigotJar.path)
+                }
+                classpath.from(mojangMappedVanillaJar.path)
+                classpath.from(vanillaJar.path)
+                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 inputDir.set(srcDir)
                 transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)
                 outputDir.set(srcOut)
             }
 
             queue.submit(ApplyTransformsAction::class) {
+                vanillaRemappedSpigotJar.pathOrNull?.let {
+                    classpath.from(vanillaRemappedSpigotJar.path)
+                }
+                classpath.from(mojangMappedVanillaJar.path)
+                classpath.from(vanillaJar.path)
+                classpath.from(spigotDeps.files.filter { it.toPath().isLibraryJar })
                 classpath.from(srcDir)
                 inputDir.set(testDir)
                 transforms.set(this@ApplySourceAccessTransforms.transforms.pathOrNull)

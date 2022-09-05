@@ -58,6 +58,9 @@ open class AllTasks(
         sourcesZip.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
         testsZip.set(remapSpigotSources.flatMap { it.testsOutputZip })
         transforms.set(extension.paper.additionalAts.fileExists(project))
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
+        mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
+        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
     }
 
     val copyResources by tasks.registering<CopyResources> {
