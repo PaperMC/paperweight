@@ -86,7 +86,7 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
                 objects.fileCollection().from(fernFlowerJar),
                 workingDir = layout.cache,
                 logFile = logFile,
-                jvmArgs = listOf("-Xmx$memory.get()"),
+                jvmArgs = listOf("-Xmx${memory.get()}"),
                 args = cmd.toTypedArray()
             )
 
