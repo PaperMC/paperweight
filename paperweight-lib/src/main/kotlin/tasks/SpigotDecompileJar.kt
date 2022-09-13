@@ -82,28 +82,18 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             logFile.deleteForcefully()
 
-            // Override max memory for decompile jvm
-            overrideXmx(cmd, memory.get())
-
-            launcher.runJar(objects.fileCollection().from(fernFlowerJar), workingDir = layout.cache, logFile = logFile, args = cmd.toTypedArray())
+            launcher.runJar(
+                objects.fileCollection().from(fernFlowerJar),
+                workingDir = layout.cache,
+                logFile = logFile,
+                jvmArgs = listOf("-Xmx$memory.get()"),
+                args = cmd.toTypedArray()
+            )
 
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).moveTo(outputJarFile)
         } finally {
             decomp.deleteRecursively()
-        }
-    }
-
-    private fun overrideXmx(cmd: MutableList<String>, memory: String) {
-        val copy = cmd.toMutableList()
-        cmd.clear()
-        for (s in copy) {
-            if (!s.startsWith("-Xmx")) {
-                cmd.add(s)
-            }
-            if (s == "java") {
-                cmd.add("-Xmx$memory")
-            }
         }
     }
 }
