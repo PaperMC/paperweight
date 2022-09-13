@@ -47,25 +47,21 @@ object McDev {
     ) {
         val patchLines = readPatchLines(patches)
 
-        val (importMcDev, banned) = readMcDevNames(patchLines, importsFile).asSequence()
-            .map { targetDir.resolve("net/minecraft/$it.java") }
-            .filter { !it.exists() }
-            .distinct()
-            .partition { file -> bannedClasses.none { file.toString().contains(it) } }
-
-        logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
-
-        banned.forEach {
-            logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File is banned", it.toString())
-        }
-
         decompJar.openZip().use { zipFile ->
-            // pull in all package-info classes
+            val decompFiles = mutableSetOf<String>()
+
             zipFile.walk().use { stream ->
                 for (zipEntry in stream) {
+                    // substring(1) trims the leading /
+                    val path = zipEntry.invariantSeparatorsPathString.substring(1)
+
+                    if (path.endsWith(".java")) {
+                        decompFiles += path
+                    }
+
+                    // pull in all package-info classes
                     if (zipEntry.toString().endsWith("package-info.java")) {
-                        // substring(1) trims the leading /
-                        val targetFile = targetDir.resolve(zipEntry.invariantSeparatorsPathString.substring(1))
+                        val targetFile = targetDir.resolve(path)
                         if (targetFile.exists()) {
                             continue
                         }
@@ -75,6 +71,18 @@ object McDev {
                         zipEntry.copyTo(targetFile)
                     }
                 }
+            }
+
+            val (importMcDev, banned) = readMcDevNames(patchLines, decompFiles, importsFile).asSequence()
+                .map { targetDir.resolve("$it.java") }
+                .filterNot { it.exists() }
+                .distinct()
+                .partition { file -> bannedClasses.none { file.toString().contains(it) } }
+
+            logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
+
+            banned.forEach {
+                logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File is banned", it.toString())
             }
 
             for (file in importMcDev) {
@@ -134,29 +142,30 @@ object McDev {
         return result
     }
 
-    private fun readMcDevNames(patchLines: Set<String>, additionalClasses: Path?): Set<String> {
+    private fun readMcDevNames(
+        patchLines: Set<String>,
+        decompFiles: Set<String>,
+        additionalClasses: Path?
+    ): Set<String> {
         val result = hashSetOf<String>()
 
-        val patchLinesPrefix = "net/minecraft/"
         val suffix = ".java"
 
-        patchLines.filter { it.startsWith(patchLinesPrefix) }
+        patchLines.filter { decompFiles.contains(it) }
             .filterNot { file -> bannedClasses.any { file.contains(it) } }
-            .mapTo(result) { it.substring(patchLinesPrefix.length, it.length - suffix.length) }
+            .mapTo(result) { it.removeSuffix(".java") }
 
         additionalClasses?.useLines { lines ->
             lines.filterNot { it.startsWith("#") }
                 .mapNotNull {
                     val parts = it.split(" ")
-                    if (parts[0] != "minecraft") {
-                        null
-                    } else {
+                    if (parts[0] == "minecraft") {
                         parts[1]
+                    } else {
+                        null
                     }
                 }
-                .forEach { line ->
-                    result += line.removeSuffix(".java").replace('.', '/').removePrefix("net/minecraft/")
-                }
+                .mapTo(result) { it.removeSuffix(suffix).replace('.', '/') }
         }
 
         return result
