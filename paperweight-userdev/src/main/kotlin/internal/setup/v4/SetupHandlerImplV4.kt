@@ -28,7 +28,6 @@ import io.papermc.paperweight.userdev.internal.setup.RunPaperclip
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -255,39 +254,10 @@ class SetupHandlerImplV4(
         get() = bundle.config.buildData.libraryRepositories
 
     private fun createExtractFromBundlerStep(): ExtractFromBundlerStep = ExtractFromBundlerStep(
-        cache,
+        cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes")),
         vanillaSteps,
         vanillaServerJar,
         minecraftLibraryJars,
         ::minecraftLibraryJars
     )
-
-    private class ExtractFromBundlerStep(
-        cache: Path,
-        private val vanillaSteps: VanillaSteps,
-        private val vanillaServerJar: Path,
-        private val minecraftLibraryJars: Path,
-        private val listMinecraftLibraryJars: () -> List<Path>,
-    ) : SetupStep {
-        override val name: String = "extract libraries and server from downloaded jar"
-
-        override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
-
-        override fun run(context: SetupHandler.Context) {
-            ServerBundler.extractFromBundler(
-                vanillaSteps.mojangJar,
-                vanillaServerJar,
-                minecraftLibraryJars,
-                null,
-                null,
-                null,
-                null,
-            )
-        }
-
-        override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-            builder.include(vanillaSteps.mojangJar, vanillaServerJar)
-            builder.include(listMinecraftLibraryJars())
-        }
-    }
 }
