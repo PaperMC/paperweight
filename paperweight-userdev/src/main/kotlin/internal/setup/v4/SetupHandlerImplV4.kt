@@ -218,7 +218,7 @@ class SetupHandlerImplV4(
         val coords = mutableListOf(bundle.config.mappedServerCoordinates)
         coords += bundle.config.archivedPublications.values
         coords += bundle.config.buildData.runtimeDependencies
-        coords.forEach { coordinates ->
+        for (coordinates in coords) {
             val dep = context.project.dependencies.create(coordinates).also {
                 (it as ExternalModuleDependency).isTransitive = false
             }

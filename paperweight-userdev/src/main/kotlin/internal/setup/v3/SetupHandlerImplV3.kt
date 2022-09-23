@@ -190,18 +190,13 @@ class SetupHandlerImplV3(
     }
 
     override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        listOf(
+        val list = mutableListOf(
             bundle.config.mappedServerCoordinates,
             bundle.config.apiCoordinates,
             bundle.config.mojangApiCoordinates
-        ).forEach { coordinate ->
-            val dep = context.project.dependencies.create(coordinate).also {
-                (it as ExternalModuleDependency).isTransitive = false
-            }
-            dependencySet.add(dep)
-        }
-
-        for (coordinates in bundle.config.buildData.runtimeDependencies) {
+        )
+        list += bundle.config.buildData.runtimeDependencies
+        for (coordinates in list) {
             val dep = context.project.dependencies.create(coordinates).also {
                 (it as ExternalModuleDependency).isTransitive = false
             }
