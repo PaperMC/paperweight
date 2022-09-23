@@ -158,6 +158,8 @@ class SetupHandlerImplV4(
             return
         }
 
+        setupArchivedPublications(context)
+
         val source = if (service.parameters.genSources.get()) {
             generateSources(context)
             patchedSourcesJar
@@ -180,20 +182,17 @@ class SetupHandlerImplV4(
             minecraftVersion,
         )
 
-        setupArchivedPublications()
-
         setupCompleted = true
     }
 
-    private fun setupArchivedPublications() {
-        val maven = cache.resolve(MAVEN_REPOSITORY)
-        maven.deleteRecursively()
-        maven.createDirectories()
-        for (name in bundle.config.archivedPublications.keys) {
-            bundle.dir.resolve("${bundle.config.archivedPublicationsDir}/$name.zip").openZip().use { fs ->
-                fs.getPath("/").copyRecursivelyTo(maven)
-            }
-        }
+    private fun setupArchivedPublications(context: SetupHandler.Context) {
+        val step = SetupArchivedPublications(
+            cache.resolve(MAVEN_REPOSITORY),
+            bundle.config.archivedPublications.keys.sorted(),
+            bundle.dir.resolve(bundle.config.archivedPublicationsDir),
+            cache.resolve(paperSetupOutput("setupArchivedPublications", "txt"))
+        )
+        StepExecutor.executeStep(context, step)
     }
 
     override fun configureIvyRepo(repo: IvyArtifactRepository) {
