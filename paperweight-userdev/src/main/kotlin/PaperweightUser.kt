@@ -170,6 +170,8 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
+        userdevSetup.addLocalRepositories(project)
+
         maven(userdevSetup.paramMappings.url) {
             name = PARAM_MAPPINGS_REPO_NAME
             content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
@@ -185,8 +187,6 @@ abstract class PaperweightUser : Plugin<Project> {
         for (repo in userdevSetup.libraryRepositories) {
             maven(repo)
         }
-
-        userdevSetup.addIvyRepository(project)
     }
 
     private fun Project.checkForDevBundle() {
@@ -237,7 +237,7 @@ abstract class PaperweightUser : Plugin<Project> {
             defaultDependencies {
                 val ctx = createContext(target)
                 userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
+                    setup.createOrUpdateLocalRepositories(ctx)
                     setup.populateCompileConfiguration(ctx, this)
                 }
             }
@@ -258,7 +258,7 @@ abstract class PaperweightUser : Plugin<Project> {
             defaultDependencies {
                 val ctx = createContext(target)
                 userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
+                    setup.createOrUpdateLocalRepositories(ctx)
                     setup.populateRuntimeConfiguration(ctx, this)
                 }
             }

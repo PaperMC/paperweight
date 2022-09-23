@@ -20,14 +20,14 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.v2
+package io.papermc.paperweight.userdev.internal.setup.v3
 
 import io.papermc.paperweight.extension.Relocation
 import io.papermc.paperweight.userdev.internal.setup.DevBundleVersions
 import io.papermc.paperweight.util.*
 
-object DevBundleV2 {
-    val version = DevBundleVersions.SupportedVersion(2, Config::class, SetupHandlerImplV2) // 1.17.1
+object DevBundleV3 {
+    val version = DevBundleVersions.SupportedVersion(3, Config::class, SetupHandlerImplV3)
 
     data class Config(
         val minecraftVersion: String,
@@ -36,7 +36,7 @@ object DevBundleV2 {
         val mojangApiCoordinates: String,
         val buildData: BuildData,
         val decompile: Runner,
-        val remap: Runner,
+        val remapper: MavenDep,
         val patchDir: String
     )
 
@@ -46,10 +46,12 @@ object DevBundleV2 {
         val accessTransformFile: String,
         val mojangMappedPaperclipFile: String,
         val vanillaJarIncludes: List<String>,
-        val vanillaServerLibraries: List<String>,
-        val libraryDependencies: Set<String>,
+        val compileDependencies: List<String>,
+        val runtimeDependencies: List<String>,
         val libraryRepositories: List<String>,
-        val relocations: List<Relocation>
+        val relocations: List<Relocation>,
+        val minecraftRemapArgs: List<String>,
+        val pluginRemapArgs: List<String>,
     )
 
     data class Runner(val dep: MavenDep, val args: List<String>)

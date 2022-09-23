@@ -32,17 +32,14 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
-import javax.inject.Inject
 import kotlin.io.path.*
 import org.apache.tools.ant.types.selectors.SelectorUtils
-import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.ListProperty
@@ -52,10 +49,12 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.TaskProvider
 
-abstract class GenerateDevBundle : DefaultTask() {
+abstract class GenerateDevBundle : BaseTask() {
 
     @get:InputFile
     abstract val decompiledJar: RegularFileProperty
@@ -74,12 +73,6 @@ abstract class GenerateDevBundle : DefaultTask() {
 
     @get:Input
     abstract val serverCoordinates: Property<String>
-
-    @get:Input
-    abstract val apiCoordinates: Property<String>
-
-    @get:Input
-    abstract val mojangApiCoordinates: Property<String>
 
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
@@ -126,8 +119,36 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:OutputFile
     abstract val devBundleFile: RegularFileProperty
 
-    @get:Inject
-    abstract val layout: ProjectLayout
+    @get:Nested
+    abstract val archivedMavenPublications: ListProperty<ArchivedPublication>
+
+    data class ArchivedPublication(
+        @get:Input
+        val name: String,
+        @get:InputFile
+        val file: RegularFileProperty,
+        @get:Input
+        val coordinates: String,
+    )
+
+    fun archivedPublication(
+        name: String,
+        archivedPublication: TaskProvider<ArchivePublication>,
+        coordinates: String
+    ) {
+        val publication = ArchivedPublication(
+            name,
+            objects.fileProperty().convention(archivedPublication.flatMap { it.outputZip }),
+            coordinates,
+        )
+        archivedMavenPublications.add(publication)
+    }
+
+    fun projectArchivedPublication(
+        project: Project,
+        archivedPublication: TaskProvider<ArchivePublication>,
+        coordinates: String
+    ) = archivedPublication(project.name, archivedPublication, coordinates)
 
     @TaskAction
     fun run() {
@@ -141,7 +162,8 @@ abstract class GenerateDevBundle : DefaultTask() {
 
             val dataDir = "data"
             val patchesDir = "patches"
-            val config = createBundleConfig(dataDir, patchesDir)
+            val archivedDir = "$dataDir/archivedMavenPublications"
+            val config = createBundleConfig(dataDir, patchesDir, archivedDir)
 
             devBundle.writeZip().use { zip ->
                 zip.getPath("config.json").bufferedWriter(Charsets.UTF_8).use { writer ->
@@ -154,6 +176,12 @@ abstract class GenerateDevBundle : DefaultTask() {
                 reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
                 mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
                 atFile.path.copyTo(dataZip.resolve(atFileName))
+
+                archivedMavenPublications.get().forEach { archived ->
+                    val pubs = zip.getPath(archivedDir)
+                    pubs.createDirectories()
+                    archived.file.path.copyTo(pubs.resolve("${archived.name}.zip"))
+                }
 
                 val patchesZip = zip.getPath(patchesDir)
                 tempPatchDir.copyRecursivelyTo(patchesZip)
@@ -298,12 +326,16 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     @Suppress("SameParameterValue")
-    private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
+    private fun createBundleConfig(
+        dataTargetDir: String,
+        patchTargetDir: String,
+        archivedDir: String,
+    ): DevBundleConfig {
         return DevBundleConfig(
             minecraftVersion = minecraftVersion.get(),
             mappedServerCoordinates = serverCoordinates.get(),
-            apiCoordinates = "${apiCoordinates.get()}:${serverVersion.get()}",
-            mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverVersion.get()}",
+            archivedPublications = archivedMavenPublications.get().associate { it.name to it.coordinates },
+            archivedPublicationsDir = archivedDir,
             buildData = createBuildDataConfig(dataTargetDir),
             decompile = createDecompileRunner(),
             remapper = createRemapDep(),
@@ -386,8 +418,8 @@ abstract class GenerateDevBundle : DefaultTask() {
     data class DevBundleConfig(
         val minecraftVersion: String,
         val mappedServerCoordinates: String,
-        val apiCoordinates: String,
-        val mojangApiCoordinates: String,
+        val archivedPublications: Map<String, String>,
+        val archivedPublicationsDir: String,
         val buildData: BuildData,
         val decompile: Runner,
         val remapper: MavenDep,
@@ -416,7 +448,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 3
+        const val currentDataVersion = 4
 
         fun createCoordinatesFor(project: Project): String =
             sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")

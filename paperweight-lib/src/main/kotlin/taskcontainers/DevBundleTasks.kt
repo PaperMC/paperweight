@@ -122,3 +122,18 @@ class DevBundleTasks(
         }
     }
 }
+
+/**
+ * Registers a project dependency to have its publication included in the dev bundle, and it's coordinates
+ * depended on by the server artifact. Paper registers `paper-api` and `paper-mojangapi` using this method.
+ */
+fun Project.registerProjectPublicationForDevBundle(
+    project: Project,
+    publicationName: String,
+    coordinates: String,
+) {
+    val archive = project.archivePublication(publicationName)
+    tasks.named<GenerateDevBundle>("generateDevelopmentBundle") {
+        projectArchivedPublication(project, archive, coordinates)
+    }
+}

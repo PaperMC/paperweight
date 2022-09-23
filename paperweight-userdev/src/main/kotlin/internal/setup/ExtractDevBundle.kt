@@ -23,16 +23,9 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
-
-private val supported = mapOf(
-    2 to DevBundleV2.Config::class, // 1.17.1
-    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class,
-)
 
 data class ExtractedBundle<C>(
     val changed: Boolean,
@@ -73,17 +66,12 @@ private fun readDevBundle(
     extractedDevBundlePath: Path
 ): Pair<Any, Int> {
     val dataVersion = extractedDevBundlePath.resolve("data-version.txt").readText().trim().toInt()
-    if (dataVersion !in supported) {
-        throw PaperweightException(
-            "The paperweight development bundle you are attempting to use is of data version '$dataVersion', but" +
-                " the currently running version of paperweight only supports data versions '$supported'."
-        )
-    }
+    DevBundleVersions.checkSupported(dataVersion)
 
-    val configClass = supported[dataVersion] ?: throw PaperweightException("Could not find config class for version $dataVersion?")
+    val ver = DevBundleVersions.versions[dataVersion] ?: throw PaperweightException("Could not find data version $dataVersion?")
     val configFile = extractedDevBundlePath.resolve("config.json")
     val config: Any = configFile.bufferedReader(Charsets.UTF_8).use { reader ->
-        gson.fromJson(reader, configClass.java)
+        gson.fromJson(reader, ver.configType.java)
     }
     return config to dataVersion
 }
