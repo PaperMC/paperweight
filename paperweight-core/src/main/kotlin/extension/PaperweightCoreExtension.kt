@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.extension
 
+import io.papermc.paperweight.extension.DevBundleExtension
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.util.Locale
@@ -73,5 +74,13 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     @Suppress("unused")
     fun paper(action: Action<in PaperExtension>) {
         action.execute(paper)
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    val devBundle = DevBundleExtension(project, objects)
+
+    @Suppress("unused")
+    fun devBundle(action: Action<in DevBundleExtension>) {
+        action.execute(devBundle)
     }
 }

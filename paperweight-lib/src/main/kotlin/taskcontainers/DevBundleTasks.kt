@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.taskcontainers
 
+import io.papermc.paperweight.extension.DevBundleExtension
 import io.papermc.paperweight.extension.RelocationExtension
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
@@ -72,6 +73,7 @@ class DevBundleTasks(
         vanillaBundlerJarFile: Provider<Path?>,
         accessTransformFile: Provider<Path?>,
         versionJsonFile: Provider<RegularFile>,
+        devBundleExtension: DevBundleExtension,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
         serverBundlerForDevBundle {
@@ -110,6 +112,8 @@ class DevBundleTasks(
             decompiledJar.pathProvider(decompileJar)
             atFile.pathProvider(accessTransformFile)
 
+            libraryRepositories.addAll(devBundleExtension.libraryRepositories)
+
             devBundleConfiguration(this)
         }
     }
@@ -119,20 +123,5 @@ class DevBundleTasks(
             remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
             decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).map { it.url.toString() })
         }
-    }
-}
-
-/**
- * Registers a project dependency to have its publication included in the dev bundle, and it's coordinates
- * depended on by the server artifact. Paper registers `paper-api` and `paper-mojangapi` using this method.
- */
-fun Project.registerProjectPublicationForDevBundle(
-    project: Project,
-    publicationName: String,
-    coordinates: String,
-) {
-    val archive = project.archivePublication(publicationName)
-    tasks.named<GenerateDevBundle>("generateDevelopmentBundle") {
-        projectArchivedPublication(project, archive, coordinates)
     }
 }

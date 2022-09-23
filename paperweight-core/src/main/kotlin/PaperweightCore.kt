@@ -162,7 +162,8 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
                 tasks.mergeAdditionalAts.map { it.outputFile.path },
-                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
+                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers),
+                ext.devBundle,
             ) {
                 vanillaJarIncludes.set(ext.vanillaJarIncludes)
                 reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })

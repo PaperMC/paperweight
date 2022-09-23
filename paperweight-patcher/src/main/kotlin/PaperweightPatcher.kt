@@ -179,7 +179,8 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.serverLibrariesList },
                 upstreamData.map { it.vanillaJar },
                 upstreamData.map { it.accessTransform },
-                upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(layout, providers)
+                upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(layout, providers),
+                patcher.devBundle,
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
                 reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
