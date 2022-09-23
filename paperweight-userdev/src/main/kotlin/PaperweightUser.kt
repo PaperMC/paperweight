@@ -170,7 +170,18 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
+        // Initial repos
+        val before = toList()
+
+        // Add local repos
         userdevSetup.addLocalRepositories(project)
+
+        // Move local repos to front
+        val new = toList().subtract(before.toSet())
+        new.forEach {
+            remove(it)
+            addFirst(it)
+        }
 
         maven(userdevSetup.paramMappings.url) {
             name = PARAM_MAPPINGS_REPO_NAME
