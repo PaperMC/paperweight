@@ -102,7 +102,6 @@ class DevBundleTasks(
                 }
             )
 
-            serverVersion.set(serverProj.version.toString())
             serverCoordinates.set(GenerateDevBundle.createCoordinatesFor(serverProj))
             serverProject.set(serverProj)
             runtimeConfiguration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))

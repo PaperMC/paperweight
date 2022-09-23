@@ -69,9 +69,6 @@ abstract class GenerateDevBundle : BaseTask() {
     abstract val mojangMappedPaperclipFile: RegularFileProperty
 
     @get:Input
-    abstract val serverVersion: Property<String>
-
-    @get:Input
     abstract val serverCoordinates: Property<String>
 
     @get:Input
