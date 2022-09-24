@@ -32,6 +32,7 @@ import io.papermc.paperweight.userdev.internal.setup.util.genSources
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
+import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.attributes.Bundling
@@ -43,6 +44,7 @@ import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -166,6 +168,7 @@ abstract class PaperweightUser : Plugin<Project> {
             checkForDevBundle()
 
             configureRepositories(userdevSetup)
+            ideaFixes(target)
         }
     }
 
@@ -273,6 +276,36 @@ abstract class PaperweightUser : Plugin<Project> {
                     setup.populateRuntimeConfiguration(ctx, this)
                 }
             }
+        }
+    }
+
+    private fun isIdeaSync(): Boolean =
+        java.lang.Boolean.parseBoolean(System.getProperty("idea.sync.active", "false"))
+
+    /**
+     * IDEA's DownloadSources task resolves sources weirdly, by resolving the compileClasspath once before it runs,
+     * gradle will already know where to look regardless. Also do this on syncs in general to attempt to allow automatic
+     * source downloads.
+     */
+    private fun ideaFixes(target: Project) {
+        val paperweightUserdevPrimeForIdea by target.tasks.registering<DefaultTask> {
+            inputs.files(target.configurations.named("compileClasspath"))
+            description = "Internal paperweight-userdev task ran before IntelliJ IDEA's DownloadSources task"
+            doLast {
+            }
+        }
+        target.tasks.all {
+            if (name == "DownloadSources") {
+                dependsOn(paperweightUserdevPrimeForIdea)
+            }
+        }
+
+        if (isIdeaSync()) {
+            val startParameter = target.gradle.startParameter
+            val taskRequests = ArrayList(startParameter.taskRequests)
+
+            taskRequests.add(DefaultTaskExecutionRequest(listOf(paperweightUserdevPrimeForIdea.name)))
+            startParameter.setTaskRequests(taskRequests)
         }
     }
 
