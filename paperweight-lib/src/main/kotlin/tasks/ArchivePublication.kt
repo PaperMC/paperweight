@@ -45,8 +45,8 @@ abstract class ArchivePublication : ZippedTask() {
 }
 
 fun Project.archivePublication(publicationName: String): TaskProvider<ArchivePublication> {
-    val repoName = "archiveTempRepo_$publicationName"
-    val repoDir = layout.buildDirectory.dir(repoName)
+    val repoName = "archive${publicationName.capitalize()}PublicationTempRepo"
+    val repoDir = layout.buildDirectory.dir("tmp/$repoName")
     the<PublishingExtension>().repositories {
         maven {
             name = repoName
