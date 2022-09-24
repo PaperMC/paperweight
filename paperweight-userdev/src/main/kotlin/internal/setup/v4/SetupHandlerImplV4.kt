@@ -20,23 +20,33 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup
+package io.papermc.paperweight.userdev.internal.setup.v4
 
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.internal.setup.ExtractedBundle
+import io.papermc.paperweight.userdev.internal.setup.RunPaperclip
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 
-class SetupHandlerImpl(
+class SetupHandlerImplV4(
     private val service: UserdevSetup,
     private val bundle: ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
     private val cache: Path = service.parameters.cache.path,
 ) : SetupHandler {
+    companion object : SetupHandler.Factory<GenerateDevBundle.DevBundleConfig> {
+        override fun create(setupService: UserdevSetup, extractedBundle: ExtractedBundle<GenerateDevBundle.DevBundleConfig>): SetupHandler =
+            SetupHandlerImplV4(setupService, extractedBundle)
+    }
+
     private val vanillaSteps by lazy {
         VanillaSteps(
             bundle.config.minecraftVersion,
@@ -142,10 +152,12 @@ class SetupHandlerImpl(
     private var setupCompleted = false
 
     @Synchronized
-    override fun createOrUpdateIvyRepository(context: SetupHandler.Context) {
+    override fun createOrUpdateLocalRepositories(context: SetupHandler.Context) {
         if (setupCompleted) {
             return
         }
+
+        setupArchivedPublications(context)
 
         val source = if (service.parameters.genSources.get()) {
             generateSources(context)
@@ -159,8 +171,7 @@ class SetupHandlerImpl(
         applyMojangMappedPaperclipPatch(context)
 
         val deps = bundle.config.buildData.compileDependencies.toList() +
-            bundle.config.apiCoordinates +
-            bundle.config.mojangApiCoordinates
+            bundle.config.archivedPublications.map { it.value }
         installPaperServer(
             cache,
             bundle.config.mappedServerCoordinates,
@@ -173,9 +184,27 @@ class SetupHandlerImpl(
         setupCompleted = true
     }
 
+    private fun setupArchivedPublications(context: SetupHandler.Context) {
+        val step = SetupArchivedPublications(
+            cache.resolve(MAVEN_REPOSITORY),
+            bundle.config.archivedPublications.keys.sorted(),
+            bundle.dir.resolve(bundle.config.archivedPublicationsDir),
+            cache.resolve(paperSetupOutput("setupArchivedPublications", "txt"))
+        )
+        StepExecutor.executeStep(context, step)
+    }
+
     override fun configureIvyRepo(repo: IvyArtifactRepository) {
         repo.content {
             includeFromDependencyNotation(bundle.config.mappedServerCoordinates)
+        }
+    }
+
+    override fun configureMavenRepo(repo: MavenArtifactRepository) {
+        repo.content {
+            for (coordinates in bundle.config.archivedPublications.values) {
+                includeFromDependencyNotation(coordinates)
+            }
         }
     }
 
@@ -184,18 +213,10 @@ class SetupHandlerImpl(
     }
 
     override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        listOf(
-            bundle.config.mappedServerCoordinates,
-            bundle.config.apiCoordinates,
-            bundle.config.mojangApiCoordinates
-        ).forEach { coordinate ->
-            val dep = context.project.dependencies.create(coordinate).also {
-                (it as ExternalModuleDependency).isTransitive = false
-            }
-            dependencySet.add(dep)
-        }
-
-        for (coordinates in bundle.config.buildData.runtimeDependencies) {
+        val coords = mutableListOf(bundle.config.mappedServerCoordinates)
+        coords += bundle.config.archivedPublications.values
+        coords += bundle.config.buildData.runtimeDependencies
+        for (coordinates in coords) {
             val dep = context.project.dependencies.create(coordinates).also {
                 (it as ExternalModuleDependency).isTransitive = false
             }
@@ -233,39 +254,10 @@ class SetupHandlerImpl(
         get() = bundle.config.buildData.libraryRepositories
 
     private fun createExtractFromBundlerStep(): ExtractFromBundlerStep = ExtractFromBundlerStep(
-        cache,
+        cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes")),
         vanillaSteps,
         vanillaServerJar,
         minecraftLibraryJars,
         ::minecraftLibraryJars
     )
-
-    private class ExtractFromBundlerStep(
-        cache: Path,
-        private val vanillaSteps: VanillaSteps,
-        private val vanillaServerJar: Path,
-        private val minecraftLibraryJars: Path,
-        private val listMinecraftLibraryJars: () -> List<Path>,
-    ) : SetupStep {
-        override val name: String = "extract libraries and server from downloaded jar"
-
-        override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
-
-        override fun run(context: SetupHandler.Context) {
-            ServerBundler.extractFromBundler(
-                vanillaSteps.mojangJar,
-                vanillaServerJar,
-                minecraftLibraryJars,
-                null,
-                null,
-                null,
-                null,
-            )
-        }
-
-        override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-            builder.include(vanillaSteps.mojangJar, vanillaServerJar)
-            builder.include(listMinecraftLibraryJars())
-        }
-    }
 }

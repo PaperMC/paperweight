@@ -59,7 +59,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     abstract val mainClass: Property<String>
 
     @get:Nested
-    val versionArtifacts: NamedDomainObjectContainer<VersionArtifact> = createVersionArtifactContainer()
+    val versionArtifacts: NamedDomainObjectContainer<VersionArtifact> = createNamedDomainObjectContainer()
 
     @get:Classpath
     @get:Optional
@@ -75,8 +75,8 @@ abstract class CreateBundlerJar : ZippedTask() {
     @get:OutputFile
     abstract val libraryChangesJson: RegularFileProperty
 
-    private fun createVersionArtifactContainer(): NamedDomainObjectContainer<VersionArtifact> =
-        objects.domainObjectContainer(VersionArtifact::class) { objects.newInstance(it) }
+    private inline fun <reified T : Any> createNamedDomainObjectContainer(): NamedDomainObjectContainer<T> =
+        objects.domainObjectContainer(T::class.java) { objects.newInstance(it) }
 
     override fun init() {
         super.init()

@@ -24,12 +24,12 @@ package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.IVY_REPOSITORY
-import io.papermc.paperweight.util.constants.paperSetupOutput
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -61,8 +61,12 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     private fun createSetup(): SetupHandler =
         SetupHandler.create(this, extractDevBundle)
 
-    fun addIvyRepository(project: Project) {
+    fun addLocalRepositories(project: Project) {
         project.repositories {
+            maven {
+                setUrl(parameters.cache.path.resolve(MAVEN_REPOSITORY))
+                configureMavenRepo(this)
+            }
             setupIvyRepository(parameters.cache.path.resolve(IVY_REPOSITORY)) {
                 configureIvyRepo(this)
             }
@@ -70,12 +74,16 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     }
 
     // begin delegate to setup
-    override fun createOrUpdateIvyRepository(context: SetupHandler.Context) {
-        setup.createOrUpdateIvyRepository(context)
+    override fun createOrUpdateLocalRepositories(context: SetupHandler.Context) {
+        setup.createOrUpdateLocalRepositories(context)
     }
 
     override fun configureIvyRepo(repo: IvyArtifactRepository) {
         setup.configureIvyRepo(repo)
+    }
+
+    override fun configureMavenRepo(repo: MavenArtifactRepository) {
+        setup.configureMavenRepo(repo)
     }
 
     override fun populateCompileConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {

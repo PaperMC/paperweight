@@ -72,8 +72,12 @@ fun hashFiles(files: List<Path>): String = files.asSequence()
         "${it.fileName.pathString}:${it.sha256asHex()}"
     }
 
-fun hashDirectory(dir: Path): String =
-    Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
+fun hashDirectory(dir: Path): String {
+    if (!dir.isDirectory()) {
+        return ""
+    }
+    return Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
+}
 
 fun DownloadService.download(
     downloadName: String,

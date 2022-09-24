@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.patcher
 
+import io.papermc.paperweight.extension.DevBundleExtension
 import io.papermc.paperweight.patcher.upstream.DefaultPaperRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.DefaultPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.DefaultRepoPatcherUpstream
@@ -65,6 +66,8 @@ open class PaperweightPatcherExtension(project: Project, private val objects: Ob
 
     val upstreams: ExtensiblePolymorphicDomainObjectContainer<PatcherUpstream> = objects.polymorphicDomainObjectContainer(PatcherUpstream::class)
 
+    val devBundle = DevBundleExtension(project, objects)
+
     /**
      * The directory upstreams should be checked out in. Paperweight will use the directory specified in the
      * following order, whichever is set first:
@@ -100,5 +103,9 @@ open class PaperweightPatcherExtension(project: Project, private val objects: Ob
                 action.execute(this)
             }
         }
+    }
+
+    fun devBundle(action: Action<in DevBundleExtension>) {
+        action.execute(devBundle)
     }
 }

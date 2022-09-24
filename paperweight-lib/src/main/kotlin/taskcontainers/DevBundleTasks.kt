@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.taskcontainers
 
+import io.papermc.paperweight.extension.DevBundleExtension
 import io.papermc.paperweight.extension.RelocationExtension
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
@@ -72,6 +73,7 @@ class DevBundleTasks(
         vanillaBundlerJarFile: Provider<Path?>,
         accessTransformFile: Provider<Path?>,
         versionJsonFile: Provider<RegularFile>,
+        devBundleExtension: DevBundleExtension,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
         serverBundlerForDevBundle {
@@ -102,7 +104,6 @@ class DevBundleTasks(
                 }
             )
 
-            serverVersion.set(serverProj.version.toString())
             serverCoordinates.set(GenerateDevBundle.createCoordinatesFor(serverProj))
             serverProject.set(serverProj)
             runtimeConfiguration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
@@ -110,6 +111,8 @@ class DevBundleTasks(
             relocations.set(serverProj.the<RelocationExtension>().relocations.map { gson.toJson(it) })
             decompiledJar.pathProvider(decompileJar)
             atFile.pathProvider(accessTransformFile)
+
+            libraryRepositories.addAll(devBundleExtension.libraryRepositories)
 
             devBundleConfiguration(this)
         }

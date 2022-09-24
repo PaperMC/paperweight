@@ -96,6 +96,7 @@ const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
 
 const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
+const val MAVEN_REPOSITORY = "$PAPER_PATH/mavenRepository"
 
 const val RELOCATION_EXTENSION = "relocation"
 

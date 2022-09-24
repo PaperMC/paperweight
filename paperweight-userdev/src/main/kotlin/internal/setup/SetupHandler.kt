@@ -23,22 +23,23 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
-import io.papermc.paperweight.userdev.internal.setup.v2.SetupHandlerImplV2
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
-    fun createOrUpdateIvyRepository(context: Context)
+    fun createOrUpdateLocalRepositories(context: Context)
 
     fun configureIvyRepo(repo: IvyArtifactRepository)
+
+    fun configureMavenRepo(repo: MavenArtifactRepository) {
+    }
 
     fun populateCompileConfiguration(context: Context, dependencySet: DependencySet)
 
@@ -71,21 +72,21 @@ interface SetupHandler {
             get() = javaToolchainService.defaultJavaLauncher(project).get()
     }
 
+    fun interface Factory<C> {
+        fun create(setupService: UserdevSetup, extractedBundle: ExtractedBundle<C>): SetupHandler
+    }
+
     companion object {
         @Suppress("unchecked_cast")
         fun create(
             setupService: UserdevSetup,
             extractedBundle: ExtractedBundle<Any>
-        ): SetupHandler = when (extractedBundle.config) {
-            is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
-                setupService,
-                extractedBundle as ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
-            )
-            is DevBundleV2.Config -> SetupHandlerImplV2(
-                setupService,
-                extractedBundle as ExtractedBundle<DevBundleV2.Config>
-            )
-            else -> throw PaperweightException("Unknown dev bundle config type: ${extractedBundle.config::class.java.typeName}")
+        ): SetupHandler {
+            if (extractedBundle.config::class !in DevBundleVersions.versionsByConfigType) {
+                throw PaperweightException("Unknown dev bundle config type: ${extractedBundle.config::class.java.typeName}")
+            }
+            return (DevBundleVersions.versionsByConfigType[extractedBundle.config::class]!!.factory as Factory<Any>)
+                .create(setupService, extractedBundle)
         }
     }
 }
