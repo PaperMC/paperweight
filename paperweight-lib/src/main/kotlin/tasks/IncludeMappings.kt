@@ -25,14 +25,14 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.defaultOutput
 import io.papermc.paperweight.util.openZip
 import io.papermc.paperweight.util.path
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
 
 abstract class IncludeMappings : BaseTask() {
     @get:InputFile
