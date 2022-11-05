@@ -53,9 +53,11 @@ import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 
@@ -193,14 +195,27 @@ abstract class ScanJarForBadCalls : JavaLauncherTask() {
 
         private fun handleInstruction(classNode: ClassNode, method: MethodNode, absIsnNode: AbstractInsnNode, classNodeCache: ClassNodeCache) {
             when (absIsnNode) {
+                is InvokeDynamicInsnNode -> handleInvokeDynamic(classNode, method, absIsnNode, classNodeCache)
                 is MethodInsnNode -> handleMethodInvocation(classNode, method, absIsnNode, classNodeCache)
             }
         }
 
+        private fun handleInvokeDynamic(classNode: ClassNode, method: MethodNode, invokeDynamicInsnNode: InvokeDynamicInsnNode, classNodeCache: ClassNodeCache) {
+            if (invokeDynamicInsnNode.bsm.owner == "java/lang/invoke/LambdaMetafactory" && invokeDynamicInsnNode.bsmArgs.size > 1) {
+                when (val methodHandle = invokeDynamicInsnNode.bsmArgs[1]) {
+                    is Handle -> checkMethod(classNode, method, methodHandle.owner, methodHandle.name, methodHandle.desc, classNodeCache)
+                }
+            }
+        }
+
         private fun handleMethodInvocation(classNode: ClassNode, method: MethodNode, methodIsnNode: MethodInsnNode, classNodeCache: ClassNodeCache) {
-            val targetOwner = classNodeCache.findClass(methodIsnNode.owner) ?: return
+            checkMethod(classNode, method, methodIsnNode.owner, methodIsnNode.name, methodIsnNode.desc, classNodeCache)
+        }
+
+        private fun checkMethod(classNode: ClassNode, method: MethodNode, owner: String, name: String, desc: String, classNodeCache: ClassNodeCache) {
+            val targetOwner = classNodeCache.findClass(owner) ?: return
             val target = targetOwner.methods.find {
-                it.name == methodIsnNode.name && it.desc == methodIsnNode.desc
+                it.name == name && it.desc == desc
             } ?: return
 
             val annotations = (target.visibleAnnotations ?: emptyList()) + (target.invisibleAnnotations ?: emptyList())
@@ -215,7 +230,7 @@ abstract class ScanJarForBadCalls : JavaLauncherTask() {
             val methodDelimiter = if (Opcodes.ACC_STATIC in method.access) '.' else '#'
             val targetMethodDelimiter = if (Opcodes.ACC_STATIC in target.access) '.' else '#'
             return "Method ${classNode.name}$methodDelimiter${method.name}${method.desc} " +
-                "makes call to bad method ${targetOwner.name}$targetMethodDelimiter${target.name}${target.desc}"
+                "includes reference to bad method ${targetOwner.name}$targetMethodDelimiter${target.name}${target.desc}"
         }
     }
 }
