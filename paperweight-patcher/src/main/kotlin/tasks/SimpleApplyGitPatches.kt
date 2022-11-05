@@ -24,6 +24,7 @@ package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
@@ -66,6 +67,10 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
     @get:Optional
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
+
+    @get:Optional
+    @get:InputDirectory
+    abstract val spigotLibrariesSourceDir: DirectoryProperty
 
     @get:Input
     abstract val ignoreGitIgnore: Property<Boolean>
@@ -119,13 +124,16 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
         val srcDir = output.resolve("src/main/java")
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
+        val librarySources = ArrayList<Path>()
+        mcLibrariesDir.pathOrNull?.let { librarySources.add(it) }
+        spigotLibrariesSourceDir.pathOrNull?.let { librarySources.add(it) }
 
         if (sourceMcDevJar.isPresent && importMcDev.get()) {
             McDev.importMcDev(
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDirs = mcLibrariesDir.pathOrNull?.let { listOf(it) },
+                librariesDirs = librarySources,
                 targetDir = srcDir,
                 printOutput = printOutput.get()
             )

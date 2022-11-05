@@ -151,6 +151,7 @@ class PaperweightPatcher : Plugin<Project> {
                     patchTask.patchTask {
                         sourceMcDevJar.convention(target, upstreamData.map { it.decompiledJar })
                         mcLibrariesDir.convention(target, upstreamData.map { it.libSourceDir })
+                        spigotLibrariesSourceDir.convention(target, upstreamData.map { it.spigotLibSourcesDir })
                     }
                 }
             }
