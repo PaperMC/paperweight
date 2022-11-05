@@ -125,7 +125,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDir = mcLibrariesDir.pathOrNull,
+                librariesDirs = mcLibrariesDir.pathOrNull?.let { listOf(it) },
                 targetDir = srcDir,
                 printOutput = printOutput.get()
             )

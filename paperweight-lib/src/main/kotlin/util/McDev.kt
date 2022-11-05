@@ -41,7 +41,7 @@ object McDev {
         patches: Iterable<Path>,
         decompJar: Path,
         importsFile: Path?,
-        librariesDir: Path?,
+        librariesDirs: List<Path>?,
         targetDir: Path,
         printOutput: Boolean = true
     ) {
@@ -100,7 +100,7 @@ object McDev {
             }
         }
 
-        val libFiles = librariesDir?.listDirectoryEntries("*-sources.jar") ?: return
+        val libFiles = librariesDirs?.flatMap { it.listDirectoryEntries("*-sources.jar") } ?: return
         if (libFiles.isEmpty()) {
             throw PaperweightException("No library files found")
         }

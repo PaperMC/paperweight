@@ -150,6 +150,9 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
+    @get:OutputDirectory
+    abstract val outputSourcesDir: DirectoryProperty
+
     @get:Internal
     abstract val downloader: Property<DownloadService>
 
@@ -164,6 +167,10 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         val out = outputDir.path
         val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
         out.deleteRecursively(excludes)
+
+        val outSources = outputSourcesDir.path
+        val excludesSources = listOf(outSources.fileSystem.getPathMatcher("glob:*.etag"))
+        outSources.deleteRecursively(excludesSources)
 
         val spigotRepos = mutableSetOf<String>()
         spigotRepos += apiSetup.repos
@@ -180,6 +187,12 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                 artifact.set(art.toString())
                 target.set(out)
                 downloadToDir.set(true)
+                downloader.set(this@DownloadSpigotDependencies.downloader)
+            }
+            queue.submit(DownloadSourcesToDirAction::class) {
+                repos.set(spigotRepos)
+                artifact.set(art.toString())
+                target.set(outSources)
                 downloader.set(this@DownloadSpigotDependencies.downloader)
             }
         }

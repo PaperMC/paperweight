@@ -169,6 +169,7 @@ open class SpigotTasks(
         apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
         serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
         outputDir.set(cache.resolve(SPIGOT_JARS_PATH))
+        outputSourcesDir.set(cache.resolve(SPIGOT_SOURCES_JARS_PATH))
 
         downloader.set(downloadService)
     }

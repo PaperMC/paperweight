@@ -176,7 +176,7 @@ abstract class RemapPatches : BaseTask() {
                     patches = patchesToSkip + patchesToRemap,
                     decompJar = spigotDecompJar.path,
                     importsFile = devImports.path,
-                    librariesDir = mcLibrarySourcesDir.path,
+                    librariesDirs = listOf(mcLibrarySourcesDir.path),
                     targetDir = tempInputDir.resolve("src/main/java")
                 )
 

@@ -65,6 +65,9 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
+    @get:InputDirectory
+    abstract val spigotLibrariesDir: DirectoryProperty
+
     @get:Optional
     @get:InputFile
     abstract val devImports: RegularFileProperty
@@ -123,7 +126,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDir = mcLibrariesDir.path,
+                librariesDirs = listOf(mcLibrariesDir.path, spigotLibrariesDir.path),
                 targetDir = sourceDir,
                 printOutput = printOutput.get()
             )
