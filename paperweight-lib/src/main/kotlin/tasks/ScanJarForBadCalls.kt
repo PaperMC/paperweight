@@ -200,7 +200,12 @@ abstract class ScanJarForBadCalls : JavaLauncherTask() {
             }
         }
 
-        private fun handleInvokeDynamic(classNode: ClassNode, method: MethodNode, invokeDynamicInsnNode: InvokeDynamicInsnNode, classNodeCache: ClassNodeCache) {
+        private fun handleInvokeDynamic(
+            classNode: ClassNode,
+            method: MethodNode,
+            invokeDynamicInsnNode: InvokeDynamicInsnNode,
+            classNodeCache: ClassNodeCache
+        ) {
             if (invokeDynamicInsnNode.bsm.owner == "java/lang/invoke/LambdaMetafactory" && invokeDynamicInsnNode.bsmArgs.size > 1) {
                 when (val methodHandle = invokeDynamicInsnNode.bsmArgs[1]) {
                     is Handle -> checkMethod(classNode, method, methodHandle.owner, methodHandle.name, methodHandle.desc, classNodeCache)
