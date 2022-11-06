@@ -147,6 +147,10 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val serverPom: RegularFileProperty
 
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val mcLibrariesDir: DirectoryProperty
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -180,6 +184,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         artifacts += apiSetup.artifacts
         artifacts += serverSetup.artifacts
 
+        val mcLibraries = mcLibrariesDir.path.listDirectoryEntries("*-sources.jar").map { it.fileName.toString() }
         val queue = workerExecutor.noIsolation()
         for (art in artifacts) {
             queue.submit(DownloadWorker::class) {
@@ -189,11 +194,14 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                 downloadToDir.set(true)
                 downloader.set(this@DownloadSpigotDependencies.downloader)
             }
-            queue.submit(DownloadSourcesToDirAction::class) {
-                repos.set(spigotRepos)
-                artifact.set(art.toString())
-                target.set(outSources)
-                downloader.set(this@DownloadSpigotDependencies.downloader)
+            val mvnArtifact = MavenArtifact.parse(art.toString()).copy(classifier = "sources")
+            if (!mcLibraries.contains(mvnArtifact.file)) { // skip libraries already downloaded
+                queue.submit(DownloadSourcesToDirAction::class) {
+                    repos.set(spigotRepos)
+                    artifact.set(art.toString())
+                    target.set(outSources)
+                    downloader.set(this@DownloadSpigotDependencies.downloader)
+                }
             }
         }
     }

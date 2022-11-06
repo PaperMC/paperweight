@@ -168,6 +168,7 @@ open class SpigotTasks(
         dependsOn(patchSpigot)
         apiPom.set(patchSpigotApi.flatMap { it.outputDir.file("pom.xml") })
         serverPom.set(patchSpigotServer.flatMap { it.outputDir.file("pom.xml") })
+        mcLibrariesDir.set(tasks.named<DownloadMcLibraries>("downloadMcLibrariesSources").flatMap { it.outputDir })
         outputDir.set(cache.resolve(SPIGOT_JARS_PATH))
         outputSourcesDir.set(cache.resolve(SPIGOT_SOURCES_JARS_PATH))
 

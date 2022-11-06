@@ -133,7 +133,7 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDirs = librarySources,
+                librariesDirs = if (librarySources.isEmpty()) null else librarySources,
                 targetDir = srcDir,
                 printOutput = printOutput.get()
             )
