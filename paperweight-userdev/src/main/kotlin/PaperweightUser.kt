@@ -38,11 +38,9 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
-import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -136,25 +134,8 @@ abstract class PaperweightUser : Plugin<Project> {
                 return@afterEvaluate
             }
 
-            val jar = tasks.named<AbstractArchiveTask>("jar") {
-                archiveClassifier.set("dev")
-            }
-
-            val devJarTask = if (tasks.findByName("shadowJar") != null) {
-                tasks.named<AbstractArchiveTask>("shadowJar") {
-                    archiveClassifier.set("dev-all")
-                }
-            } else {
-                jar
-            }
-
-            val archivesName = target.extensions.findByType(BasePluginExtension::class)?.archivesName
-                ?: target.provider { target.name }
-
-            reobfJar {
-                inputJar.set(devJarTask.flatMap { it.archiveFile })
-                outputJar.convention(archivesName.flatMap { layout.buildDirectory.file("libs/$it-${project.version}.jar") })
-            }
+            userdev.reobfArtifactConfiguration.get()
+                .configure(target, reobfJar)
 
             if (userdev.injectPaperRepository.get()) {
                 target.repositories.maven(PAPER_MAVEN_REPO_URL) {
