@@ -78,7 +78,7 @@ fun interface ReobfArtifactConfiguration {
             }
         }
 
-        private fun archivesName(project: Project): Provider<String> =
+        fun archivesName(project: Project): Provider<String> =
             project.extensions.findByType(BasePluginExtension::class)?.archivesName ?: project.provider { project.name }
     }
 }
