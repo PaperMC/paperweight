@@ -51,6 +51,13 @@ abstract class PaperweightUserExtension(
     val injectPaperRepository: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     /**
+     * The [ReobfArtifactConfiguration] is responsible for setting the input and output jars for `reobfJar`,
+     * as well as changing the classifiers of other jars (i.e. `jar` or `shadowJar`).
+     */
+    val reobfArtifactConfiguration: Property<ReobfArtifactConfiguration> = objects.property<ReobfArtifactConfiguration>()
+        .convention(ReobfArtifactConfiguration.REOBF_PRODUCTION)
+
+    /**
      * Provides a runnable Mojang mapped server jar, extracted from the current dev bundle.
      */
     @Deprecated(
