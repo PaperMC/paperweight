@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.MavenArtifact
 import java.nio.file.Path
 import javax.inject.Inject
@@ -67,7 +68,7 @@ abstract class DownloadMcLibraries : BaseTask() {
     abstract val mcLibrariesFile: RegularFileProperty
 
     @get:Input
-    abstract val mcRepo: Property<String>
+    abstract val repositories: ListProperty<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -92,7 +93,7 @@ abstract class DownloadMcLibraries : BaseTask() {
             downloader,
             workerExecutor,
             outputDir.path,
-            mcRepo.get(),
+            repositories.get(),
             mcLibrariesFile.path.readLines(),
             sources.get()
         )
@@ -103,28 +104,26 @@ fun downloadMinecraftLibraries(
     download: Provider<DownloadService>,
     workerExecutor: WorkerExecutor,
     targetDir: Path,
-    mcRepo: String,
+    repositories: List<String>,
     mcLibraries: List<String>,
     sources: Boolean
 ): WorkQueue {
     val excludes = listOf(targetDir.fileSystem.getPathMatcher("glob:*.etag"))
     targetDir.deleteRecursively(excludes)
 
-    val mcRepos = listOf(mcRepo)
-
     val queue = workerExecutor.noIsolation()
 
     for (lib in mcLibraries) {
         if (sources) {
             queue.submit(DownloadSourcesToDirAction::class) {
-                repos.set(mcRepos)
+                repos.set(repositories)
                 artifact.set(lib)
                 target.set(targetDir)
                 downloader.set(download)
             }
         } else {
             queue.submit(DownloadWorker::class) {
-                repos.set(mcRepos)
+                repos.set(repositories)
                 artifact.set(lib)
                 target.set(targetDir)
                 downloadToDir.set(true)
@@ -147,9 +146,9 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val serverPom: RegularFileProperty
 
-    @get:InputDirectory
+    @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mcLibrariesDir: DirectoryProperty
+    abstract val mcLibrariesFile: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -167,6 +166,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     fun run() {
         val apiSetup = parsePom(apiPom.path)
         val serverSetup = parsePom(serverPom.path)
+        val mcLibraries = mcLibrariesFile.path.readLines()
 
         val out = outputDir.path
         val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
@@ -184,7 +184,6 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         artifacts += apiSetup.artifacts
         artifacts += serverSetup.artifacts
 
-        val mcLibraries = mcLibrariesDir.path.listDirectoryEntries("*-sources.jar").map { it.fileName.toString() }
         val queue = workerExecutor.noIsolation()
         for (art in artifacts) {
             queue.submit(DownloadWorker::class) {
@@ -194,8 +193,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                 downloadToDir.set(true)
                 downloader.set(this@DownloadSpigotDependencies.downloader)
             }
-            val mvnArtifact = MavenArtifact.parse(art.toString()).copy(classifier = "sources")
-            if (!mcLibraries.contains(mvnArtifact.file)) { // skip libraries already downloaded
+            if (!mcLibraries.contains(art.toString())) {
                 queue.submit(DownloadSourcesToDirAction::class) {
                     repos.set(spigotRepos)
                     artifact.set(art.toString())
@@ -217,7 +215,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         depList += MavenArtifact(
             "org.apache.logging.log4j",
             "log4j-api",
-            "2.16.0"
+            "2.17.0"
         )
         depList += MavenArtifact(
             "org.jetbrains",
@@ -226,7 +224,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         )
         val repoList = arrayListOf<String>()
         // Maven Central is implicit
-        repoList += "https://repo.maven.apache.org/maven2/"
+        repoList += MAVEN_CENTRAL_URL
 
         val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val doc = pomFile.inputStream().buffered().use { stream ->

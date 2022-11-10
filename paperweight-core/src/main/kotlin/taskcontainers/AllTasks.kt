@@ -95,7 +95,7 @@ open class AllTasks(
 
     val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
         mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
-        mcRepo.set(MC_LIBRARY_URL)
+        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
         outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
         sources.set(true)
 

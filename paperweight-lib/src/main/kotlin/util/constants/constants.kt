@@ -33,6 +33,8 @@ const val MC_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_mani
 
 const val PAPER_MAVEN_REPO_URL = "https://repo.papermc.io/repository/maven-public/"
 
+const val MAVEN_CENTRAL_URL = "https://repo.maven.apache.org/maven2/"
+
 const val PARAM_MAPPINGS_CONFIG = "paramMappings"
 const val REMAPPER_CONFIG = "remapper"
 const val DECOMPILER_CONFIG = "decompiler"
