@@ -24,7 +24,9 @@ package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.tasks.*
 import org.gradle.api.Project
+import org.gradle.api.UnknownTaskException
 import org.gradle.api.plugins.BasePluginExtension
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -45,15 +47,15 @@ fun interface ReobfArtifactConfiguration {
          * the `reobfJar`, falling back to the project name if it is not configured.
          */
         val REOBF_PRODUCTION: ReobfArtifactConfiguration = ReobfArtifactConfiguration { project, reobfJar ->
-            val jar = project.tasks.named<AbstractArchiveTask>("jar") {
+            val jar = project.tasks.named<AbstractArchiveTask>(JavaPlugin.JAR_TASK_NAME) {
                 archiveClassifier.set("dev")
             }
 
-            val devJarTask = if (project.tasks.findByName("shadowJar") != null) {
+            val devJarTask = try {
                 project.tasks.named<AbstractArchiveTask>("shadowJar") {
                     archiveClassifier.set("dev-all")
                 }
-            } else {
+            } catch (ex: UnknownTaskException) {
                 jar
             }
 
@@ -70,8 +72,11 @@ fun interface ReobfArtifactConfiguration {
          * the `reobfJar`, falling back to the project name if it is not configured.
          */
         val MOJANG_PRODUCTION: ReobfArtifactConfiguration = ReobfArtifactConfiguration { project, reobfJar ->
-            val devJarName = if (project.tasks.findByName("shadowJar") != null) "shadowJar" else "jar"
-            val devJarTask = project.tasks.named<AbstractArchiveTask>(devJarName)
+            val devJarTask = try {
+                project.tasks.named<AbstractArchiveTask>("shadowJar")
+            } catch (ex: UnknownTaskException) {
+                project.tasks.named<AbstractArchiveTask>(JavaPlugin.JAR_TASK_NAME)
+            }
             reobfJar {
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
                 outputJar.convention(archivesName(project).flatMap { layout.buildDirectory.file("libs/$it-${project.version}-reobf.jar") })

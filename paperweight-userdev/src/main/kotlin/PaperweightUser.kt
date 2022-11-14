@@ -62,7 +62,7 @@ abstract class PaperweightUser : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.create(DEV_BUNDLE_CONFIG)
+        target.configurations.register(DEV_BUNDLE_CONFIG)
 
         // these must not be initialized until afterEvaluate, as they resolve the dev bundle
         val userdevSetup by lazy {
@@ -107,7 +107,7 @@ abstract class PaperweightUser : Plugin<Project> {
             remapperArgs.set(target.provider { userdevSetup.pluginRemapArgs })
         }
 
-        target.configurations.create(REOBF_CONFIG) {
+        target.configurations.register(REOBF_CONFIG) {
             isCanBeConsumed = true
             isCanBeResolved = false
             attributes {
@@ -224,7 +224,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.plugins.withType<JavaPlugin> {
+        target.plugins.withType<JavaPlugin>().configureEach {
             listOf(
                 JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
                 JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
