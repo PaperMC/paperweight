@@ -188,7 +188,7 @@ abstract class PaperweightUser : Plugin<Project> {
         target: Project,
         userdevSetup: Provider<UserdevSetup>
     ) {
-        target.configurations.create(DECOMPILER_CONFIG) {
+        target.configurations.register(DECOMPILER_CONFIG) {
             defaultDependencies {
                 for (dep in userdevSetup.get().decompiler.coordinates) {
                     add(target.dependencies.create(dep))
@@ -196,7 +196,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.configurations.create(PARAM_MAPPINGS_CONFIG) {
+        target.configurations.register(PARAM_MAPPINGS_CONFIG) {
             defaultDependencies {
                 for (dep in userdevSetup.get().paramMappings.coordinates) {
                     add(target.dependencies.create(dep))
@@ -204,7 +204,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.configurations.create(REMAPPER_CONFIG) {
+        target.configurations.register(REMAPPER_CONFIG) {
             isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
             defaultDependencies {
                 for (dep in userdevSetup.get().remapper.coordinates) {
@@ -213,7 +213,7 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        val mojangMappedServerConfig = target.configurations.create(MOJANG_MAPPED_SERVER_CONFIG) {
+        val mojangMappedServerConfig = target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
             exclude("junit", "junit") // json-simple exposes junit for some reason
             defaultDependencies {
                 val ctx = createContext(target)
@@ -230,12 +230,12 @@ abstract class PaperweightUser : Plugin<Project> {
                 JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
             ).map(target.configurations::named).forEach { config ->
                 config {
-                    extendsFrom(mojangMappedServerConfig)
+                    extendsFrom(mojangMappedServerConfig.get())
                 }
             }
         }
 
-        target.configurations.create(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
+        target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
             defaultDependencies {
                 val ctx = createContext(target)
                 userdevSetup.get().let { setup ->
