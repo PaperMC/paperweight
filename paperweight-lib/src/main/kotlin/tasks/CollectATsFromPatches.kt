@@ -8,14 +8,12 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class CollectATsFromPatches : BaseTask() {
 
     @get:Input
-    @get:Optional
     abstract val header: Property<String>
 
     @get:InputDirectory
