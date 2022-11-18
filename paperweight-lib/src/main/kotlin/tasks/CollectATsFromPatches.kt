@@ -56,7 +56,7 @@ abstract class CollectATsFromPatches : BaseTask() {
         outputFile.path.writeLines(readAts(patches))
     }
 
-    private fun readAts(patches: Iterable<Path>) : Set<String> {
+    private fun readAts(patches: Iterable<Path>): Set<String> {
         val result = hashSetOf<String>()
 
         val start = header.get()
