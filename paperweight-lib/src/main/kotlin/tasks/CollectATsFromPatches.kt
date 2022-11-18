@@ -5,11 +5,18 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class CollectATsFromPatches : BaseTask() {
+
+    @get:Input
+    @get:Optional
+    abstract val header: Property<String>
 
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
@@ -18,6 +25,7 @@ abstract class CollectATsFromPatches : BaseTask() {
     abstract val outputFile: RegularFileProperty
 
     override fun init() {
+        header.convention("== AT ==")
         outputFile.convention(defaultOutput("at"))
     }
 
@@ -31,19 +39,21 @@ abstract class CollectATsFromPatches : BaseTask() {
     private fun readAts(patches: Iterable<Path>) : Set<String> {
         val result = hashSetOf<String>()
 
-        val start = "== AT =="
+        val start = header.get()
         val end = "diff --git a/"
         for (patch in patches) {
-            var reading = false
-            for (readLine in patch.readLines()) {
-                if (readLine.startsWith(end)) {
-                    break
-                }
-                if (reading && readLine.isNotBlank()) {
-                    result.add(readLine)
-                }
-                if (readLine.startsWith(start)) {
-                    reading = true
+            patch.useLines {
+                var reading = false
+                for (line in it) {
+                    if (line.startsWith(end)) {
+                        break
+                    }
+                    if (reading && line.isNotBlank()) {
+                        result.add(line)
+                    }
+                    if (line.startsWith(start)) {
+                        reading = true
+                    }
                 }
             }
         }
