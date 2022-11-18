@@ -46,7 +46,7 @@ open class AllTasks(
 
     val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
         firstFile.set(mergeGeneratedAts.flatMap { it.outputFile })
-        secondFile.set(extension.paper.additionalAts.fileExists(project))
+        secondFile.set(mergePaperAts.flatMap { it.outputFile })
     }
 
     val applyMergedAt by tasks.registering<ApplyAccessTransform> {

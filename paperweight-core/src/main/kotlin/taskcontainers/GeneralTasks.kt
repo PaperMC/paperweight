@@ -50,4 +50,13 @@ open class GeneralTasks(
         inputJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(extension.vanillaJarIncludes)
     }
+
+    val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
+        patchDir.set(extension.paper.spigotServerPatchDir)
+    }
+
+    val mergePaperAts by tasks.registering<MergeAccessTransforms> {
+        firstFile.set(extension.paper.additionalAts.fileExists(project))
+        secondFile.set(collectAtsFromPatches.flatMap { it.outputFile })
+    }
 }
