@@ -66,7 +66,7 @@ abstract class CollectATsFromPatches : BaseTask() {
         outputFile.path.writeLines(readAts(patches))
     }
 
-    private fun readAts(patches: Iterable<Path>): Set<String> {
+    private fun readAts(patches: Iterable<Path>): List<String> {
         val result = hashSetOf<String>()
 
         val start = header.get()
@@ -77,7 +77,7 @@ abstract class CollectATsFromPatches : BaseTask() {
                     if (line.startsWith(PATCH_CONTENT_START) || line.startsWith(CO_AUTHOR_LINE, true)) {
                         break
                     }
-                    if (reading && line.isNotBlank()) {
+                    if (reading && line.isNotBlank() && !line.startsWith('#')) {
                         result.add(line)
                     }
                     if (line.startsWith(start)) {
@@ -86,6 +86,7 @@ abstract class CollectATsFromPatches : BaseTask() {
                 }
             }
         }
-        return result
+
+        return result.sorted()
     }
 }
