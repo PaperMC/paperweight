@@ -94,6 +94,7 @@ class PaperweightCore : Plugin<Project> {
             mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
             mcLibrariesDir.set(tasks.extractFromBundler.flatMap { it.serverLibraryJars })
             mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
+            spigotLibrariesSourcesDir.set(tasks.downloadSpigotDependencies.flatMap { it.outputSourcesDir })
             mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
             notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
             sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })

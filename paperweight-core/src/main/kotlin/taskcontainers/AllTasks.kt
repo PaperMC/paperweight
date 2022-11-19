@@ -95,7 +95,7 @@ open class AllTasks(
 
     val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
         mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
-        mcRepo.set(MC_LIBRARY_URL)
+        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
         outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
         sources.set(true)
 
@@ -119,6 +119,7 @@ open class AllTasks(
         upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        spigotLibrariesDir.set(downloadSpigotDependencies.flatMap { it.outputSourcesDir })
         devImports.set(extension.paper.devImports.fileExists(project))
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 

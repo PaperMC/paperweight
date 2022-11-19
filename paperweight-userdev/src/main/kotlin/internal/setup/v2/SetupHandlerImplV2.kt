@@ -74,7 +74,7 @@ class SetupHandlerImplV2(
                     download = service.parameters.downloadService,
                     workerExecutor = context.workerExecutor,
                     targetDir = minecraftLibraryJars,
-                    mcRepo = MC_LIBRARY_URL,
+                    repositories = listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL),
                     mcLibraries = bundle.config.buildData.vanillaServerLibraries,
                     sources = false
                 ).await()

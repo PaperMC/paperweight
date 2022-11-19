@@ -60,6 +60,9 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputDirectory
     abstract val mcLibrariesSourcesDir: DirectoryProperty
 
+    @get:InputDirectory
+    abstract val spigotLibrariesSourcesDir: DirectoryProperty
+
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
 
@@ -122,6 +125,7 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             mcLibrariesDir.path,
             mcLibrariesSourcesDir.path,
             mcLibrariesFile.path,
+            spigotLibrariesSourcesDir.path,
             mappings.path,
             notchToSpigotMappings.path,
             sourceMappings.path,

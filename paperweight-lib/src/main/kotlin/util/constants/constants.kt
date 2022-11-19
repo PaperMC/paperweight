@@ -33,6 +33,8 @@ const val MC_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_mani
 
 const val PAPER_MAVEN_REPO_URL = "https://repo.papermc.io/repository/maven-public/"
 
+const val MAVEN_CENTRAL_URL = "https://repo.maven.apache.org/maven2/"
+
 const val PARAM_MAPPINGS_CONFIG = "paramMappings"
 const val REMAPPER_CONFIG = "remapper"
 const val DECOMPILER_CONFIG = "decompiler"
@@ -59,6 +61,7 @@ const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
 const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
 
 const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
+const val SPIGOT_SOURCES_JARS_PATH = "$JARS_PATH/spigot-sources"
 
 private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
 const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
