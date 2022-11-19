@@ -34,6 +34,10 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class CollectATsFromPatches : BaseTask() {
+    companion object {
+        private const val PATCH_CONTENT_START = "diff --git a/"
+        private const val CO_AUTHOR_LINE = "Co-authored-by: "
+    }
 
     @get:Input
     abstract val header: Property<String>
@@ -60,12 +64,11 @@ abstract class CollectATsFromPatches : BaseTask() {
         val result = hashSetOf<String>()
 
         val start = header.get()
-        val end = "diff --git a/"
         for (patch in patches) {
             patch.useLines {
                 var reading = false
                 for (line in it) {
-                    if (line.startsWith(end)) {
+                    if (line.startsWith(PATCH_CONTENT_START) || line.startsWith(CO_AUTHOR_LINE)) {
                         break
                     }
                     if (reading && line.isNotBlank()) {
