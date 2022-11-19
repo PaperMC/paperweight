@@ -126,8 +126,8 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDirs = listOf(mcLibrariesDir.path, spigotLibrariesDir.path),
                 targetDir = sourceDir,
+                librariesDirs = listOf(spigotLibrariesDir.path, mcLibrariesDir.path),
                 printOutput = printOutput.get()
             )
 

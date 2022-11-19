@@ -125,16 +125,16 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
         val librarySources = ArrayList<Path>()
-        mcLibrariesDir.pathOrNull?.let { librarySources.add(it) }
         spigotLibrariesSourceDir.pathOrNull?.let { librarySources.add(it) }
+        mcLibrariesDir.pathOrNull?.let { librarySources.add(it) }
 
         if (sourceMcDevJar.isPresent && importMcDev.get()) {
             McDev.importMcDev(
                 patches = patches,
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
-                librariesDirs = if (librarySources.isEmpty()) null else librarySources,
                 targetDir = srcDir,
+                librariesDirs = librarySources,
                 printOutput = printOutput.get()
             )
         }
