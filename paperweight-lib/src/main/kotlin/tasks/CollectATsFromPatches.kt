@@ -68,7 +68,7 @@ abstract class CollectATsFromPatches : BaseTask() {
             patch.useLines {
                 var reading = false
                 for (line in it) {
-                    if (line.startsWith(PATCH_CONTENT_START) || line.startsWith(CO_AUTHOR_LINE)) {
+                    if (line.startsWith(PATCH_CONTENT_START) || line.startsWith(CO_AUTHOR_LINE, true)) {
                         break
                     }
                     if (reading && line.isNotBlank()) {
