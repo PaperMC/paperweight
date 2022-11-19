@@ -30,6 +30,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -45,6 +46,10 @@ abstract class CollectATsFromPatches : BaseTask() {
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 
+    @get:InputDirectory
+    @get:Optional
+    abstract val extraPatchDir: DirectoryProperty
+
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
@@ -56,7 +61,8 @@ abstract class CollectATsFromPatches : BaseTask() {
     @TaskAction
     fun run() {
         outputFile.path.deleteForcefully()
-        val patches = patchDir.path.listDirectoryEntries("*.patch")
+        val patches = patchDir.path.listDirectoryEntries("*.patch") +
+            (extraPatchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: emptyList())
         outputFile.path.writeLines(readAts(patches))
     }
 
