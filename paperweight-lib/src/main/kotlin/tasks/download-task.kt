@@ -25,7 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.data.MavenArtifact
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
@@ -42,6 +42,7 @@ import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 
 // Not cached since these are Mojang's files
@@ -235,19 +236,28 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
         doc.documentElement.normalize()
 
-        val list = doc.getElementsByTagName("dependencies")
-        for (i in 0 until list.length) {
-            val node = list.item(i) as? Element ?: continue
+        depList += doc.extractDependencies()
+        repoList += doc.extractRepos()
 
-            val depNode = node.getElementsByTagName("dependency")
-            for (j in 0 until depNode.length) {
-                val dependency = depNode.item(j) as? Element ?: continue
-                val artifact = getDependency(dependency) ?: continue
-                depList += artifact
-            }
+        return MavenSetup(repos = repoList, artifacts = depList)
+    }
+
+    private fun Document.extractDependencies(): List<MavenArtifact> {
+        val depList = arrayListOf<MavenArtifact>()
+        val list = getElementsByTagName("dependencies")
+        val node = list.item(0) as Element // Only want the first dependencies element
+        val depNode = node.getElementsByTagName("dependency")
+        for (j in 0 until depNode.length) {
+            val dependency = depNode.item(j) as? Element ?: continue
+            val artifact = getDependency(dependency) ?: continue
+            depList += artifact
         }
+        return depList
+    }
 
-        val repos = doc.getElementsByTagName("repositories")
+    private fun Document.extractRepos(): List<String> {
+        val repoList = arrayListOf<String>()
+        val repos = getElementsByTagName("repositories")
         for (i in 0 until repos.length) {
             val node = repos.item(i) as? Element ?: continue
             val depNode = node.getElementsByTagName("repository")
@@ -257,8 +267,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                 repoList += repoUrl
             }
         }
-
-        return MavenSetup(repos = repoList, artifacts = depList)
+        return repoList
     }
 
     private fun getDependency(node: Element): MavenArtifact? {
