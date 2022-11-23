@@ -13,8 +13,10 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-          cache: 'gradle'
-      - run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Deploy release
+        run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace
         env:
           ORG_GRADLE_PROJECT_paperUsername: ${{ secrets.DEPLOY_USER }}
           ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.DEPLOY_PASS }}

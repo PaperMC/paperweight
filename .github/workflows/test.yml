@@ -1,7 +1,7 @@
 name: Test
 on:
   push:
-    tags-ignore: [ "**" ]
+    branches: [ "**" ]
   pull_request:
 
 jobs:
@@ -16,5 +16,7 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-          cache: 'gradle'
-      - run: ./gradlew -Dorg.gradle.parallel=true build --no-daemon --stacktrace
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Execute Gradle build
+        run: ./gradlew build --no-daemon --stacktrace
