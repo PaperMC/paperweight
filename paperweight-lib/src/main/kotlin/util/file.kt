@@ -201,7 +201,8 @@ fun acquireProcessLockWaiting(lockFile: Path, timeout: Long = Long.MAX_VALUE): B
                 if (sleptMs >= 1000 * 60 && sleptMs % (1000 * 60) == 0L) {
                     logger.lifecycle(
                         "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
-                            "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again."
+                            "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again.\n" +
+                            "If the problem persists, the lock file may need to be deleted manually."
                     )
                 }
                 if (sleptMs >= timeout) {
