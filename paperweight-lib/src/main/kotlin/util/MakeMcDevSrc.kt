@@ -54,7 +54,7 @@ fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
     }
 }
 
-fun Path.acquireLockWaiting(): Path {
+private fun Path.acquireLockWaiting(): Path {
     val logger = Logging.getLogger("paperweight mc dev sources lock")
     val lockFile = resolve("paperweight.lock")
     if (lockFile.exists()) {
