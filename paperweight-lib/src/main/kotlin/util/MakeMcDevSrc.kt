@@ -27,7 +27,7 @@ import kotlin.io.path.*
 import org.gradle.api.logging.Logging
 
 fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
-    val lock = target.acquireOrWaitForLock()
+    val lock = target.acquireLockWaiting()
     try {
         target.listDirectoryEntries()
             .filter { it.name != lock.name }
@@ -54,7 +54,7 @@ fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
     }
 }
 
-fun Path.acquireOrWaitForLock(): Path {
+fun Path.acquireLockWaiting(): Path {
     val logger = Logging.getLogger("paperweight mc dev sources lock")
     val lockFile = resolve("paperweight.lock")
     if (lockFile.exists()) {
