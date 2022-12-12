@@ -157,6 +157,6 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
         applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
 
-        makeMcDevSrc(sourceMcDevJar.path, srcDir, mcDevSources.path)
+        makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, srcDir)
     }
 }

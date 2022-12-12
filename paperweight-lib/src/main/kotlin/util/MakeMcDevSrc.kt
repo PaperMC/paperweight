@@ -26,10 +26,14 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
-fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
-    val projectDir = paperSource.toAbsolutePath().parent.parent.parent // todo
-    val lockFilePath = applyPatchesLock(projectDir)
-    val lockFile = projectDir.parent.resolve(".gradle/caches").resolve(lockFilePath) // todo
+fun makeMcDevSrc(
+    cache: Path,
+    decompileJar: Path,
+    target: Path,
+    paperProject: Path,
+    paperSource: Path = paperProject.resolve("src/main/java"),
+) {
+    val lockFile = cache.resolve(applyPatchesLock(paperProject))
     val alreadyHave = acquireProcessLockWaiting(lockFile)
     try {
         ensureDeleted(target)
