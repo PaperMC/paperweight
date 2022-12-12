@@ -22,19 +22,9 @@
 
 package io.papermc.paperweight.util
 
-import org.gradle.api.logging.Logging
 import java.nio.file.Path
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.name
-import kotlin.io.path.readText
-import kotlin.io.path.relativeTo
-import kotlin.io.path.writeText
+import kotlin.io.path.*
+import org.gradle.api.logging.Logging
 
 fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
     val lock = target.acquireOrWaitForLock()
