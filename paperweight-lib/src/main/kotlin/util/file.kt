@@ -187,19 +187,19 @@ fun acquireProcessLockWaiting(lockFile: Path, timeout: Long = Long.MAX_VALUE): B
             return true
         }
 
-        logger.info("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
+        logger.lifecycle("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
         val handle = ProcessHandle.of(lockingProcessId)
         if (handle.isEmpty) {
-            logger.info("Locking process does not exist, assuming abrupt termination and deleting lock file.")
+            logger.lifecycle("Locking process does not exist, assuming abrupt termination and deleting lock file.")
             lockFile.deleteIfExists()
         } else {
-            logger.info("Waiting for lock to be released...")
+            logger.lifecycle("Waiting for lock to be released...")
             var sleptMs: Long = 0
             while (lockFile.exists() && handle.isPresent) {
                 Thread.sleep(100)
                 sleptMs += 100
                 if (sleptMs >= 1000 * 60 && sleptMs % (1000 * 60) == 0L) {
-                    logger.info(
+                    logger.lifecycle(
                         "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
                             "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again."
                     )
