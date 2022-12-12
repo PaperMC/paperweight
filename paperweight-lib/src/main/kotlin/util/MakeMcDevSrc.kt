@@ -65,6 +65,7 @@ fun Path.acquireOrWaitForLock(): Path {
             logger.info("Locking process does not exist, assuming abrupt termination and deleting lock file.")
             lockFile.deleteIfExists()
         } else {
+            logger.info("Waiting for lock to be released...")
             var sleptMs: Long = 0
             while (lockFile.exists() && handle.isPresent) {
                 Thread.sleep(100)
