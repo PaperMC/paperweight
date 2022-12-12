@@ -24,6 +24,7 @@ package io.papermc.paperweight.patcher.tasks
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -93,6 +94,16 @@ abstract class SimpleApplyGitPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        val lockFile = layout.cache.resolve(applyPatchesLock(outputDir.get().path))
+        acquireProcessLockWaiting(lockFile)
+        try {
+            run0()
+        } finally {
+            lockFile.deleteForcefully()
+        }
+    }
+
+    private fun run0() {
         Git.checkForGit()
 
         val output = outputDir.path
