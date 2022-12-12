@@ -22,16 +22,17 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.logging.Logging
 
 fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
-    val lock = target.acquireLockWaiting()
+    val projectDir = paperSource.toAbsolutePath().parent.parent.parent // todo
+    val lockFilePath = applyPatchesLock(projectDir)
+    val lockFile = projectDir.parent.resolve(".gradle/caches").resolve(lockFilePath) // todo
+    val alreadyHave = acquireProcessLockWaiting(lockFile)
     try {
-        target.listDirectoryEntries()
-            .filter { it.name != lock.name }
-            .forEach { ensureDeleted(it) }
+        ensureDeleted(target)
 
         decompileJar.openZip().use { fs ->
             val root = fs.getPath("/")
@@ -50,40 +51,8 @@ fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
             }
         }
     } finally {
-        lock.deleteForcefully()
-    }
-}
-
-private fun Path.acquireLockWaiting(): Path {
-    val logger = Logging.getLogger("paperweight mc dev sources lock")
-    val lockFile = resolve("paperweight.lock")
-    if (lockFile.exists()) {
-        val lockingProcessId = lockFile.readText().toLong()
-        logger.info("Directory '$this' is currently locked by pid '$lockingProcessId'.")
-        val handle = ProcessHandle.of(lockingProcessId)
-        if (handle.isEmpty) {
-            logger.info("Locking process does not exist, assuming abrupt termination and deleting lock file.")
-            lockFile.deleteIfExists()
-        } else {
-            logger.info("Waiting for lock to be released...")
-            var sleptMs: Long = 0
-            while (lockFile.exists() && handle.isPresent) {
-                Thread.sleep(100)
-                sleptMs += 100
-                if (sleptMs >= 1000 * 60 && sleptMs % (1000 * 60) == 0L) {
-                    logger.info(
-                        "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
-                            "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again."
-                    )
-                }
-            }
+        if (!alreadyHave) {
+            lockFile.deleteForcefully()
         }
     }
-
-    val pid = ProcessHandle.current().pid()
-    if (!exists()) {
-        createDirectories()
-    }
-    lockFile.writeText(pid.toString())
-    return lockFile
 }
