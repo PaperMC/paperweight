@@ -24,6 +24,7 @@ package io.papermc.paperweight.tasks
 
 import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -95,6 +96,16 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
+        val lockFile = layout.cache.resolve(applyPatchesLock(outputDir.get().path))
+        acquireProcessLockWaiting(lockFile)
+        try {
+            run0()
+        } finally {
+            lockFile.deleteForcefully()
+        }
+    }
+
+    private fun run0() {
         Git.checkForGit()
 
         val outputFile = outputDir.path
@@ -150,7 +161,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
 
-            makeMcDevSrc(sourceMcDevJar.path, sourceDir, mcDevSources.path)
+            makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir)
         }
     }
 

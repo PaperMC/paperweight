@@ -22,26 +22,41 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
-fun makeMcDevSrc(decompileJar: Path, paperSource: Path, target: Path) {
-    ensureDeleted(target)
+fun makeMcDevSrc(
+    cache: Path,
+    decompileJar: Path,
+    target: Path,
+    paperProject: Path,
+    paperSource: Path = paperProject.resolve("src/main/java"),
+) {
+    val lockFile = cache.resolve(applyPatchesLock(paperProject))
+    val alreadyHave = acquireProcessLockWaiting(lockFile)
+    try {
+        ensureDeleted(target)
 
-    decompileJar.openZip().use { fs ->
-        val root = fs.getPath("/")
-        fs.walk().use { stream ->
-            stream.forEach { sourceFile ->
-                if (sourceFile.isRegularFile()) {
-                    val sourceFilePath = sourceFile.relativeTo(root).invariantSeparatorsPathString
+        decompileJar.openZip().use { fs ->
+            val root = fs.getPath("/")
+            fs.walk().use { stream ->
+                stream.forEach { sourceFile ->
+                    if (sourceFile.isRegularFile()) {
+                        val sourceFilePath = sourceFile.relativeTo(root).invariantSeparatorsPathString
 
-                    if (!paperSource.resolve(sourceFilePath).isRegularFile()) {
-                        val targetFile = target.resolve(sourceFilePath)
-                        targetFile.parent.createDirectories()
-                        sourceFile.copyTo(targetFile)
+                        if (!paperSource.resolve(sourceFilePath).isRegularFile()) {
+                            val targetFile = target.resolve(sourceFilePath)
+                            targetFile.parent.createDirectories()
+                            sourceFile.copyTo(targetFile)
+                        }
                     }
                 }
             }
+        }
+    } finally {
+        if (!alreadyHave) {
+            lockFile.deleteForcefully()
         }
     }
 }

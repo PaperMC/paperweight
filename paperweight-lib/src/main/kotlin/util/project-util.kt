@@ -61,9 +61,10 @@ fun Project.setupServerProject(
             dependencies {
                 // update mc-dev sources on dependency resolution
                 makeMcDevSrc(
+                    parent.layout.cache,
                     remappedJarSources.convertToPath(),
-                    layout.projectDirectory.path.resolve("src/main/java"),
-                    mcDevSourceDir
+                    mcDevSourceDir,
+                    layout.projectDirectory.path
                 )
 
                 add(create(parent.files(remappedJar)))

@@ -22,6 +22,9 @@
 
 package io.papermc.paperweight.util.constants
 
+import io.papermc.paperweight.util.*
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.Task
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
@@ -50,6 +53,12 @@ const val REMAPPER_REPO_NAME = "paperweightRemapperRepository"
 
 const val CACHE_PATH = "caches"
 private const val PAPER_PATH = "paperweight"
+
+const val LOCK_DIR = "$PAPER_PATH/lock"
+const val APPLY_PATCHES_LOCK_DIR = "$LOCK_DIR/apply-patches"
+
+fun applyPatchesLock(targetDir: Path): String = "$APPLY_PATCHES_LOCK_DIR/" +
+    "${toHex(targetDir.absolutePathString().byteInputStream().hash(digestSha256))}"
 
 const val UPSTREAMS = "$PAPER_PATH/upstreams"
 const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"

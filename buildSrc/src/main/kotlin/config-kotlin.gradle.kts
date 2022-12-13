@@ -10,7 +10,7 @@ plugins {
 kotlin {
     jvmToolchain {
         (this as JavaToolchainSpec).apply {
-            languageVersion.set(JavaLanguageVersion.of(8))
+            languageVersion.set(JavaLanguageVersion.of(11))
         }
     }
 }
@@ -48,7 +48,7 @@ gradlePlugin {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs = listOf(
             "-Xjvm-default=all",
             "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
