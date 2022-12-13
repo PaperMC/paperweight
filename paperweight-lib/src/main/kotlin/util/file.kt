@@ -188,14 +188,13 @@ fun acquireProcessLockWaiting(lockFile: Path, timeout: Long = Long.MAX_VALUE): B
         }
 
         logger.lifecycle("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
-        val handle = ProcessHandle.of(lockingProcessId)
-        if (handle.isEmpty) {
+        if (ProcessHandle.of(lockingProcessId).isEmpty) {
             logger.lifecycle("Locking process does not exist, assuming abrupt termination and deleting lock file.")
             lockFile.deleteIfExists()
         } else {
             logger.lifecycle("Waiting for lock to be released...")
             var sleptMs: Long = 0
-            while (lockFile.exists() && handle.isPresent) {
+            while (lockFile.exists()) {
                 Thread.sleep(100)
                 sleptMs += 100
                 if (sleptMs >= 1000 * 60 && sleptMs % (1000 * 60) == 0L) {
