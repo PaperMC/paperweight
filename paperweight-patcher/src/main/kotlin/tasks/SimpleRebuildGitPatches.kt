@@ -151,8 +151,10 @@ abstract class SimpleRebuildGitPatches : ControllableOutputTask() {
         }
 
         if (noChangesPatches.isNotEmpty()) {
-            git("reset", "HEAD", *noChangesPatches.map { it.name }.toTypedArray()).executeSilently()
-            git("checkout", "--", *noChangesPatches.map { it.name }.toTypedArray()).executeSilently()
+            for (chunk in noChangesPatches.chunked(50)) {
+                git("reset", "HEAD", *chunk.map { it.name }.toTypedArray()).executeSilently()
+                git("checkout", "--", *chunk.map { it.name }.toTypedArray()).executeSilently()
+            }
         }
 
         if (printOutput.get()) {
