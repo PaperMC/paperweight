@@ -23,9 +23,9 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.userdev.internal.setup.util.lockSetup
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.IVY_REPOSITORY
-import io.papermc.paperweight.util.constants.paperSetupOutput
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
@@ -36,7 +36,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
-import org.gradle.kotlin.dsl.repositories
+import org.gradle.kotlin.dsl.*
 
 abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandler {
 
@@ -51,15 +51,17 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         val genSources: Property<Boolean>
     }
 
-    private val extractDevBundle = extractDevBundle(
-        parameters.cache.path.resolve(paperSetupOutput("extractDevBundle", "dir")),
-        parameters.bundleZip.path
-    )
+    private val extractDevBundle: ExtractedBundle<Any> = lockSetup(parameters.cache.path) {
+        extractDevBundle(
+            parameters.cache.path.resolve(paperSetupOutput("extractDevBundle", "dir")),
+            parameters.bundleZip.path
+        )
+    }
 
     private val setup = createSetup()
 
     private fun createSetup(): SetupHandler =
-        SetupHandler.create(this, extractDevBundle)
+        SetupHandler.create(parameters, extractDevBundle)
 
     fun addIvyRepository(project: Project) {
         project.repositories {

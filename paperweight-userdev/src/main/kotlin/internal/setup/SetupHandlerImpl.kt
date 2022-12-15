@@ -24,7 +24,7 @@ package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
+import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -33,15 +33,15 @@ import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 
 class SetupHandlerImpl(
-    private val service: UserdevSetup,
+    private val parameters: UserdevSetup.Parameters,
     private val bundle: ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
-    private val cache: Path = service.parameters.cache.path,
+    private val cache: Path = parameters.cache.path,
 ) : SetupHandler {
     private val vanillaSteps by lazy {
         VanillaSteps(
             bundle.config.minecraftVersion,
             cache,
-            service.parameters.downloadService.get(),
+            parameters.downloadService.get(),
             bundle.changed,
         )
     }
@@ -128,15 +128,17 @@ class SetupHandlerImpl(
             return
         }
 
-        StepExecutor.executeStep(
-            context,
-            RunPaperclip(
-                bundle.dir.resolve(bundle.config.buildData.mojangMappedPaperclipFile),
-                mojangMappedPaperJar,
-                vanillaSteps.mojangJar,
-                minecraftVersion,
+        lockSetup(cache, true) {
+            StepExecutor.executeStep(
+                context,
+                RunPaperclip(
+                    bundle.dir.resolve(bundle.config.buildData.mojangMappedPaperclipFile),
+                    mojangMappedPaperJar,
+                    vanillaSteps.mojangJar,
+                    minecraftVersion,
+                )
             )
-        )
+        }
     }
 
     private var setupCompleted = false
@@ -147,7 +149,13 @@ class SetupHandlerImpl(
             return
         }
 
-        val source = if (service.parameters.genSources.get()) {
+        lockSetup(cache) {
+            createOrUpdateIvyRepositoryDirect(context)
+        }
+    }
+
+    private fun createOrUpdateIvyRepositoryDirect(context: SetupHandler.Context) {
+        val source = if (parameters.genSources.get()) {
             generateSources(context)
             patchedSourcesJar
         } else {

@@ -74,15 +74,15 @@ interface SetupHandler {
     companion object {
         @Suppress("unchecked_cast")
         fun create(
-            setupService: UserdevSetup,
+            parameters: UserdevSetup.Parameters,
             extractedBundle: ExtractedBundle<Any>
         ): SetupHandler = when (extractedBundle.config) {
             is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
-                setupService,
+                parameters,
                 extractedBundle as ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
             )
             is DevBundleV2.Config -> SetupHandlerImplV2(
-                setupService,
+                parameters,
                 extractedBundle as ExtractedBundle<DevBundleV2.Config>
             )
             else -> throw PaperweightException("Unknown dev bundle config type: ${extractedBundle.config::class.java.typeName}")

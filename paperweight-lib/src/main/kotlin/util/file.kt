@@ -177,7 +177,10 @@ fun Path.sha256asHex(): String = toHex(hashFile(digestSha256))
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
 
 // Returns true if our process already owns the lock
-fun acquireProcessLockWaiting(lockFile: Path, timeout: Long = Long.MAX_VALUE): Boolean {
+fun acquireProcessLockWaiting(
+    lockFile: Path,
+    timeoutMs: Long = 1000L * 60 * 60 /* one hour */
+): Boolean {
     val logger = Logging.getLogger("paperweight lock file")
     val currentPid = ProcessHandle.current().pid()
 
@@ -204,8 +207,8 @@ fun acquireProcessLockWaiting(lockFile: Path, timeout: Long = Long.MAX_VALUE): B
                             "If the problem persists, the lock file may need to be deleted manually."
                     )
                 }
-                if (sleptMs >= timeout) {
-                    throw PaperweightException("Have been waiting on lock file '$lockFile' for $sleptMs ms. Giving up as timeout is '$timeout'.")
+                if (sleptMs >= timeoutMs) {
+                    throw PaperweightException("Have been waiting on lock file '$lockFile' for $sleptMs ms. Giving up as timeout is $timeoutMs ms.")
                 }
             }
         }

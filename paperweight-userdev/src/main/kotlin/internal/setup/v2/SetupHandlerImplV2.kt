@@ -28,7 +28,7 @@ import io.papermc.paperweight.userdev.internal.setup.RunPaperclip
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
+import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -37,15 +37,15 @@ import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 
 class SetupHandlerImplV2(
-    private val service: UserdevSetup,
+    private val parameters: UserdevSetup.Parameters,
     private val bundle: ExtractedBundle<DevBundleV2.Config>,
-    private val cache: Path = service.parameters.cache.path,
+    private val cache: Path = parameters.cache.path,
 ) : SetupHandler {
     private val vanillaSteps by lazy {
         VanillaSteps(
             bundle.config.minecraftVersion,
             cache,
-            service.parameters.downloadService.get(),
+            parameters.downloadService.get(),
             bundle.changed,
         )
     }
@@ -71,7 +71,7 @@ class SetupHandlerImplV2(
 
             override fun run(context: SetupHandler.Context) {
                 downloadMinecraftLibraries(
-                    download = service.parameters.downloadService,
+                    download = parameters.downloadService,
                     workerExecutor = context.workerExecutor,
                     targetDir = minecraftLibraryJars,
                     repositories = listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL),
@@ -170,16 +170,18 @@ class SetupHandlerImplV2(
             return
         }
 
-        StepExecutor.executeStep(
-            context,
-            RunPaperclip(
-                bundle.dir.resolve(bundle.config.buildData.mojangMappedPaperclipFile),
-                mojangMappedPaperJar,
-                vanillaSteps.mojangJar,
-                minecraftVersion,
-                false,
+        lockSetup(cache, true) {
+            StepExecutor.executeStep(
+                context,
+                RunPaperclip(
+                    bundle.dir.resolve(bundle.config.buildData.mojangMappedPaperclipFile),
+                    mojangMappedPaperJar,
+                    vanillaSteps.mojangJar,
+                    minecraftVersion,
+                    false,
+                )
             )
-        )
+        }
     }
 
     private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
@@ -192,6 +194,12 @@ class SetupHandlerImplV2(
             return
         }
 
+        lockSetup(cache) {
+            createOrUpdateIvyRepositoryDirect(context)
+        }
+    }
+
+    private fun createOrUpdateIvyRepositoryDirect(context: SetupHandler.Context) {
         generateSources(context)
 
         val deps = bundle.config.buildData.libraryDependencies.toList() +

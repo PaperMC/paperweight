@@ -95,17 +95,17 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     }
 
     @TaskAction
-    fun run() {
-        val lockFile = layout.cache.resolve(applyPatchesLock(outputDir.get().path))
+    fun runLocking() {
+        val lockFile = layout.cache.resolve(applyPatchesLock(outputDir.path))
         acquireProcessLockWaiting(lockFile)
         try {
-            run0()
+            run()
         } finally {
             lockFile.deleteForcefully()
         }
     }
 
-    private fun run0() {
+    private fun run() {
         Git.checkForGit()
 
         val outputFile = outputDir.path

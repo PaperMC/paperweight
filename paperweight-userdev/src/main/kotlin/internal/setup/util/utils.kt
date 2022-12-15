@@ -26,6 +26,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.userdev.PaperweightUser
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -150,6 +151,18 @@ fun interface HashFunction : () -> String {
 private fun hashPaperweightJar(): String {
     val userdevShadowJar = Paths.get(PaperweightUser::class.java.protectionDomain.codeSource.location.toURI())
     return hash(userdevShadowJar)
+}
+
+fun <R> lockSetup(cache: Path, canBeNested: Boolean = false, action: () -> R): R {
+    val lockFile = cache.resolve(USERDEV_SETUP_LOCK)
+    val alreadyHad = acquireProcessLockWaiting(lockFile)
+    try {
+        return action()
+    } finally {
+        if (!canBeNested || !alreadyHad) {
+            lockFile.deleteForcefully()
+        }
+    }
 }
 
 // set by most CI
