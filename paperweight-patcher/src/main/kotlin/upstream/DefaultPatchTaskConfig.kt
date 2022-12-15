@@ -22,8 +22,8 @@
 
 package io.papermc.paperweight.patcher.upstream
 
-import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
-import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
+import io.papermc.paperweight.patcher.tasks.PatcherApplyGitPatches
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.file.DirectoryProperty
@@ -52,10 +52,10 @@ open class DefaultPatchTaskConfig @Inject constructor(
     override val rebuildTaskName: String
         get() = "rebuild${name.capitalize()}Patches"
 
-    override val patchTask: TaskProvider<SimpleApplyGitPatches>
+    override val patchTask: TaskProvider<PatcherApplyGitPatches>
         get() = tasks.providerFor(patchTaskName)
 
-    override val rebuildTask: TaskProvider<SimpleRebuildGitPatches>
+    override val rebuildTask: TaskProvider<RebuildGitPatches>
         get() = tasks.providerFor(rebuildTaskName)
 
     override fun getName(): String {

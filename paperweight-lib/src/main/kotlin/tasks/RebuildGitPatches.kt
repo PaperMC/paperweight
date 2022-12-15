@@ -32,14 +32,10 @@ import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.*
 
-@UntrackedTask(because = "RebuildPaperPatches should always run when requested")
-abstract class RebuildPaperPatches : ControllableOutputTask() {
+@UntrackedTask(because = "RebuildGitPatches should always run when requested")
+abstract class RebuildGitPatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty

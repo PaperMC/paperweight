@@ -39,7 +39,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-abstract class SimpleApplyGitPatches : ControllableOutputTask() {
+abstract class PatcherApplyGitPatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val upstreamDir: DirectoryProperty

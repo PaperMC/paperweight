@@ -23,11 +23,7 @@
 package io.papermc.paperweight.patcher
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.patcher.tasks.CheckoutRepo
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherPrepareForDownstream
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
-import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
-import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
+import io.papermc.paperweight.patcher.tasks.*
 import io.papermc.paperweight.patcher.upstream.PatchTaskConfig
 import io.papermc.paperweight.patcher.upstream.PatcherUpstream
 import io.papermc.paperweight.patcher.upstream.RepoPatcherUpstream
@@ -256,9 +252,9 @@ class PaperweightPatcher : Plugin<Project> {
         ext: PaperweightPatcherExtension,
         upstreamTaskPair: Pair<TaskProvider<CheckoutRepo>?, TaskProvider<PaperweightPatcherUpstreamData>>,
         applyPatches: TaskProvider<Task>
-    ): TaskProvider<SimpleApplyGitPatches> {
+    ): TaskProvider<PatcherApplyGitPatches> {
         val project = this
-        val patchTask = tasks.configureTask<SimpleApplyGitPatches>(config.patchTaskName) {
+        val patchTask = tasks.configureTask<PatcherApplyGitPatches>(config.patchTaskName) {
             group = "paperweight"
 
             if (isBaseExecution) {
@@ -294,8 +290,8 @@ class PaperweightPatcher : Plugin<Project> {
     private fun Project.rebuildPatchTask(
         config: PatchTaskConfig,
         rebuildPatches: TaskProvider<Task>
-    ): TaskProvider<SimpleRebuildGitPatches> {
-        val rebuildTask = tasks.configureTask<SimpleRebuildGitPatches>(config.rebuildTaskName) {
+    ): TaskProvider<RebuildGitPatches> {
+        val rebuildTask = tasks.configureTask<RebuildGitPatches>(config.rebuildTaskName) {
             group = "paperweight"
 
             patchDir.convention(config.patchDir)

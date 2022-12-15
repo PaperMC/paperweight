@@ -22,8 +22,8 @@
 
 package io.papermc.paperweight.patcher.upstream
 
-import io.papermc.paperweight.patcher.tasks.SimpleApplyGitPatches
-import io.papermc.paperweight.patcher.tasks.SimpleRebuildGitPatches
+import io.papermc.paperweight.patcher.tasks.PatcherApplyGitPatches
+import io.papermc.paperweight.tasks.*
 import org.gradle.api.Named
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
@@ -42,6 +42,6 @@ interface PatchTaskConfig : Named {
 
     val patchTaskName: String
     val rebuildTaskName: String
-    val patchTask: TaskProvider<SimpleApplyGitPatches>
-    val rebuildTask: TaskProvider<SimpleRebuildGitPatches>
+    val patchTask: TaskProvider<PatcherApplyGitPatches>
+    val rebuildTask: TaskProvider<RebuildGitPatches>
 }
