@@ -22,11 +22,17 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
+import codechicken.diffpatch.cli.PatchOperation
+import codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.hashDirectory
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.*
+import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
+import io.papermc.paperweight.util.ensureDeleted
+import io.papermc.paperweight.util.findOutputDir
+import io.papermc.paperweight.util.zip
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -41,30 +47,65 @@ class ApplyDevBundlePatches(
     override val hashFile: Path = outputJar.siblingHashesFile()
 
     override fun run(context: SetupHandler.Context) {
-        Git.checkForGit()
-
-        val workDir = findOutputDir(outputJar)
+        val tempPatchDir = findOutputDir(outputJar)
+        val tempSourceDir = findOutputDir(outputJar)
+        val outputDir = findOutputDir(outputJar)
+        val log = outputJar.siblingLogFile()
 
         try {
-            unzip(decompiledJar, workDir)
-            val git = Git(workDir)
-
             Files.walk(devBundlePatches).use { stream ->
                 stream.forEach {
                     if (it.name.endsWith(".patch")) {
-                        git("apply", "--ignore-whitespace", it.absolutePathString()).executeOut()
+                        relativeCopy(devBundlePatches, it, tempPatchDir)
                     } else if (it.isRegularFile()) {
-                        val destination = workDir.resolve(it.relativeTo(devBundlePatches))
-                        destination.parent.createDirectories()
-                        it.copyTo(destination, overwrite = true)
+                        relativeCopy(devBundlePatches, it, tempSourceDir)
+                    }
+                }
+            }
+
+            ensureDeleted(log)
+            PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
+                val op = PatchOperation.builder()
+                    .logTo(logOut)
+                    .verbose(true)
+                    .summary(true)
+                    .basePath(decompiledJar, ArchiveFormat.ZIP)
+                    .patchesPath(tempPatchDir)
+                    .outputPath(outputDir)
+                    .build()
+                op.operate().throwOnError()
+            }
+
+            Files.walk(tempSourceDir).use { stream ->
+                stream.forEach {
+                    if (it.isRegularFile()) {
+                        relativeMove(tempSourceDir, it, outputDir)
                     }
                 }
             }
 
             ensureDeleted(outputJar)
-            zip(workDir, outputJar)
+            zip(outputDir, outputJar)
         } finally {
-            workDir.deleteRecursively()
+            ensureDeleted(outputDir, tempPatchDir, tempSourceDir)
+        }
+    }
+
+    private fun relativeCopy(baseDir: Path, file: Path, outputDir: Path) {
+        relativeCopyOrMove(baseDir, file, outputDir, false)
+    }
+
+    private fun relativeMove(baseDir: Path, file: Path, outputDir: Path) {
+        relativeCopyOrMove(baseDir, file, outputDir, true)
+    }
+
+    private fun relativeCopyOrMove(baseDir: Path, file: Path, outputDir: Path, move: Boolean) {
+        val destination = outputDir.resolve(file.relativeTo(baseDir).invariantSeparatorsPathString)
+        destination.parent.createDirectories()
+        if (move) {
+            file.moveTo(destination, overwrite = true)
+        } else {
+            file.copyTo(destination, overwrite = true)
         }
     }
 

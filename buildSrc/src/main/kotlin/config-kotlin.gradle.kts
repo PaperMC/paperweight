@@ -21,6 +21,11 @@ repositories {
             includeModule("org.cadixdev", "mercury")
         }
     }
+    maven("https://repo.papermc.io/repository/maven-public/") {
+        mavenContent {
+            includeGroup("net.minecraftforge")
+        }
+    }
     maven("https://maven.quiltmc.org/repository/release/") {
         mavenContent {
             includeGroup("org.quiltmc")
