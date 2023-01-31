@@ -47,7 +47,9 @@ val shadowJar by tasks.existing(ShadowJar::class) {
         "org.objectweb.asm",
         "org.osgi",
         "org.tukaani.xz",
-        "org.slf4j"
+        "org.slf4j",
+        "codechicken.diffpatch",
+        "codechicken.repack"
     ).forEach { pack ->
         relocate(pack, "$prefix.$pack")
     }
