@@ -73,7 +73,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param configurationAction action configuring the dependency
      */
     @JvmOverloads
-    fun DependencyHandlerScope.devBundle(
+    fun devBundle(
         group: String,
         version: String? = null,
         artifactId: String = "dev-bundle",
@@ -127,7 +127,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param configurationAction action configuring the dependency
      */
     @JvmOverloads
-    fun DependencyHandlerScope.devBundleDependency(
+    fun devBundleDependency(
         group: String,
         version: String? = null,
         artifactId: String = "dev-bundle",
