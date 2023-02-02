@@ -91,6 +91,12 @@ abstract class PaperweightUser : Plugin<Project> {
             target.objects
         )
 
+        target.dependencies.extensions.create(
+            "paperweight",
+            PaperweightUserDependenciesExtension::class,
+            target.dependencies
+        )
+
         createConfigurations(target, target.provider { userdevSetup })
 
         val reobfJar by target.tasks.registering<RemapJar> {
