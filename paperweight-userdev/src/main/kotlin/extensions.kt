@@ -36,6 +36,12 @@ import org.gradle.kotlin.dsl.*
  * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
  * @param configurationAction action configuring the dependency
  */
+@Deprecated(
+    message = "Replaced by extension methods",
+    replaceWith = ReplaceWith(
+        "paperweight.paperDevBundle"
+    )
+)
 fun DependencyHandlerScope.paperDevBundle(
     version: String? = null,
     group: String = "io.papermc.paper",
@@ -59,6 +65,12 @@ fun DependencyHandlerScope.paperDevBundle(
  * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
  * @param configurationAction action configuring the dependency
  */
+@Deprecated(
+    message = "Replaced by extension methods",
+    replaceWith = ReplaceWith(
+        "paperweight.devBundle"
+    )
+)
 fun DependencyHandlerScope.paperweightDevBundle(
     group: String,
     version: String? = null,
