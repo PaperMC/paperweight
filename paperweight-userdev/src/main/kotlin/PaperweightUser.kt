@@ -92,7 +92,7 @@ abstract class PaperweightUser : Plugin<Project> {
         )
 
         target.dependencies.extensions.create(
-            "paperweight",
+            PAPERWEIGHT_EXTENSION,
             PaperweightUserDependenciesExtension::class,
             target.dependencies
         )
