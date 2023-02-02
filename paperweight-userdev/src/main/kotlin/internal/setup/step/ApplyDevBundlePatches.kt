@@ -24,14 +24,13 @@ package io.papermc.paperweight.userdev.internal.setup.step
 
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.hashDirectory
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
-import io.papermc.paperweight.util.ensureDeleted
-import io.papermc.paperweight.util.findOutputDir
-import io.papermc.paperweight.util.zip
+import io.papermc.paperweight.util.*
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -73,7 +72,14 @@ class ApplyDevBundlePatches(
                     .patchesPath(tempPatchDir)
                     .outputPath(outputDir)
                     .build()
-                op.operate().throwOnError()
+                try {
+                    op.operate().throwOnError()
+                } catch (ex: Exception) {
+                    throw PaperweightException(
+                        "Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details. " +
+                            "Usually, the issue is with the dev bundle itself, and not the userdev project.", ex
+                    )
+                }
             }
 
             Files.walk(tempSourceDir).use { stream ->
