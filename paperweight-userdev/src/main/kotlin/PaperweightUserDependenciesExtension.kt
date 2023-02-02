@@ -42,6 +42,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param ext dependency extension
      * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
      * @param configurationAction action configuring the dependency
+     * @return dependency
      */
     @JvmOverloads
     fun paperDevBundle(
@@ -71,6 +72,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param ext dependency extension
      * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
      * @param configurationAction action configuring the dependency
+     * @return dependency
      */
     @JvmOverloads
     fun devBundle(
@@ -99,6 +101,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param classifier dependency classifier
      * @param ext dependency extension
      * @param configurationAction action configuring the dependency
+     * @return dependency
      */
     @JvmOverloads
     fun paperDevBundleDependency(
@@ -125,6 +128,7 @@ abstract class PaperweightUserDependenciesExtension(
      * @param classifier dependency classifier
      * @param ext dependency extension
      * @param configurationAction action configuring the dependency
+     * @return dependency
      */
     @JvmOverloads
     fun devBundleDependency(
