@@ -220,3 +220,21 @@ fun acquireProcessLockWaiting(
     lockFile.writeText(currentPid.toString())
     return false
 }
+
+fun relativeCopy(baseDir: Path, file: Path, outputDir: Path) {
+    relativeCopyOrMove(baseDir, file, outputDir, false)
+}
+
+fun relativeMove(baseDir: Path, file: Path, outputDir: Path) {
+    relativeCopyOrMove(baseDir, file, outputDir, true)
+}
+
+private fun relativeCopyOrMove(baseDir: Path, file: Path, outputDir: Path, move: Boolean) {
+    val destination = outputDir.resolve(file.relativeTo(baseDir).invariantSeparatorsPathString)
+    destination.parent.createDirectories()
+    if (move) {
+        file.moveTo(destination, overwrite = true)
+    } else {
+        file.copyTo(destination, overwrite = true)
+    }
+}

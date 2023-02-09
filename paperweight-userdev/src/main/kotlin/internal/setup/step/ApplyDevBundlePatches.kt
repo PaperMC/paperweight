@@ -35,6 +35,7 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 
 class ApplyDevBundlePatches(
     @Input private val decompiledJar: Path,
@@ -47,19 +48,17 @@ class ApplyDevBundlePatches(
 
     override fun run(context: SetupHandler.Context) {
         val tempPatchDir = findOutputDir(outputJar)
-        val tempSourceDir = findOutputDir(outputJar)
         val outputDir = findOutputDir(outputJar)
         val log = outputJar.siblingLogFile()
 
         try {
-            Files.walk(devBundlePatches).use { stream ->
-                stream.forEach {
-                    if (it.name.endsWith(".patch")) {
-                        relativeCopy(devBundlePatches, it, tempPatchDir)
-                    } else if (it.isRegularFile()) {
-                        relativeCopy(devBundlePatches, it, tempSourceDir)
-                    }
-                }
+            val (patches, newFiles) = Files.walk(devBundlePatches).use { stream ->
+                stream.asSequence()
+                    .filter { it.isRegularFile() }
+                    .partition { it.name.endsWith(".patch") }
+            }
+            for (patch in patches) {
+                relativeCopy(devBundlePatches, patch, tempPatchDir)
             }
 
             ensureDeleted(log)
@@ -83,36 +82,14 @@ class ApplyDevBundlePatches(
                 }
             }
 
-            Files.walk(tempSourceDir).use { stream ->
-                stream.forEach {
-                    if (it.isRegularFile()) {
-                        relativeMove(tempSourceDir, it, outputDir)
-                    }
-                }
+            for (file in newFiles) {
+                relativeCopy(devBundlePatches, file, outputDir)
             }
 
             ensureDeleted(outputJar)
             zip(outputDir, outputJar)
         } finally {
-            ensureDeleted(outputDir, tempPatchDir, tempSourceDir)
-        }
-    }
-
-    private fun relativeCopy(baseDir: Path, file: Path, outputDir: Path) {
-        relativeCopyOrMove(baseDir, file, outputDir, false)
-    }
-
-    private fun relativeMove(baseDir: Path, file: Path, outputDir: Path) {
-        relativeCopyOrMove(baseDir, file, outputDir, true)
-    }
-
-    private fun relativeCopyOrMove(baseDir: Path, file: Path, outputDir: Path, move: Boolean) {
-        val destination = outputDir.resolve(file.relativeTo(baseDir).invariantSeparatorsPathString)
-        destination.parent.createDirectories()
-        if (move) {
-            file.moveTo(destination, overwrite = true)
-        } else {
-            file.copyTo(destination, overwrite = true)
+            ensureDeleted(outputDir, tempPatchDir)
         }
     }
 
