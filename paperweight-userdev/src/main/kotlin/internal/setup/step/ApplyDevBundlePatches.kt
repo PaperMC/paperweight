@@ -22,14 +22,20 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
+import codechicken.diffpatch.cli.PatchOperation
+import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.hashDirectory
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
+import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
 import io.papermc.paperweight.util.*
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 
 class ApplyDevBundlePatches(
     @Input private val decompiledJar: Path,
@@ -41,30 +47,49 @@ class ApplyDevBundlePatches(
     override val hashFile: Path = outputJar.siblingHashesFile()
 
     override fun run(context: SetupHandler.Context) {
-        Git.checkForGit()
-
-        val workDir = findOutputDir(outputJar)
+        val tempPatchDir = findOutputDir(outputJar)
+        val outputDir = findOutputDir(outputJar)
+        val log = outputJar.siblingLogFile()
 
         try {
-            unzip(decompiledJar, workDir)
-            val git = Git(workDir)
+            val (patches, newFiles) = Files.walk(devBundlePatches).use { stream ->
+                stream.asSequence()
+                    .filter { it.isRegularFile() }
+                    .partition { it.name.endsWith(".patch") }
+            }
+            for (patch in patches) {
+                relativeCopy(devBundlePatches, patch, tempPatchDir)
+            }
 
-            Files.walk(devBundlePatches).use { stream ->
-                stream.forEach {
-                    if (it.name.endsWith(".patch")) {
-                        git("apply", "--ignore-whitespace", it.absolutePathString()).executeOut()
-                    } else if (it.isRegularFile()) {
-                        val destination = workDir.resolve(it.relativeTo(devBundlePatches))
-                        destination.parent.createDirectories()
-                        it.copyTo(destination, overwrite = true)
-                    }
+            ensureDeleted(log)
+            PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
+                val op = PatchOperation.builder()
+                    .logTo(logOut)
+                    .verbose(true)
+                    .summary(true)
+                    .basePath(decompiledJar, ArchiveFormat.ZIP)
+                    .patchesPath(tempPatchDir)
+                    .outputPath(outputDir)
+                    .build()
+                try {
+                    op.operate().throwOnError()
+                } catch (ex: Exception) {
+                    throw PaperweightException(
+                        "Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details. " +
+                            "Usually, the issue is with the dev bundle itself, and not the userdev project.",
+                        ex
+                    )
                 }
             }
 
+            for (file in newFiles) {
+                relativeCopy(devBundlePatches, file, outputDir)
+            }
+
             ensureDeleted(outputJar)
-            zip(workDir, outputJar)
+            zip(outputDir, outputJar)
         } finally {
-            workDir.deleteRecursively()
+            ensureDeleted(outputDir, tempPatchDir)
         }
     }
 

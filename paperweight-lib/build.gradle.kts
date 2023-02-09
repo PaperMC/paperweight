@@ -16,4 +16,8 @@ dependencies {
     implementation(libs.lorenzTiny)
 
     implementation(libs.jbsdiff)
+
+    implementation("net.minecraftforge:DiffPatch:2.0.7:all") {
+        isTransitive = false
+    }
 }
