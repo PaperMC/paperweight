@@ -31,7 +31,7 @@ jbsdiff = "io.sigpipe:jbsdiff:1.0"
 # Gradle
 gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.1"
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:7.1.2"
-gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:11.1.0"
+gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:10.2.1"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:2.4.1"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.1.0"
