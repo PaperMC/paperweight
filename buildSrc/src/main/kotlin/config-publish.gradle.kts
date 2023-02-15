@@ -60,6 +60,7 @@ val shadowJar by tasks.existing(ShadowJar::class) {
     archiveClassifier.set(null as String?)
     configureStandard()
 
+    inputs.property("noRelocate", noRelocate)
     if (noRelocate) {
         return@existing
     }
