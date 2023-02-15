@@ -54,7 +54,7 @@ tasks.withType<KotlinCompile> {
         jvmTarget = "11"
         freeCompilerArgs = listOf(
             "-Xjvm-default=all",
-            "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
+            "-opt-in=kotlin.io.path.ExperimentalPathApi"
         )
     }
 }

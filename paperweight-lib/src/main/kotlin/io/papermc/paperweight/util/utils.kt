@@ -118,7 +118,6 @@ fun commentRegex(): Regex {
 
 val Project.isBaseExecution: Boolean
     get() = providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
-        .forUseAtConfigurationTime()
         .orElse(provider { "false" })
         .map { it == "false" }
         .get()
@@ -234,7 +233,6 @@ val <T> Optional<T>.orNull: T?
 inline fun <reified T : Any> Project.contents(contentFile: RegularFileProperty, crossinline convert: (String) -> T): Provider<T> {
     return providers.fileContents(contentFile)
         .asText
-        .forUseAtConfigurationTime()
         .map { convert(it) }
 }
 

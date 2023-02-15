@@ -168,13 +168,12 @@ fun <R> lockSetup(cache: Path, canBeNested: Boolean = false, action: () -> R): R
 // set by most CI
 val Project.ci: Provider<Boolean>
     get() = providers.environmentVariable("CI")
-        .forUseAtConfigurationTime()
         .map { it.toBoolean() }
         .orElse(false)
 
 val Project.genSources: Boolean
     get() {
         val ci = ci.get()
-        val prop = providers.gradleProperty("paperweight.experimental.genSources").forUseAtConfigurationTime().orNull?.toBoolean()
+        val prop = providers.gradleProperty("paperweight.experimental.genSources").orNull?.toBoolean()
         return prop ?: !ci
     }
