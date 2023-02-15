@@ -1,9 +1,19 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    `maven-publish`
     id("org.jetbrains.kotlin.jvm")
     id("com.github.johnrengelman.shadow")
+    id("com.gradle.plugin-publish")
+}
+
+fun version(): String = version.toString()
+val noRelocate = project.hasProperty("disable-relocation")
+if (noRelocate) {
+    if (version().contains("-SNAPSHOT")) {
+        version = version().substringBefore("-SNAPSHOT") + "-NO-RELOCATE-SNAPSHOT"
+    } else {
+        version = version() + "-NO-RELOCATE"
+    }
 }
 
 val shade: Configuration by configurations.creating
@@ -23,10 +33,36 @@ fun ShadowJar.configureStandard() {
     mergeServiceFiles()
 }
 
-val kotlinSourcesJar by tasks.existing
+val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
+    from(
+        zipTree(project(":paperweight-lib").tasks
+            .named("sourcesJar", AbstractArchiveTask::class)
+            .flatMap { it.archiveFile })
+    ) {
+        exclude("META-INF/**")
+    }
+}
+
+val prefix = project.name.substringAfter("paperweight-")
+
+gradlePlugin {
+    website.set("https://github.com/PaperMC/paperweight")
+    vcsUrl.set("https://github.com/PaperMC/paperweight")
+    plugins.create("paperweight-$prefix") {
+        id = "io.papermc.paperweight." + prefix
+        displayName = "paperweight $prefix"
+        description = "paperweight $prefix"
+        tags.set(listOf("paper", "minecraft"))
+    }
+}
 
 val shadowJar by tasks.existing(ShadowJar::class) {
+    archiveClassifier.set(null as String?)
     configureStandard()
+
+    if (noRelocate) {
+        return@existing
+    }
 
     val prefix = "paper.libs"
     listOf(
@@ -55,88 +91,20 @@ val shadowJar by tasks.existing(ShadowJar::class) {
     }
 }
 
-val devShadowJar by tasks.registering(ShadowJar::class) {
-    configureStandard()
-
-    from(project.sourceSets.main.get().output)
-
-    archiveClassifier.set("dev")
-}
-
-val isSnapshot = version().endsWith("-SNAPSHOT")
-
 publishing {
+    repositories {
+        maven("https://repo.papermc.io/repository/maven-snapshots/") {
+            credentials(PasswordCredentials::class)
+            name = "paper"
+        }
+    }
+
     publications {
-        register<MavenPublication>("shadow") {
-            pluginConfig(version())
-            artifact(shadowJar) {
-                classifier = null
+        withType(MavenPublication::class).configureEach {
+            pom {
+                pomConfig()
             }
         }
-        register<MavenPublication>("maven") {
-            standardConfig(version())
-        }
-        register<MavenPublication>("shadowLocal") {
-            pluginConfig(localVersion())
-            artifact(devShadowJar) {
-                classifier = null
-            }
-        }
-        register<MavenPublication>("mavenLocal") {
-            standardConfig(localVersion())
-        }
-
-        repositories {
-            val url = if (isSnapshot) {
-                "https://repo.papermc.io/repository/maven-snapshots/"
-            } else {
-                "https://repo.papermc.io/repository/maven-releases/"
-            }
-            maven(url) {
-                credentials(PasswordCredentials::class)
-                name = "paper"
-            }
-        }
-    }
-}
-
-tasks.withType(PublishToMavenRepository::class).configureEach {
-    onlyIf {
-        !publication.name.endsWith("Local")
-    }
-}
-tasks.withType(PublishToMavenLocal::class).configureEach {
-    onlyIf {
-        publication.name.endsWith("Local")
-    }
-}
-
-fun MavenPublication.standardConfig(versionName: String) {
-    groupId = project.group.toString()
-    artifactId = project.name
-    version = versionName
-
-    from(components["java"])
-    artifact(devShadowJar)
-
-    withoutBuildIdentifier()
-    pom {
-        pomConfig()
-    }
-}
-
-fun MavenPublication.pluginConfig(versionName: String) {
-    val baseName = project.group.toString() + "." + project.name.substringAfter('-')
-
-    groupId = baseName
-    artifactId = "$baseName.gradle.plugin"
-    version = versionName
-
-    artifact(kotlinSourcesJar)
-
-    withoutBuildIdentifier()
-    pom {
-        pomConfig()
     }
 }
 
@@ -148,7 +116,6 @@ fun MavenPom.pomConfig() {
     description.set("Gradle plugin for the PaperMC project")
     url.set(repoUrl)
     inceptionYear.set("2020")
-    packaging = "jar"
 
     licenses {
         license {
@@ -176,17 +143,5 @@ fun MavenPom.pomConfig() {
         url.set(repoUrl)
         connection.set("scm:git:$repoUrl.git")
         developerConnection.set("scm:git:git@github.com:$repoPath.git")
-    }
-}
-
-fun version(): String {
-    return project.version.toString()
-}
-
-fun localVersion(): String {
-    return if (isSnapshot) {
-        version().substringBefore('-') + "-LOCAL-SNAPSHOT"
-    } else {
-        version() + "-LOCAL"
     }
 }

@@ -10,3 +10,9 @@ dependencies {
         isTransitive = false
     }
 }
+
+gradlePlugin {
+    plugins.all {
+        implementationClass = "io.papermc.paperweight.userdev.PaperweightUser"
+    }
+}

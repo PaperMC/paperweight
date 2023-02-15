@@ -7,11 +7,13 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint")
 }
 
+java {
+    withSourcesJar()
+}
+
 kotlin {
     jvmToolchain {
-        (this as JavaToolchainSpec).apply {
-            languageVersion.set(JavaLanguageVersion.of(11))
-        }
+        languageVersion.set(JavaLanguageVersion.of(11))
     }
 }
 
@@ -45,10 +47,6 @@ configurations.all {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(kotlin("stdlib-jdk8"))
-}
-
-gradlePlugin {
-    isAutomatedPublishing = false
 }
 
 tasks.withType<KotlinCompile> {
