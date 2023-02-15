@@ -10,6 +10,7 @@ dependencies {
 
 gradlePlugin {
     plugins.all {
+        description = "Gradle plugin for developing Paper derivatives"
         implementationClass = "io.papermc.paperweight.patcher.PaperweightPatcher"
     }
 }
