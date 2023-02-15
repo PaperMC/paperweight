@@ -63,10 +63,10 @@ class PaperweightCore : Plugin<Project> {
         target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
 
-        if (target.providers.gradleProperty("paperweight.dev").forUseAtConfigurationTime().orNull == "true") {
+        if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {
                 inputDir.convention(ext.paper.paperServerDir.map { it.dir("src/main/java") })
-                val prop = target.providers.gradleProperty("paperweight.diff.output").forUseAtConfigurationTime()
+                val prop = target.providers.gradleProperty("paperweight.diff.output")
                 if (prop.isPresent) {
                     baseDir.convention(target.layout.projectDirectory.dir(prop))
                 }
@@ -135,7 +135,7 @@ class PaperweightCore : Plugin<Project> {
             // Setup the server jar
             val cache = target.layout.cache
 
-            val serverProj = target.ext.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
+            val serverProj = target.ext.serverProject.orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
             val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
 

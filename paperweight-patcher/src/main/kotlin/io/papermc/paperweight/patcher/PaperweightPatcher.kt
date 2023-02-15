@@ -64,8 +64,8 @@ class PaperweightPatcher : Plugin<Project> {
         target.configurations.create(REMAPPER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
 
-        val workDirProp = target.providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY).forUseAtConfigurationTime()
-        val dataFileProp = target.providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).forUseAtConfigurationTime()
+        val workDirProp = target.providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY)
+        val dataFileProp = target.providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
 
         val applyPatches by target.tasks.registering { group = "paperweight" }
         val rebuildPatches by target.tasks.registering { group = "paperweight" }
@@ -152,7 +152,7 @@ class PaperweightPatcher : Plugin<Project> {
                 }
             }
 
-            val serverProj = patcher.serverProject.forUseAtConfigurationTime().orNull ?: return@afterEvaluate
+            val serverProj = patcher.serverProject.orNull ?: return@afterEvaluate
             serverProj.apply(plugin = "com.github.johnrengelman.shadow")
             val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
 
