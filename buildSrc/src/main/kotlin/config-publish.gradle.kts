@@ -51,7 +51,6 @@ gradlePlugin {
     plugins.create("paperweight-$prefix") {
         id = "io.papermc.paperweight." + prefix
         displayName = "paperweight $prefix"
-        description = "paperweight $prefix"
         tags.set(listOf("paper", "minecraft"))
     }
 }

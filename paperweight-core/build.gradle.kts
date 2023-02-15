@@ -11,6 +11,7 @@ dependencies {
 
 gradlePlugin {
     plugins.all {
+        description = "Gradle plugin for developing Paper"
         implementationClass = "io.papermc.paperweight.core.PaperweightCore"
     }
 }
