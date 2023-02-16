@@ -25,7 +25,9 @@ package io.papermc.paperweight.userdev
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Action
 import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.*
 
 abstract class PaperweightUserDependenciesExtension(
@@ -89,6 +91,38 @@ abstract class PaperweightUserDependenciesExtension(
         configurationAction(dep)
         dependencies.add(devBundleConfigurationName, dep)
         return dep
+    }
+
+    /**
+     * Adds a dependency to the [DEV_BUNDLE_CONFIG] configuration.
+     *
+     * Intended for use with Gradle version catalogs.
+     *
+     * @param bundle dev bundle dependency provider
+     * @param configurationAction action configuring the dependency
+     */
+    @JvmOverloads
+    fun devBundle(
+        bundle: Provider<MinimalExternalModuleDependency>,
+        configurationAction: Action<ExternalModuleDependency> = nullAction()
+    ) {
+        dependencies.addProvider(DEV_BUNDLE_CONFIG, bundle, configurationAction)
+    }
+
+    /**
+     * Adds a dependency on the Paper dev bundle to the [DEV_BUNDLE_CONFIG] configuration.
+     *
+     * Intended for use with Gradle version catalogs.
+     *
+     * @param version version provider
+     * @param configurationAction action configuring the dependency
+     */
+    @JvmOverloads
+    fun paperDevBundle(
+        version: Provider<String>,
+        configurationAction: Action<ExternalModuleDependency> = nullAction()
+    ) {
+        dependencies.addProvider(DEV_BUNDLE_CONFIG, version.map { "io.papermc.paper:dev-bundle:$it" }, configurationAction)
     }
 
     /**
