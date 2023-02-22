@@ -30,7 +30,7 @@ Gradle will not start until the debugger is connected so you don't need to worry
 
 ### Style Guide
 
-This projects follows the opinionated [`ktlint`](https://ktlint.github.io/) linter and formatter. It uses the
+This project follows the opinionated [`ktlint`](https://ktlint.github.io/) linter and formatter. It uses the
 [`ktlint-gradle`](https://github.com/jlleitschuh/ktlint-gradle) plugin to automatically check and format the code in
 this repo.
 
@@ -50,8 +50,8 @@ with `ktlint` style settings and to automatically format this project's code bef
 ./gradlew ktlintApplyToIdea addKtlintFormatGitPreCommitHook
 ```
 
-> This project uses many new Gradle features to make sure we're ready for Gradle 7.0 and beyond, and we don't find
+> This project uses lots of new Gradle features , to make sure we're ready for Gradle 7.0 and beyond, and we don't find
 > ourselves stuck in a bad position where it's too hard for us to update. That being said, Gradle always marks new APIs
 > as unstable for a bit until the next major version, so you should probably disable the "Unstable API Usages" inspection
-> in IntelliJ as well. The easiest way to do this is just find any place where an "unstable API" is used (tons in
+> in IntelliJ as well. The easiest way to do this is just to find any place where an "unstable API" is used (tons in
 > `Paperweight.kt`) and disable the inspection from there.
