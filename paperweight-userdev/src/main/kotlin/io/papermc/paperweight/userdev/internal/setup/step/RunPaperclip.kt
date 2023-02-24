@@ -71,7 +71,7 @@ class RunPaperclip(
         cache.createDirectories()
         mojangJar.copyTo(cache.resolve("mojang_$minecraftVersion.jar"))
 
-        context.defaultJavaLauncher.runJar(
+        context.javaLauncher.runJar(
             classpath = context.project.files(paperclip),
             workingDir = work,
             logFile = logFile,

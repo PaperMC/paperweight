@@ -40,7 +40,7 @@ class FixMinecraftJar(
     override fun run(context: SetupHandler.Context) {
         fixJar(
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher,
+            launcher = context.javaLauncher,
             vanillaJarPath = vanillaServerJar,
             inputJarPath = inputJar,
             outputJarPath = outputJar,

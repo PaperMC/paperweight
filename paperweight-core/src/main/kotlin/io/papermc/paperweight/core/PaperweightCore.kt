@@ -33,18 +33,23 @@ import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.io.File
+import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 
-class PaperweightCore : Plugin<Project> {
+abstract class PaperweightCore : Plugin<Project> {
+    @get:Inject
+    abstract val javaToolchainService: JavaToolchainService
+
     override fun apply(target: Project) {
         Git.checkForGit()
 
-        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
+        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target, javaToolchainService)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 

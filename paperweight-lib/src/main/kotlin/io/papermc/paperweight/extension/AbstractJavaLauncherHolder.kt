@@ -20,32 +20,21 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.extension
 
 import io.papermc.paperweight.util.*
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Nested
-import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.api.Project
+import org.gradle.jvm.toolchain.JavaToolchainService
 
-interface JavaLauncherTaskBase {
-    @get:Nested
-    val launcher: Property<JavaLauncher>
-}
-
-abstract class JavaLauncherTask : BaseTask(), JavaLauncherTaskBase {
-
-    override fun init() {
-        super.init()
-
-        launcher.convention(project.defaultJavaLauncher())
+abstract class AbstractJavaLauncherHolder(
+    project: Project,
+    javaToolchainService: JavaToolchainService
+) : JavaLauncherHolder {
+    init {
+        init(project, javaToolchainService)
     }
-}
 
-abstract class JavaLauncherZippedTask : ZippedTask(), JavaLauncherTaskBase {
-
-    override fun init() {
-        super.init()
-
-        launcher.convention(project.defaultJavaLauncher())
+    private fun init(project: Project, javaToolchainService: JavaToolchainService) {
+        javaLauncher.convention(javaToolchainService.defaultJavaLauncher(project))
     }
 }

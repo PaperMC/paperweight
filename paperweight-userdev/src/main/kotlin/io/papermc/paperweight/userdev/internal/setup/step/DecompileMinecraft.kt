@@ -52,7 +52,7 @@ class DecompileMinecraft(
             inputJar = inputJar,
             libraries = minecraftLibraryJars(),
             outputJar = outputJar,
-            javaLauncher = context.defaultJavaLauncher
+            javaLauncher = context.javaLauncher
         )
     }
 

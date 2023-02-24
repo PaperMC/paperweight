@@ -55,7 +55,7 @@ class RemapMinecraft(
             remapClasspath = minecraftLibraryJars(),
             remapper = remapper,
             outputJar = outputJar,
-            launcher = context.defaultJavaLauncher,
+            launcher = context.javaLauncher,
             workingDir = cache
         )
     }

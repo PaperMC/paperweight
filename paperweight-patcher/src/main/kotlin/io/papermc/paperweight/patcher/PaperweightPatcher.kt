@@ -35,6 +35,7 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -42,15 +43,18 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
 
-class PaperweightPatcher : Plugin<Project> {
+abstract class PaperweightPatcher : Plugin<Project> {
+    @get:Inject
+    abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
         Git.checkForGit()
 
-        val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target)
+        val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target, javaToolchainService)
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 

@@ -42,7 +42,7 @@ class AccessTransformMinecraft(
             outputJarPath = outputJar,
             atFilePath = at,
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher
+            launcher = context.javaLauncher
         ).await()
     }
 }

@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.extension
 
+import io.papermc.paperweight.extension.AbstractJavaLauncherHolder
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.util.Locale
@@ -32,9 +33,15 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 
-open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
+abstract class PaperweightCoreExtension(
+    project: Project,
+    objects: ObjectFactory,
+    layout: ProjectLayout,
+    javaToolchainService: JavaToolchainService
+) : AbstractJavaLauncherHolder(project, javaToolchainService) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")

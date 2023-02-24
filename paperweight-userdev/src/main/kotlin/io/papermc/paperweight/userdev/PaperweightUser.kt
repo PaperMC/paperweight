@@ -82,13 +82,13 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val userdev = target.extensions.create(
-            PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
+            PAPERWEIGHT_EXTENSION,
+            PaperweightUserExtensionImpl::class,
             target,
             workerExecutor,
             javaToolchainService,
-            target.provider { userdevSetup },
-            target.objects
+            target.provider { userdevSetup }
         )
 
         target.dependencies.extensions.create(
@@ -253,5 +253,5 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun createContext(project: Project): SetupHandler.Context =
-        SetupHandler.Context(project, workerExecutor, javaToolchainService)
+        SetupHandler.Context(project, workerExecutor)
 }

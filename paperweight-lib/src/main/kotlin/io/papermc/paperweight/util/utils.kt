@@ -27,6 +27,7 @@ import com.google.gson.*
 import dev.denwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.extension.JavaLauncherHolder
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import java.io.File
@@ -267,6 +268,10 @@ fun toHex(hash: ByteArray): String {
     }
     return sb.toString()
 }
+
+// This works because we don't expect or support people applying more than one of userdev/core/patcher in a single project
+fun Project.defaultJavaLauncher(): Provider<JavaLauncher> =
+    extensions.getByType(JavaLauncherHolder::class.java).javaLauncher
 
 fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLauncher> {
     return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain).orElse(

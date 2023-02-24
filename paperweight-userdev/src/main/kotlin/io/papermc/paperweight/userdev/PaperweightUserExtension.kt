@@ -22,40 +22,28 @@
 
 package io.papermc.paperweight.userdev
 
-import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.util.*
-import org.gradle.api.Project
+import io.papermc.paperweight.extension.JavaLauncherHolder
 import org.gradle.api.file.RegularFile
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.jvm.toolchain.JavaToolchainService
-import org.gradle.kotlin.dsl.*
-import org.gradle.workers.WorkerExecutor
+import org.gradle.jvm.toolchain.JavaLauncher
 
 /**
  * Extension exposing configuration and other APIs for paperweight userdev.
  */
-abstract class PaperweightUserExtension(
-    project: Project,
-    workerExecutor: WorkerExecutor,
-    javaToolchainService: JavaToolchainService,
-    setup: Provider<SetupHandler>,
-    objects: ObjectFactory
-) {
+interface PaperweightUserExtension : JavaLauncherHolder {
     /**
      * Whether to inject the Paper maven repository for use by the dev bundle configuration.
      *
      * True by default to allow easily resolving Paper development bundles.
      */
-    val injectPaperRepository: Property<Boolean> = objects.property<Boolean>().convention(true)
+    val injectPaperRepository: Property<Boolean>
 
     /**
      * The [ReobfArtifactConfiguration] is responsible for setting the input and output jars for `reobfJar`,
      * as well as changing the classifiers of other jars (i.e. `jar` or `shadowJar`).
      */
-    val reobfArtifactConfiguration: Property<ReobfArtifactConfiguration> = objects.property<ReobfArtifactConfiguration>()
-        .convention(ReobfArtifactConfiguration.REOBF_PRODUCTION)
+    val reobfArtifactConfiguration: Property<ReobfArtifactConfiguration>
 
     /**
      * Provides a runnable Mojang mapped server jar, extracted from the current dev bundle.
@@ -65,14 +53,17 @@ abstract class PaperweightUserExtension(
         replaceWith = ReplaceWith("project.configurations.mojangMappedServerRuntime"),
         level = DeprecationLevel.WARNING
     )
-    val mojangMappedServerJar: Provider<RegularFile> = objects.fileProperty().pathProvider(
-        setup.map { it.serverJar(SetupHandler.Context(project, workerExecutor, javaToolchainService)) }
-    ).withDisallowChanges().withDisallowUnsafeRead()
+    val mojangMappedServerJar: Provider<RegularFile>
 
     /**
      * Provides the Minecraft version of the current dev bundle.
      */
-    val minecraftVersion: Provider<String> = objects.property<String>().value(
-        setup.map { it.minecraftVersion }
-    ).withDisallowChanges().withDisallowUnsafeRead()
+    val minecraftVersion: Provider<String>
+
+    /**
+     * The default [JavaLauncher] for paperweight.
+     *
+     * Used for executing setup, and as the default launcher for `reobfJar`.
+     */
+    override val javaLauncher: Property<JavaLauncher>
 }

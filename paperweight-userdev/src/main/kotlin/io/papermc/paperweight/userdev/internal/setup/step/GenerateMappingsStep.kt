@@ -49,7 +49,7 @@ class GenerateMappingsStep(
             paramMappingsPath = paramMappings,
             outputMappingsPath = outputMappings,
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher
+            launcher = context.javaLauncher
         ).await()
     }
 

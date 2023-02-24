@@ -32,7 +32,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.jvm.toolchain.JavaLauncher
-import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
@@ -64,11 +63,10 @@ interface SetupHandler {
 
     data class Context(
         val project: Project,
-        val workerExecutor: WorkerExecutor,
-        val javaToolchainService: JavaToolchainService
+        val workerExecutor: WorkerExecutor
     ) {
-        val defaultJavaLauncher: JavaLauncher
-            get() = javaToolchainService.defaultJavaLauncher(project).get()
+        val javaLauncher: JavaLauncher
+            get() = project.defaultJavaLauncher().get()
     }
 
     companion object {

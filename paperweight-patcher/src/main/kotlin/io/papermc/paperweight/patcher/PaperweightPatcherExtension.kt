@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.patcher
 
+import io.papermc.paperweight.extension.AbstractJavaLauncherHolder
 import io.papermc.paperweight.patcher.upstream.DefaultPaperRepoPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.DefaultPatcherUpstream
 import io.papermc.paperweight.patcher.upstream.DefaultRepoPatcherUpstream
@@ -43,10 +44,17 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
-open class PaperweightPatcherExtension(project: Project, private val objects: ObjectFactory, layout: ProjectLayout, tasks: TaskContainer) {
+abstract class PaperweightPatcherExtension(
+    project: Project,
+    private val objects: ObjectFactory,
+    layout: ProjectLayout,
+    tasks: TaskContainer,
+    javaToolchainService: JavaToolchainService
+) : AbstractJavaLauncherHolder(project, javaToolchainService) {
 
     val serverProject: Property<Project> = objects.property()
 
