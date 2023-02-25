@@ -63,6 +63,11 @@ open class InitialTasks(
                 manifest.versions.first { it.id == version }.url
             }
         )
+        expectedHash.set(
+            mcManifest.zip(extension.minecraftVersion) { manifest, version ->
+                Hash(manifest.versions.first { it.id == version }.sha1, HashingAlgorithm.SHA1)
+            }
+        )
         outputFile.set(cache.resolve(VERSION_JSON))
 
         downloader.set(downloadService)
@@ -75,6 +80,11 @@ open class InitialTasks(
                 version["downloads"]["server_mappings"]["url"].string
             }
         )
+        expectedHash.set(
+            versionManifest.map { version ->
+                Hash(version["downloads"]["server_mappings"]["sha1"].string, HashingAlgorithm.SHA1)
+            }
+        )
         outputFile.set(cache.resolve(SERVER_MAPPINGS))
 
         downloader.set(downloadService)
@@ -84,6 +94,11 @@ open class InitialTasks(
         downloadUrl.set(
             versionManifest.map { version ->
                 version["downloads"]["server"]["url"].string
+            }
+        )
+        expectedHash.set(
+            versionManifest.map { version ->
+                Hash(version["downloads"]["server"]["sha1"].string, HashingAlgorithm.SHA1)
             }
         )
 

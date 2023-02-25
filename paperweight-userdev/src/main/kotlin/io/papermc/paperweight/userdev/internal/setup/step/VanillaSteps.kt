@@ -48,14 +48,16 @@ class VanillaSteps(
         downloadService.download(
             "vanilla minecraft server jar",
             minecraftVersionManifest["downloads"]["server"]["url"].string,
-            mojangJar
+            mojangJar,
+            expectedHash = Hash(minecraftVersionManifest["downloads"]["server"]["sha1"].string, HashingAlgorithm.SHA1)
         )
 
     fun downloadServerMappings(): DownloadResult<Unit> =
         downloadService.download(
             "mojang server mappings",
             minecraftVersionManifest["downloads"]["server_mappings"]["url"].string,
-            serverMappings
+            serverMappings,
+            expectedHash = Hash(minecraftVersionManifest["downloads"]["server_mappings"]["sha1"].string, HashingAlgorithm.SHA1)
         )
 
     private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> =
@@ -68,11 +70,13 @@ class VanillaSteps(
             minecraftManifest = downloadMinecraftManifest(true)
         }
 
+        val ver = minecraftManifest.data.versions.firstOrNull { it.id == minecraftVersion }
+            ?: throw PaperweightException("Could not find Minecraft version '$minecraftVersion' in the downloaded manifest.")
         val minecraftVersionManifestJson = downloadService.download(
             "minecraft version manifest",
-            minecraftManifest.data.versions.firstOrNull { it.id == minecraftVersion }?.url
-                ?: throw PaperweightException("Could not find Minecraft version '$minecraftVersion' in the downloaded manifest."),
-            cache.resolve(VERSION_JSON)
+            ver.url,
+            cache.resolve(VERSION_JSON),
+            expectedHash = Hash(ver.sha1, HashingAlgorithm.SHA1)
         )
         return gson.fromJson(minecraftVersionManifestJson.path)
     }

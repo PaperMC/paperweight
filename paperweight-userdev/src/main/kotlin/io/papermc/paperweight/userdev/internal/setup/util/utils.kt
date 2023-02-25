@@ -26,7 +26,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.userdev.PaperweightUser
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.constants.USERDEV_SETUP_LOCK
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -62,7 +62,7 @@ fun hash(things: List<Any>): String {
     return hashFiles(paths) + if (strings.isEmpty()) {
         ""
     } else {
-        "\n" + strings.sorted().joinToString("\n") { toHex(it.byteInputStream().hash(digestSha256)) }
+        "\n" + strings.sorted().joinToString("\n") { it.hash(HashingAlgorithm.SHA256).asHexString() }
     }
 }
 
@@ -81,6 +81,7 @@ fun DownloadService.download(
     remote: String,
     destination: Path,
     forceDownload: Boolean = false,
+    expectedHash: Hash? = null
 ): DownloadResult<Unit> {
     val hashFile = destination.siblingHashesFile()
 
@@ -94,10 +95,12 @@ fun DownloadService.download(
     UserdevSetup.LOGGER.lifecycle(":executing 'download {}'", downloadName)
     destination.parent.createDirectories()
     val elapsed = measureTimeMillis {
-        download(remote, destination)
+        download(remote, destination, expectedHash)
     }
     UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
-    hashFile.writeText(hash(remote, destination))
+    val toHash = mutableListOf<Any>(remote, destination)
+    expectedHash?.let { toHash += it.valueLower }
+    hashFile.writeText(hash(toHash))
 
     return DownloadResult(destination, true, Unit)
 }

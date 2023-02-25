@@ -32,5 +32,6 @@ data class ManifestVersion(
     val type: String,
     val time: String,
     val releaseTime: String,
-    val url: String
+    val url: String,
+    val sha1: String,
 )

@@ -28,8 +28,6 @@ import io.papermc.paperweight.util.data.*
 import io.sigpipe.jbsdiff.Diff
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
 import java.util.StringJoiner
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -95,15 +93,9 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
             }
         }
 
-        val digestSha1 = try {
-            MessageDigest.getInstance("SHA1")
-        } catch (e: NoSuchAlgorithmException) {
-            throw PaperweightException("Could not create SHA1 digest", e)
-        }
-
         val originalJar = originalBundlerJar.path
         val vanillaSha256Hash = originalJar.sha256asHex()
-        val vanillaSha1Hash = toHex(originalJar.hashFile(digestSha1))
+        val vanillaSha1Hash = originalJar.hashFile(HashingAlgorithm.SHA1).asHexString()
         val vanillaUrl = "https://piston-data.mojang.com/v1/objects/$vanillaSha1Hash/server.jar"
         val vanillaFileName = "mojang_${mcVersion.get()}.jar"
 
