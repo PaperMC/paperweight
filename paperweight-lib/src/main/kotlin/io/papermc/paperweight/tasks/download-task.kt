@@ -58,6 +58,7 @@ abstract class DownloadTask : DefaultTask() {
     abstract val downloader: Property<DownloadService>
 
     @get:Nested
+    @get:Optional
     abstract val expectedHash: Property<Hash>
 
     @TaskAction

@@ -26,11 +26,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Nested
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 // Not cached since this is Mojang's server jar
 abstract class DownloadServerJar : BaseTask() {
@@ -45,6 +41,7 @@ abstract class DownloadServerJar : BaseTask() {
     abstract val downloader: Property<DownloadService>
 
     @get:Nested
+    @get:Optional
     abstract val expectedHash: Property<Hash>
 
     override fun init() {
