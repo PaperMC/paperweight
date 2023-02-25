@@ -23,15 +23,13 @@
 package io.papermc.paperweight.userdev.internal.setup.util
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.PaperweightUser
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.constants.USERDEV_SETUP_LOCK
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Locale
 import java.util.stream.Collectors
 import kotlin.io.path.*
 import kotlin.system.measureTimeMillis
@@ -64,7 +62,7 @@ fun hash(things: List<Any>): String {
     return hashFiles(paths) + if (strings.isEmpty()) {
         ""
     } else {
-        "\n" + strings.sorted().joinToString("\n") { toHex(it.byteInputStream().hash(digestSha256)) }
+        "\n" + strings.sorted().joinToString("\n") { it.hash(HashingAlgorithm.SHA256).asHexString() }
     }
 }
 
@@ -83,8 +81,7 @@ fun DownloadService.download(
     remote: String,
     destination: Path,
     forceDownload: Boolean = false,
-    sha1: String? = null,
-    retry: Boolean = false
+    expectedHash: Hash? = null
 ): DownloadResult<Unit> {
     val hashFile = destination.siblingHashesFile()
 
@@ -98,27 +95,12 @@ fun DownloadService.download(
     UserdevSetup.LOGGER.lifecycle(":executing 'download {}'", downloadName)
     destination.parent.createDirectories()
     val elapsed = measureTimeMillis {
-        download(remote, destination)
+        download(remote, destination, expectedHash)
     }
     UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
-    val hash = mutableListOf<Any>(remote, destination)
-    if (sha1 != null) {
-        val sha1lower = sha1.toLowerCase(Locale.ENGLISH)
-        hash += sha1lower
-        val dlSha1 = toHex(destination.hashFile(digestSha1)).toLowerCase(Locale.ENGLISH)
-        if (dlSha1 != sha1lower) {
-            UserdevSetup.LOGGER.warn(
-                "SHA1 hash of downloaded file '${destination.name}' does not match what was expected! (expected: '$sha1lower', got: '$dlSha1')"
-            )
-            if (!retry) {
-                UserdevSetup.LOGGER.warn("Re-attempting download once before giving up.")
-                download(downloadName, remote, destination, forceDownload, sha1, true)
-            } else {
-                throw PaperweightException("Failed to download file '${destination.name}' from '$remote'.")
-            }
-        }
-    }
-    hashFile.writeText(hash(hash))
+    val toHash = mutableListOf<Any>(remote, destination)
+    expectedHash?.let { toHash += it.valueLower }
+    hashFile.writeText(hash(toHash))
 
     return DownloadResult(destination, true, Unit)
 }

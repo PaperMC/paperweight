@@ -57,8 +57,11 @@ abstract class DownloadTask : DefaultTask() {
     @get:Internal
     abstract val downloader: Property<DownloadService>
 
+    @get:Nested
+    abstract val expectedHash: Property<Hash>
+
     @TaskAction
-    fun run() = downloader.get().download(url, outputFile)
+    fun run() = downloader.get().download(url, outputFile, expectedHash.orNull)
 }
 
 @CacheableTask

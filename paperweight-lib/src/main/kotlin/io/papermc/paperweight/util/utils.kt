@@ -37,13 +37,15 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
-import kotlin.reflect.KProperty
+import kotlin.properties.ReadOnlyProperty
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -56,6 +58,8 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -165,6 +169,7 @@ fun Any.convertToPath(): Path {
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }
 }
+
 fun Any.convertToFileProvider(layout: ProjectLayout, providers: ProviderFactory): Provider<RegularFile> {
     return when (this) {
         is Path -> layout.file(providers.provider { toFile() })
@@ -254,21 +259,44 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
-private class ThreadLocalMessageDigestDelegate(private val digest: ThreadLocal<MessageDigest>) {
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): MessageDigest {
-        return digest.get()
+enum class HashingAlgorithm(algorithm: String) {
+    SHA256("SHA-256"),
+    SHA1("SHA-1");
+
+    val digest by threadLocalMessageDigest(algorithm)
+
+    private fun threadLocalMessageDigest(algorithm: String): ReadOnlyProperty<Any?, MessageDigest> {
+        val threadLocal = ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) }
+        return ReadOnlyProperty<Any?, MessageDigest> { _, _ -> threadLocal.get() }
     }
 }
 
-private fun threadLocalMessageDigest(algorithm: String): ThreadLocalMessageDigestDelegate =
-    ThreadLocalMessageDigestDelegate(ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) })
+class Hash(
+    @get:Input
+    val value: String,
+    @get:Input
+    val algorithm: HashingAlgorithm
+) {
+    @get:Internal
+    val valueLower: String by lazy { value.toLowerCase(Locale.ENGLISH) }
+}
 
-val digestSha256: MessageDigest by threadLocalMessageDigest("SHA-256")
-val digestSha1: MessageDigest by threadLocalMessageDigest("SHA-1")
+fun String.hash(algorithm: HashingAlgorithm): ByteArray = byteInputStream().hash(algorithm)
 
-fun toHex(hash: ByteArray): String {
-    val sb: StringBuilder = StringBuilder(hash.size * 2)
-    for (aHash in hash) {
+fun InputStream.hash(algorithm: HashingAlgorithm): ByteArray {
+    val digestStream = DigestInputStream(this, algorithm.digest)
+    digestStream.use { stream ->
+        val buffer = ByteArray(1024)
+        while (stream.read(buffer) != -1) {
+            // reading
+        }
+    }
+    return digestStream.messageDigest.digest()
+}
+
+fun ByteArray.asHexString(): String {
+    val sb: StringBuilder = StringBuilder(size * 2)
+    for (aHash in this) {
         sb.append("%02x".format(aHash.toInt() and 0xFF))
     }
     return sb.toString()

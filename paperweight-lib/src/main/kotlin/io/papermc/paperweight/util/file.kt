@@ -23,7 +23,6 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
-import java.io.InputStream
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -31,8 +30,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -159,20 +156,9 @@ fun FileSystem.walk(): Stream<Path> {
 
 fun ProcessBuilder.directory(path: Path): ProcessBuilder = directory(path.toFile())
 
-fun InputStream.hash(digest: MessageDigest): ByteArray {
-    val digestStream = DigestInputStream(this, digest)
-    digestStream.use { stream ->
-        val buffer = ByteArray(1024)
-        while (stream.read(buffer) != -1) {
-            // reading
-        }
-    }
-    return digestStream.messageDigest.digest()
-}
+fun Path.hashFile(algorithm: HashingAlgorithm): ByteArray = inputStream().use { input -> input.hash(algorithm) }
 
-fun Path.hashFile(digest: MessageDigest): ByteArray = inputStream().use { iS -> iS.hash(digest) }
-
-fun Path.sha256asHex(): String = toHex(hashFile(digestSha256))
+fun Path.sha256asHex(): String = hashFile(HashingAlgorithm.SHA256).asHexString()
 
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
 

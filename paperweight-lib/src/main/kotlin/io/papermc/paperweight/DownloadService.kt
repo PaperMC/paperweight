@@ -29,6 +29,7 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 import org.apache.http.HttpHost
@@ -40,10 +41,16 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.DateUtils
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClientBuilder
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 
 abstract class DownloadService : BuildService<BuildServiceParameters.None>, AutoCloseable {
+
+    private companion object {
+        val LOGGER: Logger = Logging.getLogger(DownloadService::class.java)
+    }
 
     private val httpClient: CloseableHttpClient = HttpClientBuilder.create().let { builder ->
         builder.setRetryHandler { _, count, _ -> count < 3 }
@@ -51,10 +58,34 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
         builder.build()
     }
 
-    fun download(source: Any, target: Any) {
+    fun download(source: Any, target: Any, hash: Hash? = null) {
         val url = source.convertToUrl()
         val file = target.convertToPath()
-        download(url, file)
+        download(url, file, hash)
+    }
+
+    private fun download(source: URL, target: Path, hash: Hash?, retry: Boolean = false) {
+        download(source, target)
+        if (hash == null) {
+            return
+        }
+        val dlHash = target.hashFile(hash.algorithm).asHexString().toLowerCase(Locale.ENGLISH)
+        if (dlHash == hash.valueLower) {
+            return
+        }
+        LOGGER.warn(
+            "{} hash of downloaded file '{}' does not match what was expected! (expected: '{}', got: '{}')",
+            hash.algorithm.name,
+            target,
+            hash.valueLower,
+            dlHash
+        )
+        if (retry) {
+            throw PaperweightException("Failed to download file '$target' from '$source'.")
+        }
+        LOGGER.warn("Re-attempting download once before giving up.")
+        target.deleteIfExists()
+        download(source, target, hash, true)
     }
 
     private fun download(source: URL, target: Path) {

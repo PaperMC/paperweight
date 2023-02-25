@@ -59,7 +59,7 @@ const val USERDEV_SETUP_LOCK = "$LOCK_DIR/userdev/setup.lock"
 const val APPLY_PATCHES_LOCK_DIR = "$LOCK_DIR/apply-patches"
 
 fun applyPatchesLock(targetDir: Path): String = APPLY_PATCHES_LOCK_DIR + '/' +
-    toHex(targetDir.absolutePathString().byteInputStream().hash(digestSha256)) + ".lock"
+    targetDir.absolutePathString().hash(HashingAlgorithm.SHA256).asHexString() + ".lock"
 
 const val UPSTREAMS = "$PAPER_PATH/upstreams"
 const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"

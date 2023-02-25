@@ -49,7 +49,7 @@ class VanillaSteps(
             "vanilla minecraft server jar",
             minecraftVersionManifest["downloads"]["server"]["url"].string,
             mojangJar,
-            sha1 = minecraftVersionManifest["downloads"]["server"]["sha1"].string
+            expectedHash = Hash(minecraftVersionManifest["downloads"]["server"]["sha1"].string, HashingAlgorithm.SHA1)
         )
 
     fun downloadServerMappings(): DownloadResult<Unit> =
@@ -57,7 +57,7 @@ class VanillaSteps(
             "mojang server mappings",
             minecraftVersionManifest["downloads"]["server_mappings"]["url"].string,
             serverMappings,
-            sha1 = minecraftVersionManifest["downloads"]["server_mappings"]["sha1"].string
+            expectedHash = Hash(minecraftVersionManifest["downloads"]["server_mappings"]["sha1"].string, HashingAlgorithm.SHA1)
         )
 
     private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> =
@@ -76,7 +76,7 @@ class VanillaSteps(
             "minecraft version manifest",
             ver.url,
             cache.resolve(VERSION_JSON),
-            sha1 = ver.sha1
+            expectedHash = Hash(ver.sha1, HashingAlgorithm.SHA1)
         )
         return gson.fromJson(minecraftVersionManifestJson.path)
     }
