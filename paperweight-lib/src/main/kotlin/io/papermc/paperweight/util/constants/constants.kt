@@ -46,6 +46,8 @@ const val DEV_BUNDLE_CONFIG = "paperweightDevelopmentBundle"
 const val MOJANG_MAPPED_SERVER_CONFIG = "mojangMappedServer"
 const val MOJANG_MAPPED_SERVER_RUNTIME_CONFIG = "mojangMappedServerRuntime"
 const val REOBF_CONFIG = "reobf"
+const val CONSUMABLE_RUNTIME_CLASSPATH = "consumableRuntimeClasspath"
+const val SERVER_RUNTIME_CLASSPATH = "serverRuntimeClasspath"
 
 const val PARAM_MAPPINGS_REPO_NAME = "paperweightParamMappingsRepository"
 const val DECOMPILER_REPO_NAME = "paperweightDecompilerRepository"

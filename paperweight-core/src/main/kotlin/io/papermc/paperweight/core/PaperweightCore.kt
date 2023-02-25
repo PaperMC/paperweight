@@ -181,7 +181,6 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.flatMap { it.versionJson },
                 tasks.extractFromBundler.flatMap { it.serverLibrariesList },
                 tasks.downloadServerJar.flatMap { it.outputJar },
-                serverProj,
                 shadowJar,
                 reobfJar,
                 ext.minecraftVersion

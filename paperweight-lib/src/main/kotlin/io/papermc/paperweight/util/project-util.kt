@@ -29,6 +29,8 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
@@ -55,6 +57,8 @@ fun Project.setupServerProject(
     plugins.apply("java")
 
     extensions.create<RelocationExtension>(RELOCATION_EXTENSION, objects)
+
+    exportRuntimeClasspathTo(parent)
 
     val vanillaServer: Configuration by configurations.creating {
         withDependencies {
@@ -90,6 +94,31 @@ fun Project.setupServerProject(
 
     plugins.apply("com.github.johnrengelman.shadow")
     return createBuildTasks(parent, packagesToFix, reobfMappings)
+}
+
+private fun Project.exportRuntimeClasspathTo(parent: Project) {
+    configurations.create(CONSUMABLE_RUNTIME_CLASSPATH) {
+        isCanBeConsumed = true
+        isCanBeResolved = false
+        extendsFrom(configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+    }
+    parent.configurations.create(SERVER_RUNTIME_CLASSPATH) {
+        attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage.JAVA_RUNTIME))
+    }
+    parent.dependencies {
+        add(SERVER_RUNTIME_CLASSPATH, parent.dependencies.project(path, configuration = CONSUMABLE_RUNTIME_CLASSPATH))
+    }
+    afterEvaluate {
+        val old = parent.repositories.toList()
+        parent.repositories.clear()
+        repositories.filterIsInstance<MavenArtifactRepository>().forEach {
+            parent.repositories.maven(it.url) {
+                name = "serverRuntimeClasspath repo ${it.url}"
+                content { onlyForConfigurations(SERVER_RUNTIME_CLASSPATH) }
+            }
+        }
+        parent.repositories.addAll(old)
+    }
 }
 
 private fun Project.createBuildTasks(
