@@ -45,7 +45,6 @@ import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
-import kotlin.properties.ReadOnlyProperty
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -263,12 +262,10 @@ enum class HashingAlgorithm(algorithm: String) {
     SHA256("SHA-256"),
     SHA1("SHA-1");
 
-    val digest by threadLocalMessageDigest(algorithm)
+    private val threadLocalMessageDigest = ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) }
 
-    private fun threadLocalMessageDigest(algorithm: String): ReadOnlyProperty<Any?, MessageDigest> {
-        val threadLocal = ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) }
-        return ReadOnlyProperty<Any?, MessageDigest> { _, _ -> threadLocal.get() }
-    }
+    val digest: MessageDigest
+        get() = threadLocalMessageDigest.get()
 }
 
 class Hash(
