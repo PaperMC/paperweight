@@ -23,6 +23,7 @@
 package io.papermc.paperweight.userdev.internal.setup.util
 
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.PaperweightUser
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
@@ -81,6 +82,8 @@ fun DownloadService.download(
     remote: String,
     destination: Path,
     forceDownload: Boolean = false,
+    sha1: String? = null,
+    retry: Boolean = false
 ): DownloadResult<Unit> {
     val hashFile = destination.siblingHashesFile()
 
@@ -97,7 +100,24 @@ fun DownloadService.download(
         download(remote, destination)
     }
     UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
-    hashFile.writeText(hash(remote, destination))
+    val hash = mutableListOf<Any>(remote, destination)
+    if (sha1 != null) {
+        val sha1lower = sha1.lowercase()
+        hash += sha1lower
+        val dlSha1 = toHex(destination.hashFile(digestSha1)).lowercase()
+        if (dlSha1 != sha1lower) {
+            UserdevSetup.LOGGER.warn(
+                "SHA1 hash of downloaded file '${destination.name}' does not match what was expected! (expected: '$sha1lower', got: '$dlSha1')"
+            )
+            if (!retry) {
+                UserdevSetup.LOGGER.warn("Re-attempting download once before giving up.")
+                download(downloadName, remote, destination, forceDownload, sha1, true)
+            } else {
+                throw PaperweightException("Failed to download file '${destination.name}' from '$remote'.")
+            }
+        }
+    }
+    hashFile.writeText(hash(hash))
 
     return DownloadResult(destination, true, Unit)
 }

@@ -43,6 +43,7 @@ import java.util.IdentityHashMap
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
+import kotlin.reflect.KProperty
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -253,12 +254,17 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
-private val threadLocalDigestSha256: ThreadLocal<MessageDigest> = ThreadLocal.withInitial {
-    MessageDigest.getInstance("SHA-256")
+private class ThreadLocalMessageDigestDelegate(private val digest: ThreadLocal<MessageDigest>) {
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): MessageDigest {
+        return digest.get()
+    }
 }
 
-val digestSha256: MessageDigest
-    get() = threadLocalDigestSha256.get()
+private fun threadLocalMessageDigest(algorithm: String): ThreadLocalMessageDigestDelegate =
+    ThreadLocalMessageDigestDelegate(ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) })
+
+val digestSha256: MessageDigest by threadLocalMessageDigest("SHA-256")
+val digestSha1: MessageDigest by threadLocalMessageDigest("SHA-1")
 
 fun toHex(hash: ByteArray): String {
     val sb: StringBuilder = StringBuilder(hash.size * 2)
