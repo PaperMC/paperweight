@@ -31,6 +31,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Locale
 import java.util.stream.Collectors
 import kotlin.io.path.*
 import kotlin.system.measureTimeMillis
@@ -102,9 +103,9 @@ fun DownloadService.download(
     UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
     val hash = mutableListOf<Any>(remote, destination)
     if (sha1 != null) {
-        val sha1lower = sha1.lowercase()
+        val sha1lower = sha1.toLowerCase(Locale.ENGLISH)
         hash += sha1lower
-        val dlSha1 = toHex(destination.hashFile(digestSha1)).lowercase()
+        val dlSha1 = toHex(destination.hashFile(digestSha1)).toLowerCase(Locale.ENGLISH)
         if (dlSha1 != sha1lower) {
             UserdevSetup.LOGGER.warn(
                 "SHA1 hash of downloaded file '${destination.name}' does not match what was expected! (expected: '$sha1lower', got: '$dlSha1')"
