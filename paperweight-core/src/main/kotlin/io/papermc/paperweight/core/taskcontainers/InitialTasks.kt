@@ -22,16 +22,13 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import com.github.salomonbrys.kotson.get
-import com.github.salomonbrys.kotson.string
-import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.data.MinecraftManifest
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -65,42 +62,26 @@ open class InitialTasks(
         )
         expectedHash.set(
             mcManifest.zip(extension.minecraftVersion) { manifest, version ->
-                Hash(manifest.versions.first { it.id == version }.sha1, HashingAlgorithm.SHA1)
+                manifest.versions.first { it.id == version }.hash()
             }
         )
         outputFile.set(cache.resolve(VERSION_JSON))
 
         downloader.set(downloadService)
     }
-    private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<JsonObject>(it) }
+    private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftVersionManifest>(it) }
 
     val downloadMappings by tasks.registering<DownloadTask> {
-        url.set(
-            versionManifest.map { version ->
-                version["downloads"]["server_mappings"]["url"].string
-            }
-        )
-        expectedHash.set(
-            versionManifest.map { version ->
-                Hash(version["downloads"]["server_mappings"]["sha1"].string, HashingAlgorithm.SHA1)
-            }
-        )
+        url.set(versionManifest.map { version -> version.serverMappingsDownload().url })
+        expectedHash.set(versionManifest.map { version -> version.serverMappingsDownload().hash() })
         outputFile.set(cache.resolve(SERVER_MAPPINGS))
 
         downloader.set(downloadService)
     }
 
     val downloadServerJar by tasks.registering<DownloadServerJar> {
-        downloadUrl.set(
-            versionManifest.map { version ->
-                version["downloads"]["server"]["url"].string
-            }
-        )
-        expectedHash.set(
-            versionManifest.map { version ->
-                Hash(version["downloads"]["server"]["sha1"].string, HashingAlgorithm.SHA1)
-            }
-        )
+        downloadUrl.set(versionManifest.map { version -> version.serverDownload().url })
+        expectedHash.set(versionManifest.map { version -> version.serverDownload().hash() })
 
         downloader.set(downloadService)
     }

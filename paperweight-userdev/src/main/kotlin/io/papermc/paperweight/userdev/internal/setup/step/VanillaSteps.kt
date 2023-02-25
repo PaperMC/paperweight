@@ -22,9 +22,6 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import com.github.salomonbrys.kotson.get
-import com.github.salomonbrys.kotson.string
-import com.google.gson.JsonObject
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.setup.util.*
@@ -40,31 +37,31 @@ class VanillaSteps(
     private val downloadService: DownloadService,
     private val bundleChanged: Boolean,
 ) {
-    val minecraftVersionManifest: JsonObject by lazy { setupMinecraftVersionManifest() }
+    private val versionManifest: MinecraftVersionManifest by lazy { setupMinecraftVersionManifest() }
     val mojangJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
     val serverMappings: Path = cache.resolve(SERVER_MAPPINGS)
 
     fun downloadVanillaServerJar(): DownloadResult<Unit> =
         downloadService.download(
             "vanilla minecraft server jar",
-            minecraftVersionManifest["downloads"]["server"]["url"].string,
+            versionManifest.serverDownload().url,
             mojangJar,
-            expectedHash = Hash(minecraftVersionManifest["downloads"]["server"]["sha1"].string, HashingAlgorithm.SHA1)
+            expectedHash = versionManifest.serverDownload().hash()
         )
 
     fun downloadServerMappings(): DownloadResult<Unit> =
         downloadService.download(
             "mojang server mappings",
-            minecraftVersionManifest["downloads"]["server_mappings"]["url"].string,
+            versionManifest.serverMappingsDownload().url,
             serverMappings,
-            expectedHash = Hash(minecraftVersionManifest["downloads"]["server_mappings"]["sha1"].string, HashingAlgorithm.SHA1)
+            expectedHash = versionManifest.serverMappingsDownload().hash()
         )
 
     private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> =
         downloadService.download("minecraft manifest", MC_MANIFEST_URL, cache.resolve(MC_MANIFEST), force)
             .mapData { gson.fromJson(it.path) }
 
-    private fun setupMinecraftVersionManifest(): JsonObject {
+    private fun setupMinecraftVersionManifest(): MinecraftVersionManifest {
         var minecraftManifest = downloadMinecraftManifest(bundleChanged)
         if (!minecraftManifest.didDownload && minecraftManifest.data.versions.none { it.id == minecraftVersion }) {
             minecraftManifest = downloadMinecraftManifest(true)
@@ -76,7 +73,7 @@ class VanillaSteps(
             "minecraft version manifest",
             ver.url,
             cache.resolve(VERSION_JSON),
-            expectedHash = Hash(ver.sha1, HashingAlgorithm.SHA1)
+            expectedHash = ver.hash()
         )
         return gson.fromJson(minecraftVersionManifestJson.path)
     }

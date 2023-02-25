@@ -22,6 +22,8 @@
 
 package io.papermc.paperweight.util.data
 
+import io.papermc.paperweight.util.*
+
 data class MinecraftManifest(
     val latest: Map<String, *>,
     val versions: List<ManifestVersion>
@@ -34,4 +36,25 @@ data class ManifestVersion(
     val releaseTime: String,
     val url: String,
     val sha1: String,
-)
+) {
+    fun hash(): Hash = Hash(sha1, HashingAlgorithm.SHA1)
+}
+
+data class MinecraftVersionManifest(
+    val downloads: Map<String, Download>,
+) {
+    data class Download(
+        val sha1: String,
+        val url: String,
+    ) {
+        fun hash(): Hash = Hash(sha1, HashingAlgorithm.SHA1)
+    }
+
+    fun download(name: String): Download {
+        return downloads[name] ?: error("No such download '$name' in version manifest")
+    }
+
+    fun serverDownload(): Download = download("server")
+
+    fun serverMappingsDownload(): Download = download("server_mappings")
+}

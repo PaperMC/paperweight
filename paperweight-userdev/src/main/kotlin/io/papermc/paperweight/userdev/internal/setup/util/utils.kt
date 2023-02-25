@@ -85,21 +85,22 @@ fun DownloadService.download(
 ): DownloadResult<Unit> {
     val hashFile = destination.siblingHashesFile()
 
+    val toHash = mutableListOf<Any>(remote, destination)
+    expectedHash?.let { toHash += it.valueLower }
     val upToDate = !forceDownload &&
         hashFile.isRegularFile() &&
-        hashFile.readText() == hash(remote, destination)
+        hashFile.readText() == hash(toHash)
     if (upToDate) {
         return DownloadResult(destination, false, Unit)
     }
 
     UserdevSetup.LOGGER.lifecycle(":executing 'download {}'", downloadName)
-    destination.parent.createDirectories()
     val elapsed = measureTimeMillis {
+        destination.parent.createDirectories()
+        destination.deleteIfExists()
         download(remote, destination, expectedHash)
     }
     UserdevSetup.LOGGER.info("done executing 'download {}', took {}s", downloadName, elapsed / 1000.00)
-    val toHash = mutableListOf<Any>(remote, destination)
-    expectedHash?.let { toHash += it.valueLower }
     hashFile.writeText(hash(toHash))
 
     return DownloadResult(destination, true, Unit)
