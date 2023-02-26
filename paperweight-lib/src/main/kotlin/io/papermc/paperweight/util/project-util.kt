@@ -100,9 +100,12 @@ private fun Project.exportRuntimeClasspathTo(parent: Project) {
     configurations.create(CONSUMABLE_RUNTIME_CLASSPATH) {
         isCanBeConsumed = true
         isCanBeResolved = false
+        attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage.JAVA_RUNTIME))
         extendsFrom(configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
     }
     parent.configurations.create(SERVER_RUNTIME_CLASSPATH) {
+        isCanBeConsumed = false
+        isCanBeResolved = true
         attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage.JAVA_RUNTIME))
     }
     parent.dependencies {
