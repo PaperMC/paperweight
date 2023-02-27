@@ -200,7 +200,6 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.serverLibrariesList }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.vanillaJar }.convertToFileProvider(target.layout, target.providers),
-                serverProj,
                 shadowJar,
                 reobfJar,
                 upstreamData.map { it.mcVersion }

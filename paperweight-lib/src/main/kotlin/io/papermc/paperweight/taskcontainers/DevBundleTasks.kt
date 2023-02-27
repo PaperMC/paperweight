@@ -32,7 +32,6 @@ import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.file.RegularFile
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
@@ -105,7 +104,7 @@ class DevBundleTasks(
             serverVersion.set(serverProj.version.toString())
             serverCoordinates.set(GenerateDevBundle.createCoordinatesFor(serverProj))
             serverProject.set(serverProj)
-            runtimeConfiguration.set(serverProj.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+            runtimeConfiguration.set(project.configurations.named(SERVER_RUNTIME_CLASSPATH))
 
             relocations.set(serverProj.the<RelocationExtension>().relocations.map { gson.toJson(it) })
             decompiledJar.pathProvider(decompileJar)

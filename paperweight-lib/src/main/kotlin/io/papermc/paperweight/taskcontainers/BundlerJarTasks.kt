@@ -29,7 +29,6 @@ import io.papermc.paperweight.util.constants.*
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -61,7 +60,6 @@ class BundlerJarTasks(
         bundlerVersionJson: Provider<RegularFile>,
         serverLibrariesList: Provider<RegularFile>,
         vanillaJar: Provider<RegularFile>,
-        serverProject: Project,
         shadowJar: TaskProvider<out AbstractArchiveTask>,
         reobfJar: TaskProvider<RemapJar>,
         mcVersion: Provider<String>
@@ -70,14 +68,12 @@ class BundlerJarTasks(
             bundlerVersionJson,
             serverLibrariesList,
             vanillaJar,
-            serverProject,
             shadowJar.flatMap { it.archiveFile },
         )
         createReobfBundlerJar.configureWith(
             bundlerVersionJson,
             serverLibrariesList,
             vanillaJar,
-            serverProject,
             reobfJar.flatMap { it.outputJar },
         )
 
@@ -123,10 +119,9 @@ class BundlerJarTasks(
         bundlerVersionJson: Provider<RegularFile>,
         serverLibrariesListFile: Provider<RegularFile>,
         vanillaJar: Provider<RegularFile>,
-        serverProject: Project,
         serverJar: Provider<RegularFile>,
     ) = this {
-        libraryArtifacts.set(serverProject.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+        libraryArtifacts.set(project.configurations.named(SERVER_RUNTIME_CLASSPATH))
         serverLibrariesList.set(serverLibrariesListFile)
         vanillaBundlerJar.set(vanillaJar)
 
