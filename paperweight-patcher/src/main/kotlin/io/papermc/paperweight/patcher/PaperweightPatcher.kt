@@ -166,6 +166,16 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
 
+            val (_, reobfJar) = serverProj.setupServerProject(
+                target,
+                upstreamData.map { it.remappedJar },
+                upstreamData.map { it.decompiledJar },
+                patcher.mcDevSourceDir.path,
+                upstreamData.map { it.libFile },
+                mergedReobfPackagesToFix,
+                patchReobfMappings.flatMap { it.outputMappings }
+            ) ?: return@afterEvaluate
+
             devBundleTasks.configure(
                 patcher.serverProject.get(),
                 patcher.bundlerJarName.get(),
@@ -185,16 +195,6 @@ class PaperweightPatcher : Plugin<Project> {
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
             }
             devBundleTasks.configureAfterEvaluate()
-
-            val (_, reobfJar) = serverProj.setupServerProject(
-                target,
-                upstreamData.map { it.remappedJar },
-                upstreamData.map { it.decompiledJar },
-                patcher.mcDevSourceDir.path,
-                upstreamData.map { it.libFile },
-                mergedReobfPackagesToFix,
-                patchReobfMappings.flatMap { it.outputMappings }
-            ) ?: return@afterEvaluate
 
             bundlerJarTasks.configureBundlerTasks(
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(target.layout, target.providers),
