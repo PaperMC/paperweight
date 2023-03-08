@@ -28,9 +28,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.genSources
-import io.papermc.paperweight.userdev.internal.setup.util.paperweightHash
-import io.papermc.paperweight.userdev.internal.setup.util.sharedCaches
+import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -146,10 +144,10 @@ abstract class PaperweightUser : Plugin<Project> {
             }
 
             userdev.reobfArtifactConfiguration.get()
-                .configure(target, reobfJar)
+                .configure(this, reobfJar)
 
             if (userdev.injectPaperRepository.get()) {
-                target.repositories.maven(PAPER_MAVEN_REPO_URL) {
+                repositories.maven(PAPER_MAVEN_REPO_URL) {
                     content { onlyForConfigurations(DEV_BUNDLE_CONFIG) }
                 }
             }
@@ -158,6 +156,8 @@ abstract class PaperweightUser : Plugin<Project> {
             checkForDevBundle()
 
             configureRepositories(userdevSetup)
+
+            cleanSharedCaches(this, sharedCacheRootRoot)
         }
     }
 
