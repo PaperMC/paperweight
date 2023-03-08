@@ -36,7 +36,7 @@ import kotlin.system.measureTimeMillis
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 
-private val paperweightHash: String by lazy { hashPaperweightJar() }
+val paperweightHash: String by lazy { hashPaperweightJar() }
 
 fun Path.siblingLogFile(): Path = withDifferentExtension("log")
 
@@ -154,7 +154,7 @@ fun interface HashFunction : () -> String {
 
 private fun hashPaperweightJar(): String {
     val userdevShadowJar = Paths.get(PaperweightUser::class.java.protectionDomain.codeSource.location.toURI())
-    return hash(userdevShadowJar)
+    return userdevShadowJar.sha256asHex()
 }
 
 fun <R> lockSetup(cache: Path, canBeNested: Boolean = false, action: () -> R): R {
@@ -175,9 +175,14 @@ val Project.ci: Provider<Boolean>
         .map { it.toBoolean() }
         .orElse(false)
 
+private fun experimentalProp(name: String) = "paperweight.experimental.$name"
+
 val Project.genSources: Boolean
     get() {
         val ci = ci.get()
-        val prop = providers.gradleProperty("paperweight.experimental.genSources").orNull?.toBoolean()
+        val prop = providers.gradleProperty(experimentalProp("genSources")).orNull?.toBoolean()
         return prop ?: !ci
     }
+
+val Project.sharedCaches: Boolean
+    get() = providers.gradleProperty(experimentalProp("sharedCaches")).orNull.toBoolean()

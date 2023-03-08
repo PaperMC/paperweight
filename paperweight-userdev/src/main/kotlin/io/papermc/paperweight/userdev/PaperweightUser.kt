@@ -29,11 +29,18 @@ import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.util.genSources
+import io.papermc.paperweight.userdev.internal.setup.util.paperweightHash
+import io.papermc.paperweight.userdev.internal.setup.util.sharedCaches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
@@ -54,32 +61,30 @@ abstract class PaperweightUser : Plugin<Project> {
     abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
+        val sharedCacheRootRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
+        val sharedCacheRoot = if (target.sharedCaches) sharedCacheRootRoot.resolve(paperweightHash) else null
+
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
+        val cleanAllTaskName = "cleanAllPaperweightUserdevCaches"
+        if (target.sharedCaches) {
+            target.tasks.register<Delete>(cleanAllTaskName) {
+                group = "paperweight"
+                description = "Delete the project & shared paperweight-userdev setup cache."
+                delete(target.layout.cache)
+                delete(sharedCacheRootRoot)
+            }
+        }
         val cleanCache by target.tasks.registering<Delete> {
             group = "paperweight"
-            description = "Delete the project setup cache and task outputs."
+            description = "Delete the project paperweight-userdev setup cache."
             delete(target.layout.cache)
         }
 
         target.configurations.register(DEV_BUNDLE_CONFIG)
 
-        // these must not be initialized until afterEvaluate, as they resolve the dev bundle
-        val userdevSetup by lazy {
-            val devBundleZip = target.configurations.named(DEV_BUNDLE_CONFIG).map { it.singleFile }.convertToPath()
-            val serviceName = "paperweight-userdev:setupService:${devBundleZip.sha256asHex()}"
-
-            target.gradle.sharedServices
-                .registerIfAbsent(serviceName, UserdevSetup::class) {
-                    parameters {
-                        cache.set(target.layout.cache)
-                        bundleZip.set(devBundleZip)
-                        downloadService.set(target.download)
-                        genSources.set(target.genSources)
-                    }
-                }
-                .get()
-        }
+        // must not be initialized until afterEvaluate, as it resolves the dev bundle
+        val userdevSetup by lazy { createSetup(target, sharedCacheRoot) }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
@@ -133,7 +138,7 @@ abstract class PaperweightUser : Plugin<Project> {
             val cleaningCache = gradle.startParameter.taskRequests
                 .any { req ->
                     req.args.any { arg ->
-                        NameMatcher().find(arg, tasks.names) == cleanCache.name
+                        NameMatcher().find(arg, tasks.names) in setOf(cleanCache.name, cleanAllTaskName)
                     }
                 }
             if (cleaningCache) {
@@ -254,4 +259,40 @@ abstract class PaperweightUser : Plugin<Project> {
 
     private fun createContext(project: Project): SetupHandler.Context =
         SetupHandler.Context(project, workerExecutor, javaToolchainService)
+
+    private fun createSetup(target: Project, sharedCacheRoot: Path?): UserdevSetup {
+        val bundleConfig = target.configurations.named(DEV_BUNDLE_CONFIG)
+        val devBundleZip = bundleConfig.map { it.singleFile }.convertToPath()
+        val bundleHash = devBundleZip.sha256asHex()
+        val cacheDir = if (sharedCacheRoot == null) {
+            target.layout.cache
+        } else {
+            when (bundleConfig.get().dependencies.single()) {
+                is ProjectDependency -> {
+                    throw PaperweightException("Shared caches does not support the dev bundle being a ProjectDependency.")
+                }
+
+                is ModuleDependency -> {
+                    val resolved =
+                        bundleConfig.get().incoming.resolutionResult.rootComponent.get().dependencies.single() as ResolvedDependencyResult
+                    val resolvedId = resolved.selected.id as ModuleComponentIdentifier
+                    sharedCacheRoot.resolve("module/${resolvedId.group}/${resolvedId.module}/${resolvedId.version}")
+                }
+
+                else -> sharedCacheRoot.resolve("non-module/$bundleHash")
+            }
+        }
+
+        val serviceName = "paperweight-userdev:setupService:$bundleHash"
+        return target.gradle.sharedServices
+            .registerIfAbsent(serviceName, UserdevSetup::class) {
+                parameters {
+                    cache.set(cacheDir)
+                    bundleZip.set(devBundleZip)
+                    downloadService.set(target.download)
+                    genSources.set(target.genSources)
+                }
+            }
+            .get()
+    }
 }
