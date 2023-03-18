@@ -121,6 +121,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
 
             val sourceDir = createDir(outputDir.path.resolve("src/main/java"))
+            val mcDataDir = outputDir.path.resolve("src/main/resources")
             val testDir = createDir(outputDir.path.resolve("src/test/java"))
 
             fs.copy {
@@ -138,6 +139,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
                 targetDir = sourceDir,
+                dataTargetDir = mcDataDir,
                 librariesDirs = listOf(spigotLibrariesDir.path, mcLibrariesDir.path),
                 printOutput = printOutput.get()
             )
@@ -161,7 +163,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
 
-            makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir)
+            makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir, mcDataDir)
         }
     }
 

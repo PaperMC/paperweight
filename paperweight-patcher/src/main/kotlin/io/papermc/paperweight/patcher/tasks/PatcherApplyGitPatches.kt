@@ -133,6 +133,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         git.disableAutoGpgSigningInRepo()
 
         val srcDir = output.resolve("src/main/java")
+        val dataDir = output.resolve("src/main/resources")
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
         val librarySources = ArrayList<Path>()
@@ -145,6 +146,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
                 decompJar = sourceMcDevJar.path,
                 importsFile = devImports.pathOrNull,
                 targetDir = srcDir,
+                dataTargetDir = dataDir,
                 librariesDirs = librarySources,
                 printOutput = printOutput.get()
             )
@@ -157,6 +159,6 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
 
         applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
 
-        makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, srcDir)
+        makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, srcDir, dataDir)
     }
 }

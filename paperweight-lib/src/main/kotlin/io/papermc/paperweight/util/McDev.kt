@@ -23,9 +23,9 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
+import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.*
-import kotlin.streams.toList
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -38,10 +38,11 @@ object McDev {
         decompJar: Path,
         importsFile: Path?,
         targetDir: Path,
+        dataTargetDir: Path? = null,
         librariesDirs: List<Path> = listOf(),
         printOutput: Boolean = true
     ) {
-        val patchLines = readPatchLines(patches)
+        val (javaPatchLines, dataPatchLines) = readPatchLines(patches)
 
         decompJar.openZip().use { zipFile ->
             val decompFiles = mutableSetOf<String>()
@@ -69,35 +70,38 @@ object McDev {
                 }
             }
 
-            val exactImports = patchLines.filter { decompFiles.contains(it) }
+            val exactJavaImports = javaPatchLines.filter { decompFiles.contains(it) }
                 .map { targetDir.resolve(it) }
+            val exactDataImports = if (dataTargetDir != null) dataPatchLines.map { dataTargetDir.resolve(it) } else listOf()
 
-            val matcherImports = readAdditionalImports(importsFile)
-                .distinct()
+            val (additionalSrcImports, additionalDataImports) = readAdditionalImports(importsFile)
+
+            val srcMatcherImports = additionalSrcImports.distinct()
                 .map { zipFile.getPathMatcher("glob:/$it.java") }
+            val dataMatcherImports = additionalDataImports.distinct()
+                .map { zipFile.getPathMatcher("glob:$it") }
 
-            val importMcDev = zipFile.walk().use { stream ->
-                stream.toList()
-                    .filter { file -> matcherImports.any { it.matches(file) } }
-                    .map { targetDir.resolve(it.invariantSeparatorsPathString.substring(1)) }
-                    .plus(exactImports)
-                    .filterNot { it.exists() }
+            val (srcImportMcDev, dataImportMcDev) = zipFile.walk().use { stream ->
+                val src = hashSetOf<Path>()
+                val data = hashSetOf<Path>()
+                stream.forEach { file ->
+                    if (srcMatcherImports.any { it.matches(file) }) {
+                        src.add(targetDir.resolve(file.invariantSeparatorsPathString.substring(1)))
+                    } else if (dataTargetDir != null && dataMatcherImports.any { it.matches(file) }) {
+                        data.add(dataTargetDir.resolve(file.invariantSeparatorsPathString.substring(1)))
+                    }
+                }
+                Pair(src.filterNot { it.exists() } + exactJavaImports, data.filterNot { it.exists() } + exactDataImports)
             }
 
-            logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
+            logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", srcImportMcDev.size)
 
-            for (file in importMcDev) {
-                if (!file.parent.exists()) {
-                    file.parent.createDirectories()
-                }
-                val vanillaFile = file.relativeTo(targetDir).toString()
+            importFiles(srcImportMcDev, targetDir, zipFile, printOutput)
 
-                val zipPath = zipFile.getPath(vanillaFile)
-                if (zipPath.notExists()) {
-                    logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File not found", file.toString())
-                    continue
-                }
-                zipPath.copyTo(file)
+            if (dataTargetDir != null) {
+                logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} data files from vanilla data...", dataImportMcDev.size)
+
+                importFiles(dataImportMcDev, dataTargetDir, zipFile, printOutput, true)
             }
         }
 
@@ -110,7 +114,7 @@ object McDev {
         }
 
         // Import library classes
-        val imports = findLibraries(importsFile, libFiles, patchLines)
+        val imports = findLibraries(importsFile, libFiles, javaPatchLines)
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", imports.size)
 
         for ((libraryFileName, importFilePath) in imports) {
@@ -130,42 +134,73 @@ object McDev {
         }
     }
 
-    private fun readPatchLines(patches: Iterable<Path>): Set<String> {
-        val result = hashSetOf<String>()
+    private fun importFiles(files: List<Path>, targetDir: Path, zipFile: FileSystem, printOutput: Boolean, checkFinalNewline: Boolean = false) {
+        for (file in files) {
+            if (!file.parent.exists()) {
+                file.parent.createDirectories()
+            }
+            val vanillaFile = file.relativeTo(targetDir).toString()
 
-        val prefix = "+++ b/src/main/java/"
+            val zipPath = zipFile.getPath(vanillaFile)
+            if (zipPath.notExists()) {
+                logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File not found", file.toString())
+                continue
+            }
+            zipPath.copyTo(file)
+            if (checkFinalNewline) {
+                var content = file.readText(Charsets.UTF_8)
+                if (!content.endsWith("\n")) {
+                    content += "\n"
+                    file.writeText(content, Charsets.UTF_8)
+                }
+            }
+        }
+    }
+
+    private fun readPatchLines(patches: Iterable<Path>): Pair<Set<String>, Set<String>> {
+        val srcResult = hashSetOf<String>()
+        val dataResult = hashSetOf<String>()
+
+        val javaPrefix = "+++ b/src/main/java/"
+        val dataPrefix = "+++ b/src/main/resources/data/minecraft/"
 
         for (patch in patches) {
             patch.useLines { lines ->
-                lines.filter { it.startsWith(prefix) }
-                    .mapTo(result) { it.substring(prefix.length, it.length) }
+                val matches = lines.partition {
+                    it.startsWith(javaPrefix)
+                }
+                matches.first
+                    .mapTo(srcResult) { it.substring(javaPrefix.length, it.length) }
+                matches.second
+                    .filter { it.startsWith(dataPrefix) }
+                    .mapTo(dataResult) { it.substring(dataPrefix.length, it.length) }
             }
         }
 
-        return result
+        return Pair(srcResult, dataResult)
     }
 
     private fun readAdditionalImports(
         additionalClasses: Path?
-    ): Set<String> {
-        val result = hashSetOf<String>()
+    ): Pair<Set<String>, Set<String>> {
+        val srcResult = hashSetOf<String>()
+        val dataResult = hashSetOf<String>()
 
         val suffix = ".java"
 
         additionalClasses?.useLines { lines ->
             lines.filterNot { it.startsWith("#") }
-                .mapNotNull {
+                .forEach {
                     val parts = it.split(" ")
                     if (parts[0] == "minecraft") {
-                        parts[1]
-                    } else {
-                        null
+                        srcResult += parts[1].removeSuffix(suffix).replace('.', '/')
+                    } else if (parts[0] == "mc_data") {
+                        dataResult += parts[1]
                     }
                 }
-                .mapTo(result) { it.removeSuffix(suffix).replace('.', '/') }
         }
 
-        return result
+        return Pair(srcResult, dataResult)
     }
 
     private fun findLibraries(libraryImports: Path?, libFiles: List<Path>, patchLines: Set<String>): Set<LibraryImport> {
@@ -176,7 +211,7 @@ object McDev {
             lines.filterNot { it.startsWith('#') }
                 .map { it.split(' ') }
                 .filter { it.size == 2 }
-                .filter { it[0] != "minecraft" }
+                .filter { it[0] != "minecraft" && it[0] != "mc_data" }
                 .mapTo(result) { parts ->
                     val libFileName = libFiles.firstOrNull { it.name.startsWith(parts[0]) }?.name
                         ?: throw PaperweightException("Failed to read library line '${parts[0]} ${parts[1]}', no library file was found.")

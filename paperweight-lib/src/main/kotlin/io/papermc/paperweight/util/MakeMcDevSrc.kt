@@ -32,6 +32,7 @@ fun makeMcDevSrc(
     target: Path,
     paperProject: Path,
     paperSource: Path = paperProject.resolve("src/main/java"),
+    dataSource: Path = paperProject.resolve("src/main/resources")
 ) {
     val lockFile = cache.resolve(applyPatchesLock(paperProject))
     val alreadyHave = acquireProcessLockWaiting(lockFile)
@@ -45,7 +46,7 @@ fun makeMcDevSrc(
                     if (sourceFile.isRegularFile()) {
                         val sourceFilePath = sourceFile.relativeTo(root).invariantSeparatorsPathString
 
-                        if (!paperSource.resolve(sourceFilePath).isRegularFile()) {
+                        if (!paperSource.resolve(sourceFilePath).isRegularFile() && !dataSource.resolve(sourceFilePath).isRegularFile()) {
                             val targetFile = target.resolve(sourceFilePath)
                             targetFile.parent.createDirectories()
                             sourceFile.copyTo(targetFile)
