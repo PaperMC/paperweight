@@ -106,6 +106,7 @@ private const val SETUP_CACHE = "$PAPER_PATH/setupCache"
 private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
+const val FINAL_FILTERED_REMAPPED_JAR = "$TASK_CACHE/filteredMinecraft.jar"
 const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 
 const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"

@@ -60,6 +60,13 @@ fun Project.setupServerProject(
 
     exportRuntimeClasspathTo(parent)
 
+    val filterProjectDir by tasks.registering<FilterProjectDir> {
+        inputSrcDir.set(file("src/main/java"))
+        inputResourcesDir.set(file("src/main/resources"))
+        vanillaJar.set(parent.file(remappedJar))
+        outputJar.set(parent.layout.cache.resolve(FINAL_FILTERED_REMAPPED_JAR))
+    }
+
     val vanillaServer: Configuration by configurations.creating {
         withDependencies {
             dependencies {
@@ -71,7 +78,7 @@ fun Project.setupServerProject(
                     layout.projectDirectory.path
                 )
 
-                add(create(parent.files(remappedJar)))
+                add(create(parent.files(filterProjectDir.flatMap { it.outputJar })))
             }
         }
     }
