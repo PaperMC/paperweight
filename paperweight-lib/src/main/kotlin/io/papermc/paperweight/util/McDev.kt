@@ -25,18 +25,13 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
 import kotlin.io.path.*
-import kotlin.streams.asSequence
+import kotlin.streams.toList
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
 object McDev {
     private val logger: Logger = Logging.getLogger(McDev::class.java)
-
-    private val bannedClasses = setOf(
-        "MCUtil",
-        "ServerWorkerThread",
-    )
 
     fun importMcDev(
         patches: Iterable<Path>,
@@ -75,27 +70,21 @@ object McDev {
             }
 
             val exactImports = patchLines.filter { decompFiles.contains(it) }
-                .filterNot { file -> bannedClasses.any { file.contains(it) } }
                 .map { targetDir.resolve(it) }
 
             val matcherImports = readAdditionalImports(importsFile)
                 .distinct()
                 .map { zipFile.getPathMatcher("glob:/$it.java") }
 
-            val (importMcDev, banned) = zipFile.walk().use { stream ->
-                stream.asSequence()
+            val importMcDev = zipFile.walk().use { stream ->
+                stream.toList()
                     .filter { file -> matcherImports.any { it.matches(file) } }
                     .map { targetDir.resolve(it.invariantSeparatorsPathString.substring(1)) }
                     .plus(exactImports)
                     .filterNot { it.exists() }
-                    .partition { file -> bannedClasses.none { file.toString().contains(it) } }
             }
 
             logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
-
-            banned.forEach {
-                logger.log(if (printOutput) LogLevel.WARN else LogLevel.DEBUG, "Skipped importing '{}': File is banned", it.toString())
-            }
 
             for (file in importMcDev) {
                 if (!file.parent.exists()) {
@@ -149,7 +138,6 @@ object McDev {
         for (patch in patches) {
             patch.useLines { lines ->
                 lines.filter { it.startsWith(prefix) }
-                    .filterNot { file -> bannedClasses.any { file.contains(it) } }
                     .mapTo(result) { it.substring(prefix.length, it.length) }
             }
         }
