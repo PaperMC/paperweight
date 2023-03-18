@@ -64,14 +64,11 @@ abstract class PaperweightUser : Plugin<Project> {
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
-        val cleanAllTaskName = "cleanAllPaperweightUserdevCaches"
-        if (target.sharedCaches) {
-            target.tasks.register<Delete>(cleanAllTaskName) {
-                group = "paperweight"
-                description = "Delete the project & shared paperweight-userdev setup cache."
-                delete(target.layout.cache)
-                delete(sharedCacheRootRoot)
-            }
+        val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
+            group = "paperweight"
+            description = "Delete the project & all shared paperweight-userdev setup cache."
+            delete(target.layout.cache)
+            delete(sharedCacheRootRoot)
         }
         val cleanCache by target.tasks.registering<Delete> {
             group = "paperweight"
@@ -136,7 +133,7 @@ abstract class PaperweightUser : Plugin<Project> {
             val cleaningCache = gradle.startParameter.taskRequests
                 .any { req ->
                     req.args.any { arg ->
-                        NameMatcher().find(arg, tasks.names) in setOf(cleanCache.name, cleanAllTaskName)
+                        NameMatcher().find(arg, tasks.names) in setOf(cleanCache.name, cleanAll.name)
                     }
                 }
             if (cleaningCache) {
