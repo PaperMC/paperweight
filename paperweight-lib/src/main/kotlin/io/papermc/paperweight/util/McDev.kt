@@ -25,6 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -73,11 +74,22 @@ object McDev {
                 }
             }
 
-            val (importMcDev, banned) = readMcDevNames(patchLines, decompFiles, importsFile).asSequence()
-                .map { targetDir.resolve("$it.java") }
-                .filterNot { it.exists() }
+            val exactImports = patchLines.filter { decompFiles.contains(it) }
+                .filterNot { file -> bannedClasses.any { file.contains(it) } }
+                .map { targetDir.resolve(it) }
+
+            val matcherImports = readAdditionalImports(importsFile)
                 .distinct()
-                .partition { file -> bannedClasses.none { file.toString().contains(it) } }
+                .map { zipFile.getPathMatcher("glob:/$it.java") }
+
+            val (importMcDev, banned) = zipFile.walk().use { stream ->
+                stream.asSequence()
+                    .filter { file -> matcherImports.any { it.matches(file) } }
+                    .map { targetDir.resolve(it.invariantSeparatorsPathString.substring(1)) }
+                    .plus(exactImports)
+                    .filterNot { it.exists() }
+                    .partition { file -> bannedClasses.none { file.toString().contains(it) } }
+            }
 
             logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", importMcDev.size)
 
@@ -145,18 +157,12 @@ object McDev {
         return result
     }
 
-    private fun readMcDevNames(
-        patchLines: Set<String>,
-        decompFiles: Set<String>,
+    private fun readAdditionalImports(
         additionalClasses: Path?
     ): Set<String> {
         val result = hashSetOf<String>()
 
         val suffix = ".java"
-
-        patchLines.filter { decompFiles.contains(it) }
-            .filterNot { file -> bannedClasses.any { file.contains(it) } }
-            .mapTo(result) { it.removeSuffix(".java") }
 
         additionalClasses?.useLines { lines ->
             lines.filterNot { it.startsWith("#") }
