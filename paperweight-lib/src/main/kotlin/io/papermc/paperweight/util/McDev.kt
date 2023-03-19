@@ -99,7 +99,11 @@ object McDev {
             importFiles(srcImportMcDev, targetDir, zipFile, printOutput)
 
             if (dataTargetDir != null) {
-                logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} data files from vanilla data...", dataImportMcDev.size)
+                logger.log(
+                    if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG,
+                    "Importing {} data files from vanilla data...",
+                    dataImportMcDev.size
+                )
 
                 importFiles(dataImportMcDev, dataTargetDir, zipFile, printOutput, true)
             }
