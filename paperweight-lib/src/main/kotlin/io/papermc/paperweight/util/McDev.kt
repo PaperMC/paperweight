@@ -72,14 +72,14 @@ object McDev {
 
             val exactJavaImports = javaPatchLines.filter { decompFiles.contains(it) }
                 .map { targetDir.resolve(it) }
-            val exactDataImports = if (dataTargetDir != null) dataPatchLines.map { dataTargetDir.resolve(it) } else listOf()
+            val exactDataImports = if (dataTargetDir != null) dataPatchLines.map { dataTargetDir.resolve("data/minecraft/$it") } else listOf()
 
             val (additionalSrcImports, additionalDataImports) = readAdditionalImports(importsFile)
 
             val srcMatcherImports = additionalSrcImports.distinct()
                 .map { zipFile.getPathMatcher("glob:/$it.java") }
             val dataMatcherImports = additionalDataImports.distinct()
-                .map { zipFile.getPathMatcher("glob:$it") }
+                .map { zipFile.getPathMatcher("glob:/data/minecraft/$it") }
 
             val (srcImportMcDev, dataImportMcDev) = zipFile.walk().use { stream ->
                 val src = hashSetOf<Path>()
@@ -91,7 +91,7 @@ object McDev {
                         data.add(dataTargetDir.resolve(file.invariantSeparatorsPathString.substring(1)))
                     }
                 }
-                Pair(src.filterNot { it.exists() } + exactJavaImports, data.filterNot { it.exists() } + exactDataImports)
+                Pair((src + exactJavaImports).filterNot { it.exists() }, (data + exactDataImports).filterNot { it.exists() })
             }
 
             logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from vanilla...", srcImportMcDev.size)
