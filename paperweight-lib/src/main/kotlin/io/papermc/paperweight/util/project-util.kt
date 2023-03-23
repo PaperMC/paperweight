@@ -60,6 +60,7 @@ fun Project.setupServerProject(
 
     exportRuntimeClasspathTo(parent)
 
+    @Suppress("UNUSED_VARIABLE")
     val filterProjectDir by tasks.registering<FilterProjectDir> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
@@ -78,10 +79,19 @@ fun Project.setupServerProject(
                     layout.projectDirectory.path
                 )
 
-                add(create(parent.files(filterProjectDir.flatMap { it.outputJar })))
+                add(create(parent.files(remappedJar)))
             }
         }
     }
+//
+//    @Suppress("UNUSED_VARIABLE")
+//    val filteredServer: Configuration by configurations.creating {
+//        withDependencies {
+//            dependencies {
+//                add(create(parent.files(filterProjectDir.flatMap { it.outputJar })))
+//            }
+//        }
+//    }
 
     configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
         extendsFrom(vanillaServer)

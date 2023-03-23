@@ -23,12 +23,10 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.PathMatcher
+import java.util.stream.Collectors
 import kotlin.io.path.*
-import kotlin.streams.toList
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
@@ -61,19 +59,24 @@ abstract class FilterProjectDir : BaseTask() {
         target.createDirectories()
 
         vanillaJar.path.openZip().use { zip ->
-            val srcMatchers = createMatchers(inputSrcDir.path, zip)
-            val resourcesMatchers = createMatchers(inputResourcesDir.path, zip)
+            val srcFiles = collectFiles(inputSrcDir.path)
+            val resourceFiles = collectFiles(inputResourcesDir.path)
 
             zip.walk().use { stream ->
-                stream.filter { f ->
-                    f.isRegularFile() &&
-                        !srcMatchers.any { matcher -> matcher.matches(f) } &&
-                        !resourcesMatchers.any { matcher -> matcher.matches(f) }
-                }.forEach { f ->
-                    val targetFile = target.resolve(f.invariantSeparatorsPathString.substring(1))
-                    targetFile.parent.createDirectories()
-                    f.copyTo(targetFile)
-                }
+                stream
+                    .filter { it.isRegularFile() }
+                    .filter {
+                        if (it.nameCount > 1) {
+                            val path = it.subpath(0, it.nameCount - 1).resolve(it.fileName.toString().split("$")[0].removeSuffix(".class")).toString()
+                            !srcFiles.contains("$path.java") && !resourceFiles.contains(path)
+                        } else {
+                            true
+                        }
+                    }.forEach { f ->
+                        val targetFile = target.resolve(f.invariantSeparatorsPathString.substring(1))
+                        targetFile.parent.createDirectories()
+                        f.copyTo(targetFile)
+                    }
             }
         }
 
@@ -81,13 +84,11 @@ abstract class FilterProjectDir : BaseTask() {
         target.deleteRecursively()
     }
 
-    private fun createMatchers(dir: Path, zip: FileSystem): List<PathMatcher> {
+    private fun collectFiles(dir: Path): Set<String> {
         return Files.walk(dir).use { stream ->
             stream.filter { it.isRegularFile() }
-                .map {
-                    val relativePath = it.relativeTo(dir)
-                    zip.getPathMatcher("glob:/$relativePath")
-                }.toList()
+                .map { it.relativeTo(dir).toString() }
+                .collect(Collectors.toUnmodifiableSet())
         }
     }
 }
