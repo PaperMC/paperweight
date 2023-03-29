@@ -64,6 +64,36 @@ abstract class PaperweightUserDependenciesExtension(
     }
 
     /**
+     * Adds a dependency on Folia's dev bundle to the dev bundle [org.gradle.api.artifacts.Configuration].
+     *
+     * @param version dependency version
+     * @param group dependency group
+     * @param artifactId dependency artifactId
+     * @param configuration dependency configuration
+     * @param classifier dependency classifier
+     * @param ext dependency extension
+     * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
+     * @param configurationAction action configuring the dependency
+     * @return dependency
+     */
+    @JvmOverloads
+    fun foliaDevBundle(
+        version: String? = null,
+        group: String = "dev.folia",
+        artifactId: String = "dev-bundle",
+        configuration: String? = null,
+        classifier: String? = null,
+        ext: String? = null,
+        devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
+        configurationAction: Action<ExternalModuleDependency> = nullAction()
+    ): ExternalModuleDependency {
+        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        configurationAction(dep)
+        dependencies.add(devBundleConfigurationName, dep)
+        return dep
+    }
+
+    /**
      * Adds a dependency to the dev bundle [org.gradle.api.artifacts.Configuration].
      *
      * @param group dependency group
@@ -123,6 +153,49 @@ abstract class PaperweightUserDependenciesExtension(
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ) {
         dependencies.addProvider(DEV_BUNDLE_CONFIG, version.map { "io.papermc.paper:dev-bundle:$it" }, configurationAction)
+    }
+
+    /**
+     * Adds a dependency on the Folia dev bundle to the [DEV_BUNDLE_CONFIG] configuration.
+     *
+     * Intended for use with Gradle version catalogs.
+     *
+     * @param version version provider
+     * @param configurationAction action configuring the dependency
+     */
+    @JvmOverloads
+    fun foliaDevBundle(
+        version: Provider<String>,
+        configurationAction: Action<ExternalModuleDependency> = nullAction()
+    ) {
+        dependencies.addProvider(DEV_BUNDLE_CONFIG, version.map { "dev.folia:dev-bundle:$it" }, configurationAction)
+    }
+
+    /**
+     * Creates a Folia dev bundle dependency without adding it to any configurations.
+     *
+     * @param version dependency version
+     * @param group dependency group
+     * @param artifactId dependency artifactId
+     * @param configuration dependency configuration
+     * @param classifier dependency classifier
+     * @param ext dependency extension
+     * @param configurationAction action configuring the dependency
+     * @return dependency
+     */
+    @JvmOverloads
+    fun foliaDevBundleDependency(
+        version: String? = null,
+        group: String = "dev.folia",
+        artifactId: String = "dev-bundle",
+        configuration: String? = null,
+        classifier: String? = null,
+        ext: String? = null,
+        configurationAction: Action<ExternalModuleDependency> = nullAction()
+    ): ExternalModuleDependency {
+        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        configurationAction(dep)
+        return dep
     }
 
     /**
