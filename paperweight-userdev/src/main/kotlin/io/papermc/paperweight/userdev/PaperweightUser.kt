@@ -43,6 +43,8 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
@@ -52,6 +54,10 @@ import org.gradle.util.internal.NameMatcher
 import org.gradle.workers.WorkerExecutor
 
 abstract class PaperweightUser : Plugin<Project> {
+    companion object {
+        private val logger: Logger = Logging.getLogger(PaperweightUser::class.java)
+    }
+
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
@@ -60,7 +66,12 @@ abstract class PaperweightUser : Plugin<Project> {
 
     override fun apply(target: Project) {
         val sharedCacheRootRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
-        val sharedCacheRoot = if (target.sharedCaches) sharedCacheRootRoot.resolve(paperweightHash) else null
+        val sharedCacheRoot = if (target.sharedCaches) {
+            logger.lifecycle("paperweight-userdev experimental shared caches are enabled.")
+            sharedCacheRootRoot.resolve(paperweightHash)
+        } else {
+            null
+        }
 
         target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
 
