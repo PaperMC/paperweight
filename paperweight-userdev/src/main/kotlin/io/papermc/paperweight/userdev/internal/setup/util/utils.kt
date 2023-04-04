@@ -26,17 +26,19 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.userdev.PaperweightUser
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.USERDEV_SETUP_LOCK
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.stream.Collectors
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 import kotlin.system.measureTimeMillis
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 
-private val paperweightHash: String by lazy { hashPaperweightJar() }
+val paperweightHash: String by lazy { hashPaperweightJar() }
 
 fun Path.siblingLogFile(): Path = withDifferentExtension("log")
 
@@ -154,7 +156,7 @@ fun interface HashFunction : () -> String {
 
 private fun hashPaperweightJar(): String {
     val userdevShadowJar = Paths.get(PaperweightUser::class.java.protectionDomain.codeSource.location.toURI())
-    return hash(userdevShadowJar)
+    return userdevShadowJar.sha256asHex()
 }
 
 fun <R> lockSetup(cache: Path, canBeNested: Boolean = false, action: () -> R): R {
@@ -175,9 +177,56 @@ val Project.ci: Provider<Boolean>
         .map { it.toBoolean() }
         .orElse(false)
 
+private fun experimentalProp(name: String) = "paperweight.experimental.$name"
+
 val Project.genSources: Boolean
     get() {
         val ci = ci.get()
-        val prop = providers.gradleProperty("paperweight.experimental.genSources").orNull?.toBoolean()
+        val prop = providers.gradleProperty(experimentalProp("genSources")).orNull?.toBoolean()
         return prop ?: !ci
     }
+
+val Project.sharedCaches: Boolean
+    get() = providers.gradleProperty(experimentalProp("sharedCaches")).orNull.toBoolean()
+
+private fun deleteUnusedAfter(target: Project): Long =
+    target.providers.gradleProperty(experimentalProp("sharedCaches.deleteUnusedAfter"))
+        .map { value -> parseDuration(value) }
+        .orElse(Duration.ofDays(7))
+        .map { duration -> duration.toMillis() }
+        .get()
+
+fun lastUsedFile(cacheDir: Path): Path = cacheDir.resolve(paperSetupOutput("last-used", "txt"))
+
+fun cleanSharedCaches(target: Project, root: Path) {
+    if (!root.exists()) {
+        return
+    }
+    val toDelete = Files.walk(root).use { stream ->
+        stream.asSequence()
+            .filter { it.name == "last-used.txt" }
+            .mapNotNull {
+                val dir = it.parent.parent // paperweight dir
+                val lastUsed = it.readText().toLong()
+                val since = System.currentTimeMillis() - lastUsed
+                val cutoff = deleteUnusedAfter(target)
+                if (since > cutoff) dir else null
+            }
+            .toList()
+    }
+    for (path in toDelete) {
+        path.deleteRecursively()
+
+        // clean up empty parent directories
+        var parent: Path = path.parent
+        while (true) {
+            val entries = parent.listDirectoryEntries()
+            if (entries.isEmpty()) {
+                parent.deleteIfExists()
+            } else {
+                break
+            }
+            parent = parent.parent
+        }
+    }
+}

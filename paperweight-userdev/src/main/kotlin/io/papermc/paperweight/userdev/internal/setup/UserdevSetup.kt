@@ -23,10 +23,11 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.userdev.internal.setup.util.lockSetup
+import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
@@ -52,10 +53,12 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     }
 
     private val extractDevBundle: ExtractedBundle<Any> = lockSetup(parameters.cache.path) {
-        extractDevBundle(
+        val extract = extractDevBundle(
             parameters.cache.path.resolve(paperSetupOutput("extractDevBundle", "dir")),
             parameters.bundleZip.path
         )
+        lastUsedFile(parameters.cache.path).writeText(System.currentTimeMillis().toString())
+        extract
     }
 
     private val setup = createSetup()

@@ -20,3 +20,11 @@ jobs:
         env:
           GRADLE_PUBLISH_KEY: "${{ secrets.GRADLE_PLUGIN_PORTAL_KEY }}"
           GRADLE_PUBLISH_SECRET: "${{ secrets.GRADLE_PLUGIN_PORTAL_SECRET }}"
+      - name: Parse tag
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+      - name: Create release and changelog
+        uses: MC-Machinations/auto-release-changelog@v1.1.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: paperweight ${{ steps.vars.outputs.tag }}
