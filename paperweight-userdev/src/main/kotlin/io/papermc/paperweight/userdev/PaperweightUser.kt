@@ -65,6 +65,8 @@ abstract class PaperweightUser : Plugin<Project> {
     abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
+        checkJavaVersion()
+
         val sharedCacheRootRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
         val sharedCacheRoot = if (target.sharedCaches) {
             logger.lifecycle("paperweight-userdev experimental shared caches are enabled.")

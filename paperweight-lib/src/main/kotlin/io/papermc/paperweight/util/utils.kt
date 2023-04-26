@@ -32,6 +32,7 @@ import io.papermc.paperweight.util.constants.*
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.management.ManagementFactory
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.URL
@@ -317,3 +318,29 @@ fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> =
         .filter { p -> p.isLibraryJar }
         .map { p -> ClassProviderRoot.fromJar(p) }
         .toList()
+
+private fun javaVersion(): Int {
+    val version = System.getProperty("java.specification.version")
+    val parts = version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+    val errorMsg = "Could not determine version of the current JVM"
+    check(parts.isNotEmpty()) { errorMsg }
+    return if (parts[0] == "1") {
+        check(parts.size >= 2) { errorMsg }
+        parts[1].toInt()
+    } else {
+        parts[0].toInt()
+    }
+}
+
+fun checkJavaVersion() {
+    val minimumJava = 11
+    val ver = javaVersion()
+    if (ver < minimumJava) {
+        var msg = "paperweight requires Gradle to be run with a Java $minimumJava runtime or newer."
+        val runtimeMX = ManagementFactory.getRuntimeMXBean()
+        if (runtimeMX != null) {
+            msg += " Current runtime: Java ${runtimeMX.specVersion} (${runtimeMX.vmName} ${runtimeMX.vmVersion})"
+        }
+        throw PaperweightException(msg)
+    }
+}

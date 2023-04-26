@@ -48,6 +48,7 @@ import org.gradle.kotlin.dsl.registering
 class PaperweightPatcher : Plugin<Project> {
 
     override fun apply(target: Project) {
+        checkJavaVersion()
         Git.checkForGit()
 
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target)

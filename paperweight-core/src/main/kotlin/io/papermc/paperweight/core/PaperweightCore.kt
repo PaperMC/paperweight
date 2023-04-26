@@ -42,6 +42,7 @@ import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
+        checkJavaVersion()
         Git.checkForGit()
 
         val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
