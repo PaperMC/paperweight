@@ -38,7 +38,7 @@ abstract class SetupSpigot : BaseTask() {
         Git.checkForGit()
         initialCraftBukkitSpigotPatch.path.deleteForcefully()
         initialVanillaSpigotPatch.path.deleteForcefully()
-        spigotNmsPatches.path.deleteRecursively()
+        spigotNmsPatches.path.deleteRecursive()
 
         Git(spigotServerDir).let {
             val vanilla = it("format-patch", "--no-stat", "-N", "--zero-commit", "--full-index", "--no-signature", "-1", "base~1")

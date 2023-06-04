@@ -39,10 +39,22 @@ abstract class RemapCraftBukkitPatches : BaseTask() {
     @TaskAction
     fun run() {
         Git.checkForGit()
+        decompiledSourceFolder.path.deleteRecursive()
 
-        fs.copy {
-            from(archives.zipTree(decompiledJar))
-            into(decompiledSourceFolder)
+        decompiledJar.path.openZip().use { zipFile ->
+            zipFile.walk().use { stream ->
+                for (zipEntry in stream) {
+                    val path = zipEntry.invariantSeparatorsPathString.substring(1)
+
+                    if (path.endsWith(".java")) {
+                        val targetFile = decompiledSourceFolder.path.resolve(path)
+                        if (!targetFile.parent.exists()) {
+                            targetFile.parent.createDirectories()
+                        }
+                        zipEntry.copyTo(targetFile)
+                    }
+                }
+            }
         }
 
         val nmsPatches = remappedPatches.path
