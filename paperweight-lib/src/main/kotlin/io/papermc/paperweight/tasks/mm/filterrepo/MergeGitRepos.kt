@@ -5,12 +5,16 @@ import io.papermc.paperweight.util.*
 import java.nio.file.Files
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
 abstract class MergeGitRepos : BaseTask() {
+
+    @get:Input
+    abstract val cloneBranch: Property<String>
 
     @get:InputDirectory
     abstract val bukkitDir: DirectoryProperty
@@ -33,10 +37,9 @@ abstract class MergeGitRepos : BaseTask() {
         Git.checkForGit()
 
         val paperGit = Git(paperDir)
-        val defaultBranch = paperGit("config", "init.defaultBranch").getText().trim()
         val currentBranch = paperGit("rev-parse", "--abbrev-ref", "HEAD").getText().trim()
 
-        outputDir.path.deleteRecursively()
+        outputDir.path.deleteRecursive()
         Files.createDirectories(outputDir.path)
 
         Git(outputDir).let { git ->
@@ -47,8 +50,8 @@ abstract class MergeGitRepos : BaseTask() {
 
             git("fetch", "--all").execute()
 
-            git("merge", "bukkit/$defaultBranch", "--no-edit").execute()
-            git("merge", "craftbukkit/$defaultBranch", "--no-edit", "--allow-unrelated-histories").execute()
+            git("merge", "bukkit/${cloneBranch.get()}", "--no-edit").execute()
+            git("merge", "craftbukkit/${cloneBranch.get()}", "--no-edit", "--allow-unrelated-histories").execute()
             git("commit", "--amend", "--no-edit", "--author=Initial Source <auto@mated.null>").execute()
             git("merge", "paper/$currentBranch", "--no-edit", "--allow-unrelated-histories").execute()
             git("commit", "--amend", "--no-edit", "--author=Initial Source <auto@mated.null>").execute()

@@ -179,8 +179,10 @@ open class AllTasks(
         outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
+    val cloneBranchName = "for-clone"
     val cloneRepos by tasks.registering<CloneRepos> {
         dependsOn(initSubmodules)
+        cloneBranch.set(cloneBranchName)
         craftBukkitDir.set(extension.craftBukkit.craftBukkitDir)
         bukkitDir.set(extension.craftBukkit.bukkitDir)
         paperClone.set(objects.dirFrom(extension.workDir, "PaperClone"))
@@ -280,6 +282,7 @@ open class AllTasks(
     }
 
     val mergeGitRepos by tasks.registering<MergeGitRepos> {
+        cloneBranch.set(cloneBranchName)
         bukkitDir.set(finalizeApiHistory.flatMap { it.outputDir })
         craftBukkitDir.set(finalizeServerHistory.flatMap { it.outputDir })
         paperDir.set(finalizePaperHistory.flatMap { it.outputDir })

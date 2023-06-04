@@ -5,6 +5,8 @@ import io.papermc.paperweight.util.*
 import java.nio.file.Files
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -12,6 +14,9 @@ import org.gradle.api.tasks.UntrackedTask
 
 @UntrackedTask(because = "Git")
 abstract class CloneRepos : BaseTask() {
+
+    @get:Input
+    abstract val cloneBranch: Property<String>
 
     @get:InputDirectory
     abstract val craftBukkitDir: DirectoryProperty
@@ -42,13 +47,16 @@ abstract class CloneRepos : BaseTask() {
     fun run() {
         Git.checkForGit()
 
-        craftBukkitClone.path.deleteRecursively()
-        Git(craftBukkitDir)("clone", ".", craftBukkitClone.path.absolutePathString()).execute()
-
-        bukkitClone.path.deleteRecursively()
-        Git(bukkitDir)("clone", ".", bukkitClone.path.absolutePathString()).execute()
-
-        paperClone.path.deleteRecursively()
-        Git(project.rootDir)("clone", ".", paperClone.path.absolutePathString()).execute()
+        listOf(
+            Pair(craftBukkitClone, craftBukkitDir),
+            Pair(bukkitClone, bukkitDir),
+            Pair(paperClone, project.rootProject.rootDir)
+        ).forEach {
+            it.first.path.deleteRecursive()
+            Git(it.second).let { git ->
+                git("branch", "-f", cloneBranch.get(), "HEAD").runSilently(silenceErr = true)
+                git("clone", ".", it.first.path.absolutePathString(), "--branch", cloneBranch.get()).execute()
+            }
+        }
     }
 }

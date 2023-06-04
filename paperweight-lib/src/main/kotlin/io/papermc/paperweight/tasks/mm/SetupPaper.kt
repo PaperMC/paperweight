@@ -32,7 +32,7 @@ abstract class SetupPaper : BaseTask() {
     @TaskAction
     fun run() {
         Git.checkForGit()
-        paperNmsPatches.path.deleteRecursively()
+        paperNmsPatches.path.deleteRecursive()
 
         Git(paperServer.get().projectDir)("format-patch", "-o", paperNmsPatches.path.absolutePathString(), "--no-stat", "-N", "--zero-commit", "--full-index", "--no-signature", "base", "--",
             "src/main/java/net/minecraft", "src/main/java/com/mojang").execute() // TODO does all of com.mojang have to stay as patches?

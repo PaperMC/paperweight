@@ -157,7 +157,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 git("mv", "-f", obfFile.toString(), deobfFile.toString()).runSilently(silenceErr = true)
             }
 
-            unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursively() }
+            unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursive() }
 
             git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
