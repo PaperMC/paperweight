@@ -26,11 +26,7 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") {
         mavenContent {
             includeGroup("net.minecraftforge")
-        }
-    }
-    maven("https://maven.quiltmc.org/repository/release/") {
-        mavenContent {
-            includeGroup("org.quiltmc")
+            includeGroup("net.fabricmc")
         }
     }
     mavenCentral()
