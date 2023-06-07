@@ -60,7 +60,7 @@ fun Project.setupServerProject(
 
     exportRuntimeClasspathTo(parent)
 
-    @Suppress("UNUSED_VARIABLE")
+    @Suppress("UNUSED_VARIABLE", "KotlinRedundantDiagnosticSuppress")
     val filterProjectDir by tasks.registering<FilterProjectDir> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
@@ -83,15 +83,6 @@ fun Project.setupServerProject(
             }
         }
     }
-//
-//    @Suppress("UNUSED_VARIABLE")
-//    val filteredServer: Configuration by configurations.creating {
-//        withDependencies {
-//            dependencies {
-//                add(create(parent.files(filterProjectDir.flatMap { it.outputJar })))
-//            }
-//        }
-//    }
 
     configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
         extendsFrom(vanillaServer)
