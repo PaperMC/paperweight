@@ -42,10 +42,11 @@ open class AllTasks(
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
     downloadService: Provider<DownloadService> = project.download
-) : SpigotTasks(project) {
+): VanillaTasks(project) {
 
     val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(mergeGeneratedAts.flatMap { it.outputFile })
+        // TODO
+        //firstFile.set(mergeGeneratedAts.flatMap { it.outputFile })
         secondFile.set(mergePaperAts.flatMap { it.outputFile })
     }
 
@@ -86,7 +87,8 @@ open class AllTasks(
 
         branch.set("HEAD")
         upstreamBranch.set("upstream")
-        upstream.set(patchSpigotApi.flatMap { it.outputDir })
+        // TODO
+        //upstream.set(patchSpigotApi.flatMap { it.outputDir })
         patchDir.set(extension.paper.spigotApiPatchDir)
         unneededFiles.value(listOf("README.md"))
 
@@ -113,13 +115,13 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
-        remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
-        remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
-        caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
-        upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
+        // TODO
+        //remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
+        //remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
+        //caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
+        //upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
-        spigotLibrariesDir.set(downloadSpigotDependencies.flatMap { it.outputSourcesDir })
         devImports.set(extension.paper.devImports.fileExists(project))
         unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
 
@@ -156,24 +158,5 @@ open class AllTasks(
         group = "paper"
         description = "Rebuilds patches to api and server"
         dependsOn(rebuildApiPatches, rebuildServerPatches)
-    }
-
-    val generateReobfMappings by tasks.registering<GenerateReobfMappings> {
-        inputMappings.set(patchMappings.flatMap { it.outputMappings })
-        notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
-        spigotRecompiledClasses.set(remapSpigotSources.flatMap { it.spigotRecompiledClasses })
-
-        reobfMappings.set(cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
-    }
-
-    val patchReobfMappings by tasks.registering<PatchMappings> {
-        inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
-        patch.set(extension.paper.reobfMappingsPatch.fileExists(project))
-
-        fromNamespace.set(DEOBF_NAMESPACE)
-        toNamespace.set(SPIGOT_NAMESPACE)
-
-        outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 }

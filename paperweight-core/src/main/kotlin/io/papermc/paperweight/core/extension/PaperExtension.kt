@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -36,22 +37,16 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
     val spigotApiPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/api")
     val spigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server")
-    val remappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server-remapped")
-    val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server-unmapped")
     val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
-    val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
-    val mappingsPatch: RegularFileProperty = objects.fileProperty()
-
-    val craftBukkitPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
-    val spigotServerPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
-    val spigotApiPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
+
+    val patchSets: ListProperty<PatchSet> = objects.listProperty()
 }

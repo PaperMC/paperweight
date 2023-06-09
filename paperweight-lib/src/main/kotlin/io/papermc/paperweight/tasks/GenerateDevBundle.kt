@@ -268,7 +268,6 @@ abstract class GenerateDevBundle : DefaultTask() {
 
             val args = listOf(
                 "diff",
-                "--color=never",
                 "-ud",
                 "--label", "a/$fileName",
                 oldFile.absolutePathString(),

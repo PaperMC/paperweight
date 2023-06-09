@@ -69,10 +69,6 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
 
-    @get:Optional
-    @get:InputDirectory
-    abstract val spigotLibrariesSourceDir: DirectoryProperty
-
     @get:Input
     abstract val ignoreGitIgnore: Property<Boolean>
 
@@ -137,7 +133,6 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
 
         val patches = patchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: listOf()
         val librarySources = ArrayList<Path>()
-        spigotLibrariesSourceDir.pathOrNull?.let { librarySources.add(it) }
         mcLibrariesDir.pathOrNull?.let { librarySources.add(it) }
 
         if (sourceMcDevJar.isPresent && importMcDev.get()) {

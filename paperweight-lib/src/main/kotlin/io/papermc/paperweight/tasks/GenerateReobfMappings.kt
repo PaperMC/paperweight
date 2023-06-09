@@ -61,10 +61,6 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
-    abstract val notchToSpigotMappings: RegularFileProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
     abstract val sourceMappings: RegularFileProperty
 
     @get:Classpath
@@ -78,10 +74,6 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val spigotRecompiledClasses: RegularFileProperty
 
     override fun init() {
         super.init()
@@ -98,10 +90,8 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
         queue.submit(GenerateReobfMappingsAction::class) {
             inputMappings.set(this@GenerateReobfMappings.inputMappings)
-            notchToSpigotMappings.set(this@GenerateReobfMappings.notchToSpigotMappings)
             sourceMappings.set(this@GenerateReobfMappings.sourceMappings)
             inputJar.set(this@GenerateReobfMappings.inputJar)
-            spigotRecompiles.set(spigotRecompiledClasses.path)
 
             reobfMappings.set(this@GenerateReobfMappings.reobfMappings)
         }

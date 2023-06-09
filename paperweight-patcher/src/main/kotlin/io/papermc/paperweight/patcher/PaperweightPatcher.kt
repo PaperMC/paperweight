@@ -148,7 +148,6 @@ class PaperweightPatcher : Plugin<Project> {
                     patchTask.patchTask {
                         sourceMcDevJar.convention(target, upstreamData.map { it.decompiledJar })
                         mcLibrariesDir.convention(target, upstreamData.map { it.libSourceDir })
-                        spigotLibrariesSourceDir.convention(target, upstreamData.map { it.spigotLibSourcesDir })
                     }
                 }
             }
@@ -159,10 +158,8 @@ class PaperweightPatcher : Plugin<Project> {
 
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
-                notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
                 inputJar.set(shadowJar.flatMap { it.archiveFile })
-                spigotRecompiledClasses.pathProvider(upstreamData.map { it.spigotRecompiledClasses })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }

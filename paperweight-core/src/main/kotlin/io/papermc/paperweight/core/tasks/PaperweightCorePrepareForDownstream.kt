@@ -60,9 +60,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     @get:InputDirectory
     abstract val mcLibrariesSourcesDir: DirectoryProperty
 
-    @get:InputDirectory
-    abstract val spigotLibrariesSourcesDir: DirectoryProperty
-
     @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
 
@@ -71,9 +68,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
 
     @get:InputFile
     abstract val mappings: RegularFileProperty
-
-    @get:InputFile
-    abstract val notchToSpigotMappings: RegularFileProperty
 
     @get:InputFile
     abstract val sourceMappings: RegularFileProperty
@@ -100,9 +94,6 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
     abstract val atFile: RegularFileProperty
 
     @get:InputFile
-    abstract val spigotRecompiledClasses: RegularFileProperty
-
-    @get:InputFile
     abstract val bundlerVersionJson: RegularFileProperty
 
     @get:InputFile
@@ -125,16 +116,13 @@ abstract class PaperweightCorePrepareForDownstream : DefaultTask() {
             mcLibrariesDir.path,
             mcLibrariesSourcesDir.path,
             mcLibrariesFile.path,
-            spigotLibrariesSourcesDir.path,
             mappings.path,
-            notchToSpigotMappings.path,
             sourceMappings.path,
             reobfPackagesToFix.get(),
             reobfMappingsPatch.path,
             vanillaJarIncludes.get(),
             determineMavenDep(paramMappingsUrl, paramMappingsConfig),
             atFile.path,
-            spigotRecompiledClasses.path,
             bundlerVersionJson.path,
             serverLibrariesTxt.path,
             serverLibrariesList.path
