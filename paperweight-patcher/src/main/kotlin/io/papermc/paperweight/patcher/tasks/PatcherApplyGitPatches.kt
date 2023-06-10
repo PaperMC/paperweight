@@ -124,7 +124,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         }
 
         val git = Git(output)
-        checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
+        git.checkoutRepoFromUpstream(upstreamDir.path, upstreamBranch.get())
 
         git.disableAutoGpgSigningInRepo()
 

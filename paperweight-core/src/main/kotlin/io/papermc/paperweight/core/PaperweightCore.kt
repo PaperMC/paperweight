@@ -95,7 +95,7 @@ class PaperweightCore : Plugin<Project> {
             vanillaJarIncludes.set(ext.vanillaJarIncludes)
             paramMappingsUrl.set(ext.paramMappingsRepo)
             paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
-            atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
+            atFile.set(tasks.mergePaperAts.flatMap { it.outputFile })
             bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
             serverLibrariesTxt.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
             serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
@@ -156,7 +156,7 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
-                tasks.mergeAdditionalAts.map { it.outputFile.path },
+                tasks.mergePaperAts.map { it.outputFile.path },
                 tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(ext.vanillaJarIncludes)

@@ -98,7 +98,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
         try {
             Git(outputPath).let { git ->
-                checkoutRepoFromUpstream(git, upstream.path, upstreamBranch.get())
+                git.checkoutRepoFromUpstream(upstream.path, upstreamBranch.get())
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
@@ -177,17 +177,17 @@ fun Git.disableAutoGpgSigningInRepo() {
     invoke("config", "tag.gpgSign", "false").executeSilently(silenceErr = true)
 }
 
-fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String) {
-    git("init", "--quiet").executeSilently(silenceErr = true)
-    git.disableAutoGpgSigningInRepo()
-    git("remote", "remove", "upstream").runSilently(silenceErr = true)
-    git("remote", "add", "upstream", upstream.toUri().toString()).executeSilently(silenceErr = true)
-    git("fetch", "upstream", "--prune").executeSilently(silenceErr = true)
-    if (git("checkout", "master").runSilently(silenceErr = true) != 0) {
-        git("checkout", "-b", "master").runSilently(silenceErr = true)
+fun Git.checkoutRepoFromUpstream(upstream: Path, upstreamBranch: String = "master") {
+    invoke("init", "--quiet").executeSilently(silenceErr = true)
+    disableAutoGpgSigningInRepo()
+    invoke("remote", "remove", "upstream").runSilently(silenceErr = true)
+    invoke("remote", "add", "upstream", upstream.toUri().toString()).executeSilently(silenceErr = true)
+    invoke("fetch", "upstream", "--prune").executeSilently(silenceErr = true)
+    if (invoke("checkout", "master").runSilently(silenceErr = true) != 0) {
+        invoke("checkout", "-b", "master").runSilently(silenceErr = true)
     }
-    git("reset", "--hard", "upstream/$upstreamBranch").executeSilently(silenceErr = true)
-    git("gc").runSilently(silenceErr = true)
+    invoke("reset", "--hard", "upstream/$upstreamBranch").executeSilently(silenceErr = true)
+    invoke("gc").runSilently(silenceErr = true)
 }
 
 fun recreateCloneDirectory(target: Path) {

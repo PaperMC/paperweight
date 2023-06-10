@@ -115,7 +115,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         }
 
         Git(outputFile).let { git ->
-            checkoutRepoFromUpstream(git, upstreamDir.path, upstreamBranch.get())
+            git.checkoutRepoFromUpstream(upstreamDir.path, upstreamBranch.get())
 
             val sourceDir = createDir(outputDir.path.resolve("src/main/java"))
             val mcDataDir = outputDir.path.resolve("src/main/resources")

@@ -44,19 +44,13 @@ open class AllTasks(
     downloadService: Provider<DownloadService> = project.download
 ): VanillaTasks(project) {
 
-    val mergeAdditionalAts by tasks.registering<MergeAccessTransforms> {
-        // TODO
-        //firstFile.set(mergeGeneratedAts.flatMap { it.outputFile })
-        secondFile.set(mergePaperAts.flatMap { it.outputFile })
-    }
-
-    val applyMergedAt by tasks.registering<ApplyAccessTransform> {
+    val applyAt by tasks.registering<ApplyAccessTransform> {
         inputJar.set(fixJar.flatMap { it.outputJar })
-        atFile.set(mergeAdditionalAts.flatMap { it.outputFile })
+        atFile.set(mergePaperAts.flatMap { it.outputFile })
     }
 
     val copyResources by tasks.registering<CopyResources> {
-        inputJar.set(applyMergedAt.flatMap { it.outputJar })
+        inputJar.set(applyAt.flatMap { it.outputJar })
         vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
     }
@@ -76,6 +70,37 @@ open class AllTasks(
         decompiledJar.set(decompileJar.flatMap { it.outputJar })
     }
 
+    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
+        mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
+        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
+        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        sources.set(true)
+
+        downloader.set(downloadService)
+    }
+
+    // TODO
+    val applyPatchSets by tasks.registering<ApplyPatchSets> {
+        group = "paper"
+        description = "Setup the Paper projects"
+
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
+        printOutput.set(project.isBaseExecution)
+
+        patchSets.set(extension.paper.patchSets)
+        outputDir.set(extension.paper.paperServerDir)
+        workDir.set(project.file("work")) // TODO
+
+        // TODO temp, to speed up stuff
+        //sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
+        sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
+        //mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        mcLibrariesDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        devImports.set(extension.paper.devImports.fileExists(project))
+    }
+
     val applyApiPatches by tasks.registering<ApplyGitPatches> {
         group = "paper"
         description = "Setup the Paper-API project"
@@ -93,15 +118,6 @@ open class AllTasks(
         unneededFiles.value(listOf("README.md"))
 
         outputDir.set(extension.paper.paperApiDir)
-    }
-
-    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
-        mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
-        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
-        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
-        sources.set(true)
-
-        downloader.set(downloadService)
     }
 
     @Suppress("DuplicatedCode")

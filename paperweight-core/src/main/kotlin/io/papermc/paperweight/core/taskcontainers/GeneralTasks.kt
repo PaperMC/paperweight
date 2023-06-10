@@ -42,6 +42,7 @@ open class GeneralTasks(
         includes.set(extension.vanillaJarIncludes)
     }
 
+    // TODO update this to look at all patch sets
     val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
         patchDir.set(extension.paper.spigotServerPatchDir)
     }
