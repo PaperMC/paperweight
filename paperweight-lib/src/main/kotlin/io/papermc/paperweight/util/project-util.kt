@@ -43,7 +43,7 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 fun Project.setupServerProject(
     parent: Project,
-    remappedJar: Any,
+    remappedJar: Provider<RegularFile>,
     remappedJarSources: Any,
     mcDevSourceDir: Path,
     libsFile: Any,
@@ -64,7 +64,7 @@ fun Project.setupServerProject(
     val filterProjectDir by tasks.registering<FilterProjectDir> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
-        vanillaJar.set(parent.file(remappedJar))
+        vanillaJar.set(remappedJar)
         outputJar.set(parent.layout.cache.resolve(FINAL_FILTERED_REMAPPED_JAR))
     }
 
