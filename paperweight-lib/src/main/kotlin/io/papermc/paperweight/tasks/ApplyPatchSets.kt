@@ -5,6 +5,7 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -26,6 +27,9 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val mcLibrariesDir: DirectoryProperty
+
+    @get:InputDirectory
+    abstract val patchesDir: DirectoryProperty
 
     @get:Optional
     @get:InputFile
@@ -72,18 +76,24 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
         patchSets.get().forEach { patchSet ->
             println("  Applying patch set ${patchSet.name}...")
 
-            val patchFolder = if (patchSet.mavenCoordinates != null) {
-                // TODO download stuff from maven into cache
-                layout.projectDirectory.path.resolve("dumdum")
+            val patches = mutableListOf<Path>()
+            if (patchSet.mavenCoordinates != null) {
+                patchesDir.path.resolve("${patchSet.name}.jar").openZip().use { patchZip ->
+                    val matcher = patchZip.getPathMatcher("glob:*.patch")
+                    // todo we prolly need to extract the zip
+                    patches.addAll(Files.walk(patchZip.getPath(patchSet.pathInArtifact?: "patches")).use { stream ->
+                        stream.filter {
+                            it.isRegularFile() && matcher.matches(it.fileName)
+                        }.collect(Collectors.toList())
+                    })
+                }
             } else if (patchSet.folder != null) {
-                patchSet.folder.path
+                val patchFolder = patchSet.folder.path
+                if (Files.isDirectory(patchFolder)) {
+                    patches.addAll(patchFolder.filesMatchingRecursive("*.patch"))
+                }
             } else {
                 throw RuntimeException("No input for patch set ${patchSet.name}?!")
-            }
-
-            val patches = mutableListOf<Path>()
-            if (Files.isDirectory(patchFolder)) {
-                patches.addAll(patchFolder.filesMatchingRecursive("*.patch"))
             }
 
             println("    Found ${patches.size} patches")

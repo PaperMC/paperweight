@@ -44,7 +44,7 @@ open class GeneralTasks(
 
     // TODO update this to look at all patch sets
     val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
-        patchDir.set(extension.paper.spigotServerPatchDir)
+        patchDir.set(extension.paper.patchSets.get()[2].folder?.path)
     }
 
     val mergePaperAts by tasks.registering<MergeAccessTransforms> {

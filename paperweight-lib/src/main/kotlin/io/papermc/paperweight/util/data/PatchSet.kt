@@ -10,12 +10,13 @@ data class PatchSet(
     val type: PatchSetType,
     val folder: RegularFile? = null,
     val mavenCoordinates: String? = null,
+    val repo: String? = null,
+    val pathInArtifact: String? = null,
 ): Serializable {
 
     // TODO this is stupid, make this a proper @Nested input or something
     @Throws(IOException::class)
     private fun writeObject(s: ObjectOutputStream) {
-        println("attempt serialization of ${toString()}")
         s.write(hashCode())
     }
 }

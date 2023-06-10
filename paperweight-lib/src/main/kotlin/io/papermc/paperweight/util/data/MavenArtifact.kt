@@ -36,7 +36,7 @@ data class MavenArtifact(
 ) {
 
     private val classifierText: String
-        get() = if (classifier != null) "-$classifier" else ""
+        get() = if (classifier != null && classifier != "") "-$classifier" else ""
 
     private val ext: String
         get() = extension ?: "jar"

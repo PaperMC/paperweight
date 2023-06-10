@@ -35,8 +35,6 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     @Suppress("MemberVisibilityCanBePrivate")
     val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
-    val spigotApiPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/api")
-    val spigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server")
     val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 

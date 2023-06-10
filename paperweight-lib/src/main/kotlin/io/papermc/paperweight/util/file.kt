@@ -25,6 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.net.URI
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -142,7 +143,16 @@ private fun Path.jarUri(): URI {
 }
 
 fun Path.openZip(): FileSystem {
-    return FileSystems.newFileSystem(jarUri(), emptyMap<String, Any>())
+    val fileSystem = try {
+        FileSystems.getFileSystem(jarUri())
+    } catch (e: FileSystemNotFoundException) {
+        null
+    }
+    return if (fileSystem != null && fileSystem.isOpen) {
+        fileSystem
+    } else {
+        FileSystems.newFileSystem(jarUri(), emptyMap<String, Any>())
+    }
 }
 
 fun Path.writeZip(): FileSystem {

@@ -79,7 +79,13 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
-    // TODO
+    val downloadPatchSets by tasks.registering<DownloadPatchesTask> {
+        patchSets.set(extension.paper.patchSets)
+        outputDir.set(cache.resolve(PATCHES_PATH))
+        downloader.set(project.download)
+    }
+
+    @Suppress("unused")
     val applyPatchSets by tasks.registering<ApplyPatchSets> {
         group = "paper"
         description = "Setup the Paper projects"
@@ -90,6 +96,7 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchSets.set(extension.paper.patchSets)
+        patchesDir.set(downloadPatchSets.flatMap { it.outputDir })
         outputDir.set(extension.paper.paperServerDir)
         workDir.set(project.file("work")) // TODO
 
@@ -101,63 +108,13 @@ open class AllTasks(
         devImports.set(extension.paper.devImports.fileExists(project))
     }
 
-    val applyApiPatches by tasks.registering<ApplyGitPatches> {
-        group = "paper"
-        description = "Setup the Paper-API project"
-
-        if (project.isBaseExecution) {
-            doNotTrackState("$name should always run when requested as part of the base execution.")
-        }
-        printOutput.set(project.isBaseExecution)
-
-        branch.set("HEAD")
-        upstreamBranch.set("upstream")
-        // TODO
-        //upstream.set(patchSpigotApi.flatMap { it.outputDir })
-        patchDir.set(extension.paper.spigotApiPatchDir)
-        unneededFiles.value(listOf("README.md"))
-
-        outputDir.set(extension.paper.paperApiDir)
-    }
-
-    @Suppress("DuplicatedCode")
-    val applyServerPatches by tasks.registering<ApplyPaperPatches> {
-        group = "paper"
-        description = "Setup the Paper-Server project"
-
-        if (project.isBaseExecution) {
-            doNotTrackState("$name should always run when requested as part of the base execution.")
-        }
-        printOutput.set(project.isBaseExecution)
-
-        patchDir.set(extension.paper.spigotServerPatchDir)
-        // TODO
-        //remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
-        //remappedTests.set(remapSpigotSources.flatMap { it.testsOutputZip })
-        //caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
-        //upstreamDir.set(patchSpigotServer.flatMap { it.outputDir })
-        sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
-        devImports.set(extension.paper.devImports.fileExists(project))
-        unneededFiles.value(listOf("nms-patches", "applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md"))
-
-        outputDir.set(extension.paper.paperServerDir)
-        mcDevSources.set(extension.mcDevSourceDir)
-    }
-
-    val applyPatches by tasks.registering<Task> {
-        group = "paper"
-        description = "Set up the Paper development environment"
-        dependsOn(applyApiPatches, applyServerPatches)
-    }
-
     val rebuildApiPatches by tasks.registering<RebuildGitPatches> {
         group = "paper"
         description = "Rebuilds patches to api"
         inputDir.set(extension.paper.paperApiDir)
         baseRef.set("base")
 
-        patchDir.set(extension.paper.spigotApiPatchDir)
+        //patchDir.set(extension.paper.spigotApiPatchDir)
     }
 
     val rebuildServerPatches by tasks.registering<RebuildGitPatches> {
@@ -166,7 +123,7 @@ open class AllTasks(
         inputDir.set(extension.paper.paperServerDir)
         baseRef.set("base")
 
-        patchDir.set(extension.paper.spigotServerPatchDir)
+        //patchDir.set(extension.paper.spigotServerPatchDir)
     }
 
     @Suppress("unused")

@@ -141,25 +141,13 @@ fun downloadMinecraftLibraries(
 }
 
 @CacheableTask
-abstract class DownloadSpigotDependencies : BaseTask() {
+abstract class DownloadPatchesTask: BaseTask() {
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val apiPom: RegularFileProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val serverPom: RegularFileProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mcLibrariesFile: RegularFileProperty
+    @get:Input
+    abstract val patchSets: ListProperty<PatchSet>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val outputSourcesDir: DirectoryProperty
 
     @get:Internal
     abstract val downloader: Property<DownloadService>
@@ -169,145 +157,24 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
     @TaskAction
     fun run() {
-        val apiSetup = parsePom(apiPom.path)
-        val serverSetup = parsePom(serverPom.path)
-        val mcLibraries = mcLibrariesFile.path.readLines()
-
         val out = outputDir.path
         val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
         out.deleteRecursively(excludes)
 
-        val outSources = outputSourcesDir.path
-        val excludesSources = listOf(outSources.fileSystem.getPathMatcher("glob:*.etag"))
-        outSources.deleteRecursively(excludesSources)
-
-        val spigotRepos = mutableSetOf<String>()
-        spigotRepos += apiSetup.repos
-        spigotRepos += serverSetup.repos
-
-        val artifacts = mutableSetOf<MavenArtifact>()
-        artifacts += apiSetup.artifacts
-        artifacts += serverSetup.artifacts
-
         val queue = workerExecutor.noIsolation()
-        for (art in artifacts) {
-            queue.submit(DownloadWorker::class) {
-                repos.set(spigotRepos)
-                artifact.set(art.toString())
-                target.set(out)
-                downloadToDir.set(true)
-                downloader.set(this@DownloadSpigotDependencies.downloader)
-            }
-            if (!mcLibraries.contains(art.toString())) {
-                queue.submit(DownloadSourcesToDirAction::class) {
-                    repos.set(spigotRepos)
-                    artifact.set(art.toString())
-                    target.set(outSources)
-                    downloader.set(this@DownloadSpigotDependencies.downloader)
+        patchSets.get().forEach { patchSet ->
+            if (patchSet.mavenCoordinates != null) {
+                queue.submit(DownloadWorker::class) {
+                    repos.set(listOf(patchSet.repo?: MAVEN_CENTRAL_URL))
+                    artifact.set(patchSet.mavenCoordinates)
+                    target.set(out.resolve("${patchSet.name}.jar"))
+                    downloadToDir.set(false)
+                    downloader.set(this@DownloadPatchesTask.downloader)
                 }
             }
         }
     }
-
-    private fun parsePom(pomFile: Path): MavenSetup {
-        val depList = arrayListOf<MavenArtifact>()
-        // todo dum
-        depList += MavenArtifact(
-            "com.google.code.findbugs",
-            "jsr305",
-            "3.0.2"
-        )
-        depList += MavenArtifact(
-            "org.apache.logging.log4j",
-            "log4j-api",
-            "2.17.0"
-        )
-        depList += MavenArtifact(
-            "org.jetbrains",
-            "annotations",
-            "23.0.0"
-        )
-        val repoList = arrayListOf<String>()
-        // Maven Central is implicit
-        repoList += MAVEN_CENTRAL_URL
-
-        val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-        val doc = pomFile.inputStream().buffered().use { stream ->
-            stream.buffered().use { buffered ->
-                builder.parse(buffered)
-            }
-        }
-
-        doc.documentElement.normalize()
-
-        depList += doc.extractDependencies()
-        repoList += doc.extractRepos()
-
-        return MavenSetup(repos = repoList, artifacts = depList)
-    }
-
-    private fun Document.extractDependencies(): List<MavenArtifact> {
-        val depList = arrayListOf<MavenArtifact>()
-        val list = getElementsByTagName("dependencies")
-        val node = list.item(0) as Element // Only want the first dependencies element
-        val depNode = node.getElementsByTagName("dependency")
-        for (j in 0 until depNode.length) {
-            val dependency = depNode.item(j) as? Element ?: continue
-            val artifact = getDependency(dependency) ?: continue
-            depList += artifact
-        }
-        return depList
-    }
-
-    private fun Document.extractRepos(): List<String> {
-        val repoList = arrayListOf<String>()
-        val repos = getElementsByTagName("repositories")
-        for (i in 0 until repos.length) {
-            val node = repos.item(i) as? Element ?: continue
-            val depNode = node.getElementsByTagName("repository")
-            for (j in 0 until depNode.length) {
-                val repo = depNode.item(j) as? Element ?: continue
-                val repoUrl = repo.getElementsByTagName("url").item(0).textContent
-                repoList += repoUrl
-            }
-        }
-        return repoList
-    }
-
-    private fun getDependency(node: Element): MavenArtifact? {
-        val scopeNode = node.getElementsByTagName("scope")
-        val scope = if (scopeNode.length == 0) {
-            "compile"
-        } else {
-            scopeNode.item(0).textContent
-        }
-
-        if (scope != "compile") {
-            return null
-        }
-
-        val group = node.getElementsByTagName("groupId").item(0).textContent
-        val artifact = node.getElementsByTagName("artifactId").item(0).textContent
-        val version = node.getElementsByTagName("version").item(0).textContent
-
-        if (version.contains("\${")) {
-            // Don't handle complicated things
-            // We don't need to (for now anyways)
-            return null
-        }
-
-        return MavenArtifact(
-            group = group,
-            artifact = artifact,
-            version = version
-        )
-    }
 }
-
-data class MavenSetup(
-    val repos: List<String>,
-    val artifacts: List<MavenArtifact>
-)
 
 interface DownloadParams : WorkParameters {
     val repos: ListProperty<String>

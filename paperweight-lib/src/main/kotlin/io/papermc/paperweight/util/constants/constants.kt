@@ -38,6 +38,8 @@ const val PAPER_MAVEN_REPO_URL = "https://repo.papermc.io/repository/maven-publi
 
 const val MAVEN_CENTRAL_URL = "https://repo.maven.apache.org/maven2/"
 
+const val FORGE_MAVEN_REPO_URL = "https://maven.minecraftforge.net/"
+
 const val PARAM_MAPPINGS_CONFIG = "paramMappings"
 const val REMAPPER_CONFIG = "remapper"
 const val DECOMPILER_CONFIG = "decompiler"
@@ -71,20 +73,12 @@ const val PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY = "paperweightDownstreamDataFile"
 private const val JARS_PATH = "$PAPER_PATH/jars"
 const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
 const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
-
-const val SPIGOT_JARS_PATH = "$JARS_PATH/spigot"
-const val SPIGOT_SOURCES_JARS_PATH = "$JARS_PATH/spigot-sources"
+const val PATCHES_PATH = "$JARS_PATH/patches"
 
 private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
 const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
 const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
 
-const val SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn.tiny"
-const val OBF_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/official-spigot.tiny"
-const val SPIGOT_MEMBER_MAPPINGS = "$MAPPINGS_DIR/spigot-members.csrg"
-const val CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-cleaned.tiny"
-const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patched.tiny"
-const val PATCHED_SPIGOT_MOJANG_YARN_SOURCE_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patched-source.tiny"
 const val REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf.tiny"
 const val PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf-patched.tiny"
 
