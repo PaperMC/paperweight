@@ -33,5 +33,6 @@ object MappingFormats {
 
     val TINY = TinyMappingFormat.STANDARD
     val CSRG: MappingFormat = Formats.CSRG
+    val TSRG: MappingFormat = Formats.TSRG
     val PROGUARD: MappingFormat = Formats.byId("proguard")
 }

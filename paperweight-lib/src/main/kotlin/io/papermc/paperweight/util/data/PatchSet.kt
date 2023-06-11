@@ -12,6 +12,7 @@ data class PatchSet(
     val mavenCoordinates: String? = null,
     val repo: String? = null,
     val pathInArtifact: String? = null,
+    val mappings: PatchMappingType = PatchMappingType.MOJANG
 ): Serializable {
 
     // TODO this is stupid, make this a proper @Nested input or something
@@ -24,4 +25,9 @@ data class PatchSet(
 enum class PatchSetType {
     FILE_BASED,
     FEATURE
+}
+
+enum class PatchMappingType {
+    MOJANG,
+    SRG
 }

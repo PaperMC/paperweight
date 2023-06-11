@@ -79,8 +79,8 @@ class PaperweightCore : Plugin<Project> {
         )
 
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-            // TODO
-            //dependsOn(tasks.applyPatches)
+            dependsOn(tasks.applyPatchSets)
+
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
