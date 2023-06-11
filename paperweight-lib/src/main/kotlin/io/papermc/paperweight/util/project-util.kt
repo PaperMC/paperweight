@@ -71,14 +71,6 @@ fun Project.setupServerProject(
     val vanillaServer: Configuration by configurations.creating {
         withDependencies {
             dependencies {
-                // update mc-dev sources on dependency resolution
-                makeMcDevSrc(
-                    parent.layout.cache,
-                    remappedJarSources.convertToPath(),
-                    mcDevSourceDir,
-                    layout.projectDirectory.path
-                )
-
                 add(create(parent.files(remappedJar)))
             }
         }

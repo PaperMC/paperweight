@@ -78,6 +78,8 @@ const val PATCHES_PATH = "$JARS_PATH/patches"
 private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
 const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
 const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
+const val SRG_CSV = "$MAPPINGS_DIR/srg-mojang+yarn.csv"
+const val TEMP_SRG = "$MAPPINGS_DIR/joined.tsrg"
 
 const val REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf.tiny"
 const val PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf-patched.tiny"

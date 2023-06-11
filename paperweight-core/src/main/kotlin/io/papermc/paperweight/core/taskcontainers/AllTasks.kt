@@ -85,6 +85,15 @@ open class AllTasks(
         downloader.set(project.download)
     }
 
+    val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
+        // TODO temp, to speed up stuff
+        //ourMappings.set(generateMappings.flatMap { it.outputMappings })
+        ourMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
+        srgMappings.set(cache.resolve(TEMP_SRG)) // TODO properly extract me
+
+        outputCsv.set(cache.resolve(SRG_CSV))
+    }
+
     @Suppress("unused")
     val applyPatchSets by tasks.registering<ApplyPatchSets> {
         group = "paper"
@@ -106,6 +115,7 @@ open class AllTasks(
         //mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
         mcLibrariesDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
         devImports.set(extension.paper.devImports.fileExists(project))
+        srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
     }
 
     val rebuildApiPatches by tasks.registering<RebuildGitPatches> {

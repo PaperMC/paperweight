@@ -1,13 +1,10 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.DEOBF_NAMESPACE
-import io.papermc.paperweight.util.constants.OBF_NAMESPACE
 import io.papermc.paperweight.util.constants.applyPatchesLock
 import io.papermc.paperweight.util.data.PatchMappingType
 import io.papermc.paperweight.util.data.PatchSet
 import io.papermc.paperweight.util.data.PatchSetType
-import org.cadixdev.lorenz.merge.MappingSetMerger
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -36,6 +33,10 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
     @get:InputFile
     abstract val devImports: RegularFileProperty
 
+    @get:Optional
+    @get:InputFile
+    abstract val srgCsv: RegularFileProperty
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -55,7 +56,11 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
     private fun run() {
 
-        createMappings()
+        val srgToMojang = mutableMapOf<String, String>()
+        Files.readAllLines(srgCsv.path).forEach {
+            val split = it.split(",")
+            srgToMojang[split[0]] = split[1]
+        }
 
         Git.checkForGit()
 
@@ -102,7 +107,7 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
                         var patchLines = Files.readAllLines(path)
                         if (patchSet.mappings == PatchMappingType.SRG) {
-                            patchLines = remapPatch(patchLines)
+                            patchLines = remapPatch(patchLines, srgToMojang)
                         }
                         Files.write(target, patchLines, StandardOpenOption.CREATE_NEW)
                         patches.add(target)
@@ -129,6 +134,7 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
                         println("    Applying feature patches...")
                         // TODO
                     }
+
                     PatchSetType.FILE_BASED -> {
                         println("    Applying file based patches...")
 
@@ -150,21 +156,9 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
         }
     }
 
-    private fun remapPatch(patchLines: List<String>): List<String> {
-        val srgRegex = Regex("[pfm]_(\\d+)_")
-        // TODO obviously horrible
-        val srgToMojang = mapOf(
-            "193328" to "unpack",
-            "193329" to "time",
-            "193330" to "subTickOrder",
-            "193311" to "type",
-            "193312" to "pos",
-            "193313" to "delay",
-            "193314" to "priority",
-            "193335" to "probe",
-            "193336" to "type",
-            "193337" to "pos"
-        )
+    private fun remapPatch(patchLines: List<String>, srgToMojang: Map<String, String>): List<String> {
+        val srgRegex = Regex("[pfm]_\\d+_")
+
 
         return patchLines.map {
             var line = it
@@ -174,8 +168,14 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
             }
 
             // remap
-            line = srgRegex.replace(line) { res -> srgToMojang[res.groupValues[1]]
-                ?: throw RuntimeException("missing mapping for " + res.groupValues[1])
+            line = srgRegex.replace(line) { res ->
+                val mapping = srgToMojang[res.groupValues[0]]
+                if (mapping != null){
+                    mapping
+                } else {
+                    println("missing mapping for " + res.groupValues[0])
+                    res.groupValues[0]
+                }
             }
 
             return@map line
@@ -206,19 +206,6 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
                 }
             }
         }
-    }
-
-    // TODO clean, own task, etc
-    private fun createMappings() {
-        val obfToOurs =  MappingFormats.TINY.read(Path.of("D:\\IdeaProjects\\Paper\\.gradle\\caches\\paperweight\\mappings\\official-mojang+yarn.tiny"), OBF_NAMESPACE, DEOBF_NAMESPACE)
-        val obfToSrg = MappingFormats.TSRG.read(Path.of("D:\\IdeaProjects\\Paper\\.gradle\\caches\\paperweight\\mappings\\joined.tsrg"))
-
-        val srgToOurs = MappingSetMerger.create(
-            obfToSrg.reverse(),
-            obfToOurs
-        ).merge()
-
-        MappingFormats.TINY.write(srgToOurs, Path.of("D:\\IdeaProjects\\Paper\\.gradle\\caches\\paperweight\\mappings\\srg_official-mojang+yarn.tiny"), "srg", DEOBF_NAMESPACE)
     }
 
     private fun createDir(dir: Path): Path {

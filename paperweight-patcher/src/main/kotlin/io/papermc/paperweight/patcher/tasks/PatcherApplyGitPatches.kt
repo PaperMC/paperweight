@@ -153,7 +153,5 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         git("tag", "base").executeSilently()
 
         applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
-
-        makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, srcDir, dataDir)
     }
 }
