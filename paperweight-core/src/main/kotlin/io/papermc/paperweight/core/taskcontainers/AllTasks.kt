@@ -79,12 +79,6 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
-    val downloadPatchSets by tasks.registering<DownloadPatchesTask> {
-        patchSets.set(extension.paper.patchSets)
-        outputDir.set(cache.resolve(PATCHES_PATH))
-        downloader.set(project.download)
-    }
-
     val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
         // TODO temp, to speed up stuff
         //ourMappings.set(generateMappings.flatMap { it.outputMappings })
@@ -105,16 +99,12 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchSets.set(extension.paper.patchSets)
-        //patchesDir.set(downloadPatchSets.flatMap { it.outputDir })
         outputDir.set(extension.paper.paperServerDir)
         workDir.set(project.file("work")) // TODO
 
         // TODO temp, to speed up stuff
         sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         //sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
-        //mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
-        //mcLibrariesDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
-        //devImports.set(extension.paper.devImports.fileExists(project))
         //srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
     }
 

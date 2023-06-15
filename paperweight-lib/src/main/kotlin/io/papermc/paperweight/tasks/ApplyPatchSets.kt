@@ -2,7 +2,6 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.applyPatchesLock
-import io.papermc.paperweight.util.data.PatchMappingType
 import io.papermc.paperweight.util.data.PatchSet
 import io.papermc.paperweight.util.data.PatchSetType
 import org.gradle.api.file.DirectoryProperty
@@ -11,8 +10,6 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import java.util.stream.Collectors
 import kotlin.io.path.*
 
 abstract class ApplyPatchSets : ControllableOutputTask() {
@@ -23,16 +20,9 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
 
-    //@get:InputDirectory
-    //abstract val mcLibrariesDir: DirectoryProperty
-
     //@get:Optional
     //@get:InputDirectory
     //abstract val patchesDir: DirectoryProperty
-
-    //@get:Optional
-    //@get:InputFile
-    //abstract val devImports: RegularFileProperty
 
     //@get:Optional
     //@get:InputFile
@@ -86,43 +76,12 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
         patchSets.get().forEach { patchSet ->
             println("  Applying patch set ${patchSet.name}...")
 
-            val patches = mutableListOf<Path>()
-            if (patchSet.mavenCoordinates != null) {
-                //patchesDir.path.resolve("${patchSet.name}.jar").openZip().use { patchZip ->
-                //    // find patches
-                //    val matcher = patchZip.getPathMatcher("glob:*.patch")
-                //    val pathInArtifact = patchZip.getPath(patchSet.pathInArtifact ?: "patches")
-                //    val patchesInZip = Files.walk(pathInArtifact).use { stream ->
-                //        stream.filter {
-                //            it.isRegularFile() && matcher.matches(it.fileName)
-                //        }.collect(Collectors.toList())
-                //    }
-//
-                //    // copy them out
-                //    val dir = patchesDir.path.resolve(patchSet.name)
-                //    createDir(dir)
-                //    patchesInZip.forEach { path ->
-                //        val source = pathInArtifact.relativize(path)
-                //        val target = dir.resolve(source.toString())
-                //        target.parent?.createDirectories()
-//
-                //        var patchLines = Files.readAllLines(path)
-                //        if (patchSet.mappings == PatchMappingType.SRG) {
-                //            patchLines = remapPatch(patchLines, srgToMojang)
-                //        }
-                //        Files.write(target, patchLines, StandardOpenOption.CREATE_NEW)
-                //        patches.add(target)
-                //    }
-                //}
-            } else if (patchSet.folder != null) {
-                val patchFolder = patchSet.folder.path
-                if (Files.isDirectory(patchFolder)) {
-                    patches.addAll(patchFolder.filesMatchingRecursive("*.patch"))
-                }
-            } else {
-                throw RuntimeException("No input for patch set ${patchSet.name}?!")
+            val patchFolder = patchSet.folder.path
+            if (!Files.isDirectory(patchFolder)) {
+                println("    No patches found")
+                return@forEach
             }
-
+            val patches = patchFolder.filesMatchingRecursive("*.patch")
             println("    Found ${patches.size} patches")
 
             val input = resolveWorkDir(patchSet.name)
@@ -178,7 +137,7 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
             // remap
             line = srgRegex.replace(line) { res ->
                 val mapping = srgToMojang[res.groupValues[0]]
-                if (mapping != null){
+                if (mapping != null) {
                     mapping
                 } else {
                     println("missing mapping for " + res.groupValues[0])

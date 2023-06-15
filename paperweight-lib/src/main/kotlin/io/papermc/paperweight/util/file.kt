@@ -110,7 +110,7 @@ private fun Path.fixWindowsPermissionsForDeletion() {
     }
 }
 
-fun Path.copyRecursivelyTo(target: Path) {
+fun Path.copyRecursivelyTo(target: Path, override: Boolean = false) {
     target.createDirectories()
     if (!exists()) {
         return
@@ -121,7 +121,7 @@ fun Path.copyRecursivelyTo(target: Path) {
             if (f.isDirectory()) {
                 targetPath.createDirectories()
             } else {
-                f.copyTo(targetPath)
+                f.copyTo(targetPath, override)
             }
         }
     }

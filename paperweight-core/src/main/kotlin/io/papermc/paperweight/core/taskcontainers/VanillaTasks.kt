@@ -35,7 +35,7 @@ open class VanillaTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-) : GeneralTasks(project) {
+) : McpConfigTasks(project) {
 
     val generateMappings by tasks.registering<GenerateMappings> {
         vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })

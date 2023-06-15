@@ -56,9 +56,15 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     )
 
     val paper = PaperExtension(objects, layout)
+    val mcpConfig = McpConfigExtension(objects, layout)
 
     @Suppress("unused")
     fun paper(action: Action<in PaperExtension>) {
         action.execute(paper)
+    }
+
+    @Suppress("unused")
+    fun mcpConfig(action: Action<in McpConfigExtension>) {
+        action.execute(mcpConfig)
     }
 }

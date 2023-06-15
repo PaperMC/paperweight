@@ -31,12 +31,16 @@ import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.McpConfig
+import io.papermc.paperweight.util.data.MinecraftManifest
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
+import java.nio.file.Files
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
@@ -57,6 +61,9 @@ class PaperweightCore : Plugin<Project> {
         target.configurations.create(REMAPPER_CONFIG)
         target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
+        target.configurations.create(MCPCONFIG_MERGE_CONFIG)
+        target.configurations.create(MCPCONFIG_RENAME_CONFIG)
+        target.configurations.create(MCPCONFIG_DECOMPILE_CONFIG)
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {
@@ -122,7 +129,32 @@ class PaperweightCore : Plugin<Project> {
                     name = DECOMPILER_REPO_NAME
                     content { onlyForConfigurations(DECOMPILER_CONFIG) }
                 }
+                // TODO get from mcpconfig config
+                maven("https://maven.minecraftforge.net/") {
+                    content { onlyForConfigurations(MCPCONFIG_RENAME_CONFIG) }
+                }
+                maven("https://maven.minecraftforge.net/") {
+                    content { onlyForConfigurations(MCPCONFIG_DECOMPILE_CONFIG) }
+                }
+                maven("https://maven.minecraftforge.net/") {
+                    content { onlyForConfigurations(MCPCONFIG_MERGE_CONFIG) }
+                }
             }
+
+
+            //val mcpConfig = tasks.downloadMcpConfig.flatMap { it.config }.map { gson.fromJson<McpConfig>(it) }
+            //val dum: Configuration by configurations.creating {
+            //    withDependencies {
+            //        dependencies {
+            //            add(create(mcpConfig.map { it.functions.rename.version }))
+            //        }
+            //    }
+            //}
+            //println("dummer ${mcpConfig.get()}")
+            //// TODO get from mcpconfig config
+            target.configurations[MCPCONFIG_RENAME_CONFIG].dependencies.add(target.dependencies.create("net.minecraftforge:ForgeAutoRenamingTool:0.1.22:all"))
+            target.configurations[MCPCONFIG_DECOMPILE_CONFIG].dependencies.add(target.dependencies.create("net.minecraftforge:forgeflower:2.0.627.2"))
+            target.configurations[MCPCONFIG_MERGE_CONFIG].dependencies.add(target.dependencies.create("net.minecraftforge:installertools:1.2.0:fatjar"))
 
             // Setup the server jar
             val cache = target.layout.cache

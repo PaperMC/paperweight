@@ -38,6 +38,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
+import org.gradle.internal.enterprise.test.FileProperty
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -142,13 +143,25 @@ fun downloadMinecraftLibraries(
 }
 
 @CacheableTask
-abstract class DownloadPatchesTask: BaseTask() {
+abstract class DownloadMcpConfigTask: BaseTask() {
 
     @get:Input
-    abstract val patchSets: ListProperty<PatchSet>
+    abstract val repo: Property<String>
+
+    @get:Input
+    abstract val artifact: Property<String>
+
+    @get:Internal
+    abstract val output: DirectoryProperty
+
+    @get:OutputFile
+    abstract val config: RegularFileProperty
 
     @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
+    abstract val patches: DirectoryProperty
+
+    @get:OutputFile
+    abstract val mappings: RegularFileProperty
 
     @get:Internal
     abstract val downloader: Property<DownloadService>
@@ -158,23 +171,15 @@ abstract class DownloadPatchesTask: BaseTask() {
 
     @TaskAction
     fun run() {
-        val out = outputDir.path
-        val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
-        out.deleteRecursively(excludes)
-        Files.createDirectories(out)
-
-        val queue = workerExecutor.noIsolation()
-        patchSets.get().forEach { patchSet ->
-            if (patchSet.mavenCoordinates != null) {
-                queue.submit(DownloadWorker::class) {
-                    repos.set(listOf(patchSet.repo?: MAVEN_CENTRAL_URL))
-                    artifact.set(patchSet.mavenCoordinates)
-                    target.set(out.resolve("${patchSet.name}.jar"))
-                    downloadToDir.set(false)
-                    downloader.set(this@DownloadPatchesTask.downloader)
-                }
-            }
+        val artifact = MavenArtifact.parse(artifact.get())
+        val target = output.path
+        artifact.downloadToFile(downloader.get(), target, listOf(repo.get()))
+        target.openZip().use { zip ->
+            zip.getPath("/config.json").copyTo(config.path, true)
+            zip.getPath("/patches/server").copyRecursivelyTo(patches.path, true)
+            zip.getPath("/config/joined.tsrg").copyTo(mappings.path, true)
         }
+        target.deleteIfExists()
     }
 }
 
