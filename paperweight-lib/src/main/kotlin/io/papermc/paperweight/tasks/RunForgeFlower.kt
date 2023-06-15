@@ -34,18 +34,18 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
 val forgeFlowerArgList: List<String> = listOf(
-    "-ind=    ",
-    "-din=1",
-    "-rbr=1",
-    "-dgs=1",
-    "-asc=1",
-    "-rsy=1",
-    "-iec=1",
-    "-jvn=1", // we need those params, else mcpconfig patches dont apply
-    "-isl=0",
-    "-iib=1",
-    "-bsm=1",
-    "-dcl=1",
+    "-ind=    ", // indentation
+    "-din=1", // decompile inner classes
+    "-rbr=1", // hide bridge methods
+    "-dgs=1", // decompile generic signatures
+    "-asc=1", // encode non-ASCII characters in string and character literals as Unicode escapes
+    "-rsy=1", //  hide synthetic class members
+    "-iec=1", // include entire classpath
+    "-jvn=0", // use jad var naming (only difference to mcp config)
+    "-isl=0", // inline simple lambdas
+    "-iib=1", // ignore invalid bytecode
+    "-bsm=1", // bytecode source mapping
+    "-dcl=1", // dum code lines
     "-ovr=0", // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
     "-pll=999999", // High line length to effectively disable formatter (only does anything on Quiltflower)
     "-log=TRACE",

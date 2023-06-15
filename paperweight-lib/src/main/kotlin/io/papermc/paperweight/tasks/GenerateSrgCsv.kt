@@ -105,54 +105,33 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
             srgClass.methodMappings.forEach { srgMethod ->
                 val namedMethod = namedClass.get().getMethodMapping(srgMethod.obfuscatedName, srgMethod.obfuscatedDescriptor)
 
-                if (/*srgMethod.deobfuscatedName == "m_193328_" || srgClass.deobfuscatedName.contains("C_183045_") || */srgClass.deobfuscatedName.contains("C_278349_")) {
-                    println("wooo1")
-                    println(srgMethod.parameterMappings)
-                    println(srgMethod)
-                    if (namedMethod.isPresent) {
-                        println(namedMethod.get().parameterMappings)
-                        println(namedMethod.get())
-                    } else {
-                        println("no named")
-                    }
-                }
-
                 if (namedMethod.isPresent) {
                     srgToOurs[srgMethod.deobfuscatedName] = namedMethod.get().deobfuscatedName
 
-
-                    val params = namedMethod.get().parameterMappings.toTypedArray()
-                    srgMethod.parameterMappings.forEachIndexed { index, srgParam ->
+                    val params = namedMethod.get().parameterMappings.toTypedArray().reversedArray()
+                    srgMethod.parameterMappings.reversed().forEachIndexed { index, srgParam ->
                         val namedParam = if (params.size > index) {
                             Optional.of(params[index])
                         } else {
-                            println("empty")
                             Optional.empty()
                         }
-                        //val namedParam = namedMethod.get().getParameterMapping(srgParam.obfuscatedName.toInt())
-
-                        //if (srgMethod.deobfuscatedName == "m_193328_") {
-                        //    println("wooo $srgParam")
-                        //    println(namedMethod.get().parameterMappings)
-                        //    println(namedMethod.get())
-                        //    println(srgMethod.parameterMappings)
-                        //    println(srgMethod)
-                        //}
 
                         if (namedParam.isPresent) {
                             srgToOurs[srgParam.deobfuscatedName] = namedParam.get().deobfuscatedName
                         } else {
-                            //println("skipping param $srgParam")
+                            println("skipping param $srgParam of method ${srgMethod.deobfuscatedName}")
                             //println(namedMethod.get().parameterMappings)
                             //println(namedMethod.get())
                             //println(srgMethod)
-                            srgToOurs[srgParam.deobfuscatedName] = srgParam.obfuscatedName
+                            srgToOurs[srgParam.deobfuscatedName] = srgParam.deobfuscatedName
                         }
                     }
                 } else {
-                    //println("skipping method ${srgMethod.obfuscatedName} ${srgMethod.deobfuscatedName}")
-                    //println(namedClass.get())
-                    //println(srgMethod)
+                    if (srgMethod.obfuscatedName != srgMethod.deobfuscatedName) {
+                        println("skipping method ${srgMethod.obfuscatedName} ${srgMethod.deobfuscatedName}")
+                        //println(namedClass.get())
+                        //println(srgMethod)
+                    }
                     srgToOurs[srgMethod.deobfuscatedName] = srgMethod.obfuscatedName
                 }
             }

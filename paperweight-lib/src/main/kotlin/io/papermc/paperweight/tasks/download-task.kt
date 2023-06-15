@@ -26,6 +26,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
@@ -160,6 +161,7 @@ abstract class DownloadPatchesTask: BaseTask() {
         val out = outputDir.path
         val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
         out.deleteRecursively(excludes)
+        Files.createDirectories(out)
 
         val queue = workerExecutor.noIsolation()
         patchSets.get().forEach { patchSet ->

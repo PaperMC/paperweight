@@ -105,17 +105,17 @@ open class AllTasks(
         printOutput.set(project.isBaseExecution)
 
         patchSets.set(extension.paper.patchSets)
-        patchesDir.set(downloadPatchSets.flatMap { it.outputDir })
+        //patchesDir.set(downloadPatchSets.flatMap { it.outputDir })
         outputDir.set(extension.paper.paperServerDir)
         workDir.set(project.file("work")) // TODO
 
         // TODO temp, to speed up stuff
-        //sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-        sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
+        sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
+        //sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
         //mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
-        mcLibrariesDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
-        devImports.set(extension.paper.devImports.fileExists(project))
-        srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
+        //mcLibrariesDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        //devImports.set(extension.paper.devImports.fileExists(project))
+        //srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
     }
 
     val rebuildApiPatches by tasks.registering<RebuildGitPatches> {

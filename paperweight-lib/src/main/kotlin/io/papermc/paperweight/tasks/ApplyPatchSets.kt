@@ -23,19 +23,20 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val mcLibrariesDir: DirectoryProperty
+    //@get:InputDirectory
+    //abstract val mcLibrariesDir: DirectoryProperty
 
-    @get:InputDirectory
-    abstract val patchesDir: DirectoryProperty
+    //@get:Optional
+    //@get:InputDirectory
+    //abstract val patchesDir: DirectoryProperty
 
-    @get:Optional
-    @get:InputFile
-    abstract val devImports: RegularFileProperty
+    //@get:Optional
+    //@get:InputFile
+    //abstract val devImports: RegularFileProperty
 
-    @get:Optional
-    @get:InputFile
-    abstract val srgCsv: RegularFileProperty
+    //@get:Optional
+    //@get:InputFile
+    //abstract val srgCsv: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -57,10 +58,10 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
     private fun run() {
 
         val srgToMojang = mutableMapOf<String, String>()
-        Files.readAllLines(srgCsv.path).forEach {
-            val split = it.split(",")
-            srgToMojang[split[0]] = split[1]
-        }
+        //Files.readAllLines(srgCsv.path).forEach {
+        //    val split = it.split(",")
+        //    srgToMojang[split[0]] = split[1]
+        //}
 
         Git.checkForGit()
 
@@ -68,7 +69,7 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
         println("  Importing decompiled vanilla")
         var upstream = resolveWorkDir("vanilla")
-        importVanilla(upstream)
+        importVanilla(upstream.resolve("src/main/java"))
         // TODO I think we also need to clone Paper-Server into here?
 
         Git(upstream).let { git ->
@@ -87,32 +88,32 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
             val patches = mutableListOf<Path>()
             if (patchSet.mavenCoordinates != null) {
-                patchesDir.path.resolve("${patchSet.name}.jar").openZip().use { patchZip ->
-                    // find patches
-                    val matcher = patchZip.getPathMatcher("glob:*.patch")
-                    val pathInArtifact = patchZip.getPath(patchSet.pathInArtifact ?: "patches")
-                    val patchesInZip = Files.walk(pathInArtifact).use { stream ->
-                        stream.filter {
-                            it.isRegularFile() && matcher.matches(it.fileName)
-                        }.collect(Collectors.toList())
-                    }
-
-                    // copy them out
-                    val dir = patchesDir.path.resolve(patchSet.name)
-                    createDir(dir)
-                    patchesInZip.forEach { path ->
-                        val source = pathInArtifact.relativize(path)
-                        val target = dir.resolve(source.toString())
-                        target.parent?.createDirectories()
-
-                        var patchLines = Files.readAllLines(path)
-                        if (patchSet.mappings == PatchMappingType.SRG) {
-                            patchLines = remapPatch(patchLines, srgToMojang)
-                        }
-                        Files.write(target, patchLines, StandardOpenOption.CREATE_NEW)
-                        patches.add(target)
-                    }
-                }
+                //patchesDir.path.resolve("${patchSet.name}.jar").openZip().use { patchZip ->
+                //    // find patches
+                //    val matcher = patchZip.getPathMatcher("glob:*.patch")
+                //    val pathInArtifact = patchZip.getPath(patchSet.pathInArtifact ?: "patches")
+                //    val patchesInZip = Files.walk(pathInArtifact).use { stream ->
+                //        stream.filter {
+                //            it.isRegularFile() && matcher.matches(it.fileName)
+                //        }.collect(Collectors.toList())
+                //    }
+//
+                //    // copy them out
+                //    val dir = patchesDir.path.resolve(patchSet.name)
+                //    createDir(dir)
+                //    patchesInZip.forEach { path ->
+                //        val source = pathInArtifact.relativize(path)
+                //        val target = dir.resolve(source.toString())
+                //        target.parent?.createDirectories()
+//
+                //        var patchLines = Files.readAllLines(path)
+                //        if (patchSet.mappings == PatchMappingType.SRG) {
+                //            patchLines = remapPatch(patchLines, srgToMojang)
+                //        }
+                //        Files.write(target, patchLines, StandardOpenOption.CREATE_NEW)
+                //        patches.add(target)
+                //    }
+                //}
             } else if (patchSet.folder != null) {
                 val patchFolder = patchSet.folder.path
                 if (Files.isDirectory(patchFolder)) {
@@ -139,8 +140,12 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
                         println("    Applying file based patches...")
 
                         for (patch in patches) {
-                            println("Applying $patch...")
-                            git("apply", "--ignore-whitespace", patch.absolutePathString()).executeOut()
+                            try {
+                                println("Applying $patch...")
+                                git("apply", "--ignore-whitespace", patch.absolutePathString()).executeOut()
+                            } catch (ex: Exception) {
+                                println("failed")
+                            }
                         }
 
                         git(*Git.add(false, ".")).setupOut().run()
@@ -154,6 +159,9 @@ abstract class ApplyPatchSets : ControllableOutputTask() {
 
             upstream = input
         }
+
+        println("worked thru all patch sets, cloneing into paper server")
+        //Git(createDir(outputDir.path)).checkoutRepoFromUpstream(upstream)
     }
 
     private fun remapPatch(patchLines: List<String>, srgToMojang: Map<String, String>): List<String> {
