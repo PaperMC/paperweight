@@ -165,13 +165,10 @@ class PaperweightPatcher : Plugin<Project> {
             }
 
             val (_, reobfJar) = serverProj.setupServerProject(
-                target,
-                upstreamData.map { it.remappedJar },
-                upstreamData.map { it.decompiledJar },
-                patcher.mcDevSourceDir.path,
-                upstreamData.map { it.libFile },
-                mergedReobfPackagesToFix,
-                patchReobfMappings.flatMap { it.outputMappings }
+                    target,
+                    upstreamData.map { it.libFile },
+                    mergedReobfPackagesToFix,
+                    patchReobfMappings.flatMap { it.outputMappings }
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(

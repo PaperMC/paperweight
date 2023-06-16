@@ -31,16 +31,12 @@ import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.data.McpConfig
-import io.papermc.paperweight.util.data.MinecraftManifest
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.*
-import java.nio.file.Files
 
 class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
@@ -85,35 +81,35 @@ class PaperweightCore : Plugin<Project> {
             ext.mainClass
         )
 
-        target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-            dependsOn(tasks.applyPatchSets)
-
-            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-            remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
-            decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
-            mcVersion.set(target.ext.minecraftVersion)
-            mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
-            mcLibrariesDir.set(tasks.extractFromBundler.flatMap { it.serverLibraryJars })
-            mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
-            // TODO
-            //mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
-            sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
-            reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
-            reobfMappingsPatch.set(ext.paper.reobfMappingsPatch)
-            vanillaJarIncludes.set(ext.vanillaJarIncludes)
-            paramMappingsUrl.set(ext.paramMappingsRepo)
-            paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
-            atFile.set(tasks.mergePaperAts.flatMap { it.outputFile })
-            bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
-            serverLibrariesTxt.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
-            serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
-
-            dataFile.set(
-                target.layout.file(
-                    providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).map { File(it) }
-                )
-            )
-        }
+        //target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
+        //    dependsOn(tasks.applyPatchSets)
+//
+        //    vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
+        //    remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
+        //    decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
+        //    mcVersion.set(target.ext.minecraftVersion)
+        //    mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
+        //    mcLibrariesDir.set(tasks.extractFromBundler.flatMap { it.serverLibraryJars })
+        //    mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
+        //    // TODO
+        //    //mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
+        //    sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
+        //    reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
+        //    reobfMappingsPatch.set(ext.paper.reobfMappingsPatch)
+        //    vanillaJarIncludes.set(ext.vanillaJarIncludes)
+        //    paramMappingsUrl.set(ext.paramMappingsRepo)
+        //    paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
+        //    atFile.set(tasks.mergePaperAts.flatMap { it.outputFile })
+        //    bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
+        //    serverLibrariesTxt.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
+        //    serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
+//
+        //    dataFile.set(
+        //        target.layout.file(
+        //            providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).map { File(it) }
+        //        )
+        //    )
+        //}
 
         target.afterEvaluate {
             target.repositories {
@@ -170,40 +166,37 @@ class PaperweightCore : Plugin<Project> {
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
-                tasks.lineMapJar.flatMap { it.outputJar },
-                tasks.decompileJar.flatMap { it.outputJar },
-                ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES_TXT),
                 ext.paper.reobfPackagesToFix,
                 // TODO
                 //tasks.patchReobfMappings.flatMap { it.outputMappings }
-                tasks.decompileJar.map { it.outputJar.get() }// dum
+                tasks.mergePaperAts.flatMap { it.firstFile }// dum
             ) ?: return@afterEvaluate
 
-            devBundleTasks.configure(
-                ext.serverProject.get(),
-                ext.bundlerJarName.get(),
-                ext.mainClass,
-                ext.minecraftVersion,
-                tasks.decompileJar.map { it.outputJar.path },
-                tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
-                tasks.extractFromBundler.map { it.serverLibrariesList.path },
-                tasks.downloadServerJar.map { it.outputJar.path },
-                tasks.mergePaperAts.map { it.outputFile.path },
-                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
-            ) {
-                vanillaJarIncludes.set(ext.vanillaJarIncludes)
-                // TODO
-                //reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
-
-                paramMappingsCoordinates.set(
-                    target.provider {
-                        determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
-                    }
-                )
-                paramMappingsUrl.set(ext.paramMappingsRepo)
-            }
-            devBundleTasks.configureAfterEvaluate()
+            //devBundleTasks.configure(
+            //    ext.serverProject.get(),
+            //    ext.bundlerJarName.get(),
+            //    ext.mainClass,
+            //    ext.minecraftVersion,
+            //    tasks.decompileJar.map { it.outputJar.path },
+            //    tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
+            //    tasks.extractFromBundler.map { it.serverLibrariesList.path },
+            //    tasks.downloadServerJar.map { it.outputJar.path },
+            //    tasks.mergePaperAts.map { it.outputFile.path },
+            //    tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
+            //) {
+            //    vanillaJarIncludes.set(ext.vanillaJarIncludes)
+            //    // TODO
+            //    //reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
+//
+            //    paramMappingsCoordinates.set(
+            //        target.provider {
+            //            determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
+            //        }
+            //    )
+            //    paramMappingsUrl.set(ext.paramMappingsRepo)
+            //}
+            //devBundleTasks.configureAfterEvaluate()
 
             bundlerJarTasks.configureBundlerTasks(
                 tasks.extractFromBundler.flatMap { it.versionJson },

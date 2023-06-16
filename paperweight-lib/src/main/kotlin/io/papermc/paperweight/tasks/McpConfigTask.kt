@@ -186,21 +186,66 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
             git("tag", "-d", "vanilla").runSilently(silenceErr = true)
             git("tag", "vanilla").executeSilently(silenceErr = true)
 
-            for (patch in patches) {
+            patches.parallelStream().forEach { patch ->
                 try {
-                    println("Applying $patch...")
                     git("apply", "--ignore-whitespace", "--directory", "src/main/java", patch.absolutePathString()).executeOut()
                 } catch (ex: Exception) {
-                    println("failed")
                 }
             }
 
-            git(*Git.add(false, ".")).setupOut().run()
-            git("commit", "-m", "Decompile Fixes", "--author=DecompFix <auto@mated.null>").setupOut().run()
+            git(*Git.add(false, ".")).run()
+            git("commit", "-m", "Decompile Fixes", "--author=DecompFix <auto@mated.null>").run()
         }
     }
 }
 
+@CacheableTask
+abstract class RemapMcpConfigSources : BaseTask() {
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val input: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val mappings: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val output: DirectoryProperty
+
+    @TaskAction
+    fun run() {
+        val srgToMojang = mutableMapOf<String, String>()
+        Files.readAllLines(mappings.path).forEach {
+            val split = it.split(",")
+            srgToMojang[split[0]] = split[1]
+        }
+
+        val regex = Regex("[pfm]_\\d+_")
+        input.path.filesMatchingRecursive("*.java").parallelStream().forEach { file ->
+            var content = Files.readString(file)
+            content = regex.replace(content) { res ->
+                val mapping = srgToMojang[res.groupValues[0]]
+                if (mapping != null) {
+                    if (res.groupValues[0].startsWith("p")) {
+                        return@replace "_$mapping"
+                    } else {
+                        return@replace mapping
+                    }
+                } else {
+                    println("missing mapping for " + res.groupValues[0])
+                    return@replace res.groupValues[0]
+                }
+            }
+            val newFile = output.path.resolve(input.path.relativize(file))
+            if (!newFile.parent.exists()) {
+                newFile.parent.createDirectories()
+            }
+            Files.writeString(newFile, content, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+        }
+
+    }
+}
 
 @CacheableTask
 abstract class CreateFernflowerLibraries : BaseTask() {

@@ -20,7 +20,7 @@ open class McpConfigTasks(
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
     downloadService: Provider<DownloadService> = project.download
-) : GeneralTasks(project) {
+) : VanillaTasks(project) {
 
     val downloadMcpConfig by tasks.registering<DownloadMcpConfigTask> {
         repo.set(extension.mcpConfig.repo)
@@ -63,6 +63,12 @@ open class McpConfigTasks(
         args.set(renameFunction.map { it.args })
     }
 
+    // adds @Override, but breaks patches
+    //val fixJar by tasks.registering<FixJarTask> {
+    //    inputJar.set(runMcpConfigRename.flatMap { it.output })
+    //    vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
+    //}
+
     val runMcpConfigDecompile by tasks.registering<RunMcpConfigDecompile> {
         val decompileFunction = mcpConfig.map { it.functions.decompile }
         executable.from(project.configurations.named(MCPCONFIG_DECOMPILE_CONFIG))
@@ -78,5 +84,20 @@ open class McpConfigTasks(
         input.set(runMcpConfigDecompile.flatMap { it.output })
         patches.set(downloadMcpConfig.flatMap { it.patches })
         output.set(cache.resolve("dum"))
+    }
+
+    val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
+        // TODO temp, to speed up stuff
+        ourMappings.set(generateMappings.flatMap { it.outputMappings })
+        //ourMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
+        srgMappings.set(downloadMcpConfig.flatMap { it.mappings })
+
+        outputCsv.set(cache.resolve(SRG_CSV))
+    }
+
+    val remapMcpConfigSources by tasks.registering<RemapMcpConfigSources> {
+        input.set(applyMcpConfigPatches.flatMap { it.output })
+        mappings.set(generateSrgCsv.flatMap { it.outputCsv })
+        output.set(cache.resolve("dum2"))
     }
 }

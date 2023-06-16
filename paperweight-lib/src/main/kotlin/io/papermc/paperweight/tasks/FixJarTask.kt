@@ -52,7 +52,6 @@ fun fixJar(
     vanillaJarPath: Path,
     inputJarPath: Path,
     outputJarPath: Path,
-    useLegacyParameterAnnotationFixer: Boolean = false,
 ): WorkQueue {
     ensureParentExists(outputJarPath)
     ensureDeleted(outputJarPath)
@@ -66,7 +65,6 @@ fun fixJar(
         inputJar.set(inputJarPath)
         vanillaJar.set(vanillaJarPath)
         outputJar.set(outputJarPath)
-        useLegacyParamAnnotationFixer.set(useLegacyParameterAnnotationFixer)
     }
 
     return queue
@@ -113,7 +111,6 @@ abstract class FixJarTask : JavaLauncherTask() {
         val inputJar: RegularFileProperty
         val vanillaJar: RegularFileProperty
         val outputJar: RegularFileProperty
-        val useLegacyParamAnnotationFixer: Property<Boolean>
     }
 
     abstract class FixJarAction : WorkAction<FixJarParams> {
@@ -126,35 +123,16 @@ abstract class FixJarTask : JavaLauncherTask() {
                             jarFile,
                             vanillaJar,
                             out,
-                            FixJarClassProcessor(parameters.useLegacyParamAnnotationFixer.get())
+                            FixJarClassProcessor()
                         )
                     }
                 }
             }
         }
 
-        private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor.NodeBased, AsmUtil {
+        private class FixJarClassProcessor : JarProcessing.ClassProcessor.NodeBased, AsmUtil {
             override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
-                if (legacy) {
-                    ParameterAnnotationFixer(node).visitNode()
-                }
-
                 OverrideAnnotationAdder(node, classNodeCache).visitNode()
-
-                if (Opcodes.ACC_RECORD in node.access) {
-                    RecordFieldAccessFixer(node).visitNode()
-                }
-            }
-        }
-    }
-}
-
-// Fix proguard changing access of record fields
-class RecordFieldAccessFixer(private val node: ClassNode) : AsmUtil {
-    fun visitNode() {
-        for (field in node.fields) {
-            if (Opcodes.ACC_STATIC !in field.access && Opcodes.ACC_FINAL in field.access && Opcodes.ACC_PRIVATE !in field.access) {
-                field.access = field.access and AsmUtil.RESET_ACCESS or Opcodes.ACC_PRIVATE
             }
         }
     }

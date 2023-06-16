@@ -28,7 +28,6 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.attributes.Usage
 import org.gradle.api.file.RegularFile
@@ -43,9 +42,6 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 fun Project.setupServerProject(
     parent: Project,
-    remappedJar: Any,
-    remappedJarSources: Any,
-    mcDevSourceDir: Path,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
     reobfMappings: Provider<RegularFile>,
@@ -60,24 +56,7 @@ fun Project.setupServerProject(
 
     exportRuntimeClasspathTo(parent)
 
-    @Suppress("UNUSED_VARIABLE", "KotlinRedundantDiagnosticSuppress")
-    val filterProjectDir by tasks.registering<FilterProjectDir> {
-        inputSrcDir.set(file("src/main/java"))
-        inputResourcesDir.set(file("src/main/resources"))
-        vanillaJar.set(parent.file(remappedJar))
-        outputJar.set(parent.layout.cache.resolve(FINAL_FILTERED_REMAPPED_JAR))
-    }
-
-    val vanillaServer: Configuration by configurations.creating {
-        withDependencies {
-            dependencies {
-                add(create(parent.files(remappedJar)))
-            }
-        }
-    }
-
     configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
-        extendsFrom(vanillaServer)
         withDependencies {
             dependencies {
                 val libs = libsFile.convertToPathOrNull()
@@ -89,8 +68,6 @@ fun Project.setupServerProject(
             }
         }
     }
-
-    addMcDevSourcesRoot(mcDevSourceDir)
 
     plugins.apply("com.github.johnrengelman.shadow")
     return createBuildTasks(parent, packagesToFix, reobfMappings)

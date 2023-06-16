@@ -110,6 +110,13 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
 
                     val params = namedMethod.get().parameterMappings.toTypedArray().reversedArray()
                     srgMethod.parameterMappings.reversed().forEachIndexed { index, srgParam ->
+                        if (srgParam.deobfuscatedName == "f_186863_" || srgParam.deobfuscatedName == "f_186864_") {
+                            println("found")
+                            println(namedMethod.get().parameterMappings)
+                            println(namedMethod.get())
+                            println(srgMethod.parameterMappings)
+                            println(srgMethod)
+                        }
                         val namedParam = if (params.size > index) {
                             Optional.of(params[index])
                         } else {

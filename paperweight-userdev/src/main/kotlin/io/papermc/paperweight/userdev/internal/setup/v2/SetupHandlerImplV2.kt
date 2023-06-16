@@ -108,12 +108,12 @@ class SetupHandlerImplV2(
             cache,
         )
 
-        val fixStep = FixMinecraftJar(
-            mappedMinecraftServerJar,
-            fixedMinecraftServerJar,
-            vanillaSteps.mojangJar,
-            true,
-        )
+        //val fixStep = FixMinecraftJar(
+        //    mappedMinecraftServerJar,
+        //    fixedMinecraftServerJar,
+        //    vanillaSteps.mojangJar,
+        //    true,
+        //)
 
         val atStep = AccessTransformMinecraft(
             bundle.dir.resolve(bundle.config.buildData.accessTransformFile),
@@ -142,7 +142,7 @@ class SetupHandlerImplV2(
             filterVanillaJarStep,
             genMappingsStep,
             remapMinecraftStep,
-            fixStep,
+            //fixStep,
             atStep,
             decomp,
             applyDevBundlePatchesStep,

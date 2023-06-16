@@ -22,11 +22,13 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -35,7 +37,8 @@ open class VanillaTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-) : McpConfigTasks(project) {
+    downloadService: Provider<DownloadService> = project.download,
+) : GeneralTasks(project) {
 
     val generateMappings by tasks.registering<GenerateMappings> {
         vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
@@ -47,17 +50,12 @@ open class VanillaTasks(
         outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }
 
-    val remapJar by tasks.registering<RemapJar> {
-        inputJar.set(filterVanillaJar.flatMap { it.outputJar })
-        mappingsFile.set(generateMappings.flatMap { it.outputMappings })
-        fromNamespace.set(OBF_NAMESPACE)
-        toNamespace.set(DEOBF_NAMESPACE)
-        remapper.from(project.configurations.named(REMAPPER_CONFIG))
-        remapperArgs.set(TinyRemapper.minecraftRemapArgs)
-    }
+    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
+        mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
+        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
+        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
+        sources.set(true)
 
-    val fixJar by tasks.registering<FixJarTask> {
-        inputJar.set(remapJar.flatMap { it.outputJar })
-        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
+        downloader.set(downloadService)
     }
 }

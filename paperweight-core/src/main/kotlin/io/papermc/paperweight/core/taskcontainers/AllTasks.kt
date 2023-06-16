@@ -41,52 +41,19 @@ open class AllTasks(
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
-    downloadService: Provider<DownloadService> = project.download
-): VanillaTasks(project) {
+): McpConfigTasks(project) {
 
-    val applyAt by tasks.registering<ApplyAccessTransform> {
-        inputJar.set(fixJar.flatMap { it.outputJar })
-        atFile.set(mergePaperAts.flatMap { it.outputFile })
-    }
-
-    val copyResources by tasks.registering<CopyResources> {
-        inputJar.set(applyAt.flatMap { it.outputJar })
-        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
-        includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
-    }
-
-    val decompileJar by tasks.registering<RunForgeFlower> {
-        executable.from(project.configurations.named(DECOMPILER_CONFIG))
-
-        inputJar.set(copyResources.flatMap { it.outputJar })
-        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
-
-        outputJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
-    }
-
-    val lineMapJar by tasks.registering<LineMapJar> {
-        inputJar.set(copyResources.flatMap { it.outputJar })
-        outputJar.set(cache.resolve(FINAL_REMAPPED_JAR))
-        decompiledJar.set(decompileJar.flatMap { it.outputJar })
-    }
-
-    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
-        mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
-        repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
-        outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
-        sources.set(true)
-
-        downloader.set(downloadService)
-    }
-
-    val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
-        // TODO temp, to speed up stuff
-        //ourMappings.set(generateMappings.flatMap { it.outputMappings })
-        ourMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
-        srgMappings.set(cache.resolve(TEMP_SRG)) // TODO properly extract me
-
-        outputCsv.set(cache.resolve(SRG_CSV))
-    }
+    // TODO
+    //val applyAt by tasks.registering<ApplyAccessTransform> {
+    //    inputJar.set(fixJar.flatMap { it.outputJar })
+    //    atFile.set(mergePaperAts.flatMap { it.outputFile })
+    //}
+//
+    //val copyResources by tasks.registering<CopyResources> {
+    //    inputJar.set(applyAt.flatMap { it.outputJar })
+    //    vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
+    //    includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
+    //}
 
     @Suppress("unused")
     val applyPatchSets by tasks.registering<ApplyPatchSets> {
@@ -103,7 +70,7 @@ open class AllTasks(
         workDir.set(project.file("work")) // TODO
 
         // TODO temp, to speed up stuff
-        sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
+        //sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
         //sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
         //srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
     }
