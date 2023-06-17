@@ -112,6 +112,8 @@ object ServerBundler {
 
         serverJar.parent.createDirectories()
         serverJarPath.copyTo(serverJar, overwrite = true)
+
+        serverJar.openZip().use { zip -> zip.getPath("META-INF").deleteRecursively() }
     }
 
     private fun extractLibraryJars(bundlerZip: Path, serverLibraryJars: Path) {

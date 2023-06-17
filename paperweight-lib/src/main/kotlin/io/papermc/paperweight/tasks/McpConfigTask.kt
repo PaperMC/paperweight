@@ -155,26 +155,31 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
 
     @TaskAction
     fun run() {
-        val target = output.path.resolve("src/main/java")
+        println("Cleanup")
+        output.path.deleteRecursively()
+
+        println("Unzipping...")
+        val target = output.path.resolve("src/main")
         input.path.openZip().use { zipFile ->
             zipFile.walk().use { stream ->
-                for (zipEntry in stream) {
+                stream.parallel().forEach { zipEntry ->
                     // substring(1) trims the leading /
                     val path = zipEntry.invariantSeparatorsPathString.substring(1)
 
-                    // pull in all classes
-                    // TODO allow including other stuff?
-                    if (zipEntry.toString().endsWith(".java")) {
-                        val targetFile = target.resolve(path)
-                        if (!targetFile.parent.exists()) {
-                            targetFile.parent.createDirectories()
-                        }
+                    val f = if (path.startsWith("com") || path.startsWith("net")) "vanilla" else "resources"
+
+                    val targetFile = target.resolve(f).resolve(path)
+                    if (!targetFile.parent.exists()) {
+                        targetFile.parent.createDirectories()
+                    }
+                    if (!Files.isDirectory(zipEntry)) {
                         zipEntry.copyTo(targetFile, true)
                     }
                 }
             }
         }
 
+        println("Patching...")
         val patches = this.patches.path.filesMatchingRecursive("*.patch")
         Git(output.path).let { git ->
             git("init", "--quiet").executeSilently(silenceErr = true)
@@ -188,14 +193,18 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
 
             patches.parallelStream().forEach { patch ->
                 try {
-                    git("apply", "--ignore-whitespace", "--directory", "src/main/java", patch.absolutePathString()).executeOut()
+                    git("apply", "--ignore-whitespace", "--directory", "src/main/vanilla", patch.absolutePathString()).executeOut()
                 } catch (ex: Exception) {
                 }
             }
 
             git(*Git.add(false, ".")).run()
-            git("commit", "-m", "Decompile Fixes", "--author=DecompFix <auto@mated.null>").run()
+            git("commit", "-m", "MCP Config Patches", "--author=MCPConfig <auto@mated.null>").run()
+            git("tag", "-d", "mcp-config").runSilently(silenceErr = true)
+            git("tag", "mcp-config").executeSilently(silenceErr = true)
         }
+
+        println("done")
     }
 }
 
@@ -215,6 +224,8 @@ abstract class RemapMcpConfigSources : BaseTask() {
 
     @TaskAction
     fun run() {
+        output.path.deleteRecursively()
+
         val srgToMojang = mutableMapOf<String, String>()
         Files.readAllLines(mappings.path).forEach {
             val split = it.split(",")
@@ -222,28 +233,46 @@ abstract class RemapMcpConfigSources : BaseTask() {
         }
 
         val regex = Regex("[pfm]_\\d+_")
-        input.path.filesMatchingRecursive("*.java").parallelStream().forEach { file ->
-            var content = Files.readString(file)
-            content = regex.replace(content) { res ->
-                val mapping = srgToMojang[res.groupValues[0]]
-                if (mapping != null) {
-                    if (res.groupValues[0].startsWith("p")) {
-                        return@replace "_$mapping"
-                    } else {
-                        return@replace mapping
-                    }
-                } else {
-                    println("missing mapping for " + res.groupValues[0])
-                    return@replace res.groupValues[0]
+        Files.walk(input.path).use { stream ->
+            stream.parallel().forEach { file ->
+                val newFile = output.path.resolve(input.path.relativize(file))
+                if (!newFile.parent.exists()) {
+                    newFile.parent.createDirectories()
                 }
-            }
-            val newFile = output.path.resolve(input.path.relativize(file))
-            if (!newFile.parent.exists()) {
-                newFile.parent.createDirectories()
-            }
-            Files.writeString(newFile, content, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
-        }
 
+                if (Files.isDirectory(file)) {
+                    return@forEach
+                }
+
+                if (!file.toString().endsWith(".java")) {
+                    Files.copy(file, newFile)
+                    return@forEach
+                }
+
+                var content = Files.readString(file)
+                content = regex.replace(content) { res ->
+                    val mapping = srgToMojang[res.groupValues[0]]
+                    if (mapping != null) {
+                        if (res.groupValues[0].startsWith("p")) {
+                            return@replace "_$mapping"
+                        } else {
+                            return@replace mapping
+                        }
+                    } else {
+                        println("missing mapping for " + res.groupValues[0])
+                        return@replace res.groupValues[0]
+                    }
+                }
+                Files.writeString(newFile, content)
+            }
+
+            Git(output.path).let { git ->
+                git(*Git.add(false, ".")).run()
+                git("commit", "-m", "Remap to Mojang+Yarn", "--author=Remap <auto@mated.null>").run()
+                git("tag", "-d", "base").runSilently(silenceErr = true)
+                git("tag", "base").executeSilently(silenceErr = true)
+            }
+        }
     }
 }
 

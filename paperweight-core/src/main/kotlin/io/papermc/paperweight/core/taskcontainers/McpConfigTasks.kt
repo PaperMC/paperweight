@@ -55,7 +55,8 @@ open class McpConfigTasks(
         val renameFunction = mcpConfig.map { it.functions.rename }
         executable.from(project.configurations.named(MCPCONFIG_RENAME_CONFIG))
 
-        input.set(filterVanillaJar.flatMap { it.outputJar })
+        //input.set(filterVanillaJar.flatMap { it.outputJar })
+        input.set(extractFromBundler.flatMap { it.serverJar })
         output.set(cache.resolve(FINAL_REMAPPED_JAR))
         mappings.set(runMcpConfigMerge.flatMap { it.output })
         libraries.set(createFernflowerLibraries.flatMap { it.output })
@@ -83,7 +84,7 @@ open class McpConfigTasks(
     val applyMcpConfigPatches by tasks.registering<ApplyMcpConfigPatches> {
         input.set(runMcpConfigDecompile.flatMap { it.output })
         patches.set(downloadMcpConfig.flatMap { it.patches })
-        output.set(cache.resolve("dum"))
+        output.set(cache.resolve(DECOMPILED_SRG))
     }
 
     val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
@@ -96,8 +97,11 @@ open class McpConfigTasks(
     }
 
     val remapMcpConfigSources by tasks.registering<RemapMcpConfigSources> {
+        // TODO temp, to speed up stuff
         input.set(applyMcpConfigPatches.flatMap { it.output })
+        //input.set(cache.resolve(DECOMPILED_SRG))
         mappings.set(generateSrgCsv.flatMap { it.outputCsv })
-        output.set(cache.resolve("dum2"))
+        //mappings.set(cache.resolve(SRG_CSV))
+        output.set(cache.resolve(RENAMED_MOJANG_YARN))
     }
 }

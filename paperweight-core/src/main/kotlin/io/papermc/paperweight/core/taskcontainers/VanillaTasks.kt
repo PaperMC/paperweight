@@ -41,7 +41,7 @@ open class VanillaTasks(
 ) : GeneralTasks(project) {
 
     val generateMappings by tasks.registering<GenerateMappings> {
-        vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
         libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
