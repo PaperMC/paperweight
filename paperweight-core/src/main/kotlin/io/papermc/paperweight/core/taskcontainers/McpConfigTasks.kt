@@ -81,12 +81,6 @@ open class McpConfigTasks(
         args.set(decompileFunction.map { it.args })
     }
 
-    val applyMcpConfigPatches by tasks.registering<ApplyMcpConfigPatches> {
-        input.set(runMcpConfigDecompile.flatMap { it.output })
-        patches.set(downloadMcpConfig.flatMap { it.patches })
-        output.set(cache.resolve(DECOMPILED_SRG))
-    }
-
     val generateSrgCsv by tasks.registering<GenerateSrgCsv> {
         // TODO temp, to speed up stuff
         ourMappings.set(generateMappings.flatMap { it.outputMappings })
@@ -96,12 +90,12 @@ open class McpConfigTasks(
         outputCsv.set(cache.resolve(SRG_CSV))
     }
 
-    val remapMcpConfigSources by tasks.registering<RemapMcpConfigSources> {
+    val prepareBase by tasks.registering<PrepareBase> {
+        input.set(runMcpConfigDecompile.flatMap { it.output })
+        patches.set(downloadMcpConfig.flatMap { it.patches })
         // TODO temp, to speed up stuff
-        input.set(applyMcpConfigPatches.flatMap { it.output })
-        //input.set(cache.resolve(DECOMPILED_SRG))
         mappings.set(generateSrgCsv.flatMap { it.outputCsv })
         //mappings.set(cache.resolve(SRG_CSV))
-        output.set(cache.resolve(RENAMED_MOJANG_YARN))
+        output.set(cache.resolve(BASE_PROJECT))
     }
 }

@@ -58,12 +58,15 @@ abstract class RunMcpConfigDecompile : McpConfigTask() {
     @TaskAction
     fun run() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
+        val patchedArgs = args.get().toMutableList()
+        patchedArgs.add(0, "-ind=    ") // we want 4 spaces, not 3 like some maniac!
         launcher.get().runJar(
                 executable,
                 layout.cache,
                 logFile,
                 jvmArgs = jvmargs.get(),
-                args = buildArgs(args.get(), mapOf(
+                args = buildArgs(
+                    patchedArgs, mapOf(
                         "libraries" to libraries.get().path,
                         "input" to input.get().path,
                         "output" to output.get().path
@@ -140,7 +143,7 @@ abstract class RunMcpConfigMerge : McpConfigTask() {
 }
 
 @CacheableTask
-abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
+abstract class PrepareBase : ControllableOutputTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -149,6 +152,10 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val patches: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val mappings: RegularFileProperty
 
     @get:OutputDirectory
     abstract val output: DirectoryProperty
@@ -159,16 +166,15 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
         output.path.deleteRecursively()
 
         println("Unzipping...")
-        val target = output.path.resolve("src/main")
         input.path.openZip().use { zipFile ->
             zipFile.walk().use { stream ->
                 stream.parallel().forEach { zipEntry ->
                     // substring(1) trims the leading /
                     val path = zipEntry.invariantSeparatorsPathString.substring(1)
 
-                    val f = if (path.startsWith("com") || path.startsWith("net")) "vanilla" else "resources"
+                    val f = if (path.startsWith("com") || path.startsWith("net")) "src/vanilla/java" else "src/vanilla/resources"
 
-                    val targetFile = target.resolve(f).resolve(path)
+                    val targetFile = output.path.resolve(f).resolve(path)
                     if (!targetFile.parent.exists()) {
                         targetFile.parent.createDirectories()
                     }
@@ -193,7 +199,7 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
 
             patches.parallelStream().forEach { patch ->
                 try {
-                    git("apply", "--ignore-whitespace", "--directory", "src/main/vanilla", patch.absolutePathString()).executeOut()
+                    git("apply", "--ignore-whitespace", "--directory", "src/vanilla/java", patch.absolutePathString()).executeOut()
                 } catch (ex: Exception) {
                 }
             }
@@ -204,75 +210,45 @@ abstract class ApplyMcpConfigPatches : ControllableOutputTask() {
             git("tag", "mcp-config").executeSilently(silenceErr = true)
         }
 
-        println("done")
-    }
-}
-
-@CacheableTask
-abstract class RemapMcpConfigSources : BaseTask() {
-
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val input: DirectoryProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mappings: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val output: DirectoryProperty
-
-    @TaskAction
-    fun run() {
-        output.path.deleteRecursively()
-
+        println("Renaming")
+        val regex = Regex("[pfm]_\\d+_")
         val srgToMojang = mutableMapOf<String, String>()
         Files.readAllLines(mappings.path).forEach {
             val split = it.split(",")
             srgToMojang[split[0]] = split[1]
         }
 
-        val regex = Regex("[pfm]_\\d+_")
-        Files.walk(input.path).use { stream ->
-            stream.parallel().forEach { file ->
-                val newFile = output.path.resolve(input.path.relativize(file))
-                if (!newFile.parent.exists()) {
-                    newFile.parent.createDirectories()
-                }
-
-                if (Files.isDirectory(file)) {
-                    return@forEach
-                }
-
-                if (!file.toString().endsWith(".java")) {
-                    Files.copy(file, newFile)
-                    return@forEach
-                }
-
-                var content = Files.readString(file)
-                content = regex.replace(content) { res ->
-                    val mapping = srgToMojang[res.groupValues[0]]
-                    if (mapping != null) {
-                        if (res.groupValues[0].startsWith("p")) {
-                            return@replace "_$mapping"
-                        } else {
-                            return@replace mapping
-                        }
+        val missedMappings = mutableSetOf<String>()
+        output.path.filesMatchingRecursive("*.java").parallelStream().forEach { file ->
+            var content = Files.readString(file)
+            content = regex.replace(content) { res ->
+                val mapping = srgToMojang[res.groupValues[0]]
+                if (mapping != null) {
+                    if (res.groupValues[0].startsWith("p")) {
+                        return@replace "_$mapping"
                     } else {
-                        println("missing mapping for " + res.groupValues[0])
-                        return@replace res.groupValues[0]
+                        return@replace mapping
                     }
+                } else {
+                    missedMappings.add(res.groupValues[0])
+                    return@replace res.groupValues[0]
                 }
-                Files.writeString(newFile, content)
             }
-
-            Git(output.path).let { git ->
-                git(*Git.add(false, ".")).run()
-                git("commit", "-m", "Remap to Mojang+Yarn", "--author=Remap <auto@mated.null>").run()
-                git("tag", "-d", "base").runSilently(silenceErr = true)
-                git("tag", "base").executeSilently(silenceErr = true)
-            }
+            Files.writeString(file, content, StandardOpenOption.TRUNCATE_EXISTING)
         }
+        missedMappings.forEach {
+            println("missed mapping $it")
+        }
+        println("${missedMappings.size} in total")
+
+        Git(output.path).let { git ->
+            git(*Git.add(false, ".")).run()
+            git("commit", "-m", "Remap to Mojang+Yarn", "--author=Remap <auto@mated.null>").run()
+            git("tag", "-d", "base").runSilently(silenceErr = true)
+            git("tag", "base").executeSilently(silenceErr = true)
+        }
+
+        println("done")
     }
 }
 

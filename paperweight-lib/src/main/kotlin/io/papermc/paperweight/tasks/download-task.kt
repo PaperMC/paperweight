@@ -24,13 +24,7 @@ package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.data.*
-import java.nio.file.Files
-import java.nio.file.Path
-import javax.inject.Inject
-import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.io.path.*
+import io.papermc.paperweight.util.data.MavenArtifact
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -38,14 +32,15 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
-import org.gradle.internal.enterprise.test.FileProperty
-import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.submit
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
-import org.w3c.dom.Document
-import org.w3c.dom.Element
+import java.nio.file.Files
+import java.nio.file.Path
+import javax.inject.Inject
+import kotlin.io.path.*
 
 // Not cached since these are Mojang's files
 abstract class DownloadTask : DefaultTask() {
@@ -143,7 +138,7 @@ fun downloadMinecraftLibraries(
 }
 
 @CacheableTask
-abstract class DownloadMcpConfigTask: BaseTask() {
+abstract class DownloadMcpConfigTask : BaseTask() {
 
     @get:Input
     abstract val repo: Property<String>
@@ -171,15 +166,39 @@ abstract class DownloadMcpConfigTask: BaseTask() {
 
     @TaskAction
     fun run() {
+        config.path.deleteIfExists()
+        patches.path.deleteRecursively()
+        mappings.path.deleteIfExists()
+        output.path.deleteIfExists()
+
         val artifact = MavenArtifact.parse(artifact.get())
-        val target = output.path
-        artifact.downloadToFile(downloader.get(), target, listOf(repo.get()))
-        target.openZip().use { zip ->
-            zip.getPath("/config.json").copyTo(config.path, true)
-            zip.getPath("/patches/server").copyRecursivelyTo(patches.path, true)
-            zip.getPath("/config/joined.tsrg").copyTo(mappings.path, true)
+        val zipPath = output.path
+        artifact.downloadToFile(downloader.get(), zipPath, listOf(repo.get()))
+        zipPath.openZip().use { zip ->
+            zip.getPath("/config.json").copyTo(config.path)
+            zip.getPath("/config/joined.tsrg").copyTo(mappings.path)
+
+            // manually copy over the patches so that we can fix them
+            val patchFolder = zip.getPath("/patches/server")
+            Files.walk(patchFolder).forEach { f ->
+                println("f $f")
+                val targetPath = patches.path.resolve(f.relativeTo(patchFolder).invariantSeparatorsPathString)
+                if (f.isDirectory()) {
+                    targetPath.createDirectories()
+                } else {
+                    var patchLines = Files.readAllLines(f)
+                    patchLines = patchLines.map { line ->
+                        return@map if (line.startsWith("+") && !line.startsWith("++")) {
+                            line.replace(" ".repeat(3), " ".repeat(4)) + " // decomp fix"
+                        } else {
+                            line
+                        }
+                    }
+                    Files.write(targetPath, patchLines)
+                }
+            }
         }
-        target.deleteIfExists()
+        zipPath.deleteIfExists()
     }
 }
 

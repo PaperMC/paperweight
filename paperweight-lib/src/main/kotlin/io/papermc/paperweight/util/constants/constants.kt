@@ -99,16 +99,14 @@ const val SERVER_LIBRARIES_TXT = "$BUNDLER_PATH/ServerLibraries.txt"
 const val SERVER_LIBRARIES_LIST = "$BUNDLER_PATH/libraries.list"
 const val SERVER_VERSIONS_LIST = "$BUNDLER_PATH/versions.list"
 
-private const val PROJECTS_CACHE = "$PAPER_PATH/projects"
-const val DECOMPILED_SRG = "$PROJECTS_CACHE/decompiled-srg"
-const val RENAMED_MOJANG_YARN = "$PROJECTS_CACHE/renamed-mojang+yarn"
-
 private const val SETUP_CACHE = "$PAPER_PATH/setupCache"
 private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_JAR = "$TASK_CACHE/minecraft.jar"
 const val FINAL_FILTERED_REMAPPED_JAR = "$TASK_CACHE/filteredMinecraft.jar"
 const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
+
+const val BASE_PROJECT = "$TASK_CACHE/base-project"
 
 const val MCP_CONFIG_DIR = "$TASK_CACHE/mcp-config"
 const val MCP_CONFIG_ZIP = "$MCP_CONFIG_DIR/mcp-config.zip"
