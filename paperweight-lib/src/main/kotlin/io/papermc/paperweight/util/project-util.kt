@@ -25,6 +25,7 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.extension.RelocationExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
+import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
@@ -37,6 +38,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
@@ -95,6 +97,30 @@ fun Project.setupServerProject(
                     }
                 }
             }
+        }
+    }
+
+    /*
+       When compiling incrementally, it sets the path to the already compiled classes as the first
+       path in the classpath, so we always load "our" classes first and only if we don't have a
+       class, we take it from the dependencies. This prevents the compiler from loading unpatched
+       classes.
+     */
+    tasks.named<JavaCompile>("compileJava") {
+        doFirst {
+            if (!options.isIncremental) {
+                return@doFirst
+            }
+
+            val classesDir = project.buildDir.resolve("classes/java/main")
+            if (!classesDir.exists()) {
+                return@doFirst
+            }
+
+            val modifiedClasspath = mutableListOf<File>()
+            modifiedClasspath.add(classesDir)
+            modifiedClasspath.addAll(inputs.files)
+            classpath = files(modifiedClasspath)
         }
     }
 
