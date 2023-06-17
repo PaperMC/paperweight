@@ -103,14 +103,22 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
             }
 
             srgClass.methodMappings.forEach { srgMethod ->
-                val namedMethod = namedClass.get().getMethodMapping(srgMethod.obfuscatedName, srgMethod.obfuscatedDescriptor)
+                val namedMethod =
+                    namedClass.get().getMethodMapping(srgMethod.obfuscatedName, srgMethod.obfuscatedDescriptor)
 
                 if (namedMethod.isPresent) {
                     srgToOurs[srgMethod.deobfuscatedName] = namedMethod.get().deobfuscatedName
 
                     val params = namedMethod.get().parameterMappings.toTypedArray().reversedArray()
                     srgMethod.parameterMappings.reversed().forEachIndexed { index, srgParam ->
-                        val namedParam = if (params.size > index) {
+                        if (srgParam.deobfuscatedName.startsWith("f_")) {
+                            // record pattern! no touchy!
+                            return@forEachIndexed
+                        }
+                        val namedParam = if (srgMethod.obfuscatedName == "<init>") {
+                            // ctors aren't synthetic, no need for fuckery
+                            namedMethod.get().getParameterMapping(srgParam.index)
+                        } else if (params.size > index) {
                             Optional.of(params[index])
                         } else {
                             Optional.empty()
@@ -137,6 +145,7 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
             }
         }
 
-        Files.write(outputCsv.path, srgToOurs.map { it.key + "," + it.value })
+        Files.write(outputCsv.path, srgToOurs.map
+        { it.key + "," + it.value })
     }
 }

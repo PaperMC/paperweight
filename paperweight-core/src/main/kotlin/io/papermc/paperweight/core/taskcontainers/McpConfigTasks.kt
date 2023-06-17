@@ -86,6 +86,7 @@ open class McpConfigTasks(
         ourMappings.set(generateMappings.flatMap { it.outputMappings })
         //ourMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
         srgMappings.set(downloadMcpConfig.flatMap { it.mappings })
+        //srgMappings.set(cache.resolve(MCP_CONFIG_MAPPINGS))
 
         outputCsv.set(cache.resolve(SRG_CSV))
     }

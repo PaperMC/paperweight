@@ -181,7 +181,6 @@ abstract class DownloadMcpConfigTask : BaseTask() {
             // manually copy over the patches so that we can fix them
             val patchFolder = zip.getPath("/patches/server")
             Files.walk(patchFolder).forEach { f ->
-                println("f $f")
                 val targetPath = patches.path.resolve(f.relativeTo(patchFolder).invariantSeparatorsPathString)
                 if (f.isDirectory()) {
                     targetPath.createDirectories()
