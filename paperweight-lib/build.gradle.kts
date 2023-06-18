@@ -17,7 +17,7 @@ dependencies {
 
     implementation(libs.jbsdiff)
 
-    implementation("net.minecraftforge:DiffPatch:2.0.8-local:all") {
+    implementation("net.minecraftforge:DiffPatch:2.0.9-local:all") {
         isTransitive = false
     }
 }

@@ -11,6 +11,8 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.nio.file.Files
 import kotlin.io.path.absolutePathString
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 
 abstract class ApplyFilePatches : ControllableOutputTask() {
 
@@ -19,6 +21,9 @@ abstract class ApplyFilePatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val vanillaBase: DirectoryProperty
+
+    @get:Input
+    abstract val ignorePattern: Property<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -52,6 +57,7 @@ abstract class ApplyFilePatches : ControllableOutputTask() {
             .mode(PatchMode.EXACT)
             .verbose(false)
             .summary(true)
+            .ignorePattern(ignorePattern.get())
             .build()
         patchOp.operate()
 

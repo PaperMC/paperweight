@@ -28,6 +28,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
 open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
@@ -47,4 +48,7 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
+
+    // https://regex101.com/r/ezhcLV/1
+    val ignoreProperty: Property<String> = objects.property(String::class.java).convention("(^\\.git.*)|(.*\\.mcassetsroot)|(.*\\.nbt)")
 }

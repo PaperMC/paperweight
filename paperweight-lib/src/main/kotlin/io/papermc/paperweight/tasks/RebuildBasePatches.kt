@@ -7,6 +7,8 @@ import io.papermc.paperweight.util.constants.applyPatchesLock
 import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.path
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -18,6 +20,9 @@ abstract class RebuildFilePatches : ControllableOutputTask() {
 
     @get:InputDirectory
     abstract val serverDir: DirectoryProperty
+
+    @get:Input
+    abstract val ignorePattern: Property<String>
 
     @get:OutputDirectory
     abstract val patchFolder: DirectoryProperty
@@ -45,6 +50,7 @@ abstract class RebuildFilePatches : ControllableOutputTask() {
             .verbose(false)
             .summary(true)
             .lineEnding("\n")
+            .ignorePattern(ignorePattern.get())
             .build()
 
         patchOp.operate()
