@@ -55,7 +55,6 @@ open class McpConfigTasks(
         val renameFunction = mcpConfig.map { it.functions.rename }
         executable.from(project.configurations.named(MCPCONFIG_RENAME_CONFIG))
 
-        //input.set(filterVanillaJar.flatMap { it.outputJar })
         input.set(extractFromBundler.flatMap { it.serverJar })
         output.set(cache.resolve(FINAL_REMAPPED_JAR))
         mappings.set(runMcpConfigMerge.flatMap { it.output })
@@ -63,12 +62,6 @@ open class McpConfigTasks(
         jvmargs.set(renameFunction.map { it.jvmargs })
         args.set(renameFunction.map { it.args })
     }
-
-    // adds @Override, but breaks patches
-    //val fixJar by tasks.registering<FixJarTask> {
-    //    inputJar.set(runMcpConfigRename.flatMap { it.output })
-    //    vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
-    //}
 
     val runMcpConfigDecompile by tasks.registering<RunMcpConfigDecompile> {
         val decompileFunction = mcpConfig.map { it.functions.decompile }
@@ -90,6 +83,8 @@ open class McpConfigTasks(
 
         outputCsv.set(cache.resolve(SRG_CSV))
     }
+
+    // TODO lets add a task here that goes over the source, applies ATs, adds @Override annotations and all the other stuff we want
 
     val prepareBase by tasks.registering<PrepareBase> {
         input.set(runMcpConfigDecompile.flatMap { it.output })

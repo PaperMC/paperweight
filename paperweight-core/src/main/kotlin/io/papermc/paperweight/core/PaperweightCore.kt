@@ -61,16 +61,6 @@ class PaperweightCore : Plugin<Project> {
         target.configurations.create(MCPCONFIG_RENAME_CONFIG)
         target.configurations.create(MCPCONFIG_DECOMPILE_CONFIG)
 
-        if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
-            target.tasks.register<CreateDiffOutput>("diff") {
-                inputDir.convention(ext.paper.paperServerDir.map { it.dir("src/main/java") })
-                val prop = target.providers.gradleProperty("paperweight.diff.output")
-                if (prop.isPresent) {
-                    baseDir.convention(target.layout.projectDirectory.dir(prop))
-                }
-            }
-        }
-
         val tasks = AllTasks(target)
 
         val devBundleTasks = DevBundleTasks(target)

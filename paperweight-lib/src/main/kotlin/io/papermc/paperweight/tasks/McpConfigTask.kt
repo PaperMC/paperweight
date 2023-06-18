@@ -61,16 +61,18 @@ abstract class RunMcpConfigDecompile : McpConfigTask() {
         val patchedArgs = args.get().toMutableList()
         patchedArgs.add(0, "-ind=    ") // we want 4 spaces, not 3 like some maniac!
         launcher.get().runJar(
-                executable,
-                layout.cache,
-                logFile,
-                jvmArgs = jvmargs.get(),
-                args = buildArgs(
-                    patchedArgs, mapOf(
-                        "libraries" to libraries.get().path,
-                        "input" to input.get().path,
-                        "output" to output.get().path
-                )).toTypedArray())
+            executable,
+            layout.cache,
+            logFile,
+            jvmArgs = jvmargs.get(),
+            args = buildArgs(
+                patchedArgs, mapOf(
+                    "libraries" to libraries.get().path,
+                    "input" to input.get().path,
+                    "output" to output.get().path
+                )
+            ).toTypedArray()
+        )
         logFile.deleteForcefully()
     }
 }
@@ -97,16 +99,19 @@ abstract class RunMcpConfigRename : McpConfigTask() {
     fun run() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
         launcher.get().runJar(
-                executable,
-                layout.cache,
-                logFile,
-                jvmArgs = jvmargs.get(),
-                args = buildArgs(args.get(), mapOf(
-                        "mappings" to mappings.get().path,
-                        "libraries" to libraries.get().path,
-                        "input" to input.get().path,
-                        "output" to output.get().path
-                )).toTypedArray())
+            executable,
+            layout.cache,
+            logFile,
+            jvmArgs = jvmargs.get(),
+            args = buildArgs(
+                args.get(), mapOf(
+                    "mappings" to mappings.get().path,
+                    "libraries" to libraries.get().path,
+                    "input" to input.get().path,
+                    "output" to output.get().path
+                )
+            ).toTypedArray()
+        )
         logFile.deleteForcefully()
     }
 }
@@ -129,15 +134,18 @@ abstract class RunMcpConfigMerge : McpConfigTask() {
     fun run() {
         val logFile = layout.cache.resolve(paperTaskOutput("log"))
         launcher.get().runJar(
-                executable,
-                layout.cache,
-                logFile,
-                jvmArgs = jvmargs.get(),
-                args = buildArgs(args.get(), mapOf(
-                        "mappings" to mappings.get().path,
-                        "official" to official.get().path,
-                        "output" to output.get().path
-                )).toTypedArray())
+            executable,
+            layout.cache,
+            logFile,
+            jvmArgs = jvmargs.get(),
+            args = buildArgs(
+                args.get(), mapOf(
+                    "mappings" to mappings.get().path,
+                    "official" to official.get().path,
+                    "output" to output.get().path
+                )
+            ).toTypedArray()
+        )
         logFile.deleteForcefully()
     }
 }
@@ -164,6 +172,7 @@ abstract class PrepareBase : ControllableOutputTask() {
     fun run() {
         println("Cleanup")
         output.path.deleteRecursively()
+        val vanillaDir = output.path.resolve("src/vanilla")
 
         println("Unzipping...")
         input.path.openZip().use { zipFile ->
@@ -172,9 +181,9 @@ abstract class PrepareBase : ControllableOutputTask() {
                     // substring(1) trims the leading /
                     val path = zipEntry.invariantSeparatorsPathString.substring(1)
 
-                    val f = if (path.startsWith("com") || path.startsWith("net")) "src/vanilla/java" else "src/vanilla/resources"
+                    val f = if (path.startsWith("com") || path.startsWith("net")) "java" else "resources"
 
-                    val targetFile = output.path.resolve(f).resolve(path)
+                    val targetFile = vanillaDir.resolve(f).resolve(path)
                     if (!targetFile.parent.exists()) {
                         targetFile.parent.createDirectories()
                     }
@@ -187,7 +196,7 @@ abstract class PrepareBase : ControllableOutputTask() {
 
         println("Patching...")
         val patches = this.patches.path.filesMatchingRecursive("*.patch")
-        Git(output.path).let { git ->
+        Git(vanillaDir).let { git ->
             git("init", "--quiet").executeSilently(silenceErr = true)
             git.disableAutoGpgSigningInRepo()
 
@@ -199,7 +208,7 @@ abstract class PrepareBase : ControllableOutputTask() {
 
             patches.parallelStream().forEach { patch ->
                 try {
-                    git("apply", "--ignore-whitespace", "--directory", "src/vanilla/java", patch.absolutePathString()).executeOut()
+                    git("apply", "--ignore-whitespace", "--directory", "java", patch.absolutePathString()).executeOut()
                 } catch (ex: Exception) {
                 }
             }
@@ -219,7 +228,7 @@ abstract class PrepareBase : ControllableOutputTask() {
         }
 
         val missedMappings = mutableSetOf<String>()
-        output.path.filesMatchingRecursive("*.java").parallelStream().forEach { file ->
+        vanillaDir.filesMatchingRecursive("*.java").parallelStream().forEach { file ->
             var content = Files.readString(file)
             content = regex.replace(content) { res ->
                 val mapping = srgToMojang[res.groupValues[0]]
@@ -241,7 +250,7 @@ abstract class PrepareBase : ControllableOutputTask() {
         }
         println("${missedMappings.size} in total")
 
-        Git(output.path).let { git ->
+        Git(vanillaDir).let { git ->
             git(*Git.add(false, ".")).run()
             git("commit", "-m", "Remap to Mojang+Yarn", "--author=Remap <auto@mated.null>").run()
             git("tag", "-d", "base").runSilently(silenceErr = true)

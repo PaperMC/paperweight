@@ -22,18 +22,23 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
-import java.nio.file.Path
+import io.papermc.paperweight.tasks.ApplyFilePatches
+import io.papermc.paperweight.tasks.ApplyGitPatches
+import io.papermc.paperweight.tasks.RebuildFilePatches
+import io.papermc.paperweight.tasks.RebuildGitPatches
+import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.constants.BASE_PROJECT
+import io.papermc.paperweight.util.isBaseExecution
+import io.papermc.paperweight.util.registering
+import io.papermc.paperweight.util.set
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.getValue
+import org.gradle.kotlin.dsl.provideDelegate
+import java.nio.file.Path
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class AllTasks(
@@ -43,60 +48,86 @@ open class AllTasks(
     extension: PaperweightCoreExtension = project.ext,
 ): McpConfigTasks(project) {
 
-    // TODO
-    //val applyAt by tasks.registering<ApplyAccessTransform> {
-    //    inputJar.set(fixJar.flatMap { it.outputJar })
-    //    atFile.set(mergePaperAts.flatMap { it.outputFile })
-    //}
-//
-    //val copyResources by tasks.registering<CopyResources> {
-    //    inputJar.set(applyAt.flatMap { it.outputJar })
-    //    vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
-    //    includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
-    //}
-
-    @Suppress("unused")
-    val applyPatchSets by tasks.registering<ApplyPatchSets> {
+    val applyFilePatches by tasks.registering<ApplyFilePatches> {
         group = "paper"
-        description = "Setup the Paper projects"
+        description = "Applies file patches"
 
         if (project.isBaseExecution) {
             doNotTrackState("$name should always run when requested as part of the base execution.")
         }
         printOutput.set(project.isBaseExecution)
 
-        patchSets.set(extension.paper.patchSets)
+        patchFolder.set(extension.paper.filePatchesDir)
+        // TODO temp, to speed stuff up
+        //vanillaBase.set(prepareBase.flatMap { it.output })
+        vanillaBase.set(cache.resolve(BASE_PROJECT))
         outputDir.set(extension.paper.paperServerDir)
-        workDir.set(project.file("work")) // TODO
-
-        // TODO temp, to speed up stuff
-        //sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
-        //sourceMcDevJar.set(cache.resolve(FINAL_DECOMPILE_JAR))
-        //srgCsv.set(generateSrgCsv.flatMap { it.outputCsv })
     }
 
-    val rebuildApiPatches by tasks.registering<RebuildGitPatches> {
+    val applyFeaturePatches by tasks.registering<ApplyGitPatches> {
         group = "paper"
-        description = "Rebuilds patches to api"
+        description = "Applies feature patches"
+
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
+
+        dependsOn(applyFilePatches)
+        // TODO
+    }
+
+    @Suppress("unused")
+    val applyPatches by tasks.registering<Task> {
+        group = "paper"
+        description = "Applies all Paper patches"
+
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
+
+        dependsOn(applyFeaturePatches)
+    }
+
+    val rebuildFilePatches by tasks.registering<RebuildFilePatches> {
+        group = "paper"
+        description = "Rebuild file patches"
+
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
+
+        patchFolder.set(extension.paper.filePatchesDir)
+        // TODO temp, to speed stuff up
+        //vanillaBase.set(prepareBase.flatMap { it.output })
+        vanillaBase.set(cache.resolve(BASE_PROJECT))
+        serverDir.set(extension.paper.paperServerDir)
+    }
+
+    val rebuildFeaturePatches by tasks.registering<RebuildGitPatches> {
+        group = "paper"
+        description = "Rebuilds feature patches"
         inputDir.set(extension.paper.paperApiDir)
         baseRef.set("base")
 
-        //patchDir.set(extension.paper.spigotApiPatchDir)
-    }
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
 
-    val rebuildServerPatches by tasks.registering<RebuildGitPatches> {
-        group = "paper"
-        description = "Rebuilds patches to server"
-        inputDir.set(extension.paper.paperServerDir)
-        baseRef.set("base")
+        // TODO
+        patchDir.set(extension.paper.featurePatchesDir)
 
-        //patchDir.set(extension.paper.spigotServerPatchDir)
+        dependsOn(rebuildFilePatches)
     }
 
     @Suppress("unused")
     val rebuildPatches by tasks.registering<Task> {
         group = "paper"
-        description = "Rebuilds patches to api and server"
-        dependsOn(rebuildApiPatches, rebuildServerPatches)
+        description = "Rebuilds all Paper patches"
+
+        if (project.isBaseExecution) {
+            doNotTrackState("$name should always run when requested as part of the base execution.")
+        }
+
+        dependsOn(rebuildFeaturePatches)
     }
 }

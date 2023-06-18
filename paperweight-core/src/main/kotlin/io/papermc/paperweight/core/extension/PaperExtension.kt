@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.data.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -38,13 +37,14 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
     val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
 
+    private val basePatchesDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches")
+    val filePatchesDir: DirectoryProperty = objects.dirFrom(basePatchesDir, "file")
+    val featurePatchesDir: DirectoryProperty = objects.dirFrom(basePatchesDir, "feature")
+
     @Suppress("MemberVisibilityCanBePrivate")
     val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
-    val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
-
-    val patchSets: ListProperty<PatchSet> = objects.listProperty()
 }

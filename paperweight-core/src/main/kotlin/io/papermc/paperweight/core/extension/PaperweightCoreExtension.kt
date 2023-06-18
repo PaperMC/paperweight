@@ -22,22 +22,15 @@
 
 package io.papermc.paperweight.core.extension
 
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import java.util.Locale
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
 open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
     val minecraftVersion: Property<String> = objects.property()
     val serverProject: Property<Project> = objects.property()
@@ -45,15 +38,9 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
     val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
 
-    val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
-
     val paramMappingsRepo: Property<String> = objects.property()
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()
-
-    val vanillaJarIncludes: ListProperty<String> = objects.listProperty<String>().convention(
-        listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
-    )
 
     val paper = PaperExtension(objects, layout)
     val mcpConfig = McpConfigExtension(objects, layout)

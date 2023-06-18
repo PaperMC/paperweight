@@ -3,3 +3,9 @@ tasks.register("printVersion") {
         println(version)
     }
 }
+
+subprojects {
+    repositories {
+        mavenLocal()
+    }
+}

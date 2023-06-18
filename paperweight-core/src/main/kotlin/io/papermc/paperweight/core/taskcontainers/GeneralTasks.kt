@@ -37,14 +37,8 @@ open class GeneralTasks(
     extension: PaperweightCoreExtension = project.ext,
 ) : InitialTasks(project) {
 
-    val filterVanillaJar by tasks.registering<FilterJar> {
-        inputJar.set(extractFromBundler.flatMap { it.serverJar })
-        includes.set(extension.vanillaJarIncludes)
-    }
-
-    // TODO update this to look at all patch sets
     val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
-        patchDir.set(extension.paper.patchSets.get()[2].folder?.path)
+        patchDir.set(extension.paper.featurePatchesDir.path)
     }
 
     val mergePaperAts by tasks.registering<MergeAccessTransforms> {
