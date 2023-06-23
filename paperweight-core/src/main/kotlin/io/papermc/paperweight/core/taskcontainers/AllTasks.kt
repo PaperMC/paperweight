@@ -60,8 +60,8 @@ open class AllTasks(
         patchFolder.set(extension.paper.filePatchesDir)
         ignorePattern.set(extension.paper.ignoreProperty)
         // TODO temp, to speed stuff up
-        //vanillaBase.set(prepareBase.flatMap { it.output })
-        vanillaBase.set(cache.resolve(BASE_PROJECT))
+        vanillaBase.set(prepareBase.flatMap { it.output })
+        //vanillaBase.set(cache.resolve(BASE_PROJECT))
         outputDir.set(extension.paper.paperServerDir)
     }
 

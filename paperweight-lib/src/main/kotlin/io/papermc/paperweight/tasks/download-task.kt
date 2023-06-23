@@ -190,7 +190,7 @@ abstract class DownloadMcpConfigTask : BaseTask() {
                         return@map if (line.startsWith("+") && !line.startsWith("++")) {
                             line.replace(" ".repeat(3), " ".repeat(4)) + " // decomp fix"
                         } else {
-                            line
+                            line.replace(" ".repeat(3), " ".repeat(4))
                         }
                     }
                     Files.write(targetPath, patchLines)

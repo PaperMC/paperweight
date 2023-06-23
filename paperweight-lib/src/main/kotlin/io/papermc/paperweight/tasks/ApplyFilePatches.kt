@@ -64,6 +64,11 @@ abstract class ApplyFilePatches : ControllableOutputTask() {
         println("  Copying git folder")
         vanillaBasePath.resolve(".git").copyRecursivelyTo(vanillaOutputPath.resolve(".git"))
 
+        println("  Fixing assets")
+        Files.writeString(vanillaOutputPath.resolve(".gitignore"), ".mcassetsroot")
+        Files.createFile(vanillaOutputPath.resolve("assets/.mcassetsroot"))
+        Files.createFile(vanillaOutputPath.resolve("data/.mcassetsroot"))
+
         Git(vanillaOutputPath).let { git ->
             git(*Git.add(false, ".")).run()
             git("commit", "-m", "Paper Core Patches", "--author=Paper Contributors <auto@mated.null>").run()

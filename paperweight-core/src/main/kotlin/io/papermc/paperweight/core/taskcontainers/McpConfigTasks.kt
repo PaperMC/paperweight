@@ -85,9 +85,11 @@ open class McpConfigTasks(
     }
 
     // TODO lets add a task here that goes over the source, applies ATs, adds @Override annotations and all the other stuff we want
+    // maybe instead we can just do so before decompile and wiggle the patches with diffpatch
 
     val prepareBase by tasks.registering<PrepareBase> {
         input.set(runMcpConfigDecompile.flatMap { it.output })
+        //input.set(cache.resolve(FINAL_DECOMPILE_JAR))
         patches.set(downloadMcpConfig.flatMap { it.patches })
         // TODO temp, to speed up stuff
         mappings.set(generateSrgCsv.flatMap { it.outputCsv })

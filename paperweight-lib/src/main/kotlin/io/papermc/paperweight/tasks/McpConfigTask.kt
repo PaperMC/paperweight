@@ -1,5 +1,7 @@
 package io.papermc.paperweight.tasks
 
+import codechicken.diffpatch.cli.PatchOperation
+import codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.paperTaskOutput
 import org.gradle.api.file.ConfigurableFileCollection
@@ -10,7 +12,6 @@ import org.gradle.api.tasks.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.*
 
 fun buildArgs(args: List<String>, props: Map<String, Any>): MutableList<String> {
     val result = mutableListOf<String>()
@@ -174,28 +175,18 @@ abstract class PrepareBase : ControllableOutputTask() {
         output.path.deleteRecursively()
         val vanillaDir = output.path.resolve("src/vanilla")
 
-        println("Unzipping...")
-        input.path.openZip().use { zipFile ->
-            zipFile.walk().use { stream ->
-                stream.parallel().forEach { zipEntry ->
-                    // substring(1) trims the leading /
-                    val path = zipEntry.invariantSeparatorsPathString.substring(1)
+        println("Patching")
+        val patchOp = PatchOperation.builder()
+            .logTo(System.out)
+            .basePath(input.path)
+            .outputPath(vanillaDir)
+            .patchesPath(this.patches.path)
+            .mode(PatchMode.EXACT)
+            .verbose(false)
+            .summary(true)
+            .build()
+        patchOp.operate()
 
-                    val f = if (path.startsWith("com") || path.startsWith("net")) "java" else "resources"
-
-                    val targetFile = vanillaDir.resolve(f).resolve(path)
-                    if (!targetFile.parent.exists()) {
-                        targetFile.parent.createDirectories()
-                    }
-                    if (!Files.isDirectory(zipEntry)) {
-                        zipEntry.copyTo(targetFile, true)
-                    }
-                }
-            }
-        }
-
-        println("Patching...")
-        val patches = this.patches.path.filesMatchingRecursive("*.patch")
         Git(vanillaDir).let { git ->
             git("init", "--quiet").executeSilently(silenceErr = true)
             git.disableAutoGpgSigningInRepo()
@@ -205,18 +196,6 @@ abstract class PrepareBase : ControllableOutputTask() {
 
             git("tag", "-d", "vanilla").runSilently(silenceErr = true)
             git("tag", "vanilla").executeSilently(silenceErr = true)
-
-            patches.parallelStream().forEach { patch ->
-                try {
-                    git("apply", "--ignore-whitespace", "--directory", "java", patch.absolutePathString()).executeOut()
-                } catch (ex: Exception) {
-                }
-            }
-
-            git(*Git.add(false, ".")).run()
-            git("commit", "-m", "MCP Config Patches", "--author=MCPConfig <auto@mated.null>").run()
-            git("tag", "-d", "mcp-config").runSilently(silenceErr = true)
-            git("tag", "mcp-config").executeSilently(silenceErr = true)
         }
 
         println("Renaming")
