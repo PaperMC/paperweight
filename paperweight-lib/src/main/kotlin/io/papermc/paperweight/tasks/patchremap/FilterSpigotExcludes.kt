@@ -20,39 +20,37 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.tasks.patchremap
 
+import io.papermc.paperweight.tasks.ZippedTask
 import io.papermc.paperweight.util.*
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 
+/**
+ * Because Spigot doesn't remap all classes, there are class and package name clashes if we don't do this in the source
+ * remap step. Other than that, we don't need this jar
+ */
 @CacheableTask
-abstract class FilterJar : BaseTask() {
+abstract class FilterSpigotExcludes : ZippedTask() {
 
-    @get:Classpath
-    abstract val inputJar: RegularFileProperty
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val excludesFile: RegularFileProperty
 
-    @get:Input
-    abstract val includes: ListProperty<String>
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    open fun run() {
-        filterJar(
-            inputJar.path,
-            outputJar.path,
-            includes.get()
-        )
+    override fun run(rootDir: Path) {
+        excludesFile.path.useLines { lines ->
+            for (line in lines) {
+                if (line.startsWith('#') || line.isBlank()) {
+                    continue
+                }
+                rootDir.resolve("$line.class").deleteForcefully()
+            }
+        }
     }
 }

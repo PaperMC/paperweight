@@ -25,6 +25,7 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
+import io.papermc.paperweight.core.taskcontainers.PatchRemapTasks
 import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
@@ -62,6 +63,8 @@ class PaperweightCore : Plugin<Project> {
         target.configurations.create(MCPCONFIG_DECOMPILE_CONFIG)
 
         val tasks = AllTasks(target)
+
+        val patchRemapTasks = PatchRemapTasks(target, tasks)
 
         val devBundleTasks = DevBundleTasks(target)
 

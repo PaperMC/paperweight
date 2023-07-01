@@ -32,6 +32,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import java.nio.file.Files
 
 class Git(private val repo: Path, private val env: Map<String, String> = emptyMap()) {
 
@@ -101,6 +102,19 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
             } catch (_: Exception) {}
 
             throw PaperweightException("You must have git installed and available on your PATH in order to use paperweight.")
+        }
+
+        fun clone(url: String, directory: Path): Git {
+            if (!Files.exists(directory)) {
+                Files.createDirectories(directory)
+            } else {
+                directory.deleteRecursively()
+                Files.createDirectory(directory)
+            }
+            val builder = ProcessBuilder("git", "clone", url, ".").directory(directory)
+            val commandText = builder.command().joinToString(" ")
+            Command(builder, commandText).execute()
+            return Git(directory)
         }
     }
 }

@@ -77,7 +77,7 @@ private const val JARS_PATH = "$PAPER_PATH/jars"
 const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
 const val MINECRAFT_SOURCES_PATH = "$JARS_PATH/minecraft-sources"
 
-private const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
+const val MAPPINGS_DIR = "$PAPER_PATH/mappings"
 const val SERVER_MAPPINGS = "$MAPPINGS_DIR/server_mappings.txt"
 const val MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/official-mojang+yarn.tiny"
 const val SRG_CSV = "$MAPPINGS_DIR/srg-mojang+yarn.csv"

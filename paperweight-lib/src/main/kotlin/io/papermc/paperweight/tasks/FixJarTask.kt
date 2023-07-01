@@ -23,13 +23,11 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.ParameterAnnotationFixer
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Internal

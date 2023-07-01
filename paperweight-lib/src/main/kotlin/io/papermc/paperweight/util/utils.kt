@@ -232,7 +232,7 @@ fun BaseTask.defaultOutput(): RegularFileProperty {
 val <T> Optional<T>.orNull: T?
     get() = orElse(null)
 
-inline fun <reified T : Any> Project.contents(contentFile: RegularFileProperty, crossinline convert: (String) -> T): Provider<T> {
+inline fun <reified T : Any> Project.contents(contentFile: Provider<RegularFile>, crossinline convert: (String) -> T): Provider<T> {
     return providers.fileContents(contentFile)
         .asText
         .map { convert(it) }

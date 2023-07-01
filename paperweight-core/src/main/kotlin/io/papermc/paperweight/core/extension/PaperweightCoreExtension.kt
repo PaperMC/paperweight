@@ -44,6 +44,7 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
 
     val paper = PaperExtension(objects, layout)
     val mcpConfig = McpConfigExtension(objects, layout)
+    val patchRemap = PatchRemapExtension(objects, layout)
 
     @Suppress("unused")
     fun paper(action: Action<in PaperExtension>) {
@@ -53,5 +54,10 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     @Suppress("unused")
     fun mcpConfig(action: Action<in McpConfigExtension>) {
         action.execute(mcpConfig)
+    }
+
+    @Suppress("unused")
+    fun patchRemap(action: Action<in PatchRemapExtension>) {
+        action.execute(patchRemap)
     }
 }
