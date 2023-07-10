@@ -294,6 +294,15 @@ class ParamsMergeHandler : MappingSetMergerHandler {
         throw IllegalStateException("Unexpectedly merged method: ${left.fullObfuscatedName}")
     }
 
+    override fun addRightParameterMapping(
+        right: MethodParameterMapping,
+        target: MethodMapping,
+        context: MergeContext?
+    ): MethodParameterMapping {
+        // prefix params with _ to avoid conflicts
+        return target.createParameterMapping(right.index, "_" + right.deobfuscatedName)
+    }
+
     // Don't take anything from yarn
     override fun addRightTopLevelClassMapping(
         right: TopLevelClassMapping?,

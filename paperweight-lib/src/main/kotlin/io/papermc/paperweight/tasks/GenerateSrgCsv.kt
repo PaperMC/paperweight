@@ -35,40 +35,6 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
 
         val srgToOurs = mutableMapOf<String, String>()
         val classes = mutableListOf<ClassMapping<*, *>>()
-        //classes.addAll(obfToOurs.topLevelClassMappings)
-        //while (classes.isNotEmpty()) {
-        //    val namedClass = classes[0]
-        //    classes.removeAt(0)
-        //
-        //    val srgClass = if (namedClass is InnerClassMapping) {
-        //        val namedParentClass = namedClass.parent
-        //        val namedSrgClass = obfToSrg.getClassMapping(namedParentClass.obfuscatedName).orElseThrow()
-        //        namedSrgClass.getInnerClassMapping(namedClass.obfuscatedName).orElseThrow()
-        //    } else {
-        //        classes.addAll(namedClass.innerClassMappings)
-        //        obfToSrg.getClassMapping(namedClass.obfuscatedName).orElseThrow()
-        //    }
-        //
-        //    if (namedClass.deobfuscatedName.contains("LootDataType")) {
-        //        println(namedClass)
-        //        println(srgClass)
-        //    }
-        //
-        //    namedClass.fieldMappings.forEach { namedField ->
-        //        val srgField = srgClass.getFieldMapping(namedField.obfuscatedName).orElseThrow()
-        //        srgToOurs[srgField.deobfuscatedName] = namedField.deobfuscatedName
-        //    }
-        //
-        //    namedClass.methodMappings.forEach { namedMethod ->
-        //        val srgMethod = srgClass.getMethodMapping(namedMethod.obfuscatedName, namedMethod.obfuscatedDescriptor).orElseThrow()
-        //        srgToOurs[srgMethod.deobfuscatedName] = namedMethod.deobfuscatedName
-        //
-        //        namedMethod.parameterMappings.forEachIndexed { index, namedParam ->
-        //            val srgParam = srgMethod.getParameterMapping(index).orElseThrow()
-        //            srgToOurs[srgParam.deobfuscatedName] = namedParam.deobfuscatedName
-        //        }
-        //    }
-        //}
 
         classes.addAll(obfToSrg.topLevelClassMappings)
         while (classes.isNotEmpty()) {
@@ -117,7 +83,7 @@ abstract class GenerateSrgCsv : ControllableOutputTask() {
                         }
                         val namedParam = if (srgMethod.obfuscatedName == "<init>") {
                             // ctors aren't synthetic, no need for fuckery
-                            namedMethod.get().getParameterMapping(srgParam.index)
+                            namedMethod.get().getParameterMapping(srgParam.index + 1)
                         } else if (params.size > index) {
                             Optional.of(params[index])
                         } else {

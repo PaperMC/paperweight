@@ -212,11 +212,7 @@ abstract class PrepareBase : ControllableOutputTask() {
             content = regex.replace(content) { res ->
                 val mapping = srgToMojang[res.groupValues[0]]
                 if (mapping != null) {
-                    if (res.groupValues[0].startsWith("p")) {
-                        return@replace "_$mapping"
-                    } else {
-                        return@replace mapping
-                    }
+                   return@replace mapping
                 } else {
                     missedMappings.add(res.groupValues[0])
                     return@replace res.groupValues[0]
