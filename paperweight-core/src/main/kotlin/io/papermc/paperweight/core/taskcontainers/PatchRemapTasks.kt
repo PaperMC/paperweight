@@ -83,13 +83,44 @@ open class PatchRemapTasks(
 
     val patchCraftBukkit by tasks.registering<ApplyCraftBukkitPatches> {
         // TODO temp to speed stuff up
-        //sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
-        sourceJar.set(cache.resolve("paperweight/taskCache/spigotDecompileJar.jar"))
+        sourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
+        //sourceJar.set(cache.resolve("paperweight/taskCache/spigotDecompileJar.jar"))
         cleanDirPath.set("net/minecraft")
         patchDir.set(extension.patchRemap.patchDir)
         craftBukkitDir.set(extension.patchRemap.craftBukkitDir)
         outputDir.set(extension.patchRemap.patchedCraftBukkitDir)
 
         //dependsOn(cloneForPatchRemap)
+    }
+
+    //val filterSpigotMojMapExcludes by tasks.registering<FilterSpigotExcludes> {
+    //    inputZip.set(spigotMojMapRemapJar.flatMap { it.outputJar })
+    //    excludesFile.set(extension.patchRemap.excludesFile)
+    //}
+//
+    //val spigotDecompileMojMapJar by tasks.registering<SpigotDecompileJar> {
+    //    inputJar.set(filterSpigotMojMapExcludes.flatMap { it.outputZip })
+    //    fernFlowerJar.set(extension.patchRemap.fernFlowerJar)
+    //    decompileCommand.set(buildDataInfo.map { it.decompileCommand })
+    //}
+
+    val remapCraftBukkitSources by tasks.registering<RemapSources> {
+        vanillaJar.set(allTasks.extractFromBundler.flatMap { it.serverJar })
+        //mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
+        //vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
+        //mappings.set(generateSpigotMappings.flatMap { it.outputMappings })
+        mappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
+        //sources.set(patchCraftBukkit.flatMap { it.outputDir }) // todo temp to speed stuff up
+        sources.set(extension.patchRemap.patchedCraftBukkitDir);
+        //spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
+        //additionalAts.set(mergePaperAts.flatMap { it.outputFile })
+    }
+
+    // todo first try diffing against remapped mcp config source
+    // if that fails, we have to diff against spigot decompiled mojmap+yarn mapped vanilla jar
+    val diffCraftBukkitAgainstVanilla by tasks.registering<DiffCraftBukkitAgainstVanilla> {
+        craftBukkit.set(remapCraftBukkitSources.flatMap { it.sourcesOutputZip })
+        //vanilla.set(allTasks.prepareBase.flatMap { it.output })
+        vanilla.set(cache.resolve(BASE_PROJECT))
     }
 }
