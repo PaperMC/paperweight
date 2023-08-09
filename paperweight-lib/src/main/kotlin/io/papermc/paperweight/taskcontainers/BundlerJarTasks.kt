@@ -31,7 +31,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -60,7 +59,7 @@ class BundlerJarTasks(
         bundlerVersionJson: Provider<RegularFile>,
         serverLibrariesList: Provider<RegularFile>,
         vanillaJar: Provider<RegularFile>,
-        shadowJar: TaskProvider<out AbstractArchiveTask>,
+        mojangJar: Provider<RegularFile>,
         reobfJar: TaskProvider<RemapJar>,
         mcVersion: Provider<String>
     ) {
@@ -68,7 +67,7 @@ class BundlerJarTasks(
             bundlerVersionJson,
             serverLibrariesList,
             vanillaJar,
-            shadowJar.flatMap { it.archiveFile },
+            mojangJar,
         )
         createReobfBundlerJar.configureWith(
             bundlerVersionJson,

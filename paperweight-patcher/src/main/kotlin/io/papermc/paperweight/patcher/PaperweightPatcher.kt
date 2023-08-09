@@ -90,6 +90,11 @@ class PaperweightPatcher : Plugin<Project> {
             toNamespace.set(SPIGOT_NAMESPACE)
         }
 
+        val generateRelocatedReobfMappings by target.tasks.registering<GenerateRelocatedReobfMappings> {
+            inputMappings.set(patchReobfMappings.flatMap { it.outputMappings })
+            outputMappings.set(target.layout.cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+        }
+
         val prepareForDownstream = target.tasks.register<PaperweightPatcherPrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dataFile.fileProvider(dataFileProp.map { File(it) })
             reobfMappingsPatch.set(mergeReobfMappingsPatches.flatMap { it.outputMappings })
@@ -167,15 +172,19 @@ class PaperweightPatcher : Plugin<Project> {
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
+            generateRelocatedReobfMappings {
+                inputJar.set(shadowJar.flatMap { it.archiveFile })
+            }
 
-            val (_, reobfJar) = serverProj.setupServerProject(
+            val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
                 upstreamData.map { it.libFile },
                 mergedReobfPackagesToFix,
-                patchReobfMappings.flatMap { it.outputMappings }
+                patchReobfMappings.flatMap { it.outputMappings },
+                generateRelocatedReobfMappings
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(
@@ -191,7 +200,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
-                reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
+                reobfMappingsFile.set(generateRelocatedReobfMappings.flatMap { it.outputMappings })
 
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
@@ -202,7 +211,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.serverLibrariesList }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.vanillaJar }.convertToFileProvider(target.layout, target.providers),
-                shadowJar,
+                includeMappings.flatMap { it.outputJar },
                 reobfJar,
                 upstreamData.map { it.mcVersion }
             )

@@ -176,4 +176,9 @@ open class AllTasks(
 
         outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
+
+    val generateRelocatedReobfMappings by tasks.registering<GenerateRelocatedReobfMappings> {
+        inputMappings.set(patchReobfMappings.flatMap { it.outputMappings })
+        outputMappings.set(cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+    }
 }

@@ -22,15 +22,10 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.extension.Relocation
-import io.papermc.paperweight.extension.RelocationWrapper
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.filterJar
-import io.papermc.paperweight.util.gson
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.walk
+import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name

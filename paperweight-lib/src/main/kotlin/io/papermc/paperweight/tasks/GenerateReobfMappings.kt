@@ -74,7 +74,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
     abstract val reobfMappings: RegularFileProperty
 
     @get:Internal
-    abstract val jvmargs: ListProperty<String>
+    abstract val jvmArgs: ListProperty<String>
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
@@ -86,13 +86,13 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
     override fun init() {
         super.init()
 
-        jvmargs.convention(listOf("-Xmx2G"))
+        jvmArgs.convention(listOf("-Xmx2G"))
     }
 
     @TaskAction
     fun run() {
         val queue = workerExecutor.processIsolation {
-            forkOptions.jvmArgs(jvmargs.get())
+            forkOptions.jvmArgs(jvmArgs.get())
             forkOptions.executable(launcher.get().executablePath.path.absolutePathString())
         }
 

@@ -22,7 +22,8 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.extension.RelocationExtension
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import io.papermc.paperweight.extension.PaperweightServerExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -37,7 +38,6 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
@@ -49,6 +49,7 @@ fun Project.setupServerProject(
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
     reobfMappings: Provider<RegularFile>,
+    relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>,
 ): ServerTasks? {
     if (!projectDir.exists()) {
         return null
@@ -56,7 +57,10 @@ fun Project.setupServerProject(
 
     plugins.apply("java")
 
-    extensions.create<RelocationExtension>(RELOCATION_EXTENSION, objects)
+    val serverExt = extensions.create<PaperweightServerExtension>(PAPERWEIGHT_EXTENSION, objects)
+    relocatedReobfMappings {
+        craftBukkitPackageVersion.set(serverExt.craftBukkitPackageVersion)
+    }
 
     exportRuntimeClasspathTo(parent)
 
@@ -104,7 +108,7 @@ fun Project.setupServerProject(
     addMcDevSourcesRoot(mcDevSourceDir)
 
     plugins.apply("com.github.johnrengelman.shadow")
-    return createBuildTasks(parent, packagesToFix, reobfMappings)
+    return createBuildTasks(parent, serverExt, vanillaServer, packagesToFix, reobfMappings, relocatedReobfMappings)
 }
 
 private fun Project.exportRuntimeClasspathTo(parent: Project) {
@@ -137,23 +141,45 @@ private fun Project.exportRuntimeClasspathTo(parent: Project) {
 
 private fun Project.createBuildTasks(
     parent: Project,
+    serverExt: PaperweightServerExtension,
+    vanillaServer: Configuration,
     packagesToFix: Provider<List<String>?>,
-    reobfMappings: Provider<RegularFile>
+    reobfMappings: Provider<RegularFile>,
+    relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>
 ): ServerTasks {
-    val shadowJar: TaskProvider<Jar> = tasks.named("shadowJar", Jar::class)
+    val shadowJar: TaskProvider<ShadowJar> = tasks.named("shadowJar", ShadowJar::class) {
+        archiveClassifier.set("mojang-mapped")
+        configurations = listOf(vanillaServer)
+    }
 
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
-        dependsOn(shadowJar)
-
         inputJar.set(shadowJar.flatMap { it.archiveFile })
         packagesToProcess.set(packagesToFix)
+    }
+
+    val includeMappings by tasks.registering<IncludeMappings> {
+        inputJar.set(fixJarForReobf.flatMap { it.outputJar })
+        mappings.set(relocatedReobfMappings.flatMap { it.outputMappings })
+        mappingsDest.set("META-INF/mappings/reobf.tiny")
+    }
+
+    val relocatedShadowJar by tasks.registering<ShadowJar> {
+        archiveClassifier.set("mojang-mapped-relocated")
+        from(zipTree(includeMappings.flatMap { it.outputJar }))
+    }
+    afterEvaluate {
+        relocatedShadowJar {
+            relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${serverExt.craftBukkitPackageVersion.get()}") {
+                exclude("org.bukkit.craftbukkit.Main*")
+            }
+        }
     }
 
     val reobfJar by tasks.registering<RemapJar> {
         group = "paperweight"
         description = "Re-obfuscate the built jar to obf mappings"
 
-        inputJar.set(fixJarForReobf.flatMap { it.outputJar })
+        inputJar.set(relocatedShadowJar.flatMap { it.archiveFile })
 
         mappingsFile.set(reobfMappings)
 
@@ -166,11 +192,11 @@ private fun Project.createBuildTasks(
         outputJar.set(layout.buildDirectory.map { it.dir("libs").file("${project.name}-${project.version}-reobf.jar") })
     }
 
-    return ServerTasks(fixJarForReobf, reobfJar)
+    return ServerTasks(includeMappings, reobfJar)
 }
 
 data class ServerTasks(
-    val fixJarForReobf: TaskProvider<FixJarForReobf>,
+    val includeMappings: TaskProvider<IncludeMappings>,
     val reobfJar: TaskProvider<RemapJar>,
 )
 

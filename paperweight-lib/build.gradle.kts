@@ -2,6 +2,10 @@ plugins {
     `config-kotlin`
 }
 
+repositories {
+    gradlePluginPortal()
+}
+
 dependencies {
     implementation(libs.httpclient)
     implementation(libs.bundles.kotson)
@@ -20,4 +24,6 @@ dependencies {
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
+
+    compileOnly(libs.gradle.shadow)
 }

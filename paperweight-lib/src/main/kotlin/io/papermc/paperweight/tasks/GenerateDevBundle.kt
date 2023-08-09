@@ -23,8 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.extension.Relocation
-import io.papermc.paperweight.extension.RelocationWrapper
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
