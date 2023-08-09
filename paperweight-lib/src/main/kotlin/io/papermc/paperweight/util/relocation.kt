@@ -20,29 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.extension
-
-import org.gradle.api.model.ObjectFactory
-import org.gradle.kotlin.dsl.*
-
-abstract class RelocationExtension(objects: ObjectFactory) {
-    val relocations = objects.listProperty<Relocation>()
-
-    fun relocate(
-        owningLibraryCoordinates: String,
-        relocation: Pair<String, String>,
-        config: Relocation.() -> Unit = {}
-    ) {
-        relocations.add(Relocation(owningLibraryCoordinates, relocation.first, relocation.second, arrayListOf()).apply(config))
-    }
-
-    fun relocate(
-        relocation: Pair<String, String>,
-        config: Relocation.() -> Unit = {}
-    ) {
-        relocations.add(Relocation(null, relocation.first, relocation.second, arrayListOf()).apply(config))
-    }
-}
+package io.papermc.paperweight.util
 
 data class Relocation(
     val owningLibraryCoordinates: String?,

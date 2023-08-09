@@ -88,6 +88,7 @@ const val PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yar
 const val PATCHED_SPIGOT_MOJANG_YARN_SOURCE_MAPPINGS = "$MAPPINGS_DIR/spigot-mojang+yarn-patched-source.tiny"
 const val REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf.tiny"
 const val PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf-patched.tiny"
+const val RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang+yarn-spigot-reobf-patched-relocated.tiny"
 
 const val OBF_NAMESPACE = "official"
 const val SPIGOT_NAMESPACE = "spigot"
@@ -113,8 +114,6 @@ const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
 
 const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
-
-const val RELOCATION_EXTENSION = "relocation"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 

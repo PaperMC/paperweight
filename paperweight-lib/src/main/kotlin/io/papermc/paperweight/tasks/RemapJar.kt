@@ -66,11 +66,15 @@ abstract class RemapJar : JavaLauncherTask() {
     @get:Internal
     abstract val jvmArgs: ListProperty<String>
 
+    @get:Input
+    abstract val markReobf: Property<Boolean>
+
     override fun init() {
         super.init()
 
         outputJar.convention(defaultOutput())
         jvmArgs.convention(listOf("-Xmx1G"))
+        markReobf.convention(false)
         remapperArgs.convention(TinyRemapper.createArgsList())
     }
 
@@ -91,6 +95,13 @@ abstract class RemapJar : JavaLauncherTask() {
             workingDir = layout.cache,
             jvmArgs = jvmArgs.get()
         )
+        outputJar.path.openZip().use { fs ->
+            val reobf = fs.getPath("META-INF/.reobf")
+            val moj = fs.getPath("META-INF/.mojang-mapped")
+            moj.deleteIfExists()
+            reobf.parent.createDirectories()
+            reobf.createFile()
+        }
     }
 }
 

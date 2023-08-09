@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.userdev.internal.setup.v2
 
-import io.papermc.paperweight.extension.Relocation
 import io.papermc.paperweight.util.*
 
 object DevBundleV2 {

@@ -33,6 +33,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
@@ -43,11 +44,18 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -124,6 +132,8 @@ abstract class PaperweightUser : Plugin<Project> {
 
             remapper.from(project.configurations.named(REMAPPER_CONFIG))
             remapperArgs.set(target.provider { userdevSetup.pluginRemapArgs })
+
+            markReobf.set(true)
         }
 
         target.configurations.register(REOBF_CONFIG) {
@@ -155,6 +165,15 @@ abstract class PaperweightUser : Plugin<Project> {
 
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
+
+            val generateMarker by tasks.registering<GenerateMarker> {
+                markerName.set("META-INF/.mojang-mapped")
+            }
+            target.configure<SourceSetContainer> {
+                named(SourceSet.MAIN_SOURCE_SET_NAME) {
+                    resources.srcDir(generateMarker)
+                }
+            }
 
             if (userdev.injectPaperRepository.get()) {
                 repositories.maven(PAPER_MAVEN_REPO_URL) {
@@ -305,5 +324,27 @@ abstract class PaperweightUser : Plugin<Project> {
                 }
             }
             .get()
+    }
+
+    abstract class GenerateMarker : BaseTask() {
+        @get:OutputDirectory
+        abstract val workDir: DirectoryProperty
+
+        @get:Input
+        abstract val markerName: Property<String>
+
+        override fun init() {
+            doNotTrackState("Not worth caching")
+            workDir.convention(project, layout.cache.resolve(paperTaskOutput("dir")))
+        }
+
+        @OptIn(ExperimentalPathApi::class)
+        @TaskAction
+        fun run() {
+            workDir.path.deleteRecursively()
+            workDir.path.resolve(markerName.get())
+                .also { it.parent.createDirectories() }
+                .createFile()
+        }
     }
 }
