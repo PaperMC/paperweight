@@ -51,6 +51,13 @@ abstract class PaperweightUserExtension(
     val injectPaperRepository: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     /**
+     * Whether to patch dependencies to exclude `junit:junit` from the transitive dependencies.
+     *
+     * True by default to avoid `junit:junit` appearing on the `compileClasspath`.
+     */
+    val applyJunitExclusionRule: Property<Boolean> = objects.property<Boolean>().convention(true)
+
+    /**
      * The [ReobfArtifactConfiguration] is responsible for setting the input and output jars for `reobfJar`,
      * as well as changing the classifiers of other jars (i.e. `jar` or `shadowJar`).
      */
