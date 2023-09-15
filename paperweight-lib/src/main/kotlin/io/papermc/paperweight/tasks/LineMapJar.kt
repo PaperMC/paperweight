@@ -168,7 +168,7 @@ private class LineMappingVisitor(
         override fun visitLineNumber(line: Int, start: Label?) {
             var mapped = lineMapping[line]
             if (mapped == null) {
-                val entry = lineMapping.higherEntry(line)
+                val entry = lineMapping.ceilingEntry(line)
                 if (entry != null) {
                     mapped = entry.value
                 }
