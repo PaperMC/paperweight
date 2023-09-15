@@ -46,8 +46,8 @@ val forgeFlowerArgList: List<String> = listOf(
     "-iib=1",
     "-bsm=1",
     "-dcl=1",
-    "-ovr=0", // We add override annotations ourselves. Quiltflower's impl doesn't work as well yet and conflicts
-    "-pll=999999", // High line length to effectively disable formatter (only does anything on Quiltflower)
+    "-ovr=0", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
+    "-pll=999999", // High line length to effectively disable formatter (only does anything on Vineflower)
     "-log=TRACE",
     "-cfg",
     "{libraries}",
