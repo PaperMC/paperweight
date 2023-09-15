@@ -32,6 +32,8 @@ import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Internal
@@ -44,6 +46,9 @@ import org.gradle.workers.WorkerExecutor
 import org.objectweb.asm.tree.ClassNode
 
 abstract class ScanJar : JavaLauncherTask() {
+    companion object {
+        private val logger: Logger = Logging.getLogger(ScanJar::class.java)
+    }
 
     @get:Classpath
     abstract val jarToScan: RegularFileProperty
@@ -105,7 +110,7 @@ abstract class ScanJar : JavaLauncherTask() {
                     try {
                         classPathJars += it.toPath().openZip()
                     } catch (ex: Exception) {
-                        ScanJarForBadCalls.logger.error("Failed to open zip $it", ex)
+                        logger.error("Failed to open zip $it", ex)
                         if (fail == null) {
                             fail = ex
                         } else {
@@ -125,7 +130,7 @@ abstract class ScanJar : JavaLauncherTask() {
                         try {
                             it.close()
                         } catch (ex: Exception) {
-                            ScanJarForBadCalls.logger.error("Failed to close zip $it", ex)
+                            logger.error("Failed to close zip $it", ex)
                             if (err == null) {
                                 err = ex
                             } else {

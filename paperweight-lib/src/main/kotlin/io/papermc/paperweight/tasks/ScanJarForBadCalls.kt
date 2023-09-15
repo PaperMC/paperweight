@@ -41,7 +41,7 @@ import org.objectweb.asm.tree.MethodNode
 @CacheableTask
 abstract class ScanJarForBadCalls : ScanJar() {
     companion object {
-        val logger: Logger = Logging.getLogger(ScanJarForBadCalls::class.java)
+        private val logger: Logger = Logging.getLogger(ScanJarForBadCalls::class.java)
     }
 
     @get:Input

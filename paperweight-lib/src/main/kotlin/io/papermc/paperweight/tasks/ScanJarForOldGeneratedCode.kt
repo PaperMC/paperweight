@@ -35,7 +35,7 @@ import org.objectweb.asm.tree.ClassNode
 @CacheableTask
 abstract class ScanJarForOldGeneratedCode : ScanJar() {
     companion object {
-        val logger: Logger = Logging.getLogger(ScanJarForOldGeneratedCode::class.java)
+        private val logger: Logger = Logging.getLogger(ScanJarForOldGeneratedCode::class.java)
     }
 
     @get:Input
