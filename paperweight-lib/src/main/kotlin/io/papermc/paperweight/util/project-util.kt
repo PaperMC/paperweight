@@ -43,7 +43,7 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 fun Project.setupServerProject(
     parent: Project,
-    remappedJar: Provider<RegularFile>,
+    remappedJar: Provider<*>,
     remappedJarSources: Any,
     mcDevSourceDir: Path,
     libsFile: Any,
@@ -64,7 +64,7 @@ fun Project.setupServerProject(
     val filterProjectDir by tasks.registering<FilterProjectDir> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
-        vanillaJar.set(remappedJar)
+        vanillaJar.set(parent.layout.file(parent.files(remappedJar).elements.map { it.single().asFile })) // unlink dependency on upstream clone task for patcher (hack); it's implicitly handled when we get upstream data
         outputJar.set(parent.layout.cache.resolve(FINAL_FILTERED_REMAPPED_JAR))
     }
 

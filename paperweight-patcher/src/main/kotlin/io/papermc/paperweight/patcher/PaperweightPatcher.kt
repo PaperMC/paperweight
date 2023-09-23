@@ -169,7 +169,7 @@ class PaperweightPatcher : Plugin<Project> {
 
             val (_, reobfJar) = serverProj.setupServerProject(
                 target,
-                upstreamData.map { it.remappedJar }.convertToFileProvider(target.layout, target.providers),
+                upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
                 upstreamData.map { it.libFile },
