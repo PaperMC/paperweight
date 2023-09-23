@@ -64,7 +64,10 @@ fun Project.setupServerProject(
     val filterProjectDir by tasks.registering<FilterProjectDir> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
-        vanillaJar.set(parent.layout.file(parent.files(remappedJar).elements.map { it.single().asFile })) // unlink dependency on upstream clone task for patcher (hack); it's implicitly handled when we get upstream data
+        vanillaJar.set(
+            // unlink dependency on upstream clone task for patcher (hack); it's implicitly handled when we get upstream data
+            parent.layout.file(parent.files(remappedJar).elements.map { it.single().asFile })
+        )
         outputJar.set(parent.layout.cache.resolve(FINAL_FILTERED_REMAPPED_JAR))
     }
 
