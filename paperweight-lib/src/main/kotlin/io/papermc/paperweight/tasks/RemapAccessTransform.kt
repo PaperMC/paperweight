@@ -32,6 +32,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import writeLF
 
 @CacheableTask
 abstract class RemapAccessTransform : BaseTask() {
@@ -57,6 +58,6 @@ abstract class RemapAccessTransform : BaseTask() {
         val mappingSet = MappingFormats.TINY.read(mappings.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
 
         val resultAt = at.remap(mappingSet)
-        AccessTransformFormats.FML.write(outputFile.path, resultAt)
+        AccessTransformFormats.FML.writeLF(outputFile.path, resultAt)
     }
 }

@@ -1,0 +1,14 @@
+{
+  "latest": {
+    "release": "fake",
+    "snapshot": "fake"
+  },
+  "versions": [
+    {
+      "id": "fake",
+      "type": "release",
+      "url": "file://project/fake_mojang/version.json",
+      "sha1": ""
+    }
+  ]
+}
