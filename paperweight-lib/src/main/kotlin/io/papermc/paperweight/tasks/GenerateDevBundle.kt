@@ -28,6 +28,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -232,18 +233,25 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun relocateFiles(relocations: List<RelocationWrapper>, workingDir: Path) {
+        val processedFiles = ArrayList<String>()
         Files.walk(workingDir).use { stream ->
             stream.filter { it.isRegularFile() && it.name.endsWith(".java") }
                 .forEach { path ->
-                    val potential = path.relativeTo(workingDir).pathString
+                    val rawPotential = path.pathString
+                    if (processedFiles.contains(rawPotential)) {
+                        return@forEach
+                    }
+                    val potential = path.relativeTo(workingDir).pathString.replace(File.separator, "/")
                     for (relocation in relocations) {
                         if (potential.startsWith(relocation.fromSlash)) {
                             if (excluded(relocation.relocation, potential)) {
                                 break
                             }
-                            val dest = workingDir.resolve(potential.replace(relocation.fromSlash, relocation.toSlash))
+                            val dest = workingDir.resolve(potential.replace(relocation.fromSlash, relocation.toSlash)
+                                .replace("/", File.separator))
                             dest.parent.createDirectories()
                             path.moveTo(dest)
+                            processedFiles.add(dest.pathString)
                             break
                         }
                     }
