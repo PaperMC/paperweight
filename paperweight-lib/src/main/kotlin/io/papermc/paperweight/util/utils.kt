@@ -45,6 +45,7 @@ import java.util.IdentityHashMap
 import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
@@ -127,6 +128,8 @@ val Project.isBaseExecution: Boolean
         .map { it == "false" }
         .get()
 
+val redirectThreadCount: AtomicLong = AtomicLong(0)
+
 fun redirect(input: InputStream, out: OutputStream): Thread {
     return Thread {
         try {
@@ -135,6 +138,7 @@ fun redirect(input: InputStream, out: OutputStream): Thread {
             throw PaperweightException("", e)
         }
     }.apply {
+        name = "paperweight stream redirect thread #${redirectThreadCount.getAndIncrement()}"
         isDaemon = true
         start()
     }
