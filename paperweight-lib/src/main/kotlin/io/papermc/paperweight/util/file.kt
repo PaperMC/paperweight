@@ -154,7 +154,7 @@ fun FileSystem.walk(): Stream<Path> {
         .flatMap { Files.walk(it) }
 }
 
-fun ProcessBuilder.directory(path: Path): ProcessBuilder = directory(path.toFile())
+fun ProcessBuilder.directory(path: Path?): ProcessBuilder = directory(path?.toFile())
 
 fun Path.hashFile(algorithm: HashingAlgorithm): ByteArray = inputStream().use { input -> input.hash(algorithm) }
 

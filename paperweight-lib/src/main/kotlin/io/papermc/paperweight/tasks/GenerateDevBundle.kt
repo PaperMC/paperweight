@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.extension.Relocation
 import io.papermc.paperweight.extension.RelocationWrapper
 import io.papermc.paperweight.util.*
@@ -32,6 +33,9 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
+import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
+import java.util.stream.Collectors
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.apache.tools.ant.types.selectors.SelectorUtils
@@ -52,6 +56,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -129,8 +134,14 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:Inject
     abstract val layout: ProjectLayout
 
+    @get:Input
+    @get:Optional
+    abstract val ignoreUnsupportedEnvironment: Property<Boolean>
+
     @TaskAction
     fun run() {
+        checkEnvironment()
+
         val devBundle = devBundleFile.path
         devBundle.deleteForcefully()
         devBundle.parent.createDirectories()
@@ -165,6 +176,7 @@ abstract class GenerateDevBundle : DefaultTask() {
 
     private fun generatePatches(output: Path) {
         val workingDir = layout.cache.resolve(paperTaskOutput("tmpdir"))
+        workingDir.deleteRecursively()
         workingDir.createDirectories()
         sourceDir.path.copyRecursivelyTo(workingDir)
 
@@ -232,23 +244,22 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun relocateFiles(relocations: List<RelocationWrapper>, workingDir: Path) {
-        Files.walk(workingDir).use { stream ->
-            stream.filter { it.isRegularFile() && it.name.endsWith(".java") }
-                .forEach { path ->
-                    val potential = path.relativeTo(workingDir).pathString
-                    for (relocation in relocations) {
-                        if (potential.startsWith(relocation.fromSlash)) {
-                            if (excluded(relocation.relocation, potential)) {
-                                break
-                            }
-                            val dest = workingDir.resolve(potential.replace(relocation.fromSlash, relocation.toSlash))
-                            dest.parent.createDirectories()
-                            path.moveTo(dest)
+        Files.walk(workingDir).use { stream -> stream.collect(Collectors.toList()) }
+            .asSequence().filter { it.isRegularFile() && it.name.endsWith(".java") }
+            .forEach { path ->
+                val potential = path.relativeTo(workingDir).invariantSeparatorsPathString
+                for (relocation in relocations) {
+                    if (potential.startsWith(relocation.fromSlash)) {
+                        if (excluded(relocation.relocation, potential)) {
                             break
                         }
+                        val dest = workingDir.resolve(potential.replace(relocation.fromSlash, relocation.toSlash))
+                        dest.parent.createDirectories()
+                        path.moveTo(dest)
+                        break
                     }
                 }
-        }
+            }
     }
 
     private fun excluded(relocation: Relocation, potential: String): Boolean =
@@ -267,12 +278,13 @@ abstract class GenerateDevBundle : DefaultTask() {
             patched.copyTo(newFile)
 
             val args = listOf(
-                "diff",
                 "--color=never",
                 "-ud",
-                "--label", "a/$fileName",
+                "--label",
+                "a/$fileName",
                 oldFile.absolutePathString(),
-                "--label", "b/$fileName",
+                "--label",
+                "b/$fileName",
                 newFile.absolutePathString(),
             )
 
@@ -282,20 +294,30 @@ abstract class GenerateDevBundle : DefaultTask() {
         }
     }
 
-    private fun runDiff(dir: Path, args: List<String>): String {
-        val process = ProcessBuilder(args)
+    private fun runDiff(dir: Path?, args: List<String>): String {
+        val cmd = listOf("diff") + args
+        val process = ProcessBuilder(cmd)
             .directory(dir)
-            .redirectErrorStream(true)
             .start()
 
-        val out = ByteArrayOutputStream()
-        process.inputStream.use { input ->
-            input.copyTo(out)
+        val errBytes = ByteArrayOutputStream().also { redirect(process.errorStream, it) }
+        val outBytes = ByteArrayOutputStream().also { redirect(process.inputStream, it) }
+
+        if (!process.waitFor(10L, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            throw PaperweightException("Command '${cmd.joinToString(" ")}' did not finish after 10 seconds, killed process")
+        }
+        val err = asString(errBytes)
+        val exit = process.exitValue()
+        if (exit != 0 && exit != 1 || err.isNotBlank()) {
+            throw PaperweightException("Error (exit code $exit) executing '${cmd.joinToString(" ")}':\n$err")
         }
 
-        return String(out.toByteArray(), Charset.defaultCharset())
-            .replace(System.getProperty("line.separator"), "\n")
+        return asString(outBytes)
     }
+
+    private fun asString(out: ByteArrayOutputStream) = String(out.toByteArray(), Charset.defaultCharset())
+        .replace(System.getProperty("line.separator"), "\n")
 
     @Suppress("SameParameterValue")
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
@@ -411,6 +433,8 @@ abstract class GenerateDevBundle : DefaultTask() {
     data class Runner(val dep: MavenDep, val args: List<String>)
 
     companion object {
+        const val unsupportedEnvironmentPropName: String = "paperweight.generateDevBundle.ignoreUnsupportedEnvironment"
+
         const val atFileName = "transform.at"
         const val reobfMappingsFileName = "$DEOBF_NAMESPACE-$SPIGOT_NAMESPACE-reobf.tiny"
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
@@ -420,5 +444,37 @@ abstract class GenerateDevBundle : DefaultTask() {
 
         fun createCoordinatesFor(project: Project): String =
             sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
+    }
+
+    private fun checkEnvironment() {
+        var unsupported = false
+
+        val osName = System.getProperty("os.name")
+        logger.lifecycle("Dev bundle generation running on '{}'...", osName)
+        if (osName.contains("win", true)) {
+            logger.warn("Dev bundle generation is not tested to work on Windows.")
+            unsupported = true
+        }
+
+        val diffVersion = runDiff(null, listOf("--version")) + " " // add whitespace so pattern still works even with eol
+        val matcher = Pattern.compile("diff \\(GNU diffutils\\) (.*?)\\s").matcher(diffVersion)
+        if (matcher.find()) {
+            logger.lifecycle("Using 'diff (GNU diffutils) {}'.", matcher.group(1))
+        } else {
+            logger.warn("Non-GNU diffutils diff detected, '--version' returned:\n{}", diffVersion)
+            unsupported = true
+        }
+
+        if (unsupported) {
+            if (this.ignoreUnsupportedEnvironment.getOrElse(false)) {
+                logger.warn("Ignoring unsupported environment as per user configuration.")
+            } else {
+                throw PaperweightException(
+                    "Dev bundle generation is running in an unsupported environment (see above log messages).\n" +
+                        "You can ignore this and attempt to generate a dev bundle anyways by setting the '$unsupportedEnvironmentPropName' Gradle " +
+                        "property to 'true'."
+                )
+            }
+        }
     }
 }
