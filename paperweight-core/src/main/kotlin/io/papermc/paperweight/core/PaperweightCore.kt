@@ -44,6 +44,7 @@ class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
         checkJavaVersion()
         Git.checkForGit()
+        printId<PaperweightCore>("paperweight-core")
 
         val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
 

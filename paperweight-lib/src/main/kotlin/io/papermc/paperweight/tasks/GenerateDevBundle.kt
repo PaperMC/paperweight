@@ -447,34 +447,22 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun checkEnvironment() {
-        var unsupported = false
-
-        val osName = System.getProperty("os.name")
-        logger.lifecycle("Dev bundle generation running on '{}'...", osName)
-        if (osName.contains("win", true)) {
-            logger.warn("Dev bundle generation is not tested to work on Windows.")
-            unsupported = true
-        }
-
         val diffVersion = runDiff(null, listOf("--version")) + " " // add whitespace so pattern still works even with eol
         val matcher = Pattern.compile("diff \\(GNU diffutils\\) (.*?)\\s").matcher(diffVersion)
         if (matcher.find()) {
             logger.lifecycle("Using 'diff (GNU diffutils) {}'.", matcher.group(1))
-        } else {
-            logger.warn("Non-GNU diffutils diff detected, '--version' returned:\n{}", diffVersion)
-            unsupported = true
+            return
         }
 
-        if (unsupported) {
-            if (this.ignoreUnsupportedEnvironment.getOrElse(false)) {
-                logger.warn("Ignoring unsupported environment as per user configuration.")
-            } else {
-                throw PaperweightException(
-                    "Dev bundle generation is running in an unsupported environment (see above log messages).\n" +
-                        "You can ignore this and attempt to generate a dev bundle anyways by setting the '$unsupportedEnvironmentPropName' Gradle " +
-                        "property to 'true'."
-                )
-            }
+        logger.warn("Non-GNU diffutils diff detected, '--version' returned:\n{}", diffVersion)
+        if (this.ignoreUnsupportedEnvironment.getOrElse(false)) {
+            logger.warn("Ignoring unsupported environment as per user configuration.")
+        } else {
+            throw PaperweightException(
+                "Dev bundle generation is running in an unsupported environment (see above log messages).\n" +
+                    "You can ignore this and attempt to generate a dev bundle anyways by setting the '$unsupportedEnvironmentPropName' Gradle " +
+                    "property to 'true'."
+            )
         }
     }
 }

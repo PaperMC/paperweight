@@ -348,3 +348,7 @@ fun checkJavaVersion() {
         throw PaperweightException(msg)
     }
 }
+
+inline fun <reified P> printId(pluginId: String) {
+    println("$pluginId v${P::class.java.`package`.implementationVersion} (running on '${System.getProperty("os.name")}')")
+}

@@ -55,6 +55,14 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.jar {
+    manifest {
+        attributes(
+            "Implementation-Version" to project.version
+        )
+    }
+}
+
 ktlint {
     enableExperimentalRules.set(true)
 

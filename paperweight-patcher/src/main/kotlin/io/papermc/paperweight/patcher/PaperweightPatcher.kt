@@ -50,6 +50,7 @@ class PaperweightPatcher : Plugin<Project> {
     override fun apply(target: Project) {
         checkJavaVersion()
         Git.checkForGit()
+        printId<PaperweightPatcher>("paperweight-patcher")
 
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target)
 
