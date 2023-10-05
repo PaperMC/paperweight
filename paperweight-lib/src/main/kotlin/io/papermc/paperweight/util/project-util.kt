@@ -179,7 +179,7 @@ private fun Project.addMcDevSourcesRoot(mcDevSourceDir: Path) {
 
     val dir = mcDevSourceDir.toFile()
 
-    the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
+    extensions.getByType<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
         java {
             srcDirs(dir)
             val pathString = dir.invariantSeparatorsPath
