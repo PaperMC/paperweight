@@ -87,7 +87,7 @@ abstract class FilterProjectDir : BaseTask() {
     private fun collectFiles(dir: Path): Set<String> {
         return Files.walk(dir).use { stream ->
             stream.filter { it.isRegularFile() }
-                .map { it.relativeTo(dir).toString() }
+                .map { it.relativeTo(dir).invariantSeparatorsPathString }
                 .collect(Collectors.toUnmodifiableSet())
         }
     }
