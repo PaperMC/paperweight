@@ -1,5 +1,5 @@
 [versions]
-asm = "9.5"
+asm = "9.6"
 lorenz = "0.5.8"
 hypo = "1.2.4"
 
