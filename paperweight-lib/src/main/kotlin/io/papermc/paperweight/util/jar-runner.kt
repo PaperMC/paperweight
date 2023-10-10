@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.OutputStream
+import java.util.concurrent.TimeUnit
 import java.util.jar.JarFile
 import kotlin.io.path.*
 import org.gradle.api.file.FileCollection
@@ -77,10 +78,12 @@ fun JavaLauncher.runJar(
     val process = processBuilder.start()
 
     output.use {
-        redirect(process.inputStream, it)
-        redirect(process.errorStream, it)
+        val outFuture = redirect(process.inputStream, it)
+        val errFuture = redirect(process.errorStream, it)
 
         val exit = process.waitFor()
+        outFuture.get(500L, TimeUnit.MILLISECONDS)
+        errFuture.get(500L, TimeUnit.MILLISECONDS)
         if (exit != 0) {
             val logMsg = logFilePath?.let { p -> " Log file: ${p.absolutePathString()}" } ?: ""
             throw PaperweightException("Execution of '$mainClass' failed with exit code $exit.$logMsg Classpath: ${classpath.asPath}")

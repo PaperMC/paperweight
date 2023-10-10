@@ -300,13 +300,17 @@ abstract class GenerateDevBundle : DefaultTask() {
             .directory(dir)
             .start()
 
-        val errBytes = ByteArrayOutputStream().also { redirect(process.errorStream, it) }
-        val outBytes = ByteArrayOutputStream().also { redirect(process.inputStream, it) }
+        val errBytes = ByteArrayOutputStream()
+        val errFuture = redirect(process.errorStream, errBytes)
+        val outBytes = ByteArrayOutputStream()
+        val outFuture = redirect(process.inputStream, outBytes)
 
         if (!process.waitFor(10L, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw PaperweightException("Command '${cmd.joinToString(" ")}' did not finish after 10 seconds, killed process")
         }
+        errFuture.get(500L, TimeUnit.MILLISECONDS)
+        outFuture.get(500L, TimeUnit.MILLISECONDS)
         val err = asString(errBytes)
         val exit = process.exitValue()
         if (exit != 0 && exit != 1 || err.isNotBlank()) {
