@@ -56,6 +56,8 @@ import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.invocation.Gradle
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -352,6 +354,9 @@ fun checkJavaVersion() {
     }
 }
 
-inline fun <reified P> printId(pluginId: String) {
+inline fun <reified P> printId(pluginId: String, gradle: Gradle) {
+    if (gradle.startParameter.logLevel == LogLevel.QUIET) {
+        return
+    }
     println("$pluginId v${P::class.java.`package`.implementationVersion} (running on '${System.getProperty("os.name")}')")
 }
