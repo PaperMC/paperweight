@@ -44,6 +44,7 @@ import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Locale
 import java.util.Optional
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.*
@@ -130,18 +131,20 @@ val Project.isBaseExecution: Boolean
 
 val redirectThreadCount: AtomicLong = AtomicLong(0)
 
-fun redirect(input: InputStream, out: OutputStream): Thread {
-    return Thread {
+fun redirect(input: InputStream, out: OutputStream): CompletableFuture<Unit> {
+    val future = CompletableFuture<Unit>()
+    val thread = Thread {
         try {
             input.copyTo(out)
-        } catch (e: Exception) {
-            throw PaperweightException("", e)
+            future.complete(Unit)
+        } catch (e: Throwable) {
+            future.completeExceptionally(PaperweightException("Failed to copy $input to $out", e))
         }
-    }.apply {
-        name = "paperweight stream redirect thread #${redirectThreadCount.getAndIncrement()}"
-        isDaemon = true
-        start()
     }
+    thread.name = "paperweight stream redirect thread #${redirectThreadCount.getAndIncrement()}"
+    thread.isDaemon = true
+    thread.start()
+    return future
 }
 
 object UselessOutputStream : OutputStream() {
