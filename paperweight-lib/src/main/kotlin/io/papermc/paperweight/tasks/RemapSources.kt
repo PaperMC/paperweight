@@ -283,9 +283,10 @@ abstract class RemapSources : JavaLauncherTask() {
             val name = when (val declaringNode = context.compilationUnit.findDeclaringNode(binding)) {
                 is VariableDeclarationFragment -> declaringNode.name
                 is MethodDeclaration -> declaringNode.name
+                null -> null
                 else -> return false
             }
-            if (name === node) {
+            if (name != null && name === node) {
                 // this is the actual declaration
                 return false
             }
@@ -321,59 +322,80 @@ abstract class RemapSources : JavaLauncherTask() {
             }
 
             when (val p = node.parent) {
-                is FieldAccess, is SuperFieldAccess, is QualifiedName, is ThisExpression, is MethodReference, is SuperMethodInvocation -> return
+                is FieldAccess, is SuperFieldAccess, is ThisExpression, is MethodReference, is SuperMethodInvocation, is MemberValuePair -> return
                 is MethodInvocation -> {
-                    if (p.expression != null && p.expression !== node) {
+                    if (!p.arguments().contains(node)) {
+                        if (p.expression != null && p.expression !== node) {
+                            return
+                        }
+                    }
+                }
+                is QualifiedName -> {
+                    if (p.qualifier !== node) {
                         return
                     }
                 }
-            }
-
-            // find declaring method
-            var parentNode: ASTNode? = node
-            loop@ while (parentNode != null) {
-                when (parentNode) {
-                    is MethodDeclaration, is AnonymousClassDeclaration, is LambdaExpression, is Initializer -> break@loop
+                is ClassInstanceCreation -> {
+                    if (!p.arguments().contains(node)) {
+                        return
+                    }
                 }
-                parentNode = parentNode.parent
             }
 
             val rewrite = context.createASTRewrite()
             val fieldAccess = rewrite.ast.newFieldAccess()
 
             val expr: Expression = if (!Modifier.isStatic(modifiers)) {
+                val accessible = mutableListOf<ITypeBinding>()
+                var curr: ASTNode = node
+                while (true) {
+                    if (curr is TypeDeclaration) {
+                        accessible += curr.resolveBinding() ?: break
+                    } else if (curr is AnonymousClassDeclaration) {
+                        accessible += curr.resolveBinding() ?: break
+                    }
+                    val m = when (curr) {
+                        is MethodDeclaration -> curr.modifiers
+                        is FieldDeclaration -> curr.modifiers
+                        is Initializer -> curr.modifiers
+                        is TypeDeclaration -> curr.modifiers
+                        else -> null
+                    }
+                    if (m != null && Modifier.isStatic(m)) {
+                        break
+                    }
+                    curr = curr.parent ?: break
+                }
+
                 rewrite.ast.newThisExpression().also { thisExpr ->
-                    if (parentNode is LambdaExpression) {
+                    if (accessible.size == 1) {
                         return@also
                     }
-
-                    if (parentNode is AnonymousClassDeclaration && referringClass.erasure != parentNode.resolveBinding().erasure) {
-                        val name = getNameNode(referringClass) ?: return
-                        thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
-                        return@also
-                    }
-
-                    val methodDec = parentNode as? MethodDeclaration ?: return@also
-
-                    var methodClass = methodDec.resolveBinding()?.declaringClass ?: return // silently return if binding does not resolve
-                    if (methodClass.isAnonymous) {
-                        val name = getNameNode(referringClass) ?: return
-                        thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
-                        return@also
-                    }
-
-                    if (referringClass.erasure != methodClass.erasure && methodClass.isNested && !Modifier.isStatic(methodClass.modifiers)) {
-                        while (true) {
-                            methodClass = methodClass.declaringClass ?: break
+                    val accessibleTargetCls = accessible.find { referringClass.isCastCompatible(it) }
+                        ?: return@also
+                    if (accessibleTargetCls.isAnonymous) {
+                        if (accessible.indexOf(accessibleTargetCls) == 0) {
+                            return@also
                         }
-                        // Looks like the method is accessing an outer class's fields
-                        if (referringClass.erasure == methodClass.erasure) {
-                            val name = getNameNode(referringClass) ?: return
-                            thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
-                        }
+                        return
+                    }
+
+                    if (!accessibleTargetCls.isCastCompatible(accessible[0])) {
+                        val name = getNameNode(accessibleTargetCls)
+                            ?: return@also
+                        thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
                     }
                 }
             } else {
+                // find declaring method
+                var parentNode: ASTNode? = node
+                loop@ while (parentNode != null) {
+                    when (parentNode) {
+                        is MethodDeclaration, is AnonymousClassDeclaration, is LambdaExpression, is Initializer -> break@loop
+                    }
+                    parentNode = parentNode.parent
+                }
+
                 if (parentNode is Initializer && Modifier.isStatic(parentNode.modifiers)) {
                     // Can't provide explicit static receiver here
                     return
