@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
@@ -382,7 +383,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
                     if (!accessibleTargetCls.isCastCompatible(accessible[0])) {
                         val name = getNameNode(accessibleTargetCls)
-                            ?: return@also
+                            ?: throw PaperweightException("Could not find name node for ${accessibleTargetCls.qualifiedName}")
                         thisExpr.qualifier = rewrite.createCopyTarget(name) as Name
                     }
                 }
