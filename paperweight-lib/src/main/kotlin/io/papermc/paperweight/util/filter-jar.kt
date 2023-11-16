@@ -31,22 +31,20 @@ fun filterJar(
     includes: List<String>,
     predicate: (Path) -> Boolean = { false }
 ) {
-    val target = outputJar.resolveSibling("${outputJar.name}.dir")
-    target.createDirectories()
+    ensureDeleted(outputJar)
 
-    inputJar.openZip().use { zip ->
-        val matchers = includes.map { zip.getPathMatcher("glob:$it") }
+    outputJar.writeZip().use { outputFs ->
+        inputJar.openZip().use { inputFs ->
+            val matchers = includes.map { inputFs.getPathMatcher("glob:$it") }
 
-        zip.walk().use { stream ->
-            stream.filter { p -> predicate(p) || matchers.any { matcher -> matcher.matches(p) } }
-                .forEach { p ->
-                    val targetFile = target.resolve(p.absolutePathString().substring(1))
-                    targetFile.parent.createDirectories()
-                    p.copyTo(targetFile)
-                }
+            inputFs.walk().use { stream ->
+                stream.filter { p -> predicate(p) || matchers.any { matcher -> matcher.matches(p) } }
+                    .forEach { p ->
+                        val targetFile = outputFs.getPath(p.toAbsolutePath().invariantSeparatorsPathString.substring(1))
+                        targetFile.parent?.createDirectories()
+                        p.copyTo(targetFile)
+                    }
+            }
         }
     }
-
-    zip(target, outputJar)
-    target.deleteRecursively()
 }

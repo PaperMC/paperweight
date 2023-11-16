@@ -64,7 +64,7 @@ class RunPaperclip(
         val logFile = outputJar.siblingLogFile()
 
         val work = createTempDirectory()
-        logFile.deleteForcefully()
+        ensureDeleted(logFile)
 
         // Copy in mojang jar, so we don't download it twice
         val cache = work.resolve("cache")
@@ -85,7 +85,7 @@ class RunPaperclip(
             handleOldPaperclip(work, outputJar)
         }
 
-        work.deleteRecursively()
+        ensureDeleted(work)
     }
 
     private fun handleBundler(paperclip: Path, work: Path, outputJar: Path) {
