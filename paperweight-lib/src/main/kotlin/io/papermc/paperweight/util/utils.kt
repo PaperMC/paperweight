@@ -38,7 +38,6 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -223,7 +222,7 @@ fun ensureDeleted(vararg files: Any) {
         try {
             f.deleteRecursively()
         } catch (e: Exception) {
-            throw PaperweightException("Failed to delete file $f", e)
+            throw PaperweightException("Failed to delete file or directory $f", e)
         }
     }
 }
@@ -268,13 +267,15 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
-enum class HashingAlgorithm(algorithm: String) {
+enum class HashingAlgorithm(val algorithmName: String) {
     SHA256("SHA-256"),
     SHA1("SHA-1");
 
-    private val threadLocalMessageDigest = ThreadLocal.withInitial { MessageDigest.getInstance(algorithm) }
+    private val threadLocalMessageDigest = ThreadLocal.withInitial { createDigest() }
 
-    val digest: MessageDigest
+    fun createDigest(): MessageDigest = MessageDigest.getInstance(algorithmName)
+
+    val threadLocalDigest: MessageDigest
         get() = threadLocalMessageDigest.get()
 }
 
@@ -288,17 +289,22 @@ class Hash(
     val valueLower: String by lazy { value.toLowerCase(Locale.ENGLISH) }
 }
 
-fun String.hash(algorithm: HashingAlgorithm): ByteArray = byteInputStream().hash(algorithm)
+fun String.hash(algorithm: HashingAlgorithm): ByteArray = algorithm.threadLocalDigest.let {
+    it.update(toByteArray())
+    it.digest()
+}
 
-fun InputStream.hash(algorithm: HashingAlgorithm): ByteArray {
-    val digestStream = DigestInputStream(this, algorithm.digest)
-    digestStream.use { stream ->
-        val buffer = ByteArray(1024)
-        while (stream.read(buffer) != -1) {
-            // reading
+fun InputStream.hash(algorithm: HashingAlgorithm, bufferSize: Int = 8192): ByteArray {
+    val digest = algorithm.threadLocalDigest
+    val buffer = ByteArray(bufferSize)
+    while (true) {
+        val count = read(buffer)
+        if (count == -1) {
+            break
         }
+        digest.update(buffer, 0, count)
     }
-    return digestStream.messageDigest.digest()
+    return digest.digest()
 }
 
 fun ByteArray.asHexString(): String {
