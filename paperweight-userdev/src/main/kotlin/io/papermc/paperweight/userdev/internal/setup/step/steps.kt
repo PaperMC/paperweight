@@ -24,6 +24,7 @@ package io.papermc.paperweight.userdev.internal.setup.step
 
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
+import io.papermc.paperweight.userdev.internal.setup.util.HashFunction
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
 import java.nio.file.Path
@@ -61,20 +62,24 @@ object StepExecutor {
     private val inputOutputDataCache: MutableMap<KClass<out SetupStep>, InputOutputData> =
         ConcurrentHashMap<KClass<out SetupStep>, InputOutputData>()
 
-    fun executeSteps(context: SetupHandler.Context, vararg steps: SetupStep) {
+    fun executeSteps(expectingChange: Boolean, context: SetupHandler.Context, vararg steps: SetupStep) {
+        // if we aren't expecting change, assume the last step is the output that matters
+        // and only verify its inputs/outputs - if it fails then we need to go back through
+        // and check each step anyway
+        if (!expectingChange) {
+            val lastStep = steps.last()
+            if (makeHashFunction(lastStep).upToDate(lastStep.hashFile)) {
+                return
+            }
+        }
+
         for (step in steps) {
             executeStep(context, step)
         }
     }
 
     fun executeStep(context: SetupHandler.Context, step: SetupStep) {
-        val data = step.inputOutputData
-        val inputs = data.inputs.mapNotNull { it.get(step) }
-        val outputs = data.outputs.mapNotNull { it.get(step) }
-
-        val hashFunction = buildHashFunction(inputs, outputs) {
-            step.touchHashFunctionBuilder(this)
-        }
+        val hashFunction = makeHashFunction(step)
 
         if (hashFunction.upToDate(step.hashFile)) {
             return
@@ -87,6 +92,16 @@ object StepExecutor {
         UserdevSetup.LOGGER.info("done executing '{}', took {}s", step.name, elapsed / 1000.00)
 
         hashFunction.writeHash(step.hashFile)
+    }
+
+    private fun makeHashFunction(step: SetupStep): HashFunction {
+        val data = step.inputOutputData
+        val inputs = data.inputs.mapNotNull { it.get(step) }
+        val outputs = data.outputs.mapNotNull { it.get(step) }
+
+        return buildHashFunction(inputs, outputs) {
+            step.touchHashFunctionBuilder(this)
+        }
     }
 
     private val SetupStep.inputOutputData: InputOutputData

@@ -137,6 +137,7 @@ class SetupHandlerImplV2(
         )
 
         StepExecutor.executeSteps(
+            bundle.changed,
             context,
             downloadMcLibs,
             filterVanillaJarStep,

@@ -107,6 +107,7 @@ class SetupHandlerImpl(
         )
 
         StepExecutor.executeSteps(
+            bundle.changed,
             context,
             extractStep,
             filterVanillaJarStep,
