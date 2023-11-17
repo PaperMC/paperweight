@@ -46,10 +46,10 @@ data class ExtractedBundle<C>(
 
 fun extractDevBundle(
     destinationDirectory: Path,
-    devBundle: Path
+    devBundle: Path,
+    newDevBundleHash: String
 ): ExtractedBundle<Any> {
     val hashFile = destinationDirectory.resolve("current.sha256")
-    val newDevBundleHash = devBundle.sha256asHex()
 
     if (destinationDirectory.exists()) {
         val currentDevBundleHash = if (hashFile.isRegularFile()) hashFile.readText(Charsets.UTF_8) else ""
