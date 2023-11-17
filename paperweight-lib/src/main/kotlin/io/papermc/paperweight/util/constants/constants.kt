@@ -115,6 +115,8 @@ const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 
 const val RELOCATION_EXTENSION = "relocation"
 
+const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
+
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String) = "$TASK_CACHE/$name.$ext"

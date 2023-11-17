@@ -54,7 +54,7 @@ class PaperweightPatcher : Plugin<Project> {
 
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class, target)
 
-        target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
+        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {}
 
         target.tasks.register<Delete>("cleanCache") {
             group = "paperweight"

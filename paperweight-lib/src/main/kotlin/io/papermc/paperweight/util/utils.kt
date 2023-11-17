@@ -118,7 +118,7 @@ inline fun <reified T : Task> TaskContainer.configureTask(name: String, noinline
 
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
-    get() = gradle.sharedServices.registrations.getByName("download").service as Provider<DownloadService>
+    get() = gradle.sharedServices.registrations.getByName(DOWNLOAD_SERVICE_NAME).service as Provider<DownloadService>
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")
