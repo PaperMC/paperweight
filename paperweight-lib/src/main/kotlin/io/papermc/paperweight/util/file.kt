@@ -23,6 +23,7 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
+import java.io.InputStream
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -161,37 +162,39 @@ fun Path.hashFile(algorithm: HashingAlgorithm): ByteArray = inputStream().use { 
 
 fun Path.sha256asHex(): String = hashFile(HashingAlgorithm.SHA256).asHexString()
 
-fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean {
+fun Path.contentEquals(two: InputStream, bufferSizeBytes: Int = 8192): Boolean {
     inputStream().use { one ->
-        file.inputStream().use { two ->
+        val bufOne = ByteArray(bufferSizeBytes)
+        val bufTwo = ByteArray(bufferSizeBytes)
 
-            val bufOne = ByteArray(bufferSizeBytes)
-            val bufTwo = ByteArray(bufferSizeBytes)
+        while (true) {
+            val readOne = one.read(bufOne)
+            val readTwo = two.read(bufTwo)
 
-            while (true) {
-                val readOne = one.read(bufOne)
-                val readTwo = two.read(bufTwo)
+            if (readOne != readTwo) {
+                // length differs
+                return false
+            }
 
-                if (readOne != readTwo) {
-                    // length differs
-                    return false
-                }
+            if (readOne == -1) {
+                // end of content
+                break
+            }
 
-                if (readOne == -1) {
-                    // end of content
-                    break
-                }
-
-                if (!Arrays.equals(bufOne, 0, readOne, bufTwo, 0, readOne)) {
-                    // content differs
-                    return false
-                }
+            if (!Arrays.equals(bufOne, 0, readOne, bufTwo, 0, readOne)) {
+                // content differs
+                return false
             }
         }
     }
 
     return true
 }
+
+fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean =
+    file.inputStream().use { two ->
+        contentEquals(two, bufferSizeBytes)
+    }
 
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
 

@@ -40,6 +40,9 @@ class FileUtilsTest {
         val two = tempDir.resolve("${FileUtilsTest::class.simpleName}.class_1")
         two.writeBytes(someBytes)
 
+        // assert the content equals what we just wrote
+        assertTrue(one.contentEquals(someBytes.inputStream()), "File content doesn't equal what was written to the file")
+
         // assert the files have matching content
         assertTrue(one.contentEquals(two), "These files have the same content")
         assertTrue(two.contentEquals(one), "These files have the same content")

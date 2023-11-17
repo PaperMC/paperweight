@@ -89,7 +89,7 @@ private fun upToDate(
     xmlIn: String
 ): Boolean {
     val bin = binDest.isRegularFile() && binDest.contentEquals(binaryIn)
-    val xml = ivyXml.isRegularFile() && ivyXml.readText(Charsets.UTF_8) == xmlIn
+    val xml = ivyXml.isRegularFile() && ivyXml.contentEquals(xmlIn.byteInputStream())
     val sources = if (sourcesIn == null) {
         sourcesDest.notExists()
     } else {
