@@ -88,12 +88,12 @@ private fun upToDate(
     binaryIn: Path,
     xmlIn: String
 ): Boolean {
-    val bin = binDest.isRegularFile() && binDest.sha256asHex() == binaryIn.sha256asHex()
+    val bin = binDest.isRegularFile() && binDest.contentEquals(binaryIn)
     val xml = ivyXml.isRegularFile() && ivyXml.readText(Charsets.UTF_8) == xmlIn
     val sources = if (sourcesIn == null) {
         sourcesDest.notExists()
     } else {
-        sourcesDest.isRegularFile() && sourcesDest.sha256asHex() == sourcesIn.sha256asHex()
+        sourcesDest.isRegularFile() && sourcesDest.contentEquals(sourcesIn)
     }
     return bin && xml && sources
 }

@@ -30,6 +30,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
+import java.util.Arrays
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -159,6 +160,38 @@ fun ProcessBuilder.directory(path: Path?): ProcessBuilder = directory(path?.toFi
 fun Path.hashFile(algorithm: HashingAlgorithm): ByteArray = inputStream().use { input -> input.hash(algorithm) }
 
 fun Path.sha256asHex(): String = hashFile(HashingAlgorithm.SHA256).asHexString()
+
+fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean {
+    inputStream().use { one ->
+        file.inputStream().use { two ->
+
+            val bufOne = ByteArray(bufferSizeBytes)
+            val bufTwo = ByteArray(bufferSizeBytes)
+
+            while (true) {
+                val readOne = one.read(bufOne)
+                val readTwo = two.read(bufTwo)
+
+                if (readOne != readTwo) {
+                    // length differs
+                    return false
+                }
+
+                if (readOne == -1) {
+                    // end of content
+                    break
+                }
+
+                if (!Arrays.equals(bufOne, 0, readOne, bufTwo, 0, readOne)) {
+                    // content differs
+                    return false
+                }
+            }
+        }
+    }
+
+    return true
+}
 
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
 
