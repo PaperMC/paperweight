@@ -45,6 +45,17 @@ dependencies {
     compileOnly(kotlin("stdlib-jdk8"))
 }
 
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useKotlinTest(embeddedKotlinVersion)
+            dependencies {
+                implementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
+            }
+        }
+    }
+}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "11"
