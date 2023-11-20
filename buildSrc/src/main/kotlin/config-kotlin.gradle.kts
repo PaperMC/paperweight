@@ -3,8 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     idea
     id("org.gradle.kotlin.kotlin-dsl")
-    id("org.cadixdev.licenser")
-    id("org.jlleitschuh.gradle.ktlint")
+    id("net.kyori.indra.licenser.spotless")
 }
 
 java {
@@ -74,27 +73,33 @@ tasks.jar {
     }
 }
 
-ktlint {
-    enableExperimentalRules.set(true)
-
-    disabledRules.addAll(
-        "no-wildcard-imports",
-        "filename",
-        "trailing-comma-on-call-site",
-        "trailing-comma-on-declaration-site",
-        "experimental:function-signature",
-    )
-}
-
 tasks.register("format") {
     group = "formatting"
     description = "Formats source code according to project style"
-    dependsOn(tasks.licenseFormat, tasks.ktlintFormat)
+    dependsOn(tasks.spotlessApply)
 }
 
-license {
-    header.set(resources.text.fromFile(rootProject.file("license/copyright.txt")))
-    include("**/*.kt")
+indraSpotlessLicenser {
+    licenseHeaderFile(rootProject.file("license/copyright.txt"))
+    newLine(true)
+}
+
+spotless {
+    val overrides = mapOf(
+        "ktlint_standard_no-wildcard-imports" to "disabled",
+        "ktlint_standard_filename" to "disabled",
+        "ktlint_standard_trailing-comma-on-call-site" to "disabled",
+        "ktlint_standard_trailing-comma-on-declaration-site" to "disabled",
+    )
+
+    val ktlintVer = "0.50.0"
+
+    kotlin {
+        ktlint(ktlintVer).editorConfigOverride(overrides)
+    }
+    kotlinGradle {
+        ktlint(ktlintVer).editorConfigOverride(overrides)
+    }
 }
 
 idea {

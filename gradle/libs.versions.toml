@@ -32,9 +32,9 @@ jbsdiff = "io.sigpipe:jbsdiff:1.0"
 diffpatch = "net.minecraftforge:DiffPatch:2.0.7"
 
 # Gradle
-gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.1"
+gradle-licenser = "net.kyori:indra-licenser-spotless:3.1.3"
+gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:6.22.0"
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1"
-gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:11.6.1"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.1.2"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.2.1"
