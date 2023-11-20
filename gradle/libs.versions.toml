@@ -29,7 +29,7 @@ slf4j-jdk14 = "org.slf4j:slf4j-jdk14:1.7.32"
 lorenzTiny = "net.fabricmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
-diffpatch = "net.minecraftforge:DiffPatch:2.0.7"
+diffpatch = "codechicken:DiffPatch:1.5.0.29"
 
 # Gradle
 gradle-licenser = "net.kyori:indra-licenser-spotless:3.1.3"

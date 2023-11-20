@@ -24,7 +24,7 @@ repositories {
     }
     maven("https://repo.papermc.io/repository/maven-public/") {
         mavenContent {
-            includeGroup("net.minecraftforge")
+            includeGroup("codechicken")
             includeGroup("net.fabricmc")
         }
     }
