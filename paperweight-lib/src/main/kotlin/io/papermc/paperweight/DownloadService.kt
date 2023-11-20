@@ -69,7 +69,7 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
         if (hash == null) {
             return
         }
-        val dlHash = target.hashFile(hash.algorithm).asHexString().toLowerCase(Locale.ENGLISH)
+        val dlHash = target.hashFile(hash.algorithm).asHexString().lowercase(Locale.ENGLISH)
         if (dlHash == hash.valueLower) {
             return
         }

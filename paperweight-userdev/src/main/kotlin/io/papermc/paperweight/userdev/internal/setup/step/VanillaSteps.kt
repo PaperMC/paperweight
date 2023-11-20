@@ -41,21 +41,19 @@ class VanillaSteps(
     val mojangJar: Path = cache.resolve(paperSetupOutput("downloadServerJar", "jar"))
     val serverMappings: Path = cache.resolve(SERVER_MAPPINGS)
 
-    fun downloadVanillaServerJar(): DownloadResult<Unit> =
-        downloadService.download(
-            "vanilla minecraft server jar",
-            versionManifest.serverDownload().url,
-            mojangJar,
-            expectedHash = versionManifest.serverDownload().hash()
-        )
+    fun downloadVanillaServerJar(): DownloadResult<Unit> = downloadService.download(
+        "vanilla minecraft server jar",
+        versionManifest.serverDownload().url,
+        mojangJar,
+        expectedHash = versionManifest.serverDownload().hash()
+    )
 
-    fun downloadServerMappings(): DownloadResult<Unit> =
-        downloadService.download(
-            "mojang server mappings",
-            versionManifest.serverMappingsDownload().url,
-            serverMappings,
-            expectedHash = versionManifest.serverMappingsDownload().hash()
-        )
+    fun downloadServerMappings(): DownloadResult<Unit> = downloadService.download(
+        "mojang server mappings",
+        versionManifest.serverMappingsDownload().url,
+        serverMappings,
+        expectedHash = versionManifest.serverMappingsDownload().hash()
+    )
 
     private fun downloadMinecraftManifest(force: Boolean): DownloadResult<MinecraftManifest> =
         downloadService.download("minecraft manifest", MC_MANIFEST_URL, cache.resolve(MC_MANIFEST), force)

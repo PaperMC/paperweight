@@ -47,10 +47,10 @@ open class DefaultPatchTaskConfig @Inject constructor(
     override val importMcDev: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     override val patchTaskName: String
-        get() = "apply${name.capitalize()}Patches"
+        get() = "apply${name.capitalized()}Patches"
 
     override val rebuildTaskName: String
-        get() = "rebuild${name.capitalize()}Patches"
+        get() = "rebuild${name.capitalized()}Patches"
 
     override val patchTask: TaskProvider<PatcherApplyGitPatches>
         get() = tasks.providerFor(patchTaskName)

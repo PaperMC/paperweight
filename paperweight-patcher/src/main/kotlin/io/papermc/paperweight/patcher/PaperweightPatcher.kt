@@ -219,7 +219,7 @@ class PaperweightPatcher : Plugin<Project> {
 
         val upstreamData = tasks.configureTask<PaperweightPatcherUpstreamData>(upstream.upstreamDataTaskName) {
             workDir.convention(workDirFromProp)
-            dataFile.convention(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalize()}.json") })
+            dataFile.convention(workDirFromProp.map { it.file("upstreamData${upstream.name.capitalized()}.json") })
         }
 
         val cloneTask = (upstream as? RepoPatcherUpstream)?.let { repo ->
@@ -288,10 +288,7 @@ class PaperweightPatcher : Plugin<Project> {
         return patchTask
     }
 
-    private fun Project.rebuildPatchTask(
-        config: PatchTaskConfig,
-        rebuildPatches: TaskProvider<Task>
-    ): TaskProvider<RebuildGitPatches> {
+    private fun Project.rebuildPatchTask(config: PatchTaskConfig, rebuildPatches: TaskProvider<Task>): TaskProvider<RebuildGitPatches> {
         val rebuildTask = tasks.configureTask<RebuildGitPatches>(config.rebuildTaskName) {
             group = "paperweight"
 

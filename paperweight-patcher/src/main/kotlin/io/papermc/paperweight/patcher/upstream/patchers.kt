@@ -43,7 +43,7 @@ open class DefaultRepoPatcherUpstream(
     override val ref: Property<String> = objects.property()
 
     override val cloneTaskName: String
-        get() = "clone${name.capitalize()}Repo"
+        get() = "clone${name.capitalized()}Repo"
     override val cloneTask: TaskProvider<CheckoutRepo>
         get() = tasks.providerFor(cloneTaskName)
 

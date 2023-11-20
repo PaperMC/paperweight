@@ -6,7 +6,7 @@ plugins {
 dependencies {
     shade(projects.paperweightLib)
 
-    implementation(libs.kotson)
+    implementation(libs.bundles.kotson)
 }
 
 gradlePlugin {

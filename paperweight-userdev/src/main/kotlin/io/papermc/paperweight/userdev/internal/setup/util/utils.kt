@@ -75,8 +75,7 @@ fun hashFiles(files: List<Path>): String = files.asSequence()
         "${it.fileName.pathString}:${it.sha256asHex()}"
     }
 
-fun hashDirectory(dir: Path): String =
-    Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
+fun hashDirectory(dir: Path): String = Files.walk(dir).use { stream -> hashFiles(stream.filter { it.isRegularFile() }.collect(Collectors.toList())) }
 
 fun DownloadService.download(
     downloadName: String,
@@ -108,10 +107,7 @@ fun DownloadService.download(
     return DownloadResult(destination, true, Unit)
 }
 
-fun buildHashFunction(
-    vararg things: Any,
-    op: HashFunctionBuilder.() -> Unit = {}
-): HashFunction = HashFunction {
+fun buildHashFunction(vararg things: Any, op: HashFunctionBuilder.() -> Unit = {}): HashFunction = HashFunction {
     val builder = HashFunctionBuilder.create()
     builder.op()
     if (builder.includePaperweightHash) {
@@ -123,8 +119,7 @@ fun buildHashFunction(
 }
 
 data class DownloadResult<D>(val path: Path, val didDownload: Boolean, val data: D) {
-    fun <N> mapData(mapper: (DownloadResult<D>) -> N): DownloadResult<N> =
-        DownloadResult(path, didDownload, mapper(this))
+    fun <N> mapData(mapper: (DownloadResult<D>) -> N): DownloadResult<N> = DownloadResult(path, didDownload, mapper(this))
 }
 
 interface HashFunctionBuilder : MutableList<Any> {
@@ -189,12 +184,11 @@ val Project.genSources: Boolean
 val Project.sharedCaches: Boolean
     get() = providers.gradleProperty(experimentalProp("sharedCaches")).orNull.toBoolean()
 
-private fun deleteUnusedAfter(target: Project): Long =
-    target.providers.gradleProperty(experimentalProp("sharedCaches.deleteUnusedAfter"))
-        .map { value -> parseDuration(value) }
-        .orElse(Duration.ofDays(7))
-        .map { duration -> duration.toMillis() }
-        .get()
+private fun deleteUnusedAfter(target: Project): Long = target.providers.gradleProperty(experimentalProp("sharedCaches.deleteUnusedAfter"))
+    .map { value -> parseDuration(value) }
+    .orElse(Duration.ofDays(7))
+    .map { duration -> duration.toMillis() }
+    .get()
 
 fun lastUsedFile(cacheDir: Path): Path = cacheDir.resolve(paperSetupOutput("last-used", "txt"))
 

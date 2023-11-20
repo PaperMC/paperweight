@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation(libs.httpclient)
-    implementation(libs.kotson)
+    implementation(libs.bundles.kotson)
 
     // ASM for inspection
     implementation(libs.bundles.asm)
@@ -17,7 +17,7 @@ dependencies {
 
     implementation(libs.jbsdiff)
 
-    implementation("net.minecraftforge:DiffPatch:2.0.7:all") {
+    implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
 }

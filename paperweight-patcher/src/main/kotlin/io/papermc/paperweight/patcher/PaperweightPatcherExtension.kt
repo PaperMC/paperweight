@@ -58,7 +58,7 @@ open class PaperweightPatcherExtension(project: Project, private val objects: Ob
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
-    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
+    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.lowercase(Locale.ENGLISH))
 
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()

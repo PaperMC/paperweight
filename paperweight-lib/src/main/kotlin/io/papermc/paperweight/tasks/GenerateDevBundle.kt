@@ -262,12 +262,11 @@ abstract class GenerateDevBundle : DefaultTask() {
             }
     }
 
-    private fun excluded(relocation: Relocation, potential: String): Boolean =
-        relocation.excludes.map {
-            it.replace('.', '/')
-        }.any { exclude ->
-            SelectorUtils.matchPath(exclude, potential, true)
-        }
+    private fun excluded(relocation: Relocation, potential: String): Boolean = relocation.excludes.map {
+        it.replace('.', '/')
+    }.any { exclude ->
+        SelectorUtils.matchPath(exclude, potential, true)
+    }
 
     private fun diffFiles(fileName: String, original: Path, patched: Path): String {
         val dir = createTempDirectory("diff")
@@ -372,7 +371,7 @@ abstract class GenerateDevBundle : DefaultTask() {
                 dependency.versionConstraint.preferredVersion,
                 dependency.version
             ).first { it.isNotBlank() }
-            new += ModuleId(dependency.group, dependency.name, version)
+            new += ModuleId(dependency.group ?: error("Missing group for $dependency"), dependency.name, version)
         }
 
         for (vanillaLib in vanillaServerLibraries) {
@@ -447,7 +446,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val currentDataVersion = 3
 
         fun createCoordinatesFor(project: Project): String =
-            sequenceOf(project.group, project.name.toLowerCase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
+            sequenceOf(project.group, project.name.lowercase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
     }
 
     private fun checkEnvironment() {

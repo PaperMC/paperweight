@@ -47,15 +47,14 @@ open class CraftBukkitExtension(objects: ObjectFactory, workDir: DirectoryProper
     val specialSourceJar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "SpecialSource.jar")
     val specialSource2Jar: RegularFileProperty = objects.fileFrom(buildDataBinDir, "SpecialSource-2.jar")
 
-    private fun ObjectFactory.bukkitFileFrom(base: DirectoryProperty, extension: String): RegularFileProperty =
-        fileProperty().convention(
-            base.flatMap { dir ->
-                val file = dir.path.useDirectoryEntries { it.filter { f -> f.name.endsWith(extension) }.singleOrNull() }
-                if (file != null) {
-                    mappingsDir.file(file.name)
-                } else {
-                    fileProperty()
-                }
+    private fun ObjectFactory.bukkitFileFrom(base: DirectoryProperty, extension: String): RegularFileProperty = fileProperty().convention(
+        base.flatMap { dir ->
+            val file = dir.path.useDirectoryEntries { it.filter { f -> f.name.endsWith(extension) }.singleOrNull() }
+            if (file != null) {
+                mappingsDir.file(file.name)
+            } else {
+                fileProperty()
             }
-        )
+        }
+    )
 }

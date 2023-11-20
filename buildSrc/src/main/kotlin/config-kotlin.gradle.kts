@@ -77,7 +77,13 @@ tasks.jar {
 ktlint {
     enableExperimentalRules.set(true)
 
-    disabledRules.add("no-wildcard-imports")
+    disabledRules.addAll(
+        "no-wildcard-imports",
+        "filename",
+        "trailing-comma-on-call-site",
+        "trailing-comma-on-declaration-site",
+        "experimental:function-signature",
+    )
 }
 
 tasks.register("format") {

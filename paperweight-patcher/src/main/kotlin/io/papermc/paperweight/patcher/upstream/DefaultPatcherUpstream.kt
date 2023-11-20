@@ -42,7 +42,7 @@ open class DefaultPatcherUpstream(
     }
 
     override val upstreamDataTaskName: String
-        get() = "get${name.capitalize()}UpstreamData"
+        get() = "get${name.capitalized()}UpstreamData"
     override val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
         get() = tasks.providerFor(upstreamDataTaskName)
 
