@@ -299,6 +299,7 @@ abstract class PaperweightUser : Plugin<Project> {
                 parameters {
                     cache.set(cacheDir)
                     bundleZip.set(devBundleZip)
+                    bundleZipHash.set(bundleHash)
                     downloadService.set(target.download)
                     genSources.set(target.genSources)
                 }

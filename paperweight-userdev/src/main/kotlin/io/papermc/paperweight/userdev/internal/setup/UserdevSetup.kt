@@ -47,6 +47,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
 
     interface Parameters : BuildServiceParameters {
         val bundleZip: RegularFileProperty
+        val bundleZipHash: Property<String>
         val cache: RegularFileProperty
         val downloadService: Property<DownloadService>
         val genSources: Property<Boolean>
@@ -55,7 +56,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     private val extractDevBundle: ExtractedBundle<Any> = lockSetup(parameters.cache.path) {
         val extract = extractDevBundle(
             parameters.cache.path.resolve(paperSetupOutput("extractDevBundle", "dir")),
-            parameters.bundleZip.path
+            parameters.bundleZip.path,
+            parameters.bundleZipHash.get()
         )
         lastUsedFile(parameters.cache.path).writeText(System.currentTimeMillis().toString())
         extract
