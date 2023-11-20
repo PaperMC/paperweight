@@ -23,6 +23,7 @@
 package io.papermc.paperweight.userdev.internal.setup.step
 
 import codechicken.diffpatch.cli.PatchOperation
+import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
@@ -65,7 +66,7 @@ class ApplyDevBundlePatches(
             PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
                 val op = PatchOperation.builder()
                     .logTo(logOut)
-                    .verbose(true)
+                    .level(LogLevel.ALL)
                     .summary(true)
                     .basePath(decompiledJar, ArchiveFormat.ZIP)
                     .patchesPath(tempPatchDir)
