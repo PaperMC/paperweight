@@ -5,8 +5,8 @@ plugins {
 
 dependencies {
     shade(projects.paperweightLib)
-    implementation(libs.kotson)
-    implementation("net.minecraftforge:DiffPatch:2.0.7:all") {
+    implementation(libs.bundles.kotson)
+    implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
 }

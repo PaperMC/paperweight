@@ -1,7 +1,5 @@
 rootProject.name = "buildSrc"
 
-enableFeaturePreview("VERSION_CATALOGS")
-
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {

@@ -163,7 +163,7 @@ private fun Project.createBuildTasks(
         remapper.from(parent.configurations.named(REMAPPER_CONFIG))
         remapperArgs.set(TinyRemapper.minecraftRemapArgs)
 
-        outputJar.set(buildDir.resolve("libs/${project.name}-${project.version}-reobf.jar"))
+        outputJar.set(layout.buildDirectory.map { it.dir("libs").file("${project.name}-${project.version}-reobf.jar") })
     }
 
     return ServerTasks(fixJarForReobf, reobfJar)

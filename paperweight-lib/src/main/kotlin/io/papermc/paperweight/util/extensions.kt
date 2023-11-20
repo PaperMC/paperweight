@@ -30,8 +30,6 @@ import org.gradle.api.model.ObjectFactory
 fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
     directoryProperty().convention(layout.projectDirectory.dir(path))
 
-fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty =
-    directoryProperty().convention(base.dir(name))
+fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty = directoryProperty().convention(base.dir(name))
 
-fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty =
-    fileProperty().convention(base.file(name))
+fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty = fileProperty().convention(base.file(name))

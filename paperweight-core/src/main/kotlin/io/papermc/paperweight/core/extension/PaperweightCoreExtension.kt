@@ -43,7 +43,7 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     val serverProject: Property<Project> = objects.property()
 
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
-    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.toLowerCase(Locale.ENGLISH))
+    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.lowercase(Locale.ENGLISH))
 
     val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
 

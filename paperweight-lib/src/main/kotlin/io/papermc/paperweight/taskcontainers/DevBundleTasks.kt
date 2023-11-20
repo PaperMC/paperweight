@@ -67,11 +67,11 @@ class DevBundleTasks(
         bundlerJarName: String,
         mainClassName: Property<String>,
         minecraftVer: Provider<String>,
-        decompileJar: Provider<Path?>,
-        serverLibrariesTxt: Provider<Path?>,
-        serverLibrariesListFile: Provider<Path?>,
-        vanillaBundlerJarFile: Provider<Path?>,
-        accessTransformFile: Provider<Path?>,
+        decompileJar: Provider<Path>,
+        serverLibrariesTxt: Provider<Path>,
+        serverLibrariesListFile: Provider<Path>,
+        vanillaBundlerJarFile: Provider<Path>,
+        accessTransformFile: Provider<Path>,
         versionJsonFile: Provider<RegularFile>,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {

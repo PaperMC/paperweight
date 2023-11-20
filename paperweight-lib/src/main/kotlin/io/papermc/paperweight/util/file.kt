@@ -55,10 +55,10 @@ val Provider<out FileSystemLocation>.pathOrNull: Path?
     get() = orNull?.path
 
 fun FileSystemLocationProperty<*>.set(path: Path?) = set(path?.toFile())
-fun <P : FileSystemLocationProperty<*>> P.pathProvider(path: Provider<Path?>) = apply { fileProvider(path.map { it.toFile() }) }
+fun <P : FileSystemLocationProperty<*>> P.pathProvider(path: Provider<Path>) = apply { fileProvider(path.map { it.toFile() }) }
 
-fun DirectoryProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.dir(path.map { it.toFile() }))
-fun RegularFileProperty.convention(project: Project, path: Provider<Path?>) = convention(project.layout.file(path.map { it.toFile() }))
+fun DirectoryProperty.convention(project: Project, path: Provider<Path>) = convention(project.layout.dir(path.map { it.toFile() }))
+fun RegularFileProperty.convention(project: Project, path: Provider<Path>) = convention(project.layout.file(path.map { it.toFile() }))
 fun DirectoryProperty.convention(project: Project, path: Path) = convention(project.layout.dir(project.provider { path.toFile() }))
 
 val Path.isLibraryJar: Boolean
@@ -128,9 +128,7 @@ fun Path.copyRecursivelyTo(target: Path) {
     }
 }
 
-fun Path.filesMatchingRecursive(
-    glob: String = "*",
-): List<Path> {
+fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
     val matcher = fileSystem.getPathMatcher("glob:$glob")
     return Files.walk(this).use { stream ->
         stream.filter {
@@ -191,17 +189,16 @@ fun Path.contentEquals(two: InputStream, bufferSizeBytes: Int = 8192): Boolean {
     return true
 }
 
-fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean =
-    file.inputStream().use { two ->
-        contentEquals(two, bufferSizeBytes)
-    }
+fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean = file.inputStream().use { two ->
+    contentEquals(two, bufferSizeBytes)
+}
 
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
 
 // Returns true if our process already owns the lock
 fun acquireProcessLockWaiting(
     lockFile: Path,
-    timeoutMs: Long = 1000L * 60 * 60 /* one hour */
+    timeoutMs: Long = 1000L * 60 * 60 // one hour
 ): Boolean {
     val logger = Logging.getLogger("paperweight lock file")
     val currentPid = ProcessHandle.current().pid()

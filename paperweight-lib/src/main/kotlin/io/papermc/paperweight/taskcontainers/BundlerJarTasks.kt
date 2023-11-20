@@ -84,8 +84,8 @@ class BundlerJarTasks(
     private fun Project.createBundlerJarTask(
         classifier: String = "",
     ): Pair<TaskProvider<CreateBundlerJar>, TaskProvider<CreatePaperclipJar>> {
-        val bundlerTaskName = "create${classifier.capitalize()}BundlerJar"
-        val paperclipTaskName = "create${classifier.capitalize()}PaperclipJar"
+        val bundlerTaskName = "create${classifier.capitalized()}BundlerJar"
+        val paperclipTaskName = "create${classifier.capitalized()}PaperclipJar"
 
         val bundlerJarTask = tasks.register<CreateBundlerJar>(bundlerTaskName) {
             group = "paperweight"

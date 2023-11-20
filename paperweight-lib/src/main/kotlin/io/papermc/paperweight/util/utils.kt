@@ -205,6 +205,10 @@ fun Any.convertToUrl(): URL {
     }
 }
 
+fun String.capitalized(): String {
+    return replaceFirstChar(Char::uppercase)
+}
+
 fun ensureParentExists(vararg files: Any) {
     for (file in files) {
         val parent = file.convertToPath().parent
@@ -286,7 +290,7 @@ class Hash(
     val algorithm: HashingAlgorithm
 ) {
     @get:Internal
-    val valueLower: String by lazy { value.toLowerCase(Locale.ENGLISH) }
+    val valueLower: String by lazy { value.lowercase(Locale.ENGLISH) }
 }
 
 fun String.hash(algorithm: HashingAlgorithm): ByteArray = algorithm.threadLocalDigest.let {
@@ -327,12 +331,11 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
 fun <P : Property<*>> P.withDisallowUnsafeRead(): P = apply { disallowUnsafeRead() }
 
-fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> =
-    files.asSequence()
-        .map { f -> f.toPath() }
-        .filter { p -> p.isLibraryJar }
-        .map { p -> ClassProviderRoot.fromJar(p) }
-        .toList()
+fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> = files.asSequence()
+    .map { f -> f.toPath() }
+    .filter { p -> p.isLibraryJar }
+    .map { p -> ClassProviderRoot.fromJar(p) }
+    .toList()
 
 private fun javaVersion(): Int {
     val version = System.getProperty("java.specification.version")

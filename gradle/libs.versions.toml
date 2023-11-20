@@ -7,8 +7,9 @@ hypo = "1.2.4"
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 
-httpclient = "org.apache.httpcomponents:httpclient:4.5.13"
+httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
+gson = "com.google.code.gson:gson:2.10.1"
 
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
 cadix-lorenz-asm = { module = "org.cadixdev:lorenz-asm", version.ref = "lorenz" }
@@ -28,15 +29,18 @@ slf4j-jdk14 = "org.slf4j:slf4j-jdk14:1.7.32"
 lorenzTiny = "net.fabricmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
+diffpatch = "net.minecraftforge:DiffPatch:2.0.7"
+
 # Gradle
-gradle-licenser = "org.cadixdev.licenser:org.cadixdev.licenser.gradle.plugin:0.6.1"
-gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:7.1.2"
-gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:10.2.1"
-gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:2.4.1"
+gradle-licenser = "net.kyori:indra-licenser-spotless:3.1.3"
+gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:6.22.0"
+gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1"
+gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.1.2"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.1.0"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.2.1"
 
 [bundles]
 asm = ["asm-core", "asm-tree"]
 cadix = ["cadix-lorenz-core", "cadix-lorenz-asm", "cadix-lorenz-proguard", "cadix-atlas", "cadix-at", "cadix-mercury"]
 hypo = ["hypo-model", "hypo-core", "hypo-hydrate", "hypo-asm-core", "hypo-asm-hydrate", "hypo-mappings"]
+kotson = ["kotson", "gson"]
