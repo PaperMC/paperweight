@@ -224,7 +224,7 @@ fun ensureDeleted(vararg files: Any) {
     for (file in files) {
         val f = file.convertToPath()
         try {
-            f.deleteRecursively()
+            f.deleteRecursive()
         } catch (e: Exception) {
             throw PaperweightException("Failed to delete file or directory $f", e)
         }

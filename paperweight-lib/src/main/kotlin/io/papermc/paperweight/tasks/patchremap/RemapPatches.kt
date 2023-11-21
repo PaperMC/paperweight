@@ -265,7 +265,7 @@ abstract class RemapPatches : BaseTask() {
     private fun createWorkDir(name: String, source: Path? = null, recreate: Boolean = true): Path {
         return layout.cache.resolve("paperweight").resolve(name).apply {
             if (recreate) {
-                deleteRecursively()
+                deleteRecursive()
                 createDirectories()
                 source?.copyRecursivelyTo(this)
             }
@@ -276,7 +276,7 @@ abstract class RemapPatches : BaseTask() {
         val workDir = layout.cache.resolve("paperweight")
         return workDir.resolve(name).apply {
             if (recreate) {
-                deleteRecursively()
+                deleteRecursive()
                 createDirectories()
                 Git(workDir)("clone", source.absolutePathString(), this.absolutePathString()).executeSilently()
             }

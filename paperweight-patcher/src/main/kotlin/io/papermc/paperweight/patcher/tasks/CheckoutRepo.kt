@@ -82,7 +82,7 @@ abstract class CheckoutRepo : DefaultTask() {
         val urlText = url.get().trim()
 
         if (dir.resolve(".git").notExists()) {
-            dir.deleteRecursively()
+            dir.deleteRecursive()
             dir.createDirectories()
 
             Git(dir)("init", "--quiet").executeSilently()

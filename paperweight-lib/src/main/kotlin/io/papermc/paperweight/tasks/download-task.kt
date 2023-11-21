@@ -114,7 +114,7 @@ fun downloadMinecraftLibraries(
     sources: Boolean
 ): WorkQueue {
     val excludes = listOf(targetDir.fileSystem.getPathMatcher("glob:*.etag"))
-    targetDir.deleteRecursively(excludes)
+    targetDir.deleteRecursive(excludes)
 
     val queue = workerExecutor.noIsolation()
 
@@ -175,11 +175,11 @@ abstract class DownloadSpigotDependencies : BaseTask() {
 
         val out = outputDir.path
         val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
-        out.deleteRecursively(excludes)
+        out.deleteRecursive(excludes)
 
         val outSources = outputSourcesDir.path
         val excludesSources = listOf(outSources.fileSystem.getPathMatcher("glob:*.etag"))
-        outSources.deleteRecursively(excludesSources)
+        outSources.deleteRecursive(excludesSources)
 
         val spigotRepos = mutableSetOf<String>()
         spigotRepos += apiSetup.repos

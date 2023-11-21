@@ -170,13 +170,13 @@ abstract class GenerateDevBundle : DefaultTask() {
                 tempPatchDir.copyRecursivelyTo(patchesZip)
             }
         } finally {
-            tempPatchDir.deleteRecursively()
+            tempPatchDir.deleteRecursive()
         }
     }
 
     private fun generatePatches(output: Path) {
         val workingDir = layout.cache.resolve(paperTaskOutput("tmpdir"))
-        workingDir.deleteRecursively()
+        workingDir.deleteRecursive()
         workingDir.createDirectories()
         sourceDir.path.copyRecursivelyTo(workingDir)
 
@@ -211,7 +211,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             }
         }
 
-        workingDir.deleteRecursively()
+        workingDir.deleteRecursive()
     }
 
     private fun relocate(relocations: List<Relocation>, workingDir: Path) {
@@ -289,7 +289,7 @@ abstract class GenerateDevBundle : DefaultTask() {
 
             return runDiff(dir, args)
         } finally {
-            dir.deleteRecursively()
+            dir.deleteRecursive()
         }
     }
 

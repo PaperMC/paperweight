@@ -101,7 +101,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
                 checkoutRepoFromUpstream(git, upstream.path, upstreamBranch.get())
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
-                    unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursively() }
+                    unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursive() }
                     git(*Git.add(ignoreGitIgnore, ".")).setupOut().run()
                     git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").setupOut().run()
                 }
@@ -113,7 +113,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
             }
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
-                rootPatchDir.deleteRecursively()
+                rootPatchDir.deleteRecursive()
             }
         }
     }
@@ -168,7 +168,7 @@ fun ControllableOutputTask.applyGitPatches(
             }
         }
     } finally {
-        tempDir.deleteRecursively()
+        tempDir.deleteRecursive()
     }
 }
 
@@ -198,7 +198,7 @@ fun recreateCloneDirectory(target: Path) {
             git("reset", "--hard", "HEAD").runSilently(silenceErr = true)
         } else {
             for (entry in target.listDirectoryEntries()) {
-                entry.deleteRecursively()
+                entry.deleteRecursive()
             }
             target.createDirectories()
         }

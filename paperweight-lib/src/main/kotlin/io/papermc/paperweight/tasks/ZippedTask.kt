@@ -65,7 +65,7 @@ abstract class ZippedTask : BaseTask() {
 
             zip(outputDir, outputZipFile)
         } finally {
-            outputDir.deleteRecursively()
+            outputDir.deleteRecursive()
         }
     }
 }

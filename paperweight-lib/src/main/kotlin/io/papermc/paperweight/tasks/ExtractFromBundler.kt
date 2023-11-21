@@ -115,7 +115,7 @@ object ServerBundler {
     }
 
     private fun extractLibraryJars(bundlerZip: Path, serverLibraryJars: Path) {
-        serverLibraryJars.deleteRecursively()
+        serverLibraryJars.deleteRecursive()
         serverLibraryJars.parent.createDirectories()
         bundlerZip.resolve("/META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
     }

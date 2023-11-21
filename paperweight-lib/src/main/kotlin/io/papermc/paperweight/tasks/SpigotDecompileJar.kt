@@ -93,7 +93,7 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).moveTo(outputJarFile)
         } finally {
-            decomp.deleteRecursively()
+            decomp.deleteRecursive()
         }
     }
 }

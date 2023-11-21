@@ -209,7 +209,7 @@ fun cleanSharedCaches(target: Project, root: Path) {
             .toList()
     }
     for (path in toDelete) {
-        path.deleteRecursively()
+        path.deleteRecursive()
 
         // clean up empty parent directories
         var parent: Path = path.parent

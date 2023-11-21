@@ -57,7 +57,7 @@ fun extractDevBundle(
         if (currentDevBundleHash.isNotBlank() && newDevBundleHash == currentDevBundleHash) {
             return ExtractedBundle(false, readDevBundle(destinationDirectory), destinationDirectory)
         }
-        destinationDirectory.deleteRecursively()
+        destinationDirectory.deleteRecursive()
     }
     destinationDirectory.createDirectories()
 

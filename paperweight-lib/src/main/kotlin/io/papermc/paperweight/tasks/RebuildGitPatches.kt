@@ -89,7 +89,7 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
                 }
             }
         } else {
-            patchFolder.deleteRecursively()
+            patchFolder.deleteRecursive()
             patchFolder.createDirectories()
         }
 

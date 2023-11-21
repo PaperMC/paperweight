@@ -117,7 +117,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
 
         if (bareDirectory.get()) {
             val up = upstreamDir.path
-            up.resolve(".git").deleteRecursively()
+            up.resolve(".git").deleteRecursive()
             Git(up).let { upstreamGit ->
                 upstreamGit("init", "--quiet").executeSilently(silenceErr = true)
                 upstreamGit("checkout", "-b", upstreamBranch.get()).executeSilently(silenceErr = true)

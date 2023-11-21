@@ -169,8 +169,8 @@ abstract class RemapSources : JavaLauncherTask() {
 
             writeSpigotRecompiledFiles(srcOut)
         } finally {
-            srcOut.deleteRecursively()
-            testOut.deleteRecursively()
+            srcOut.deleteRecursive()
+            testOut.deleteRecursive()
         }
     }
 
@@ -246,7 +246,7 @@ abstract class RemapSources : JavaLauncherTask() {
                         tempOut.copyRecursivelyTo(parameters.outputDir.path)
                     }
                 } finally {
-                    tempOut.deleteRecursively()
+                    tempOut.deleteRecursive()
                 }
             }
 

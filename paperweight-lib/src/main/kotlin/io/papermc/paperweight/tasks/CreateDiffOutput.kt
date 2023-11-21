@@ -57,7 +57,7 @@ abstract class CreateDiffOutput : BaseTask() {
     fun run() {
         val output = outputDir.path
 
-        output.deleteRecursively()
+        output.deleteRecursive()
         inputDir.path.copyRecursivelyTo(output)
     }
 }

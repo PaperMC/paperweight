@@ -66,13 +66,13 @@ class PatchSourceRemapWorker(
     }
 
     private fun setup() {
-        outputDir.deleteRecursively()
+        outputDir.deleteRecursive()
         outputDir.createDirectories()
     }
 
     private fun cleanup() {
-        inputDir.deleteRecursively()
+        inputDir.deleteRecursive()
         outputDir.moveTo(inputDir)
-        outputDir.deleteRecursively()
+        outputDir.deleteRecursive()
     }
 }

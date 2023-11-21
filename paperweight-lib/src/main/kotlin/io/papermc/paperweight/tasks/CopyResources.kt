@@ -68,6 +68,6 @@ abstract class CopyResources : BaseTask() {
         }
 
         zip(target, outputJar)
-        target.deleteRecursively()
+        target.deleteRecursive()
     }
 }

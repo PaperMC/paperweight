@@ -81,7 +81,7 @@ abstract class FilterProjectDir : BaseTask() {
         }
 
         zip(target, output)
-        target.deleteRecursively()
+        target.deleteRecursive()
     }
 
     private fun collectFiles(dir: Path): Set<String> {

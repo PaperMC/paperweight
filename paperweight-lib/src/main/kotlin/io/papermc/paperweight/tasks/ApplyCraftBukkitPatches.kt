@@ -82,7 +82,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
     fun run() {
         Git.checkForGit()
 
-        outputDir.path.deleteRecursively()
+        outputDir.path.deleteRecursive()
         outputDir.path.parent.let {
             it.createDirectories()
             val git = Git(it)
@@ -92,7 +92,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
         val git = Git(outputDir.path)
 
         val basePatchDirFile = outputDir.path.resolve("src/main/java")
-        basePatchDirFile.resolve(cleanDirPath.get()).deleteRecursively()
+        basePatchDirFile.resolve(cleanDirPath.get()).deleteRecursive()
 
         val patchSource = patchDir.pathOrNull ?: patchZip.path // used for error messages
         val rootPatchDir = patchDir.pathOrNull ?: patchZip.path.let { unzip(it, findOutputDir(it)) }
@@ -138,7 +138,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
             git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
-                rootPatchDir.deleteRecursively()
+                rootPatchDir.deleteRecursive()
             }
         }
     }

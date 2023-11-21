@@ -99,7 +99,7 @@ class PatchApplier(
     }
 
     fun generatePatches(target: Path) {
-        target.deleteRecursively()
+        target.deleteRecursive()
         target.createDirectories()
         git("checkout", remappedBranch).executeSilently()
         git(

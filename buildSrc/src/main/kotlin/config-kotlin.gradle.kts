@@ -58,10 +58,7 @@ testing {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "11"
-        freeCompilerArgs = listOf(
-            "-Xjvm-default=all",
-            "-opt-in=kotlin.io.path.ExperimentalPathApi"
-        )
+        freeCompilerArgs = listOf("-Xjvm-default=all")
     }
 }
 

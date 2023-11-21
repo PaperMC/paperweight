@@ -69,7 +69,7 @@ fun Path.deleteForcefully() {
     deleteIfExists()
 }
 
-fun Path.deleteRecursively(excludes: Iterable<PathMatcher> = emptyList()) {
+fun Path.deleteRecursive(excludes: Iterable<PathMatcher> = emptyList()) {
     if (!exists()) {
         return
     }
