@@ -311,12 +311,16 @@ fun InputStream.hash(algorithm: HashingAlgorithm, bufferSize: Int = 8192): ByteA
     return digest.digest()
 }
 
+private val hexChars = "0123456789abcdef".toCharArray()
+
 fun ByteArray.asHexString(): String {
-    val sb: StringBuilder = StringBuilder(size * 2)
-    for (aHash in this) {
-        sb.append("%02x".format(aHash.toInt() and 0xFF))
+    val chars = CharArray(2 * size)
+    forEachIndexed { i, byte ->
+        val unsigned = byte.toInt() and 0xFF
+        chars[2 * i] = hexChars[unsigned / 16]
+        chars[2 * i + 1] = hexChars[unsigned % 16]
     }
-    return sb.toString()
+    return String(chars)
 }
 
 fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLauncher> {
