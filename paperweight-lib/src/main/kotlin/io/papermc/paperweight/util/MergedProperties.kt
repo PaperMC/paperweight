@@ -28,13 +28,19 @@ import kotlin.reflect.KProperty
 import org.gradle.api.Project
 
 class MergedProperties(private val properties: List<Properties>) {
+    // val someProperty by mergedProperties
     operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
+        return get(property.name)
+    }
+
+    // mergedProperties["someProperty"] | mergedProperties.get("someProperty")
+    operator fun get(propertyName: String): String {
         for (props in properties) {
-            if (props.containsKey(property.name)) {
-                return props.getProperty(property.name)
+            if (props.containsKey(propertyName)) {
+                return props.getProperty(propertyName)
             }
         }
-        error("No value for property '${property.name}'")
+        error("No value for property '$propertyName'")
     }
 
     companion object {
