@@ -1,9 +1,10 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     idea
     id("org.gradle.kotlin.kotlin-dsl")
-    id("net.kyori.indra.licenser.spotless")
 }
 
 java {
@@ -70,18 +71,11 @@ tasks.jar {
     }
 }
 
-tasks.register("format") {
-    group = "formatting"
-    description = "Formats source code according to project style"
-    dependsOn(tasks.spotlessApply)
-}
+// The following is to work around https://github.com/diffplug/spotless/issues/1599
+// Ensure the ktlint step is before the license header step
 
-indraSpotlessLicenser {
-    licenseHeaderFile(rootProject.file("license/copyright.txt"))
-    newLine(true)
-}
-
-spotless {
+plugins.apply("com.diffplug.spotless")
+extensions.configure<SpotlessExtension> {
     val overrides = mapOf(
         "ktlint_standard_no-wildcard-imports" to "disabled",
         "ktlint_standard_filename" to "disabled",
@@ -97,6 +91,18 @@ spotless {
     kotlinGradle {
         ktlint(ktlintVer).editorConfigOverride(overrides)
     }
+}
+
+plugins.apply("net.kyori.indra.licenser.spotless")
+extensions.configure<IndraSpotlessLicenserExtension> {
+    licenseHeaderFile(rootProject.file("license/copyright.txt"))
+    newLine(true)
+}
+
+tasks.register("format") {
+    group = "formatting"
+    description = "Formats source code according to project style"
+    dependsOn(tasks.named("spotlessApply"))
 }
 
 idea {
