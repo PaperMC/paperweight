@@ -30,6 +30,7 @@ import org.gradle.api.Task
 const val PAPERWEIGHT_EXTENSION = "paperweight"
 const val PAPERWEIGHT_DEBUG = "paperweight.debug"
 const val PAPERWEIGHT_PRINT_APPLY_PATCHES_OUTPUT = "paperweight.printBaseExecutionApplyPatchesOutput"
+const val PAPERWEIGHT_PRINT_REBUILD_PATCHES_OUTPUT = "paperweight.printRebuildPatchesOutput"
 
 const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"
 
