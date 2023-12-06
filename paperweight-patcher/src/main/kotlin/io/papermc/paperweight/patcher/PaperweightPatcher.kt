@@ -261,7 +261,7 @@ class PaperweightPatcher : Plugin<Project> {
             if (isBaseExecution) {
                 doNotTrackState("$name should always run when requested as part of the base execution.")
             }
-            printOutput.set(isBaseExecution)
+            printOutput.set(printApplyPatchesOutput())
 
             val (cloneTask, upstreamDataTask) = upstreamTaskPair
             dependsOn(upstreamDataTask)

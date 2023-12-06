@@ -82,7 +82,7 @@ open class AllTasks(
         if (project.isBaseExecution) {
             doNotTrackState("$name should always run when requested as part of the base execution.")
         }
-        printOutput.set(project.isBaseExecution)
+        printOutput.set(project.printApplyPatchesOutput())
 
         branch.set("HEAD")
         upstreamBranch.set("upstream")
@@ -110,7 +110,7 @@ open class AllTasks(
         if (project.isBaseExecution) {
             doNotTrackState("$name should always run when requested as part of the base execution.")
         }
-        printOutput.set(project.isBaseExecution)
+        printOutput.set(project.printApplyPatchesOutput())
 
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
