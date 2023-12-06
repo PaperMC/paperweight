@@ -140,6 +140,7 @@ open class AllTasks(
         baseRef.set("base")
 
         patchDir.set(extension.paper.spigotApiPatchDir)
+        printOutput.set(project.printRebuildPatchesOutput())
     }
 
     val rebuildServerPatches by tasks.registering<RebuildGitPatches> {
@@ -149,6 +150,7 @@ open class AllTasks(
         baseRef.set("base")
 
         patchDir.set(extension.paper.spigotServerPatchDir)
+        printOutput.set(project.printRebuildPatchesOutput())
     }
 
     @Suppress("unused")

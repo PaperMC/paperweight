@@ -142,6 +142,12 @@ fun Project.printApplyPatchesOutput(): Provider<Boolean> {
     }
 }
 
+fun Project.printRebuildPatchesOutput(): Provider<Boolean> {
+    return providers.gradleProperty(PAPERWEIGHT_PRINT_REBUILD_PATCHES_OUTPUT)
+        .map { it.toBoolean() }
+        .orElse(false)
+}
+
 val redirectThreadCount: AtomicLong = AtomicLong(0)
 
 fun redirect(input: InputStream, out: OutputStream): CompletableFuture<Unit> {
