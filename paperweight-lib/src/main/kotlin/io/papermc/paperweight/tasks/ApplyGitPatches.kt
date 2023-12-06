@@ -155,8 +155,14 @@ fun ControllableOutputTask.applyGitPatches(
             patch.copyTo(mailDir.resolve(patch.fileName))
         }
 
-        if (git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).showErrors().run() != 0) {
+        val result = git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).captureOut()
+        if (result.exit != 0) {
             statusFile.writeText("1")
+
+            if (!printOutput) {
+                // Log the output anyway on failure
+                logger.lifecycle(result.out)
+            }
             logger.error("***   Please review above details and finish the apply then")
             logger.error("***   save the changes with `./gradlew rebuildPatches`")
 
