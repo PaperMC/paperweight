@@ -85,11 +85,15 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
     @get:OutputDirectory
     abstract val mcDevSources: DirectoryProperty
 
+    @get:Input
+    abstract val verbose: Property<Boolean>
+
     override fun init() {
         upstreamBranch.convention("master")
         importMcDev.convention(false)
         printOutput.convention(true).finalizeValueOnRead()
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
+        verbose.convention(providers.verboseApplyPatches())
     }
 
     @TaskAction
@@ -112,7 +116,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         val target = output.name
 
         if (printOutput.get()) {
-            println("   Creating $target from patch source...")
+            logger.lifecycle("Creating $target from patch source...")
         }
 
         if (bareDirectory.get()) {
@@ -157,7 +161,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         git("tag", "-d", "base").runSilently(silenceErr = true)
         git("tag", "base").executeSilently()
 
-        applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get())
+        applyGitPatches(git, target, output, patchDir.pathOrNull, printOutput.get(), verbose.get())
 
         makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, srcDir, dataDir)
     }

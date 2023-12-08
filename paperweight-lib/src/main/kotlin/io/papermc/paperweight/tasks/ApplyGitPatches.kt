@@ -71,9 +71,13 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
     @get:Inject
     abstract val providers: ProviderFactory
 
+    @get:Input
+    abstract val verbose: Property<Boolean>
+
     override fun init() {
         printOutput.convention(false).finalizeValueOnRead()
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
+        verbose.convention(providers.verboseApplyPatches())
     }
 
     @TaskAction
@@ -91,7 +95,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
         val target = outputPath.name
 
         if (printOutput.get()) {
-            println("   Resetting $target to ${upstream.path.name}...")
+            logger.lifecycle("Resetting $target to ${upstream.path.name}...")
         }
 
         val rootPatchDir = patchDir.pathOrNull ?: patchZip.path.let { unzip(it, findOutputDir(it)) }
@@ -102,14 +106,14 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
 
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursive() }
-                    git(*Git.add(ignoreGitIgnore, ".")).setupOut().run()
-                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").setupOut().run()
+                    git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
+                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
                 }
 
                 git("tag", "-d", "base").runSilently(silenceErr = true)
                 git("tag", "base").executeSilently(silenceErr = true)
 
-                applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get())
+                applyGitPatches(git, target, outputDir.path, rootPatchDir, printOutput.get(), verbose.get())
             }
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
@@ -124,10 +128,11 @@ fun ControllableOutputTask.applyGitPatches(
     target: String,
     outputDir: Path,
     patchDir: Path?,
-    printOutput: Boolean
+    printOutput: Boolean,
+    verbose: Boolean,
 ) {
     if (printOutput) {
-        println("   Applying patches to $target...")
+        logger.lifecycle("Applying patches to $target...")
     }
 
     val statusFile = outputDir.resolve(".git/patch-apply-failed")
@@ -138,7 +143,7 @@ fun ControllableOutputTask.applyGitPatches(
     val patches = patchDir?.useDirectoryEntries("*.patch") { it.toMutableList() } ?: mutableListOf()
     if (patches.isEmpty()) {
         if (printOutput) {
-            println("No patches found")
+            logger.lifecycle("No patches found")
         }
         return
     }
@@ -155,11 +160,12 @@ fun ControllableOutputTask.applyGitPatches(
             patch.copyTo(mailDir.resolve(patch.fileName))
         }
 
-        val result = git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).captureOut()
+        val gitOut = printOutput && verbose
+        val result = git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).captureOut(gitOut)
         if (result.exit != 0) {
             statusFile.writeText("1")
 
-            if (!printOutput) {
+            if (!gitOut) {
                 // Log the output anyway on failure
                 logger.lifecycle(result.out)
             }
@@ -170,7 +176,7 @@ fun ControllableOutputTask.applyGitPatches(
         } else {
             statusFile.deleteForcefully()
             if (printOutput) {
-                println("   Patches applied cleanly to $target")
+                logger.lifecycle("${patches.size} patches applied cleanly to $target")
             }
         }
     } finally {

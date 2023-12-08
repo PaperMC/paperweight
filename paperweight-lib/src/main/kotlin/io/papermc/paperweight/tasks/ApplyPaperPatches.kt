@@ -89,9 +89,13 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:OutputDirectory
     abstract val mcDevSources: DirectoryProperty
 
+    @get:Input
+    abstract val verbose: Property<Boolean>
+
     override fun init() {
         upstreamBranch.convention("master")
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
+        verbose.convention(providers.verboseApplyPatches())
     }
 
     @TaskAction
@@ -114,7 +118,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
         val target = outputFile.name
 
         if (printOutput.get()) {
-            println("   Creating $target from remapped source...")
+            logger.lifecycle("Creating $target from remapped source...")
         }
 
         Git(outputFile).let { git ->
@@ -161,7 +165,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
 
-            applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get())
+            applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get(), verbose.get())
 
             makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir, mcDataDir)
         }

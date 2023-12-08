@@ -101,7 +101,7 @@ object McDev {
             if (dataTargetDir != null) {
                 logger.log(
                     if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG,
-                    "Importing {} data files from vanilla data...",
+                    "Importing {} data files from vanilla...",
                     dataImportMcDev.size
                 )
 

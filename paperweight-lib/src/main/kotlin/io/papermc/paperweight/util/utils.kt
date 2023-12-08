@@ -124,29 +124,18 @@ fun commentRegex(): Regex {
     return Regex("\\s*#.*")
 }
 
-val Project.isBaseExecutionProvider: Provider<Boolean>
-    get() = providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+val ProviderFactory.isBaseExecution: Provider<Boolean>
+    get() = gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
         .orElse(provider { "false" })
         .map { it == "false" }
 
 val Project.isBaseExecution: Boolean
-    get() = isBaseExecutionProvider.get()
+    get() = providers.isBaseExecution.get()
 
-fun Project.printApplyPatchesOutput(): Provider<Boolean> {
-    val base = isBaseExecutionProvider
-    val showOutput = providers.gradleProperty(PAPERWEIGHT_PRINT_APPLY_PATCHES_OUTPUT)
+fun ProviderFactory.verboseApplyPatches(): Provider<Boolean> =
+    gradleProperty(PAPERWEIGHT_VERBOSE_APPLY_PATCHES)
         .map { it.toBoolean() }
         .orElse(false)
-    return base.zip(showOutput) { baseExecution, showOutputProp ->
-        return@zip baseExecution && showOutputProp
-    }
-}
-
-fun Project.printRebuildPatchesOutput(): Provider<Boolean> {
-    return providers.gradleProperty(PAPERWEIGHT_PRINT_REBUILD_PATCHES_OUTPUT)
-        .map { it.toBoolean() }
-        .orElse(false)
-}
 
 val redirectThreadCount: AtomicLong = AtomicLong(0)
 

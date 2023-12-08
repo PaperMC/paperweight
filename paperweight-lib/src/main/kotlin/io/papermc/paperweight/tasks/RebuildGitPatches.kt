@@ -70,13 +70,13 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
         }
 
         if (printOutput.get()) {
-            println("Formatting patches for $what...")
+            logger.lifecycle("Formatting patches for $what...")
         }
 
         if (inputDir.path.resolve(".git/rebase-apply").exists()) {
             // in middle of a rebase, be smarter
             if (printOutput.get()) {
-                println("REBASE DETECTED - PARTIAL SAVE")
+                logger.lifecycle("REBASE DETECTED - PARTIAL SAVE")
                 val last = inputDir.path.resolve(".git/rebase-apply/last").readText().trim().toInt()
                 val next = inputDir.path.resolve(".git/rebase-apply/next").readText().trim().toInt()
                 val orderedFiles = patchFolder.useDirectoryEntries("*.patch") { it.toMutableList() }
@@ -106,10 +106,12 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
 
         if (filterPatches.get()) {
             cleanupPatches(patchDirGit)
-        }
+        } else {
+            if (printOutput.get()) {
+                val saved = patchFolder.listDirectoryEntries("*.patch").size
 
-        if (printOutput.get()) {
-            println("  Patches saved for $what to ${patchFolder.name}/")
+                logger.lifecycle("Saved $saved patches for $what to ${layout.projectDirectory.path.relativize(patchFolder)}/")
+            }
         }
     }
 
@@ -153,9 +155,9 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
         }
 
         if (printOutput.get()) {
-            for (patch in patchFiles) {
-                println(patch.name)
-            }
+            val saved = patchFiles.size - noChangesPatches.size
+            val relDir = layout.projectDirectory.path.relativize(patchDir.path)
+            logger.lifecycle("Saved modified patches ($saved/${patchFiles.size}) for ${inputDir.path.name} to $relDir/")
         }
     }
 }

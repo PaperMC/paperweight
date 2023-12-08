@@ -23,8 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import java.io.ByteArrayOutputStream
-import java.io.OutputStream
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Console
 
@@ -48,22 +46,5 @@ abstract class ControllableOutputTask : BaseTask() {
         } else {
             setup(UselessOutputStream, System.out)
         }
-    }
-
-    class Result(val exit: Int, val out: String)
-
-    fun Command.captureOut(): Result = run {
-        val out = ByteArrayOutputStream()
-        if (printOutput.get()) {
-            val combined = System.out + out
-            setup(combined, combined)
-        } else {
-            setup(out, out)
-        }
-        Result(run(), String(out.toByteArray()))
-    }
-
-    private operator fun OutputStream.plus(out: OutputStream): OutputStream {
-        return DelegatingOutputStream(this, out)
     }
 }

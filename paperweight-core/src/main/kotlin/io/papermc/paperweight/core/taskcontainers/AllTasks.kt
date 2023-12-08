@@ -82,7 +82,7 @@ open class AllTasks(
         if (project.isBaseExecution) {
             doNotTrackState("$name should always run when requested as part of the base execution.")
         }
-        printOutput.set(project.printApplyPatchesOutput())
+        printOutput.set(project.isBaseExecution)
 
         branch.set("HEAD")
         upstreamBranch.set("upstream")
@@ -110,7 +110,7 @@ open class AllTasks(
         if (project.isBaseExecution) {
             doNotTrackState("$name should always run when requested as part of the base execution.")
         }
-        printOutput.set(project.printApplyPatchesOutput())
+        printOutput.set(project.isBaseExecution)
 
         patchDir.set(extension.paper.spigotServerPatchDir)
         remappedSource.set(remapSpigotSources.flatMap { it.sourcesOutputZip })
@@ -140,7 +140,6 @@ open class AllTasks(
         baseRef.set("base")
 
         patchDir.set(extension.paper.spigotApiPatchDir)
-        printOutput.set(project.printRebuildPatchesOutput())
     }
 
     val rebuildServerPatches by tasks.registering<RebuildGitPatches> {
@@ -150,7 +149,6 @@ open class AllTasks(
         baseRef.set("base")
 
         patchDir.set(extension.paper.spigotServerPatchDir)
-        printOutput.set(project.printRebuildPatchesOutput())
     }
 
     @Suppress("unused")

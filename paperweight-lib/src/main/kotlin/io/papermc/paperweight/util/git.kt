@@ -199,4 +199,17 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
         setup(out, System.err)
         return if (run() == 0) String(out.toByteArray(), Charset.defaultCharset()) else null
     }
+
+    class Result(val exit: Int, val out: String)
+
+    fun captureOut(logOut: Boolean): Result = run {
+        val out = ByteArrayOutputStream()
+        if (logOut) {
+            val combined = DelegatingOutputStream(System.out, out)
+            setup(combined, combined)
+        } else {
+            setup(out, out)
+        }
+        Result(run(), String(out.toByteArray()))
+    }
 }
