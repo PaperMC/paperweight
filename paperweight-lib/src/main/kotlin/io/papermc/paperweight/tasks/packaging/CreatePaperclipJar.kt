@@ -20,9 +20,10 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.tasks.packaging
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.data.*
 import io.sigpipe.jbsdiff.Diff

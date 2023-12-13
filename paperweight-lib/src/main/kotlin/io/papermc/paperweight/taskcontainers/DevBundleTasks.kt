@@ -25,6 +25,8 @@ package io.papermc.paperweight.taskcontainers
 import io.papermc.paperweight.extension.RelocationExtension
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.packaging.CreateBundlerJar
+import io.papermc.paperweight.tasks.packaging.CreatePaperclipJar
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path

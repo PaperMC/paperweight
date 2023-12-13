@@ -20,13 +20,16 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.tasks.packaging
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.Named
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -39,7 +42,7 @@ import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
 @CacheableTask
-abstract class CreateBundlerJar : ZippedTask() {
+abstract class CreateBundlerJar : JavaLauncherZippedTask() {
 
     interface VersionArtifact {
         @get:Input
@@ -74,6 +77,14 @@ abstract class CreateBundlerJar : ZippedTask() {
 
     @get:OutputFile
     abstract val libraryChangesJson: RegularFileProperty
+
+    interface LibraryRemap : RemapJarParams, Named {
+        @Input
+        override fun getName(): String
+    }
+
+    @get:Nested
+    abstract val remapLibraries: NamedDomainObjectContainer<LibraryRemap>
 
     private fun createVersionArtifactContainer(): NamedDomainObjectContainer<VersionArtifact> =
         objects.domainObjectContainer(VersionArtifact::class) { objects.newInstance(it) }
@@ -122,6 +133,8 @@ abstract class CreateBundlerJar : ZippedTask() {
 
         val outputDir = rootDir.resolve("META-INF/libraries")
 
+        val workingDir = createTempDirectory("paperweight-bundler-remap")
+
         val dependencies = collectDependencies()
         for (dep in dependencies) {
             val serverLibrary = serverLibraryEntries.firstOrNull {
@@ -129,29 +142,65 @@ abstract class CreateBundlerJar : ZippedTask() {
                     it.id.name == dep.module.name &&
                     it.id.classifier == dep.module.classifier
             }
+            val remapInfo = remapLibraries.findByName(dep.module.group + ':' + dep.module.name)
             if (serverLibrary != null) {
-                if (serverLibrary.id.version == dep.module.version) {
-                    // nothing to do
+                if (serverLibrary.id.version == dep.module.version && remapInfo == null) {
+                    // nothing to do (no remap or version change)
                     libraries += serverLibrary
 
                     dep.copyTo(outputDir.resolve(dep.module.toPath()))
                 } else {
-                    // we have a different version of this library
-                    val newId = dep.module
-                    val newPath = newId.toPath()
-                    changedLibraries += LibraryChange(serverLibrary.id, serverLibrary.path, newId, newPath)
+                    if (remapInfo != null) {
+                        // we are remapping this library, may or may not be a different version
+                        val newId = dep.module.copy(version = dep.module.version + "-remapped")
+                        val newPath = newId.toPath()
+                        changedLibraries += LibraryChange(serverLibrary.id, serverLibrary.path, newId, newPath)
 
-                    val jarFile = dep.copyTo(outputDir.resolve(newPath))
+                        TinyRemapper.run(
+                            dep.file.toPath(),
+                            outputDir.resolve(newPath),
+                            remapInfo,
+                            launcher.get(),
+                            layout.cache.resolve(paperTaskOutput("remap${remapInfo.name.capitalized()}.log")),
+                            workingDir
+                        )
 
-                    libraries += FileEntry(jarFile.sha256asHex(), newId, newPath)
+                        libraries += FileEntry(outputDir.resolve(newPath).sha256asHex(), newId, newPath)
+                    } else {
+                        // we have a different version of this library (not remapped)
+                        val newId = dep.module
+                        val newPath = newId.toPath()
+                        changedLibraries += LibraryChange(serverLibrary.id, serverLibrary.path, newId, newPath)
+
+                        val jarFile = dep.copyTo(outputDir.resolve(newPath))
+
+                        libraries += FileEntry(jarFile.sha256asHex(), newId, newPath)
+                    }
                 }
             } else {
-                // New dependency
-                val id = dep.module
-                val path = id.toPath()
-                val jarFile = dep.copyTo(outputDir.resolve(path))
+                if (remapInfo != null) {
+                    // New dependency, remapped
+                    val id = dep.module.copy(version = dep.module.version + "-remapped")
+                    val path = id.toPath()
 
-                libraries += FileEntry(jarFile.sha256asHex(), id, path)
+                    TinyRemapper.run(
+                        dep.file.toPath(),
+                        outputDir.resolve(path),
+                        remapInfo,
+                        launcher.get(),
+                        layout.cache.resolve(paperTaskOutput("remap${remapInfo.name.capitalized()}.log")),
+                        workingDir
+                    )
+
+                    libraries += FileEntry(outputDir.resolve(path).sha256asHex(), id, path)
+                } else {
+                    // New dependency, not remapped
+                    val id = dep.module
+                    val path = id.toPath()
+                    val jarFile = dep.copyTo(outputDir.resolve(path))
+
+                    libraries += FileEntry(jarFile.sha256asHex(), id, path)
+                }
             }
         }
 
@@ -204,6 +253,7 @@ abstract class CreateBundlerJar : ZippedTask() {
                     val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
                     ModuleId(capability.group, capability.name, version)
                 }
+
                 else -> throw PaperweightException("Unknown artifact result type: ${ident::class.java.name}")
             }
         }

@@ -36,35 +36,12 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
 @CacheableTask
-abstract class RemapJar : JavaLauncherTask() {
-
+abstract class RemapJar : JavaLauncherTask(), RemapJarParams {
     @get:Classpath
     abstract val inputJar: RegularFileProperty
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mappingsFile: RegularFileProperty
-
-    @get:Input
-    abstract val fromNamespace: Property<String>
-
-    @get:Input
-    abstract val toNamespace: Property<String>
-
-    @get:CompileClasspath
-    abstract val remapClasspath: ConfigurableFileCollection
-
-    @get:Classpath
-    abstract val remapper: ConfigurableFileCollection
-
-    @get:Input
-    abstract val remapperArgs: ListProperty<String>
-
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val jvmArgs: ListProperty<String>
 
     override fun init() {
         super.init()
@@ -76,22 +53,39 @@ abstract class RemapJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val logFile = layout.cache.resolve(paperTaskOutput("log"))
         TinyRemapper.run(
-            argsList = remapperArgs.get(),
-            logFile = logFile,
-            inputJar = inputJar.path,
-            mappingsFile = mappingsFile.path,
-            fromNamespace = fromNamespace.get(),
-            toNamespace = toNamespace.get(),
-            remapClasspath = remapClasspath.files.map { it.toPath() },
-            remapper = remapper,
-            outputJar = outputJar.path,
-            launcher = launcher.get(),
-            workingDir = layout.cache,
-            jvmArgs = jvmArgs.get()
+            inputJar.path,
+            outputJar.path,
+            this,
+            launcher.get(),
+            layout.cache.resolve(paperTaskOutput("log")),
+            layout.cache
         )
     }
+}
+
+interface RemapJarParams {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    val mappingsFile: RegularFileProperty
+
+    @get:Input
+    val fromNamespace: Property<String>
+
+    @get:Input
+    val toNamespace: Property<String>
+
+    @get:CompileClasspath
+    val remapClasspath: ConfigurableFileCollection
+
+    @get:Classpath
+    val remapper: ConfigurableFileCollection
+
+    @get:Input
+    val remapperArgs: ListProperty<String>
+
+    @get:Internal
+    val jvmArgs: ListProperty<String>
 }
 
 object TinyRemapper {
@@ -175,6 +169,30 @@ object TinyRemapper {
         }
 
         return args
+    }
+
+    fun run(
+        inputJar: Path,
+        outputJar: Path,
+        params: RemapJarParams,
+        launcher: JavaLauncher,
+        logFile: Path,
+        workingDir: Path,
+    ) {
+        run(
+            argsList = params.remapperArgs.get(),
+            logFile = logFile,
+            inputJar = inputJar,
+            mappingsFile = params.mappingsFile.path,
+            fromNamespace = params.fromNamespace.get(),
+            toNamespace = params.toNamespace.get(),
+            remapClasspath = params.remapClasspath.files.map { it.toPath() },
+            remapper = params.remapper,
+            outputJar = outputJar,
+            launcher = launcher,
+            workingDir = workingDir,
+            jvmArgs = params.jvmArgs.get()
+        )
     }
 
     fun run(

@@ -24,6 +24,8 @@ package io.papermc.paperweight.taskcontainers
 
 import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.packaging.CreateBundlerJar
+import io.papermc.paperweight.tasks.packaging.CreatePaperclipJar
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.NamedDomainObjectContainer
@@ -76,6 +78,19 @@ class BundlerJarTasks(
             vanillaJar,
             reobfJar.flatMap { it.outputJar },
         )
+        createReobfBundlerJar {
+            remapLibraries.configureEach {
+                mappingsFile.set(reobfJar.flatMap { it.mappingsFile })
+                fromNamespace.set(reobfJar.flatMap { it.fromNamespace })
+                toNamespace.set(reobfJar.flatMap { it.toNamespace })
+                remapClasspath.from(reobfJar.map { it.remapClasspath })
+                // add mc to remap classpath
+                remapClasspath.from(reobfJar.flatMap { it.inputJar })
+                remapper.setFrom(reobfJar.map { it.remapper })
+                remapperArgs.set(reobfJar.flatMap { it.remapperArgs })
+                jvmArgs.set(reobfJar.flatMap { it.jvmArgs })
+            }
+        }
 
         createPaperclipJar.configureWith(vanillaJar, createBundlerJar, mcVersion)
         createReobfPaperclipJar.configureWith(vanillaJar, createReobfBundlerJar, mcVersion)
