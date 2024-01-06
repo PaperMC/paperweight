@@ -183,6 +183,17 @@ open class AllTasks(
         outputMappings.set(cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
 
+    /*
+     API Tasks
+     cloneRepos -> create fresh clones from the work/ dirs
+     applySpigotApiPatches -> apply patches from the spigot repo on top of the bukkit API
+     rewriteBukkitSpigotHistory -> rewrites all api commits to have a set author
+     applyPaperApiPatches -> applies all paper API patches
+     finalizeApiHistory -> move all api commits to a subdirectory
+
+     Server Tasks
+
+     */
     val cloneBranchName = "for-clone"
     val cloneRepos by tasks.registering<CloneRepos> {
         dependsOn(initSubmodules)
@@ -224,8 +235,8 @@ open class AllTasks(
 
     val rewriteCraftBukkitSpigotHistory by tasks.registering<RewriteCommits> {
         repoDir.set(remapCraftBukkitFilePatches.flatMap { it.outputDir })
-        paths.value(listOf("nms-patches/", ".gitignore", "src/main/resources/", "pom.xml"))
-        pathGlobs.value(listOf("*.java"))
+        paths.value(listOf(".gitignore", "pom.xml"))
+        pathGlobs.value(listOf("nms-patches/**/*.*", "src/**/*.*"))
         commitCallback.value(RewriteCommits.CRAFTBUKKIT_CALLBACK)
     }
 
@@ -246,7 +257,7 @@ open class AllTasks(
 
     val finalizeServerHistory by tasks.registering<MoveCommits> {
         repoDir.set(applyPaperServerPatches.flatMap { it.outputDir })
-        toDir.value("server")
+        toDir.value("paper-server")
     }
 
     val applySpigotApiPatches by tasks.registering<ApplyApiPatches> {
@@ -256,19 +267,20 @@ open class AllTasks(
 
     val rewriteBukkitSpigotHistory by tasks.registering<RewriteCommits> {
         repoDir.set(applySpigotApiPatches.flatMap { it.outputDir })
-        paths.value(listOf(".gitignore", "pom.xml"))
-        pathGlobs.value(listOf("*.java"))
+        paths.value(listOf(".gitignore", "pom.xml", "README.md", "LICENSE.txt", "checkstyle.xml"))
+        pathGlobs.value(listOf("src/**/*.*"))
         commitCallback.value(RewriteCommits.BUKKIT_CALLBACK)
     }
 
     val applyPaperApiPatches by tasks.registering<ApplyApiPatches> {
         bukkitDir.set(rewriteBukkitSpigotHistory.flatMap { it.outputDir })
         patchesDir.set(extension.paper.spigotApiPatchDir)
+        unneededFiles.set(listOf("README.md", "checkstyle.xml"))
     }
 
     val finalizeApiHistory by tasks.registering<MoveCommits> {
         repoDir.set(applyPaperApiPatches.flatMap { it.outputDir })
-        toDir.value("api")
+        toDir.value("paper-api")
     }
 
     val rewriteAikarPaperHistory by tasks.registering<RewriteCommits> {
