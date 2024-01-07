@@ -171,6 +171,27 @@ abstract class RunVineFlower : JavaLauncherTask() {
             launcher.get(),
             jvmargs.get()
         )
-        unzipTo(decompiledSource.get().asFile, outputJar.get().asFile)
+        decompiledSource.path.deleteRecursive()
+        outputJar.get().path.openZip().use { zipFile ->
+            zipFile.walk().use { stream ->
+                for (zipEntry in stream) {
+                    if (!zipEntry.isRegularFile()) continue
+                    // substring(1) trims the leading /
+                    val path = zipEntry.invariantSeparatorsPathString.substring(1)
+                    val targetFile = decompiledSource.path.resolve(path)
+                    if (!targetFile.parent.exists()) {
+                        targetFile.parent.createDirectories()
+                    }
+                    zipEntry.copyTo(targetFile)
+                    if (zipEntry.startsWith("/data/minecraft")) {
+                        var content = targetFile.readText(Charsets.UTF_8)
+                        if (!content.endsWith("\n")) {
+                            content += "\n"
+                            targetFile.writeText(content, Charsets.UTF_8)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

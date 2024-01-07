@@ -15,7 +15,7 @@ import org.gradle.api.tasks.TaskAction
 abstract class RemapPerFilePatches : BaseTask() {
 
     @get:InputDirectory
-    abstract val craftBukkitDir: DirectoryProperty
+    abstract val targetDir: DirectoryProperty
 
     @get:InputFile
     abstract val remapPatch: RegularFileProperty
@@ -27,11 +27,14 @@ abstract class RemapPerFilePatches : BaseTask() {
     abstract val decompiledSourceFolder: DirectoryProperty
 
     @get:OutputDirectory
+    abstract val sourcePatchDir: DirectoryProperty
+
+    @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
         group = "mm"
-        outputDir.convention(craftBukkitDir)
+        outputDir.convention(targetDir)
     }
 
     @TaskAction
@@ -41,8 +44,8 @@ abstract class RemapPerFilePatches : BaseTask() {
             gson.fromJson<List<ClassNameChange>>(reader)
         }
 
-        Git(craftBukkitDir).let { git ->
-            val sourceDir = craftBukkitDir.path.resolve("src/main/java")
+        Git(targetDir).let { git ->
+            val sourceDir = targetDir.path.resolve("src/main/java")
             val excludes = arrayListOf<String>()
             for (caseOnlyChange in caseOnlyChanges) {
                 val file = sourceDir.resolve(caseOnlyChange.obfName + ".java")
@@ -52,18 +55,18 @@ abstract class RemapPerFilePatches : BaseTask() {
             git("apply", *excludes.toTypedArray(), "--exclude=nms-patches/**", remapPatch.path.absolutePathString()).execute()
         }
 
-        val nmsPatches = craftBukkitDir.path.resolve("nms-patches")
-        nmsPatches.resolve("net/minecraft").deleteRecursive()
+        val sourcePatchesDir = sourcePatchDir.path
+        sourcePatchesDir.resolve("net/minecraft").deleteRecursive()
 
-        craftBukkitDir.asFileTree.matching {
+        targetDir.asFileTree.matching {
             include("src/main/java/net/minecraft/**/*.java")
         }.forEach { patchedFile ->
             val fileName = patchedFile.absolutePath.split("src/main/java/", limit = 2)[1]
             val nmsFile = decompiledSourceFolder.get().file(fileName).asFile
-            val patchFile = nmsPatches.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
+            val patchFile = sourcePatchesDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
 
             val commandText = listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePath, "--label", "b/$fileName", patchedFile.absolutePath)
-            val processBuilder = ProcessBuilder(commandText).directory(craftBukkitDir.get().asFile)
+            val processBuilder = ProcessBuilder(commandText).directory(targetDir.get().asFile)
             val command = Command(processBuilder, commandText.joinToString(" "), arrayOf(0, 1))
             val output = command.getText()
 
@@ -73,8 +76,8 @@ abstract class RemapPerFilePatches : BaseTask() {
             }
         }
 
-        Git(craftBukkitDir).let { git ->
-            git("add", nmsPatches.absolutePathString(), "src/test", "src/main/java/org").execute()
+        Git(targetDir).let { git ->
+            git("add", sourcePatchesDir.absolutePathString(), "src/test", "src/main/java/org").execute()
             git("commit", "-m", "CraftBukkit/Spigot Patch Remap", "--author=Initial Source <auto@mated.null>").execute()
         }
     }
