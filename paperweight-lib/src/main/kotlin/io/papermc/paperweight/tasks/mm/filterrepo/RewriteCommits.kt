@@ -50,7 +50,7 @@ abstract class RewriteCommits : BaseTask() {
     }
 
     @get:InputDirectory
-    abstract val repoDir: DirectoryProperty
+    abstract val targetDir: DirectoryProperty
 
     @get:Input
     abstract val paths: ListProperty<String>
@@ -66,7 +66,7 @@ abstract class RewriteCommits : BaseTask() {
 
     override fun init() {
         group = "mm"
-        outputDir.convention(repoDir)
+        outputDir.convention(targetDir)
         paths.convention(objects.listProperty())
         pathGlobs.convention(objects.listProperty())
         commitCallback.convention(RESET_CALLBACK)
@@ -78,6 +78,6 @@ abstract class RewriteCommits : BaseTask() {
 
         val pathsArr = paths.get().map { "--path=$it" }.toTypedArray()
         val pathGlobsArr = pathGlobs.get().map { "--path-glob=$it" }.toTypedArray()
-        Git(repoDir)("filter-repo", *pathsArr, *pathGlobsArr, "--force", "--commit-callback", commitCallback.get()).executeOut()
+        Git(targetDir)("filter-repo", *pathsArr, *pathGlobsArr, "--force", "--commit-callback", commitCallback.get()).executeOut()
     }
 }
