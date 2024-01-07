@@ -2,7 +2,6 @@ package io.papermc.paperweight.tasks.mm
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import java.nio.file.Files
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property

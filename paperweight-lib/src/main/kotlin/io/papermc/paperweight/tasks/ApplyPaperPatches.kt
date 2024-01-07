@@ -97,15 +97,11 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
     @get:OutputFile
     abstract val remapSourcesPatch: RegularFileProperty
 
-    @get:OutputFile
-    abstract val mcDevSourcesPatch: RegularFileProperty
-
     override fun init() {
         upstreamBranch.convention("master")
         ignoreGitIgnore.convention(Git.ignoreProperty(providers)).finalizeValueOnRead()
         verbose.convention(providers.verboseApplyPatches())
         remapSourcesPatch.convention(objects.fileProperty().convention(layout.cacheFile("$INITIAL_PAPER_PATCHES/remap.patch")))
-        mcDevSourcesPatch.convention(objects.fileProperty().convention(layout.cacheFile("$INITIAL_PAPER_PATCHES/mcdev.patch")))
     }
 
     @TaskAction
@@ -157,14 +153,13 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
                 git("mv", "-f", obfFile.toString(), deobfFile.toString()).runSilently(silenceErr = true)
             }
 
-            unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursive() }
-
             git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
             val remapSources = git("format-patch", "--no-stat", "-N", "--zero-commit", "--full-index", "--no-signature", "HEAD~1")
             remapSourcesPatch.path.deleteForcefully()
             Files.move(outputFile.resolve(remapSources.getText().trim()), remapSourcesPatch.path)
             git("reset", "--soft", "HEAD~1").executeSilently()
+            unneededFiles.orNull?.forEach { path -> outputFile.resolve(path).deleteRecursive() }
 
             val patches = patchDir.path.listDirectoryEntries("*.patch")
             McDev.importMcDev(
@@ -179,9 +174,6 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
 
             git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
             git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
-            mcDevSourcesPatch.path.deleteForcefully()
-            val mcDev = git("format-patch", "--no-stat", "-N", "--zero-commit", "--full-index", "--no-signature", "HEAD~1", "--", ".", ":^nms-patches")
-            Files.move(outputFile.resolve(mcDev.getText().trim()), mcDevSourcesPatch.path)
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
 

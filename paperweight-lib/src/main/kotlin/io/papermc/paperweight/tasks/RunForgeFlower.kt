@@ -27,11 +27,13 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.kotlin.dsl.support.unzipTo
 
 val forgeFlowerArgList: List<String> = listOf(
     "-ind=    ",
@@ -123,6 +125,9 @@ abstract class RunForgeFlower : JavaLauncherTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:OutputDirectory
+    abstract val decompiledSource: DirectoryProperty
+
     @get:Internal
     abstract val jvmargs: ListProperty<String>
 
@@ -131,6 +136,7 @@ abstract class RunForgeFlower : JavaLauncherTask() {
 
         jvmargs.convention(listOf("-Xmx4G"))
         outputJar.convention(defaultOutput())
+        decompiledSource.convention(objects.directoryProperty().convention(layout.cacheDir(PAPER_DECOMPILED_SOURCE_FOLDER)))
     }
 
     @TaskAction
@@ -146,5 +152,6 @@ abstract class RunForgeFlower : JavaLauncherTask() {
             launcher.get(),
             jvmargs.get()
         )
+        unzipTo(decompiledSource.get().asFile, outputJar.get().asFile)
     }
 }

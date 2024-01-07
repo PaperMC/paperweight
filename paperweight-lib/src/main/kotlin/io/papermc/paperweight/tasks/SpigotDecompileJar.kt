@@ -27,13 +27,16 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.*
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.support.unzipTo
 
 @CacheableTask
 abstract class SpigotDecompileJar : JavaLauncherTask() {
@@ -50,6 +53,9 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:OutputDirectory
+    abstract val decompiledSource: DirectoryProperty
+
     @get:Input
     abstract val memory: Property<String>
 
@@ -58,6 +64,7 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
 
         memory.convention("4G")
         outputJar.convention(defaultOutput())
+        decompiledSource.convention(objects.directoryProperty().convention(layout.cacheDir(SPIGOT_DECOMPILED_JAR_SRC)))
     }
 
     @TaskAction
@@ -92,6 +99,7 @@ abstract class SpigotDecompileJar : JavaLauncherTask() {
 
             ensureDeleted(outputJarFile)
             decomp.resolve(inputJarFile.name).moveTo(outputJarFile)
+            unzipTo(decompiledSource.get().asFile, outputJarFile.toFile())
         } finally {
             decomp.deleteRecursive()
         }
