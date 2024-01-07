@@ -38,6 +38,7 @@ object McDev {
         decompJar: Path,
         importsFile: Path?,
         targetDir: Path,
+        secondaryLibraryTargetDir: Path? = null,
         dataTargetDir: Path? = null,
         librariesDirs: List<Path> = listOf(),
         printOutput: Boolean = true
@@ -134,16 +135,16 @@ object McDev {
             val libFile = libFiles.firstOrNull { it.name == libraryFileName }
                 ?: throw PaperweightException("Failed to find library: $libraryFileName for class $importFilePath")
 
-            val outputFile = targetDir.resolve(importFilePath)
-            if (outputFile.exists()) {
-                continue
-            }
-            outputFile.parent.createDirectories()
+            listOf(targetDir, secondaryLibraryTargetDir).mapNotNull { it?.resolve(importFilePath) }
+                .filter { it.notExists() }
+                .forEach { outputFile ->
+                    outputFile.parent.createDirectories()
 
-            libFile.openZip().use { zipFile ->
-                val libEntry = zipFile.getPath(importFilePath)
-                libEntry.copyTo(outputFile)
-            }
+                    libFile.openZip().use { zipFile ->
+                        val libEntry = zipFile.getPath(importFilePath)
+                        libEntry.copyTo(outputFile)
+                    }
+                }
         }
     }
 
@@ -170,7 +171,7 @@ object McDev {
         }
     }
 
-    private fun readPatchLines(patches: Iterable<Path>): Pair<Set<String>, Set<String>> {
+    fun readPatchLines(patches: Iterable<Path>): Pair<Set<String>, Set<String>> {
         val srcResult = hashSetOf<String>()
         val dataResult = hashSetOf<String>()
 

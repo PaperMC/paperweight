@@ -27,10 +27,15 @@ import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mm.*
-import io.papermc.paperweight.tasks.mm.filterrepo.*
+import io.papermc.paperweight.tasks.mm.filterrepo.FinalizePaperHistory
+import io.papermc.paperweight.tasks.mm.filterrepo.MergeGitRepos
+import io.papermc.paperweight.tasks.mm.filterrepo.MoveCommits
+import io.papermc.paperweight.tasks.mm.filterrepo.RewriteCommits
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.Provider
@@ -203,56 +208,72 @@ open class AllTasks(
         paperClone.set(objects.dirFrom(extension.workDir, "PaperClone"))
     }
 
+    val importCraftBukkitSpigotMcDevFiles by tasks.registering<ImportMcDevFiles> {
+        craftBukkitDir.set(cloneRepos.flatMap { it.craftBukkitClone })
+        patchDir.set(extension.spigot.craftBukkitPatchDir)
+        sourceMcDevJar.set(spigotDecompileJar.flatMap { it.outputJar })
+        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        spigotLibrariesDir.set(downloadSpigotDependencies.flatMap { it.outputSourcesDir })
+        devImports.set(objects.fileProperty().convention(project, extension.craftBukkit.patchDir.map {
+            val imports = mutableListOf(
+                "brigadier com/mojang/brigadier/CommandDispatcher.java",
+                "brigadier com/mojang/brigadier/tree/CommandNode.java"
+            )
+            it.asFileTree.files.forEach { file ->
+                imports.add("minecraft ${file.toPath().pathString.removeSurrounding(it.path.pathString + "/", ".patch")}.java")
+            }
+            Files.write(layout.cacheFile(SPIGOT_DECOMPILED_DEV_IMPORTS).path, imports)
+        }))
+        libraryOutputDir.set(spigotDecompileJar.flatMap { it.decompiledSource })
+    }
+
+    val setupCraftBukkit by tasks.registering<SetupCraftBukkit> {
+        craftBukkitDir.set(importCraftBukkitSpigotMcDevFiles.flatMap { it.outputDir })
+        decompiledSource.set(importCraftBukkitSpigotMcDevFiles.flatMap { it.libraryOutputDir })
+        val prefix = "src/main/java/com/mojang/brigadier"
+        recreateAsPatches.set(listOf("$prefix/CommandDispatcher.java", "$prefix/tree/CommandNode.java"))
+    }
+
     val setupSpigot by tasks.registering<SetupSpigot> {
         spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
     }
 
-    val setupPaper by tasks.registering<SetupPaper> {
-        dependsOn(applyServerPatches)
-        paperServer.set(extension.serverProject)
-    }
-
     val applySpigotCBPatches by tasks.registering<ApplyServerSourceAndNmsPatches> {
-        craftBukkitDir.set(cloneRepos.flatMap { it.craftBukkitClone })
+        craftBukkitDir.set(setupCraftBukkit.flatMap { it.outputDir })
         sourcePatches.set(extension.spigot.craftBukkitPatchDir)
-        initialVanillaSpigotPatch.set(setupSpigot.flatMap { it.initialVanillaSpigotPatch })
         initialCraftBukkitSpigotPatch.set(setupSpigot.flatMap { it.initialCraftBukkitSpigotPatch })
-        nmsPatches.set(setupSpigot.flatMap { it.spigotNmsPatches })
-        outputNmsPatches.set(objects.dirFrom(objects.dirFrom(craftBukkitDir, "nms-patches"), "spigot"))
+        directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang/brigadier"))
+        decompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
+        unneededFiles.set(listOf("applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md", "checkstyle.xml"))
     }
 
-    val applyRemapSourcePatch by tasks.registering<ApplyInitialPaperPatch> {
+    val remapPerFilePatches by tasks.registering<RemapPerFilePatches> {
         craftBukkitDir.set(applySpigotCBPatches.flatMap { it.outputDir })
-        initialPatch.set(applyServerPatches.flatMap { it.remapSourcesPatch })
+        remapPatch.set(applyServerPatches.flatMap { it.remapSourcesPatch })
         caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
-    }
-
-    val remapCraftBukkitFilePatches by tasks.registering<RemapCraftBukkitPatches> {
-        dependsOn(applyRemapSourcePatch)
-        craftBukkitDir.set(applyRemapSourcePatch.flatMap { it.craftBukkitDir })
-        decompiledJar.set(decompileJar.flatMap { it.outputJar })
+        decompiledSourceFolder.set(decompileJar.flatMap { it.decompiledSource })
     }
 
     val rewriteCraftBukkitSpigotHistory by tasks.registering<RewriteCommits> {
-        repoDir.set(remapCraftBukkitFilePatches.flatMap { it.outputDir })
-        paths.value(listOf(".gitignore", "pom.xml"))
-        pathGlobs.value(listOf("nms-patches/**/*.*", "src/**/*.*"))
+        repoDir.set(remapPerFilePatches.flatMap { it.outputDir })
         commitCallback.value(RewriteCommits.CRAFTBUKKIT_CALLBACK)
     }
 
-    val applyMcDevSourcePatch by tasks.registering<ApplyInitialPaperPatch> {
+    val importPaperMcDevFiles by tasks.registering<ImportMcDevFiles> {
         craftBukkitDir.set(rewriteCraftBukkitSpigotHistory.flatMap { it.outputDir })
-        initialPatch.set(applyServerPatches.flatMap { it.mcDevSourcesPatch })
-        caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
-        additionalExcludes.value(listOf("CONTRIBUTING.md", "README.md", "applyPatches.sh", "makePatches.sh"))
+        patchDir.set(extension.paper.spigotServerPatchDir)
+        sourceMcDevJar.set(decompileJar.flatMap { it.outputJar })
+        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        spigotLibrariesDir.set(downloadSpigotDependencies.flatMap { it.outputSourcesDir })
+        devImports.set(extension.paper.devImports.fileExists(project))
+        libraryOutputDir.set(decompileJar.flatMap { it.decompiledSource })
     }
 
     val applyPaperServerPatches by tasks.registering<ApplyServerSourceAndNmsPatches> {
-        craftBukkitDir.set(applyMcDevSourcePatch.flatMap { it.outputDir })
+        craftBukkitDir.set(importPaperMcDevFiles.flatMap { it.outputDir })
         sourcePatches.set(extension.paper.spigotServerPatchDir)
-        excludes.value(listOf("net/minecraft/**"))
-        nmsPatches.set(setupPaper.flatMap { it.paperNmsPatches })
-        outputNmsPatches.set(objects.dirFrom(objects.dirFrom(craftBukkitDir, "nms-patches"), "paper"))
+        directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang", "src/main/resources/data/minecraft"))
+        decompiledSource.set(remapPerFilePatches.flatMap { it.decompiledSourceFolder })
     }
 
     val finalizeServerHistory by tasks.registering<MoveCommits> {
@@ -267,8 +288,6 @@ open class AllTasks(
 
     val rewriteBukkitSpigotHistory by tasks.registering<RewriteCommits> {
         repoDir.set(applySpigotApiPatches.flatMap { it.outputDir })
-        paths.value(listOf(".gitignore", "pom.xml", "README.md", "LICENSE.txt", "checkstyle.xml"))
-        pathGlobs.value(listOf("src/**/*.*"))
         commitCallback.value(RewriteCommits.BUKKIT_CALLBACK)
     }
 
@@ -297,6 +316,7 @@ open class AllTasks(
         deletions.value(listOf("work", "patches", ".gitmodules"))
     }
 
+    @Suppress("unused")
     val mergeGitRepos by tasks.registering<MergeGitRepos> {
         cloneBranch.set(cloneBranchName)
         bukkitDir.set(finalizeApiHistory.flatMap { it.outputDir })

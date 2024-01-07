@@ -121,10 +121,12 @@ const val MM = "$PAPER_PATH/mm"
 const val INITIAL_PATCHES = "$MM/initial-patches"
 const val INITIAL_SPIGOT_PATCHES = "$INITIAL_PATCHES/spigot"
 const val INITIAL_PAPER_PATCHES = "$INITIAL_PATCHES/paper"
+const val SPIGOT_DECOMPILED_DEV_IMPORTS = "$MM/spigotDecompiledDevImports.txt"
+const val SPIGOT_DECOMPILED_JAR_SRC = "$MM/spigotDecompiledJar"
 const val NMS_PATCHES = "$MM/nms-patches"
 const val SPIGOT_NMS_PATCHES = "$NMS_PATCHES/spigot"
 const val PAPER_NMS_PATCHES = "$NMS_PATCHES/paper"
-const val DECOMPILED_SOURCE_FOLDER = "$MM/decompiled"
+const val PAPER_DECOMPILED_SOURCE_FOLDER = "$MM/decompiled"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 

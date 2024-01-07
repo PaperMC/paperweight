@@ -1,8 +1,8 @@
 package io.papermc.paperweight.tasks.mm
 
+import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import java.nio.file.Files
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
@@ -12,52 +12,48 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-abstract class RemapCraftBukkitPatches : BaseTask() {
+abstract class RemapPerFilePatches : BaseTask() {
 
     @get:InputDirectory
     abstract val craftBukkitDir: DirectoryProperty
 
     @get:InputFile
-    abstract val decompiledJar: RegularFileProperty
+    abstract val remapPatch: RegularFileProperty
 
-    @get:OutputDirectory
+    @get:InputFile
+    abstract val caseOnlyClassNameChanges: RegularFileProperty
+
+    @get:InputDirectory
     abstract val decompiledSourceFolder: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val remappedPatches: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     override fun init() {
         group = "mm"
-        decompiledSourceFolder.convention(objects.directoryProperty().convention(layout.cacheDir(DECOMPILED_SOURCE_FOLDER)))
-        remappedPatches.convention(craftBukkitDir.dir("nms-patches"))
         outputDir.convention(craftBukkitDir)
     }
 
     @TaskAction
     fun run() {
         Git.checkForGit()
-        decompiledSourceFolder.path.deleteRecursive()
-
-        decompiledJar.path.openZip().use { zipFile ->
-            zipFile.walk().use { stream ->
-                for (zipEntry in stream) {
-                    val path = zipEntry.invariantSeparatorsPathString.substring(1)
-
-                    if (path.endsWith(".java")) {
-                        val targetFile = decompiledSourceFolder.path.resolve(path)
-                        if (!targetFile.parent.exists()) {
-                            targetFile.parent.createDirectories()
-                        }
-                        zipEntry.copyTo(targetFile)
-                    }
-                }
-            }
+        val caseOnlyChanges = caseOnlyClassNameChanges.path.bufferedReader(Charsets.UTF_8).use { reader ->
+            gson.fromJson<List<ClassNameChange>>(reader)
         }
 
-        val nmsPatches = remappedPatches.path
+        Git(craftBukkitDir).let { git ->
+            val sourceDir = craftBukkitDir.path.resolve("src/main/java")
+            val excludes = arrayListOf<String>()
+            for (caseOnlyChange in caseOnlyChanges) {
+                val file = sourceDir.resolve(caseOnlyChange.obfName + ".java")
+                file.deleteForcefully()
+                excludes += "--exclude=src/main/java/${caseOnlyChange.obfName}.java"
+            }
+            git("apply", *excludes.toTypedArray(), "--exclude=nms-patches/**", remapPatch.path.absolutePathString()).execute()
+        }
+
+        val nmsPatches = craftBukkitDir.path.resolve("nms-patches")
+        nmsPatches.resolve("net/minecraft").deleteRecursive()
 
         craftBukkitDir.asFileTree.matching {
             include("src/main/java/net/minecraft/**/*.java")
@@ -78,12 +74,8 @@ abstract class RemapCraftBukkitPatches : BaseTask() {
         }
 
         Git(craftBukkitDir).let { git ->
-            git("add", nmsPatches.absolutePathString()).execute()
-            git("stash").execute()
-            git("reset", "--hard", "HEAD~1").execute()
-            git("rm", "-r", nmsPatches.absolutePathString()).execute()
-            git("stash", "pop").execute()
-            git("commit", "-m", "CB & Spigot NMS Patch Remap", "--author=Initial Source <auto@mated.null>").execute()
+            git("add", nmsPatches.absolutePathString(), "src/test", "src/main/java/org").execute()
+            git("commit", "-m", "CraftBukkit/Spigot Patch Remap", "--author=Initial Source <auto@mated.null>").execute()
         }
     }
 }

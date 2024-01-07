@@ -29,11 +29,13 @@ import java.util.jar.Attributes
 import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.kotlin.dsl.support.unzipTo
 
 val vineFlowerArgList: List<String> = listOf(
     "--synthetic-not-set=true",
@@ -142,6 +144,9 @@ abstract class RunVineFlower : JavaLauncherTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:OutputDirectory
+    abstract val decompiledSource: DirectoryProperty
+
     @get:Internal
     abstract val jvmargs: ListProperty<String>
 
@@ -150,6 +155,7 @@ abstract class RunVineFlower : JavaLauncherTask() {
 
         jvmargs.convention(listOf("-Xmx4G"))
         outputJar.convention(defaultOutput())
+        decompiledSource.convention(objects.directoryProperty().convention(layout.cacheDir(PAPER_DECOMPILED_SOURCE_FOLDER)))
     }
 
     @TaskAction
@@ -165,5 +171,6 @@ abstract class RunVineFlower : JavaLauncherTask() {
             launcher.get(),
             jvmargs.get()
         )
+        unzipTo(decompiledSource.get().asFile, outputJar.get().asFile)
     }
 }

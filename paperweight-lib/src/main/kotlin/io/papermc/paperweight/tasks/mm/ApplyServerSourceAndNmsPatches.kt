@@ -23,22 +23,19 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
     @get:InputDirectory
     abstract val sourcePatches: DirectoryProperty
 
-    @get:Input
-    abstract val excludes: ListProperty<String>
-
-    @get:InputFile
-    @get:Optional
-    abstract val initialVanillaSpigotPatch: RegularFileProperty
-
     @get:InputFile
     @get:Optional
     abstract val initialCraftBukkitSpigotPatch: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val nmsPatches: DirectoryProperty
+    @get:Input
+    abstract val directoriesToPatch: ListProperty<String>
 
-    @get:OutputDirectory
-    abstract val outputNmsPatches: DirectoryProperty
+    @get:InputDirectory
+    abstract val decompiledSource: DirectoryProperty
+
+    @get:Optional
+    @get:Input
+    abstract val unneededFiles: ListProperty<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -46,7 +43,7 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
     override fun init() {
         group = "mm"
         outputDir.convention(craftBukkitDir)
-        excludes.convention(objects.listProperty())
+        directoriesToPatch.convention(objects.listProperty(String::class))
     }
 
     @TaskAction
@@ -54,35 +51,59 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
         Git.checkForGit()
 
         Git(craftBukkitDir).let { git ->
-            if (initialVanillaSpigotPatch.isPresent) {
-                git("am", initialVanillaSpigotPatch.path.absolutePathString()).execute()
-            }
             if (initialCraftBukkitSpigotPatch.isPresent) {
-                git("am", initialCraftBukkitSpigotPatch.path.absolutePathString()).execute()
+                git("apply", initialCraftBukkitSpigotPatch.path.absolutePathString()).execute()
             }
 
-            val newNmsParts = outputNmsPatches.path
-            Files.createDirectories(newNmsParts)
+            val nmsPatches = craftBukkitDir.path.resolve("nms-patches")
             sourcePatches.asFileTree.files.sorted().forEach { patch ->
                 val patchName = patch.name.split("-", limit = 2)[1]
-                val excludeArr = excludes.get().map { "--exclude=$it" }.toTypedArray()
-                git("am", "--ignore-whitespace", *excludeArr, patch.toPath().absolutePathString()).execute()
+                println("Applying Patch: $patchName")
+                val excludeArray = directoriesToPatch.get().map { "--exclude=$it/**" }.toTypedArray()
+                git("am", "--ignore-whitespace", *excludeArray, patch.toPath().absolutePathString()).execute()
+                val includeArray = directoriesToPatch.get().map { "--include=$it/**" }.toTypedArray()
+                git("apply", "--ignore-whitespace", *includeArray, patch.toPath().absolutePathString()).execute()
 
-                val matches = nmsPatches.asFileTree.matching {
-                    include {
-                        it.name.split("-", limit = 2)[1] == patchName
-                    }
-                }.toList()
-
-                if (matches.size == 1) {
-                    val filePath = matches[0].toPath()
-                    val newFilePath = newNmsParts.resolve(filePath.fileName)
-                    Files.copy(filePath, newFilePath)
-                    git("add", newFilePath.absolutePathString()).execute()
-                    git("commit", "--amend", "--no-edit").execute()
-                } else if (matches.isNotEmpty()) {
-                    throw Exception(matches.toString())
+                val javaTypes = McDev.readPatchLines(listOf(patch.toPath())).first.map { "src/main/java/$it" }.filter {
+                    directoriesToPatch.get().any { dir -> it.startsWith(dir) }
                 }
+                if (javaTypes.isNotEmpty()) {
+                    javaTypes.forEach { type ->
+                        val patchedFile = craftBukkitDir.file(type).get().asFile
+                        val fileName = patchedFile.absolutePath.split("src/main/java/", limit = 2)[1]
+                        val nmsFile = decompiledSource.file(fileName).get().asFile
+                        val patchFile = nmsPatches.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
+
+                        val commandText = listOf<String>(
+                            "diff",
+                            "-u",
+                            "--label",
+                            "a/$fileName",
+                            nmsFile.absolutePath,
+                            "--label",
+                            "b/$fileName",
+                            patchedFile.absolutePath
+                        )
+                        val processBuilder = ProcessBuilder(commandText).directory(craftBukkitDir.path)
+                        val command = Command(processBuilder, commandText.joinToString(" "), arrayOf(0, 1))
+                        val output = command.getText()
+
+                        Files.createDirectories(patchFile.parent)
+                        patchFile.bufferedWriter().use {
+                            it.write(output)
+                        }
+                    }
+                    git("add", "nms-patches").execute()
+                    git("commit", "--amend", "--no-edit").execute()
+                }
+            }
+
+            if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
+                unneededFiles.get().forEach { path ->
+                    outputDir.path.resolve(path).deleteRecursive()
+                    git(*Git.add(false, path)).executeSilently()
+                }
+                git("commit", "-m", "Removed unneeded files", "--author=Initial Source <auto@mated.null>").executeSilently()
             }
         }
 
