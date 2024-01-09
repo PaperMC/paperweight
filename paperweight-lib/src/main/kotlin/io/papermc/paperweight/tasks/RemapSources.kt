@@ -45,6 +45,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
@@ -101,6 +102,9 @@ abstract class RemapSources : JavaLauncherTask() {
     @get:OutputFile
     abstract val spigotRecompiledClasses: RegularFileProperty
 
+    @get:Input
+    abstract val sourceCompatibility: Property<Int>
+
     override fun init() {
         super.init()
 
@@ -109,6 +113,7 @@ abstract class RemapSources : JavaLauncherTask() {
         testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
         generatedAt.convention(defaultOutput("at"))
         spigotRecompiledClasses.convention(defaultOutput("spigotRecompiledClasses", "txt"))
+        sourceCompatibility.convention(17)
     }
 
     @TaskAction
@@ -140,6 +145,8 @@ abstract class RemapSources : JavaLauncherTask() {
 
                 outputDir.set(srcOut)
                 generatedAtOutput.set(generatedAt.path)
+
+                sourceCompat.set(sourceCompatibility.orNull)
             }
 
             val testSrc = spigotServerDir.path.resolve("src/test/java")
@@ -160,6 +167,8 @@ abstract class RemapSources : JavaLauncherTask() {
                 cacheDir.set(this@RemapSources.layout.cache)
 
                 outputDir.set(testOut)
+
+                sourceCompat.set(sourceCompatibility.orNull)
             }
 
             queue.await()
@@ -210,7 +219,7 @@ abstract class RemapSources : JavaLauncherTask() {
 
             // Remap any references Spigot maps to mojmap+yarn
             Mercury().let { merc ->
-                merc.sourceCompatibility = JavaCore.VERSION_17
+                merc.sourceCompatibility = parameters.sourceCompat.map { it.toString() }.orNull ?: JavaCore.VERSION_17
                 merc.isGracefulClasspathChecks = true
                 merc.classPath.addAll(parameters.classpath.map { it.toPath() })
 
@@ -265,6 +274,8 @@ abstract class RemapSources : JavaLauncherTask() {
         val cacheDir: RegularFileProperty
         val generatedAtOutput: RegularFileProperty
         val outputDir: RegularFileProperty
+
+        val sourceCompat: Property<Int>
     }
 
     object ExplicitThisAdder : SourceRewriter {
