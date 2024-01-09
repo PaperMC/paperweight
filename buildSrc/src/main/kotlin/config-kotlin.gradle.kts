@@ -1,6 +1,5 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     idea
@@ -11,9 +10,21 @@ java {
     withSourcesJar()
 }
 
+tasks.withType(JavaCompile::class).configureEach {
+    options.release = 11
+}
+
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    target {
+        compilations.configureEach {
+            kotlinOptions {
+                jvmTarget = "11"
+                freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=11")
+            }
+        }
     }
 }
 
@@ -53,13 +64,6 @@ testing {
                 implementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
             }
         }
-    }
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "11"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
     }
 }
 
