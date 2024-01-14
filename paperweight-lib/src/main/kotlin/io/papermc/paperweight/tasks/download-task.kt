@@ -31,13 +31,19 @@ import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.attributes.java.TargetJvmEnvironment
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectInternal.DetachedResolver
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
@@ -140,7 +146,7 @@ fun downloadMinecraftLibraries(
     return queue
 }
 
-@CacheableTask
+@DisableCachingByDefault(because = "Gradle handles caching")
 abstract class DownloadSpigotDependencies : BaseTask() {
 
     @get:InputFile
@@ -167,6 +173,8 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    private fun detachedResolver(): DetachedResolver = (project as ProjectInternal).newDetachedResolver()
+
     @TaskAction
     fun run() {
         val apiSetup = parsePom(apiPom.path)
@@ -174,12 +182,10 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         val mcLibraries = mcLibrariesFile.path.readLines()
 
         val out = outputDir.path
-        val excludes = listOf(out.fileSystem.getPathMatcher("glob:*.etag"))
-        out.deleteRecursive(excludes)
+        out.deleteRecursive()
 
         val outSources = outputSourcesDir.path
-        val excludesSources = listOf(outSources.fileSystem.getPathMatcher("glob:*.etag"))
-        outSources.deleteRecursive(excludesSources)
+        outSources.deleteRecursive()
 
         val spigotRepos = mutableSetOf<String>()
         spigotRepos += apiSetup.repos
@@ -189,23 +195,76 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         artifacts += apiSetup.artifacts
         artifacts += serverSetup.artifacts
 
-        val queue = workerExecutor.noIsolation()
-        for (art in artifacts) {
-            queue.submit(DownloadWorker::class) {
-                repos.set(spigotRepos)
-                artifact.set(art.toString())
-                target.set(out)
-                downloadToDir.set(true)
-                downloader.set(this@DownloadSpigotDependencies.downloader)
+        val resolver = detachedResolver()
+        for (repo in spigotRepos) {
+            resolver.repositories.maven(repo)
+        }
+        val config = resolver.configurations.create("spigotDependencies") {
+            attributes {
+                attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
             }
-            if (!mcLibraries.contains(art.toString())) {
-                queue.submit(DownloadSourcesToDirAction::class) {
-                    repos.set(spigotRepos)
-                    artifact.set(art.toString())
-                    target.set(outSources)
-                    downloader.set(this@DownloadSpigotDependencies.downloader)
+        }
+        for (artifact in artifacts) {
+            val gav = artifact.gav.let {
+                if (it == "com.google.guava:guava:32.1.2-jre") {
+                    // https://github.com/google/guava/issues/6657
+                    "com.google.guava:guava:32.1.3-jre"
+                } else {
+                    it
                 }
             }
+            config.dependencies.add(
+                project.dependencies.create(gav).also {
+                    it as ExternalModuleDependency
+                    it.artifact {
+                        artifact.classifier?.let { s -> classifier = s }
+                        artifact.extension?.let { s -> extension = s }
+                    }
+                }
+            )
+        }
+
+        // The source variants don't have transitives
+        val flatComponents = mutableSetOf<ComponentIdentifier>()
+
+        for (artifact in config.incoming.artifacts.artifacts) {
+            artifact.file.toPath().copyTo(outputDir.path.resolve(artifact.file.name).also { it.parent.createDirectories() }, true)
+            flatComponents += artifact.id.componentIdentifier
+        }
+
+        val sourcesConfig = resolver.configurations.create("spigotDependenciesSources") {
+            attributes {
+                // Mojang libs & Guava don't resolve metadata correctly, so we set the classifier below instead...
+
+                // attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+                // attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+                // attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
+                // attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+
+                // Needed since we set the classifier instead of using above attributes
+                attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
+            }
+        }
+        for (component in flatComponents) {
+            sourcesConfig.dependencies.add(
+                project.dependencies.create(component.displayName).also {
+                    it as ExternalModuleDependency
+                    it.artifact {
+                        classifier = "sources"
+                    }
+                }
+            )
+        }
+        val sourcesView = sourcesConfig.incoming.artifactView {
+            componentFilter {
+                mcLibraries.none { l -> l == it.displayName } &&
+                    // This is only needed since we don't use variant-aware resolution properly
+                    it.displayName != "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"
+            }
+        }
+
+        for (artifact in sourcesView.artifacts.artifacts) {
+            artifact.file.toPath().copyTo(outputSourcesDir.path.resolve(artifact.file.name).also { it.parent.createDirectories() }, true)
         }
     }
 

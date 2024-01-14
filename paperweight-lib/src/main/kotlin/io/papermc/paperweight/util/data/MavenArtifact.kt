@@ -31,8 +31,8 @@ data class MavenArtifact(
     private val group: String,
     private val artifact: String,
     private val version: String,
-    private val classifier: String? = null,
-    private val extension: String? = null
+    val classifier: String? = null,
+    val extension: String? = null
 ) {
 
     private val classifierText: String
@@ -45,6 +45,9 @@ data class MavenArtifact(
         get() = "${group.replace('.', '/')}/$artifact/$version/$file"
     val file: String
         get() = "$artifact-$version$classifierText.$ext"
+
+    val gav: String
+        get() = "$group:$artifact:$version"
 
     fun downloadToFile(downloadService: DownloadService, targetFile: Path, repos: List<String>) {
         targetFile.parent.createDirectories()
