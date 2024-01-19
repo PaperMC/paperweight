@@ -125,6 +125,7 @@ const val PAPER_DECOMPILED_SOURCE_FOLDER = "$MM/decompiled"
 const val PATCHES_DIR = "patches"
 const val SOURCE_PATCHES = "$PATCHES_DIR/sources"
 const val DATA_PATCHES = "$PATCHES_DIR/resources"
+const val MM_PATCHED_SPIGOT_PATCHES = "$MM/patchedSpigotPatches"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 

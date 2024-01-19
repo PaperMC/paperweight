@@ -233,7 +233,7 @@ open class AllTasks(
     }
 
     val setupCraftBukkit by tasks.registering<SetupCraftBukkit> {
-        targetDir.set(importCraftBukkitMcDevFiles.flatMap { it.targetDir })
+        targetDir.set(importCraftBukkitMcDevFiles.flatMap { it.outputDir })
         decompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
         recreateAsPatches.set(libraryFilesToImportForCb.map { "src/main/java/$it" })
 //        perFilePatchesToApply.set(targetDir.dir("some outside directory with the remapped patches"))
@@ -246,9 +246,19 @@ open class AllTasks(
         configure(spigotDecompileJar.flatMap { it.outputJar }, spigotDecompileJar.flatMap { it.decompiledSource })
     }
 
+    val mmPatchSpigotServerPatches by tasks.registering<ApplyRawDiffPatches> {
+        group = "mm"
+        inputDir.set(extension.spigot.craftBukkitPatchDir)
+        patchDir.set(extension.paper.spigotServerPatchPatchesDir.fileExists(project))
+        doLast {
+            unzip(outputZip.get().asFile, layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES))
+        }
+    }
+
     val applySpigotServerPatches by tasks.registering<ApplyServerSourceAndNmsPatches> {
+        dependsOn(mmPatchSpigotServerPatches)
         targetDir.set(importSpigotMcDevFiles.flatMap { it.outputDir })
-        patchesToApply.set(extension.spigot.craftBukkitPatchDir)
+        patchesToApply.set(layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES))
         directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang/brigadier"))
         decompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
         sourcePatchDir.set(targetDir.dir(SOURCE_PATCHES))
