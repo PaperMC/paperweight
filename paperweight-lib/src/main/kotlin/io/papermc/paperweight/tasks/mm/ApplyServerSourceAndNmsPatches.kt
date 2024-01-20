@@ -26,7 +26,11 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
     abstract val directoriesToPatch: ListProperty<String>
 
     @get:InputDirectory
-    abstract val decompiledSource: DirectoryProperty
+    abstract val spigotDecompiledSource: DirectoryProperty
+
+    @get:InputDirectory
+    @get:Optional
+    abstract val paperDecompiledSource: DirectoryProperty
 
     @get:OutputDirectory
     abstract val sourcePatchDir: DirectoryProperty
@@ -51,11 +55,14 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
         files.map { "$prefix$it" }.filter { directoriesToPatch.get().any { dir -> it.startsWith(dir) } } .forEach { file ->
             val patchedFile = targetDir.file(file).get().asFile
             val fileName = patchedFile.absolutePath.split(splitPrefix, limit = 2)[1]
-            val nmsFile = decompiledSource.file(fileName).get().asFile
+            var nmsFile = spigotDecompiledSource.file(fileName).get().path
+            if (paperDecompiledSource.isPresent && Files.notExists(nmsFile)) {
+                nmsFile = paperDecompiledSource.file(fileName).get().path
+            }
             val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
 
             val commandText =
-                listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePath, "--label", "b/$fileName", patchedFile.absolutePath)
+                listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePathString(), "--label", "b/$fileName", patchedFile.absolutePath)
             val processBuilder = ProcessBuilder(commandText).directory(targetDir.path)
             val command = Command(processBuilder, commandText.joinToString(" "), arrayOf(0, 1))
             val output = command.getText()
