@@ -227,6 +227,7 @@ open class AllTasks(
     )
 
     val importCraftBukkitMcDevFiles by tasks.registering<ImportMcDevFiles> {
+        mustRunAfter(remapSpigotDecompiledSources)
         targetDir.set(cloneRepos.flatMap { it.craftBukkitClone })
         filesToImport.set(libraryFilesToImportForCb.map { "brigadier $it" })
         configure(spigotDecompileJar.flatMap { it.outputJar }, spigotDecompileJar.flatMap { it.decompiledSource })
@@ -241,6 +242,7 @@ open class AllTasks(
     }
 
     val importSpigotMcDevFiles by tasks.registering<ImportMcDevFiles> {
+        mustRunAfter(remapSpigotDecompiledSources)
         targetDir.set(setupCraftBukkit.flatMap { it.outputDir })
         patchDir.set(extension.spigot.craftBukkitPatchDir)
         configure(spigotDecompileJar.flatMap { it.outputJar }, spigotDecompileJar.flatMap { it.decompiledSource })
@@ -251,7 +253,9 @@ open class AllTasks(
         inputDir.set(extension.spigot.craftBukkitPatchDir)
         patchDir.set(extension.paper.spigotServerPatchPatchesDir.fileExists(project))
         doLast {
-            unzip(outputZip.get().asFile, layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES))
+            val target = layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES)
+            target.asFile.toPath().deleteRecursive()
+            unzip(outputZip.get().asFile, target)
         }
     }
 
@@ -260,17 +264,33 @@ open class AllTasks(
         targetDir.set(importSpigotMcDevFiles.flatMap { it.outputDir })
         patchesToApply.set(layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES))
         directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang/brigadier"))
-        decompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
+        spigotDecompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
         sourcePatchDir.set(targetDir.dir(SOURCE_PATCHES))
         dataPatchDir.set(targetDir.dir(DATA_PATCHES))
         unneededFiles.set(listOf("applyPatches.sh", "CONTRIBUTING.md", "makePatches.sh", "README.md", "checkstyle.xml"))
+    }
+
+    @Suppress("DuplicatedCode")
+    val remapSpigotDecompiledSources by tasks.registering<RemapSpigotVanillaSources> {
+        perFilePatches.set(extension.craftBukkit.patchDir)
+        spigotPatchDir.set(extension.spigot.craftBukkitPatchDir)
+        mcLibrariesDir.set(downloadMcLibrariesSources.flatMap { it.outputDir })
+        decompiledSource.set(spigotDecompileJar.flatMap { it.decompiledSource })
+        decompiledSourceJar.set(spigotDecompileJar.flatMap { it.outputJar })
+        mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })
+        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
+        mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
+        vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
+        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
+        additionalAts.set(mergePaperAts.flatMap { it.outputFile })
     }
 
     val remapPerFilePatches by tasks.registering<RemapPerFilePatches> {
         targetDir.set(applySpigotServerPatches.flatMap { it.outputDir })
         remapPatch.set(applyServerPatches.flatMap { it.remapSourcesPatch })
         caseOnlyClassNameChanges.set(cleanupSourceMappings.flatMap { it.caseOnlyNameChanges })
-        decompiledSourceFolder.set(decompileJar.flatMap { it.decompiledSource })
+        spigotDecompiledSource.set(remapSpigotDecompiledSources.flatMap { it.remappedSources })
+        paperDecompiledSource.set(decompileJar.flatMap { it.decompiledSource })
         sourcePatchDir.set(targetDir.dir(SOURCE_PATCHES))
     }
 
@@ -297,7 +317,8 @@ open class AllTasks(
         targetDir.set(importPaperMcDevFiles.flatMap { it.outputDir })
         patchesToApply.set(extension.paper.spigotServerPatchDir)
         directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang", "src/main/resources/data/minecraft"))
-        decompiledSource.set(remapPerFilePatches.flatMap { it.decompiledSourceFolder })
+        spigotDecompiledSource.set(remapPerFilePatches.flatMap { it.spigotDecompiledSource })
+        paperDecompiledSource.set(remapPerFilePatches.flatMap { it.paperDecompiledSource })
         sourcePatchDir.set(targetDir.dir(SOURCE_PATCHES))
         dataPatchDir.set(targetDir.dir(DATA_PATCHES))
     }

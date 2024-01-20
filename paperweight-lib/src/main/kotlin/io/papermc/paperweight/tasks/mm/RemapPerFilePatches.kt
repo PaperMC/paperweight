@@ -24,7 +24,10 @@ abstract class RemapPerFilePatches : BaseTask() {
     abstract val caseOnlyClassNameChanges: RegularFileProperty
 
     @get:InputDirectory
-    abstract val decompiledSourceFolder: DirectoryProperty
+    abstract val spigotDecompiledSource: DirectoryProperty
+
+    @get:InputDirectory
+    abstract val paperDecompiledSource: DirectoryProperty
 
     @get:OutputDirectory
     abstract val sourcePatchDir: DirectoryProperty
@@ -62,10 +65,13 @@ abstract class RemapPerFilePatches : BaseTask() {
             include("src/main/java/net/minecraft/**/*.java")
         }.forEach { patchedFile ->
             val fileName = patchedFile.absolutePath.split("src/main/java/", limit = 2)[1]
-            val nmsFile = decompiledSourceFolder.get().file(fileName).asFile
+            var nmsFile = spigotDecompiledSource.get().file(fileName).path
+            if (Files.notExists(nmsFile)) {
+                nmsFile = paperDecompiledSource.get().file(fileName).path
+            }
             val patchFile = sourcePatchesDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
 
-            val commandText = listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePath, "--label", "b/$fileName", patchedFile.absolutePath)
+            val commandText = listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePathString(), "--label", "b/$fileName", patchedFile.absolutePath)
             val processBuilder = ProcessBuilder(commandText).directory(targetDir.get().asFile)
             val command = Command(processBuilder, commandText.joinToString(" "), arrayOf(0, 1))
             val output = command.getText()
