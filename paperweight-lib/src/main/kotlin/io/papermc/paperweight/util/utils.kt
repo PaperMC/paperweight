@@ -47,6 +47,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
+import java.util.jar.Attributes
 import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
@@ -383,13 +384,21 @@ inline fun <reified P> printId(pluginId: String, gradle: Gradle) {
     println("$pluginId v${P::class.java.`package`.implementationVersion} (running on '${System.getProperty("os.name")}')")
 }
 
-fun FileSystem.modifyManifest(op: Manifest.() -> Unit) {
-    modifyManifest(getPath("META-INF/MANIFEST.MF"), op)
+fun FileSystem.modifyManifest(create: Boolean = true, op: Manifest.() -> Unit) {
+    modifyManifest(getPath("META-INF/MANIFEST.MF"), create, op)
 }
 
-fun modifyManifest(path: Path, op: Manifest.() -> Unit) {
-    if (path.exists()) {
-        val mf = path.inputStream().buffered().use { Manifest(it) }
+fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) {
+    val exists = path.exists()
+    if (exists || create) {
+        val mf = if (!exists) {
+            path.parent.createDirectories()
+            val manifest = Manifest()
+            manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            manifest
+        } else {
+            path.inputStream().buffered().use { Manifest(it) }
+        }
         op(mf)
         path.outputStream().buffered().use { mf.write(it) }
     }
