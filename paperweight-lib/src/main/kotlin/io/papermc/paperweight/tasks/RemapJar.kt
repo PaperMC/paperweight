@@ -76,21 +76,28 @@ abstract class RemapJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val logFile = layout.cache.resolve(paperTaskOutput("log"))
-        TinyRemapper.run(
-            argsList = remapperArgs.get(),
-            logFile = logFile,
-            inputJar = inputJar.path,
-            mappingsFile = mappingsFile.path,
-            fromNamespace = fromNamespace.get(),
-            toNamespace = toNamespace.get(),
-            remapClasspath = remapClasspath.files.map { it.toPath() },
-            remapper = remapper,
-            outputJar = outputJar.path,
-            launcher = launcher.get(),
-            workingDir = layout.cache,
-            jvmArgs = jvmArgs.get()
-        )
+        if (toNamespace.get() != fromNamespace.get()) {
+            val logFile = layout.cache.resolve(paperTaskOutput("log"))
+            TinyRemapper.run(
+                argsList = remapperArgs.get(),
+                logFile = logFile,
+                inputJar = inputJar.path,
+                mappingsFile = mappingsFile.path,
+                fromNamespace = fromNamespace.get(),
+                toNamespace = toNamespace.get(),
+                remapClasspath = remapClasspath.files.map { it.toPath() },
+                remapper = remapper,
+                outputJar = outputJar.path,
+                launcher = launcher.get(),
+                workingDir = layout.cache,
+                jvmArgs = jvmArgs.get()
+            )
+        } else {
+            outputJar.path.deleteForcefully()
+            outputJar.path.parent.createDirectories()
+            inputJar.path.copyTo(outputJar.path)
+        }
+
         outputJar.path.openZip().use { fs ->
             fs.modifyManifest {
                 mainAttributes.putValue("paperweight-mappings-namespace", toNamespace.get())
