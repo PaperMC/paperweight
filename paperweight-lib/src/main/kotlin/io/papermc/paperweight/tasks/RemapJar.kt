@@ -100,7 +100,7 @@ abstract class RemapJar : JavaLauncherTask() {
 
         outputJar.path.openZip().use { fs ->
             fs.modifyManifest {
-                mainAttributes.putValue("paperweight-mappings-namespace", toNamespace.get())
+                mainAttributes.putValue(MAPPINGS_NAMESPACE_MANIFEST_KEY, toNamespace.get())
             }
         }
     }

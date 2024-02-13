@@ -93,6 +93,7 @@ const val RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS = "$MAPPINGS_DIR/mojang
 const val OBF_NAMESPACE = "official"
 const val SPIGOT_NAMESPACE = "spigot"
 const val DEOBF_NAMESPACE = "mojang+yarn"
+const val MAPPINGS_NAMESPACE_MANIFEST_KEY = "paperweight-mappings-namespace"
 
 private const val DATA_PATH = "$PAPER_PATH/data"
 const val MC_MANIFEST = "$DATA_PATH/McManifest.json"
