@@ -391,13 +391,13 @@ fun FileSystem.modifyManifest(create: Boolean = true, op: Manifest.() -> Unit) {
 fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) {
     val exists = path.exists()
     if (exists || create) {
-        val mf = if (!exists) {
+        val mf = if (exists) {
+            path.inputStream().buffered().use { Manifest(it) }
+        } else {
             path.parent.createDirectories()
             val manifest = Manifest()
             manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
             manifest
-        } else {
-            path.inputStream().buffered().use { Manifest(it) }
         }
         op(mf)
         path.outputStream().buffered().use { mf.write(it) }

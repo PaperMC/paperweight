@@ -36,6 +36,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
@@ -166,6 +167,11 @@ private fun Project.createBuildTasks(
     val relocatedShadowJar by tasks.registering<ShadowJar> {
         archiveClassifier.set("mojang-mapped-relocated")
         from(zipTree(includeMappings.flatMap { it.outputJar }))
+        inputs.file(includeMappings.flatMap { it.manifest })
+            .withPathSensitivity(PathSensitivity.NONE)
+        doFirst {
+            manifest.from(includeMappings.flatMap { it.manifest })
+        }
     }
     afterEvaluate {
         relocatedShadowJar {
