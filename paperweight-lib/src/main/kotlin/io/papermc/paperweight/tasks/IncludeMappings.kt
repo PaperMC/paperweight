@@ -23,7 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
-import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -59,11 +58,8 @@ abstract class IncludeMappings : BaseTask() {
             dest.parent.createDirectories()
             mappings.path.copyTo(dest)
 
-            val mfPath = fs.getPath("META-INF/MANIFEST.MF")
-            if (mfPath.exists()) {
-                val mf = mfPath.inputStream().buffered().use { Manifest(it) }
-                mf.mainAttributes.putValue("Included-Mappings-Hash", mappings.path.hashFile(HashingAlgorithm.SHA256).asHexString().uppercase())
-                mfPath.outputStream().buffered().use { mf.write(it) }
+            fs.modifyManifest {
+                mainAttributes.putValue("Included-Mappings-Hash", mappings.path.hashFile(HashingAlgorithm.SHA256).asHexString().uppercase())
             }
         }
     }
