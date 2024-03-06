@@ -172,6 +172,8 @@ val Project.ci: Provider<Boolean>
         .map { it.toBoolean() }
         .orElse(false)
 
+private fun stableProp(name: String) = "paperweight.$name"
+
 private fun experimentalProp(name: String) = "paperweight.experimental.$name"
 
 val Project.genSources: Boolean
@@ -182,9 +184,12 @@ val Project.genSources: Boolean
     }
 
 val Project.sharedCaches: Boolean
-    get() = providers.gradleProperty(experimentalProp("sharedCaches")).orNull.toBoolean()
+    get() = providers.gradleProperty(stableProp("sharedCaches"))
+        .map { it.toBoolean() }
+        .orElse(true)
+        .get()
 
-private fun deleteUnusedAfter(target: Project): Long = target.providers.gradleProperty(experimentalProp("sharedCaches.deleteUnusedAfter"))
+private fun deleteUnusedAfter(target: Project): Long = target.providers.gradleProperty(stableProp("sharedCaches.deleteUnusedAfter"))
     .map { value -> parseDuration(value) }
     .orElse(Duration.ofDays(7))
     .map { duration -> duration.toMillis() }
@@ -200,11 +205,16 @@ fun cleanSharedCaches(target: Project, root: Path) {
         stream.asSequence()
             .filter { it.name == "last-used.txt" }
             .mapNotNull {
-                val dir = it.parent.parent // paperweight dir
+                val pwDir = it.parent.parent // paperweight dir
+                val cacheDir = pwDir.parent // cache dir
+                val lock = cacheDir.resolve(USERDEV_SETUP_LOCK)
+                if (lock.exists()) {
+                    return@mapNotNull null
+                }
                 val lastUsed = it.readText().toLong()
                 val since = System.currentTimeMillis() - lastUsed
                 val cutoff = deleteUnusedAfter(target)
-                if (since > cutoff) dir else null
+                if (since > cutoff) pwDir else null
             }
             .toList()
     }
