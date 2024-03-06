@@ -208,7 +208,7 @@ fun cleanSharedCaches(target: Project, root: Path) {
                 val pwDir = it.parent.parent // paperweight dir
                 val cacheDir = pwDir.parent // cache dir
                 val lock = cacheDir.resolve(USERDEV_SETUP_LOCK)
-                if (lock.exists()) {
+                if (lock.exists() && ProcessHandle.of(lock.readText().toLong()).isPresent) {
                     return@mapNotNull null
                 }
                 val lastUsed = it.readText().toLong()
