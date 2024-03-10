@@ -348,6 +348,35 @@ fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> = files.as
     .map { p -> ClassProviderRoot.fromJar(p) }
     .toList()
 
+// Longest path as of 1.20.4
+private const val longestPath: String =
+    "paperweight/mc-dev-sources/data/minecraft/datapacks/update_1_21/data/minecraft/advancements/" +
+        "recipes/building_blocks/waxed_weathered_chiseled_copper_from_waxed_weathered_cut_copper_stonecutting.json"
+
+fun testPathLength(projectLayout: ProjectLayout) {
+    if (System.getProperty("os.name").lowercase().contains("win")) {
+        val tmpProjDir = projectLayout.projectDirectory.path.resolveSibling(
+            projectLayout.projectDirectory.path.name + "_"
+        )
+        val cache = tmpProjDir.resolve(".gradle/$CACHE_PATH")
+        val testFile = cache.resolve(longestPath)
+
+        try {
+            testFile.parent.createDirectories()
+            testFile.writeText("test")
+        } catch (e: Exception) {
+            throw PaperweightException(
+                "The directory this project is cloned in is too nested. Either enable long paths in Windows and Git, or use WSL.\n" +
+                    "Windows documentation: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry\n" +
+                    "Git command: git config --global core.longpaths true",
+                e
+            )
+        } finally {
+            tmpProjDir.deleteRecursive()
+        }
+    }
+}
+
 private fun javaVersion(): Int {
     val version = System.getProperty("java.specification.version")
     val parts = version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
