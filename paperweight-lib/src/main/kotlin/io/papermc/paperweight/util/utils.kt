@@ -366,9 +366,12 @@ fun testPathLength(projectLayout: ProjectLayout) {
             testFile.writeText("test")
         } catch (e: Exception) {
             throw PaperweightException(
-                "The directory this project is cloned in is too nested. Either enable long paths in Windows and Git, or use WSL.\n" +
-                    "Windows documentation: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry\n" +
-                    "Git command: git config --global core.longpaths true",
+                """The directory this project is cloned in is too nested. Possible solutions:
+1) Move the project to a less nested directory (i.e. C:\Paper)
+2) Enable long paths in Windows and Git:
+    Windows documentation: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    Git command: git config --global core.longpaths true
+3) Clone and build the project in WSL (this will also improve build speed)""",
                 e
             )
         } finally {
