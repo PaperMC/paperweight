@@ -1,0 +1,96 @@
+{
+  "version": "fake",
+  "dependencies": {
+    "codebook": [
+      {
+        "group": "io.papermc.codebook",
+        "name": "codebook",
+        "version": "1.0.8"
+      }
+    ],
+    "paramMappings": [
+      {
+        "group": "org.parchmentmc.data",
+        "name": "parchment-1.20.1",
+        "version": "2023.09.03",
+        "extension": "zip"
+      }
+    ],
+    "constants": [
+    ],
+    "remapper": [
+      {
+        "group": "net.neoforged",
+        "name": "AutoRenamingTool",
+        "version": "1.0.7"
+      }
+    ],
+    "decompiler": [
+      {
+        "group": "org.vineflower",
+        "name": "vineflower",
+        "version": "1.10.0-SNAPSHOT"
+      }
+    ]
+  },
+  "repositories": [
+    {
+      "url": "https://maven.fabricmc.net/",
+      "name": "FabricMC",
+      "groups": [
+        "net.fabricmc"
+      ]
+    },
+    {
+      "url": "https://maven.neoforged.net/releases/",
+      "name": "NeoForged",
+      "groups": [
+        "net.neoforged",
+        "net.minecraftforge"
+      ]
+    },
+    {
+      "url": "https://repo.papermc.io/repository/maven-public/",
+      "name": "PaperMC",
+      "groups": [
+        "io.papermc"
+      ]
+    },
+    {
+      "url": "https://maven.parchmentmc.org/",
+      "name": "ParchmentMC",
+      "groups": [
+        "org.parchmentmc"
+      ]
+    },
+    {
+      "url": "https://s01.oss.sonatype.org/content/repositories/snapshots/",
+      "name": "sonatype snapshots",
+      "groups": [
+        "org.vineflower"
+      ]
+    }
+  ],
+  "decompilerArgs": [
+    "-nns=true",
+    "-tcs=true",
+    "-ovr=false",
+    "-vvm=true",
+    "-iec=true",
+    "-jrt=current",
+    "-ind=    ",
+    "-jvn=false",
+    "-dcc=true",
+    "-sef=true",
+    "-nls=1"
+  ],
+  "additionalCompileDependencies": {
+    "compileOnly": [
+      {
+        "group": "org.jetbrains",
+        "name": "annotations",
+        "version": "24.0.1"
+      }
+    ]
+  }
+}

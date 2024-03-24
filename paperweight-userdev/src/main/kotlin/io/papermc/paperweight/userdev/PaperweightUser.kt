@@ -75,7 +75,9 @@ abstract class PaperweightUser : Plugin<Project> {
             null
         }
 
-        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {}
+        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+            parameters.projectPath.set(target.projectDir)
+        }
 
         val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
             group = "paperweight"

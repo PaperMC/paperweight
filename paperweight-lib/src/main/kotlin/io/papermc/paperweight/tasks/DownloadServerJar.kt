@@ -28,7 +28,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 
-// Not cached since this is Mojang's server jar
+@CacheableTask
 abstract class DownloadServerJar : BaseTask() {
 
     @get:Input
@@ -41,7 +41,6 @@ abstract class DownloadServerJar : BaseTask() {
     abstract val downloader: Property<DownloadService>
 
     @get:Nested
-    @get:Optional
     abstract val expectedHash: Property<Hash>
 
     override fun init() {

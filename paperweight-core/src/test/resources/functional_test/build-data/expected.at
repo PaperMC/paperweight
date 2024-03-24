@@ -1,0 +1,3 @@
+public+f Test dum2
+public+f Test getTest()Ljava/lang/String;
+private+f Test getTest2()Ljava/lang/String;

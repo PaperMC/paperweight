@@ -70,6 +70,8 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 
+val whitespace = Regex("\\s+")
+
 val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
 
 class PathJsonConverter : JsonDeserializer<Path?>, JsonSerializer<Path?> {
@@ -93,7 +95,9 @@ val ProjectLayout.cache: Path
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 fun ProjectLayout.initSubmodules() {
     Git.checkForGit()
-    Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+    if (Git.checkForGitRepo(projectDirectory.path)) {
+        Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+    }
 }
 
 fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T?> {
@@ -183,6 +187,18 @@ fun Any.convertToPath(): Path {
         is Provider<*> -> this.get().convertToPath()
         else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
     }
+}
+
+fun Path.ensureClean(): Path {
+    try {
+        deleteRecursively()
+    } catch (e: Exception) {
+        println("Failed to delete $this: ${e.javaClass.name}: ${e.message}")
+        e.suppressedExceptions.forEach { println("Suppressed exception: $it") }
+        throw PaperweightException("Failed to delete $this", e)
+    }
+    parent.createDirectories()
+    return this
 }
 
 fun Any.convertToFileProvider(layout: ProjectLayout, providers: ProviderFactory): Provider<RegularFile> {
