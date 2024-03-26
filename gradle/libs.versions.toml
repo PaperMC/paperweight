@@ -35,7 +35,7 @@ diffpatch = "codechicken:DiffPatch:1.5.0.29"
 gradle-licenser = "net.kyori:indra-licenser-spotless:3.1.3"
 gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:6.23.1"
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1"
-gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.2.1"
+gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.3.0"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.2.1"
 

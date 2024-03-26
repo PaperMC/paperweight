@@ -3,3 +3,7 @@ tasks.register("printVersion") {
         println(version)
     }
 }
+
+tasks.wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+}

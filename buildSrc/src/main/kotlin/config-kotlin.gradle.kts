@@ -43,14 +43,6 @@ repositories {
     mavenCentral()
 }
 
-configurations.all {
-    if (name == "compileOnly") {
-        return@all
-    }
-    dependencies.remove(project.dependencies.gradleApi())
-    dependencies.removeIf { it.group == "org.jetbrains.kotlin" }
-}
-
 dependencies {
     compileOnly(gradleApi())
     compileOnly(kotlin("stdlib-jdk8"))
@@ -65,6 +57,14 @@ testing {
             }
         }
     }
+}
+
+configurations.all {
+    if (name == "compileOnly") {
+        return@all
+    }
+    dependencies.remove(project.dependencies.gradleApi())
+    dependencies.removeIf { it.group == "org.jetbrains.kotlin" }
 }
 
 tasks.jar {
