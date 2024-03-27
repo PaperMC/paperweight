@@ -33,6 +33,7 @@ import kotlin.io.path.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.attributes.java.TargetJvmEnvironment
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -173,6 +174,9 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    @get:Inject
+    abstract val dependencyFactory: DependencyFactory
+
     private val detachedResolver: DetachedResolver = (project as ProjectInternal).newDetachedResolver()
 
     @TaskAction
@@ -214,7 +218,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                 }
             }
             config.dependencies.add(
-                project.dependencies.create(gav).also {
+                dependencyFactory.create(gav).also {
                     it as ExternalModuleDependency
                     it.artifact {
                         artifact.classifier?.let { s -> classifier = s }
@@ -247,7 +251,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         }
         for (component in flatComponents) {
             sourcesConfig.dependencies.add(
-                project.dependencies.create(component.displayName).also {
+                dependencyFactory.create(component.displayName).also {
                     it as ExternalModuleDependency
                     it.artifact {
                         classifier = "sources"
