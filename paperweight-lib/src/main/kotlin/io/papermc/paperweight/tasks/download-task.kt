@@ -31,7 +31,6 @@ import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.attributes.java.TargetJvmEnvironment
