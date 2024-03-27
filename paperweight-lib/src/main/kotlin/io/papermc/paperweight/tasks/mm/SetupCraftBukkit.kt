@@ -1,17 +1,13 @@
 package io.papermc.paperweight.tasks.mm
 
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.io.path.*
-import kotlin.streams.asSequence
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
@@ -21,17 +17,16 @@ abstract class SetupCraftBukkit : BaseTask() {
     abstract val targetDir: DirectoryProperty
 
     @get:InputDirectory
-    abstract val decompiledSource: DirectoryProperty
+    abstract val perFilePatches: DirectoryProperty
 
     @get:InputDirectory
-    @get:Optional
-    abstract val perFilePatchesToApply: DirectoryProperty
+    abstract val sourceForPatchRecreation: DirectoryProperty
 
     @get:Input
     abstract val recreateAsPatches: ListProperty<String>
 
     @get:OutputDirectory
-    abstract val finalPerFilePatchesDirectory: DirectoryProperty
+    abstract val newPerFilePatchesDirectory: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -45,44 +40,24 @@ abstract class SetupCraftBukkit : BaseTask() {
     fun run() {
         Git.checkForGit()
 
-        val patchesToApplyDir = perFilePatchesToApply.pathOrNull ?: targetDir.path.resolve("nms-patches")
-        val patchList = Files.walk(patchesToApplyDir).use { it.asSequence().filter { file -> file.isRegularFile() }.toSet() }
-        if (patchList.isEmpty()) {
-            throw PaperweightException("No patch files found in $patchesToApplyDir")
-        }
+        // move to new patch location
+        val patchesToApplyDir = perFilePatches.path
         val git = Git(targetDir.path)
-
-        val basePatchDirFile = targetDir.path.resolve("src/main/java")
-        // Copy in patch targets
-        for (file in patchList) {
-            val javaName = javaFileName(patchesToApplyDir, file)
-            val out = basePatchDirFile.resolve(javaName)
-            val sourcePath = decompiledSource.path.resolve(javaName)
-
-            out.parent.createDirectories()
-            sourcePath.copyTo(out)
-        }
-
-        for (file in patchList) {
-            val javaName = javaFileName(patchesToApplyDir, file)
-            println("Patching ${javaName.removeSuffix(".java")}")
-            val dirPrefix = basePatchDirFile.relativeTo(outputDir.path).invariantSeparatorsPathString
-            git("apply", "--ignore-whitespace", "--directory=$dirPrefix", file.absolutePathString()).execute()
-        }
-
-        val newPatchesDir = finalPerFilePatchesDirectory.path;
+        val newPatchesDir = newPerFilePatchesDirectory.path;
         newPatchesDir.deleteRecursive()
         project.copy {
             from(patchesToApplyDir)
             into(newPatchesDir)
         }
-        targetDir.path.resolve("nms-patches").deleteRecursive()
+        targetDir.path.resolve("nms-patches").deleteRecursive() // delete old directory
         git("add", "nms-patches", newPatchesDir.absolutePathString()).execute()
 
+        // converts files that CB had previously included in their entirety from external libraries
+        // to patches of the original library source files
         recreateAsPatches.get().forEach { toRecreate ->
             val patchedFile = targetDir.file(toRecreate).path
             val fileName = patchedFile.absolutePathString().split("src/main/java/", limit = 2)[1]
-            val nmsFile = decompiledSource.get().file(fileName).asFile
+            val nmsFile = sourceForPatchRecreation.get().file(fileName).asFile
             val patchFile = newPatchesDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
 
             val commandText =
@@ -99,10 +74,6 @@ abstract class SetupCraftBukkit : BaseTask() {
             git("add", patchFile.absolutePathString()).execute()
         }
 
-        git("commit", "-m", "Convert CraftBukkit patches to new layout", "--author=Initial <auto@mated.null>").execute()
-    }
-
-    private fun javaFileName(rootDir: Path, file: Path): String {
-        return file.relativeTo(rootDir).toString().replaceAfterLast('.', "java")
+        git("commit", "-m", "Move CraftBukkit per-file patches", "--author=Initial <auto@mated.null>").execute()
     }
 }

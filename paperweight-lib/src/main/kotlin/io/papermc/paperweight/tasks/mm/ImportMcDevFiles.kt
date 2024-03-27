@@ -2,8 +2,10 @@ package io.papermc.paperweight.tasks.mm
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -16,12 +18,20 @@ import org.gradle.api.tasks.TaskAction
 
 abstract class ImportMcDevFiles : BaseTask() {
 
-    @get:InputDirectory
-    @get:Optional
-    abstract val patchDir: DirectoryProperty
-
     @get:InputFile
     abstract val sourceMcDevJar: RegularFileProperty
+
+    @get:InputDirectory
+    @get:Optional
+    abstract val sourceMcDevJarSrc: DirectoryProperty
+
+    @get:InputDirectory
+    @get:Optional
+    abstract val perCommitPatchDir: DirectoryProperty
+
+    @get:InputDirectory
+    @get:Optional
+    abstract val perFilePatchDir: DirectoryProperty
 
     @get:Optional
     @get:InputFile
@@ -55,7 +65,7 @@ abstract class ImportMcDevFiles : BaseTask() {
     fun run() {
         Git.checkForGit()
 
-        val patches = patchDir.map { it.path.listDirectoryEntries("*.patch") }.orElse(emptyList()).get()
+        val patches = perCommitPatchDir.map { it.path.listDirectoryEntries("*.patch") }.orElse(emptyList()).get()
         McDev.importMcDev(
             patches = patches,
             decompJar = sourceMcDevJar.path,
@@ -65,6 +75,24 @@ abstract class ImportMcDevFiles : BaseTask() {
             librariesDirs = listOf(spigotLibrariesDir.path, mcLibrariesDir.path),
             secondaryLibraryTargetDir = libraryOutputDir.path
         )
+
+        if (perFilePatchDir.isPresent && sourceMcDevJarSrc.isPresent) {
+            val perFilePatches = perFilePatchDir.path
+            val patchList = Files.walk(perFilePatches).use { it.asSequence().filter { file -> file.isRegularFile() }.toSet() }
+            if (patchList.isNotEmpty()) {
+                val basePatchDirFile = targetDir.path.resolve("src/main/java")
+                // Copy in patch targets
+                for (file in patchList) {
+                    val javaName = javaFileName(perFilePatches, file)
+                    val out = basePatchDirFile.resolve(javaName)
+                    val sourcePath = sourceMcDevJarSrc.path.resolve(javaName)
+
+                    out.parent.createDirectories()
+                    sourcePath.copyTo(out, true)
+                }
+            }
+
+        }
     }
 
     private fun importsFile(): Path? {
