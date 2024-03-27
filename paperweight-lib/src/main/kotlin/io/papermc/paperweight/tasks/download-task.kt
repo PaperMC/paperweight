@@ -173,7 +173,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
-    private fun detachedResolver(): DetachedResolver = (project as ProjectInternal).newDetachedResolver()
+    private val detachedResolver: DetachedResolver = (project as ProjectInternal).newDetachedResolver()
 
     @TaskAction
     fun run() {
@@ -195,7 +195,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         artifacts += apiSetup.artifacts
         artifacts += serverSetup.artifacts
 
-        val resolver = detachedResolver()
+        val resolver = detachedResolver
         for (repo in spigotRepos) {
             resolver.repositories.maven(repo)
         }
