@@ -115,7 +115,7 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
             // Override all settings for debug
             setup(DelegatingOutputStream(outStream, System.out), DelegatingOutputStream(errStream, System.err))
             println()
-            println("$ (pwd) ${processBuilder.directory().absolutePath}")
+            println("$ (pwd) ${processBuilder.directory()?.absolutePath}")
             println("$ $command")
         }
         try {
