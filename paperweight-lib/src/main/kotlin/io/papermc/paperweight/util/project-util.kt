@@ -50,6 +50,8 @@ fun Project.setupServerProject(
     packagesToFix: Provider<List<String>?>,
     reobfMappings: Provider<RegularFile>,
 ): ServerTasks? {
+    testPathLength(layout)
+
     if (!projectDir.exists()) {
         return null
     }
