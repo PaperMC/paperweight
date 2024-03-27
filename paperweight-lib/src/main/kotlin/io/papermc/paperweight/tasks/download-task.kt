@@ -219,7 +219,6 @@ abstract class DownloadSpigotDependencies : BaseTask() {
             }
             config.dependencies.add(
                 dependencyFactory.create(gav).also {
-                    it as ExternalModuleDependency
                     it.artifact {
                         artifact.classifier?.let { s -> classifier = s }
                         artifact.extension?.let { s -> extension = s }
@@ -252,7 +251,6 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         for (component in flatComponents) {
             sourcesConfig.dependencies.add(
                 dependencyFactory.create(component.displayName).also {
-                    it as ExternalModuleDependency
                     it.artifact {
                         classifier = "sources"
                     }
