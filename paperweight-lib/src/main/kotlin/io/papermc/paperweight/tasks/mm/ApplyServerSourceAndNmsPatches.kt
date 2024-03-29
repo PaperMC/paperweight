@@ -59,7 +59,7 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
             if (paperDecompiledSource.isPresent && Files.notExists(nmsFile)) {
                 nmsFile = paperDecompiledSource.file(fileName).get().path
             }
-            val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
+            val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.name + ".patch")) // keep extension
 
             val commandText =
                 listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePathString(), "--label", "b/$fileName", patchedFile.absolutePath)

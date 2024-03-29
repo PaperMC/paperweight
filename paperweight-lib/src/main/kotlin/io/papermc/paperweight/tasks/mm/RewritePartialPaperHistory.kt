@@ -46,12 +46,14 @@ abstract class RewritePartialPaperHistory : BaseTask() {
                 }
             println("Commits to rewrite: ${commitsToRewrite.size}")
 
-            git("filter-repo", "--force", "--commit-callback", """
-                if ${commitsToRewrite.joinToString(" or ")}:
-                    ${RewriteCommits.COMMIT_MSG}
-                    commit.author_name = b'Spigot'
-                    commit.author_email = b'spigot@github.com'
-                ${RewriteCommits.RESET_CALLBACK.lines().joinToString("\n") { "    $it" }}""".trimIndent()).executeOut()
+            val callbackArg = """
+            ${RewriteCommits.UTILS}
+            if ${commitsToRewrite.joinToString(" or ")}:
+                ${RewriteCommits.COMMIT_MSG.lines().joinToString("\n") { "    $it" }}
+                commit.author_name = b'Spigot'
+                commit.author_email = b'spigot@github.com'
+            ${RewriteCommits.RESET_CALLBACK}""".trimIndent()
+            git("filter-repo", "--force", "--commit-callback", callbackArg).executeOut()
 
             firstCommit = git("log", "--grep=Rename to PaperSpigot", "--format=%H").getText().trim()
             println("Removing index and line number changes from patch diff")

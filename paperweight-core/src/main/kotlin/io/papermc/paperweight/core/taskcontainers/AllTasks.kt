@@ -318,22 +318,10 @@ open class AllTasks(
         sourcePatchDir.set(targetDir.dir(SOURCE_PATCHES))
     }
 
-    val mmPatchSpigotServerPatches by tasks.registering<ApplyRawDiffPatches> {
-        group = "mm"
-        inputDir.set(extension.spigot.craftBukkitPatchDir)
-        patchDir.set(extension.paper.spigotServerPatchPatchesDir.fileExists(project))
-        doLast {
-            val target = layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES)
-            target.asFile.toPath().deleteRecursive()
-            unzip(outputZip.get().asFile, target)
-        }
-    }
-
     val remapSpigot by tasks.registering<RemapSpigot> {
-        dependsOn(mmPatchSpigotServerPatches)
         remappedCraftBukkitSource.set(rebuildCraftBukkitPerFilePatches.flatMap { it.outputDir })
         unmappedCraftBukkitSource.set(extension.craftBukkit.craftBukkitDir)
-        spigotPerCommitPatches.set(layout.cacheDir(MM_PATCHED_SPIGOT_PATCHES))
+        spigotPerCommitPatches.set(extension.spigot.craftBukkitPatchDir)
         unmappedCbCopy.set(remapCraftBukkit.flatMap { it.unmappedCopy })
         directoriesToPatch.set(listOf("src/main/java/net/minecraft", "src/main/java/com/mojang/brigadier"))
         spigotDecompiledSource.set(spigotDecompilerMojmapRemap.flatMap { it.remappedOutputSources })

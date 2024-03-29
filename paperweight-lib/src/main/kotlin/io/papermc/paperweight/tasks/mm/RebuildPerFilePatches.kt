@@ -67,7 +67,7 @@ abstract class RebuildPerFilePatches : BaseTask() {
         private fun createPerFilePatch(patchedFile: Path, originalSource: DirectoryProperty, patchDir: Path) {
             val fileName = patchedFile.absolutePathString().split("src/main/java/", limit = 2)[1]
             val nmsFile = originalSource.file(fileName).path
-            val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
+            val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.name + ".patch")) // keep extension
 
             val commandText = listOf("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePathString(), "--label", "b/$fileName", patchedFile.absolutePathString())
             val processBuilder = ProcessBuilder(commandText)

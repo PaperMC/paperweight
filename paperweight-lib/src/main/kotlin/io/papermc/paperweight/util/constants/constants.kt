@@ -130,7 +130,6 @@ const val SPIGOT_DECOMPILED_JAR_SRC = "$MM/spigotDecompiledJar"
 const val PATCHES_DIR = "patches"
 const val SOURCE_PATCHES = "$PATCHES_DIR/sources"
 const val DATA_PATCHES = "$PATCHES_DIR/resources"
-const val MM_PATCHED_SPIGOT_PATCHES = "$MM/patchedSpigotPatches"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 

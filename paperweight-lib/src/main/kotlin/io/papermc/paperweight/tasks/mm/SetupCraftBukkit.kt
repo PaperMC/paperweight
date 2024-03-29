@@ -58,7 +58,7 @@ abstract class SetupCraftBukkit : BaseTask() {
             val patchedFile = targetDir.file(toRecreate).path
             val fileName = patchedFile.absolutePathString().split("src/main/java/", limit = 2)[1]
             val nmsFile = sourceForPatchRecreation.get().file(fileName).asFile
-            val patchFile = newPatchesDir.resolve(fileName).resolveSibling((patchedFile.nameWithoutExtension + ".patch"))
+            val patchFile = newPatchesDir.resolve(fileName).resolveSibling((patchedFile.name + ".patch")) // keep extension
 
             val commandText =
                 listOf<String>("diff", "-u", "--label", "a/$fileName", nmsFile.absolutePath, "--label", "b/$fileName", patchedFile.absolutePathString())
