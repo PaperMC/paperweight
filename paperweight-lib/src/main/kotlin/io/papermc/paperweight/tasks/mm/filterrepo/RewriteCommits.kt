@@ -16,6 +16,19 @@ import org.gradle.kotlin.dsl.*
 abstract class RewriteCommits : BaseTask() {
 
     companion object {
+        const val UTILS = """
+            def insert_into_commit_msg(text):
+                msg_split = commit.message.decode("utf-8").split("\n")
+                idx = min([i for i,x in enumerate(msg_split) if x.find("Co-authored-by:") != -1 or x.find("By:") != -1 or x.find("Also-by:") != -1], default=None)
+                if idx is not None:
+                    msg_split.insert(idx, text.decode("utf-8"))
+                    commit.message = "\n".join(msg_split).encode("utf-8")
+                else:
+                    commit.message = commit.message + b'\n' + text
+
+            def replace_in_commit_msg(match, replace):
+                commit.message = commit.message.decode("utf-8").replace(match, replace).encode("utf-8")
+        """
         const val RESET_CALLBACK = """
             commit.committer_name  = commit.author_name
             commit.committer_email = commit.author_email
@@ -23,9 +36,13 @@ abstract class RewriteCommits : BaseTask() {
             """
 
         @Suppress("MemberVisibilityCanBePrivate")
-        const val COMMIT_MSG = "commit.message = commit.message + b'By: ' + commit.author_name + b' <' + commit.author_email + b'>'"
+        const val COMMIT_MSG = """
+            insert_into_commit_msg(b'By: ' + commit.author_name + b' <' + commit.author_email + b'>')
+            replace_in_commit_msg("Co-authored-by:", "Also-by:")
+        """
 
         const val CRAFTBUKKIT_CALLBACK = """
+            $UTILS
             $COMMIT_MSG
             commit.author_name     = b'CraftBukkit/Spigot'
             commit.author_email    = b'craftbukkit.spigot@github.com'
@@ -33,11 +50,20 @@ abstract class RewriteCommits : BaseTask() {
             """
 
         const val BUKKIT_CALLBACK = """
+            $UTILS
             $COMMIT_MSG
             commit.author_name     = b'Bukkit/Spigot'
             commit.author_email    = b'bukkit.spigot@github.com'
             $RESET_CALLBACK
             """
+
+        private const val MOVE_BACK_CALLBACK = """
+            $UTILS
+            import time
+            date = commit.author_date.decode('utf-8').split(' ')
+            commit.author_date = f'{int(date[0]) - 500000000} {date[1]}'.encode('utf-8')
+            insert_into_commit_msg(b'Original-Date: ' + time.ctime(int(date[0])).encode("utf-8"))
+        """
 
         const val PAPER_CALLBACK = """
             msg    = commit.message.decode('utf-8')
@@ -45,6 +71,7 @@ abstract class RewriteCommits : BaseTask() {
             if author == 'aikar@aikar.co' and (msg.startswith('[CI-SKIP] [Auto]') or msg.startswith('[Auto]')):
                 commit.author_name   = b'Automated'
                 commit.author_email  = b'auto@mated.null'
+            $MOVE_BACK_CALLBACK
             $RESET_CALLBACK
         """
     }
