@@ -29,6 +29,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -36,6 +37,7 @@ import java.lang.management.ManagementFactory
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.URL
+import java.nio.charset.Charset
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
@@ -45,6 +47,7 @@ import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
@@ -57,6 +60,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -348,35 +352,57 @@ fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> = files.as
     .map { p -> ClassProviderRoot.fromJar(p) }
     .toList()
 
-// Longest path as of 1.20.4
-private const val longestPath: String =
-    "paperweight/mc-dev-sources/data/minecraft/datapacks/update_1_21/data/minecraft/advancements/" +
-        "recipes/building_blocks/waxed_weathered_chiseled_copper_from_waxed_weathered_cut_copper_stonecutting.json"
+fun asString(out: ByteArrayOutputStream) = String(out.toByteArray(), Charset.defaultCharset())
+    .replace(System.lineSeparator(), "\n")
 
-fun testPathLength(projectLayout: ProjectLayout) {
+fun testPathLength(providers: ProviderFactory) {
+    if (!providers.gradleProperty("paperweight.windowsLongPathWarning").map { it.toBoolean() }.orElse(true).get()) {
+        return
+    }
     if (System.getProperty("os.name").lowercase().contains("win")) {
-        val tmpProjDir = projectLayout.projectDirectory.path.resolveSibling(
-            projectLayout.projectDirectory.path.name + "_"
-        )
-        val cache = tmpProjDir.resolve(".gradle/$CACHE_PATH")
-        val testFile = cache.resolve(longestPath)
+        val registryQuery =
+            "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\FileSystem /v LongPathsEnabled"
+        val proc = ProcessBuilder()
+            .command(registryQuery.split(" "))
+            .redirectErrorStream(true)
+            .start()
+        val outBytes = ByteArrayOutputStream()
+        val outFuture = redirect(proc.inputStream, outBytes)
+        if (!proc.waitFor(10L, TimeUnit.SECONDS)) {
+            proc.destroyForcibly()
+            throw PaperweightException("Command '$registryQuery' did not finish after 10 seconds, killed process")
+        }
+        outFuture.get(500L, TimeUnit.MILLISECONDS)
+        val out = asString(outBytes)
 
-        try {
-            testFile.parent.createDirectories()
-            testFile.writeText("test")
-        } catch (e: Exception) {
-            throw PaperweightException(
-                """The directory this project is cloned in is too nested. Possible solutions:
-1) Move the project to a less nested directory (i.e. C:\Paper)
-2) Enable long paths in Windows and Git:
+        val gitQuery = "git config --global --get core.longpaths"
+        val gitProc = ProcessBuilder()
+            .command(gitQuery.split(" "))
+            .redirectErrorStream(true)
+            .start()
+        val gitOutBytes = ByteArrayOutputStream()
+        val gitOutFuture = redirect(gitProc.inputStream, gitOutBytes)
+        if (!gitProc.waitFor(10L, TimeUnit.SECONDS)) {
+            gitProc.destroyForcibly()
+            throw PaperweightException("Command '$gitQuery' did not finish after 10 seconds, killed process")
+        }
+        gitOutFuture.get(500L, TimeUnit.MILLISECONDS)
+        val gitOut = asString(gitOutBytes)
+
+        if (out.contains("LongPathsEnabled    REG_DWORD    0x1") && gitOut.contains("true")) {
+            return
+        }
+        val logger = Logging.getLogger("paperweight-path-length-warning")
+        logger.warn(
+            """paperweight uses long paths that may exceed the Windows MAX_PATH limit depending on where the project is located.
+To avoid build failures and disable this warning, do one of the following:
+1) Enable long paths in Windows and Git:
     Windows documentation: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
     Git command: git config --global core.longpaths true
-3) Clone and build the project in WSL (this will also improve build speed)""",
-                e
-            )
-        } finally {
-            tmpProjDir.deleteRecursive()
-        }
+2) Clone and build the project in WSL (this will also improve build speed)
+
+This warning can also be disabled by setting the gradle property 'paperweight.windowsLongPathWarning' to 'false'."""
+        )
     }
 }
 

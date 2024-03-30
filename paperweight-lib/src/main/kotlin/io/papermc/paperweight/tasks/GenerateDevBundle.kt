@@ -29,7 +29,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
 import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
@@ -318,9 +317,6 @@ abstract class GenerateDevBundle : DefaultTask() {
 
         return asString(outBytes)
     }
-
-    private fun asString(out: ByteArrayOutputStream) = String(out.toByteArray(), Charset.defaultCharset())
-        .replace(System.getProperty("line.separator"), "\n")
 
     @Suppress("SameParameterValue")
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
