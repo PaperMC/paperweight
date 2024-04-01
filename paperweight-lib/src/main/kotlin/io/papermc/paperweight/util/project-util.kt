@@ -82,7 +82,7 @@ fun Project.setupServerProject(
                     layout.projectDirectory.path
                 )
 
-                add(create(parent.files(remappedJar)))
+                add(create(parent.files(filterPatchedFiles.flatMap { it.outputJar })))
             }
         }
     }
