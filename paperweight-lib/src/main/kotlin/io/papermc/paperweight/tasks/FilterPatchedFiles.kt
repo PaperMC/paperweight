@@ -97,16 +97,18 @@ abstract class FilterPatchedFiles : BaseTask() {
                     if (vanilla.exists()) {
                         val outFile = outputRoot.resolve(p)
                         val outDir = outFile.parent
-                        (outDir.listDirectoryEntries("${vanilla.name.removeSuffix(".class")}$*.class") + outFile).forEach {
-                            it.deleteIfExists()
-                        }
+                        val paths = outDir.listDirectoryEntries("${vanilla.name.removeSuffix(".class")}$*.class").toMutableList()
+                        paths.add(outFile)
+                        paths.forEach { it.deleteIfExists() }
                     }
                 }
                 for (del in srcRemoved) {
                     val p = del.removeSuffix(".java") + ".class"
                     val vanillaFile = vanillaRoot.resolve(p)
                     if (vanillaFile.exists()) {
-                        (vanillaFile.parent.listDirectoryEntries("${vanillaFile.name.removeSuffix(".class")}$*.class") + vanillaFile).forEach {
+                        val paths = vanillaFile.parent.listDirectoryEntries("${vanillaFile.name.removeSuffix(".class")}$*.class").toMutableList()
+                        paths.add(vanillaFile)
+                        paths.forEach {
                             val out = outputRoot.resolve(it.relativeTo(vanillaRoot))
                             out.parent.createDirectories()
                             out.deleteIfExists()
