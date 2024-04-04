@@ -61,7 +61,7 @@ fun Project.setupServerProject(
     exportRuntimeClasspathTo(parent)
 
     @Suppress("UNUSED_VARIABLE", "KotlinRedundantDiagnosticSuppress")
-    val filterProjectDir by tasks.registering<FilterProjectDir> {
+    val filterPatchedFiles by tasks.registering<FilterPatchedFiles> {
         inputSrcDir.set(file("src/main/java"))
         inputResourcesDir.set(file("src/main/resources"))
         vanillaJar.set(
@@ -82,7 +82,7 @@ fun Project.setupServerProject(
                     layout.projectDirectory.path
                 )
 
-                add(create(parent.files(remappedJar)))
+                add(create(parent.files(filterPatchedFiles.flatMap { it.outputJar })))
             }
         }
     }
