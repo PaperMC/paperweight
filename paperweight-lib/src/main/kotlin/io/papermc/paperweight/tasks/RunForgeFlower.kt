@@ -34,20 +34,25 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
 val forgeFlowerArgList: List<String> = listOf(
-    "-ind=    ",
-    "-din=1",
-    "-rbr=1",
-    "-dgs=1",
-    "-asc=1",
-    "-rsy=1",
-    "-iec=1",
-    "-jvn=0",
-    "-isl=0",
-    "-iib=1",
-    "-bsm=1",
-    "-dcl=1",
+    "-nns=true", // from mache
+    "-tcs=true", // from mache
+    "-vvm=true", // from mache
+    "-jrt=current", // from mache
+    "-dcc=true", // from mache
+    "-ind=    ", // same as mache
+    "-din=1", // is default
+    "-rbr=1", // is default
+    "-dgs=1", // is default
+    "-asc=0", // change for vineflower
+    "-rsy=1", // is default
+    "-iec=1", // same as mache
+    "-jvn=0", // same as mache
+    "-isl=0", // is default
+    "-iib=0", // change for vineflower
+    "-bsm=1", // no change
+    "-dcl=1", // no change
     "-ovr=0", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
-    "-pll=999999", // High line length to effectively disable formatter (only does anything on Vineflower)
+//    "-pll=999999", // High line length to effectively disable formatter (only does anything on Vineflower)
     "-log=TRACE",
     "-cfg",
     "{libraries}",
