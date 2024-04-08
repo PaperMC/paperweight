@@ -60,7 +60,7 @@ open class AllTasks(
         includes.set(listOf("/data/**", "/assets/**", "version.json", "yggdrasil_session_pubkey.der", "pack.mcmeta", "flightrecorder-config.jfc"))
     }
 
-    val decompileJar by tasks.registering<RunForgeFlower> {
+    val decompileJar by tasks.registering<RunVineFlower> {
         executable.from(project.configurations.named(DECOMPILER_CONFIG))
 
         inputJar.set(copyResources.flatMap { it.outputJar })

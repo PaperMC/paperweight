@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.tasks.runForgeFlower
+import io.papermc.paperweight.tasks.runVineFlower
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
@@ -44,7 +44,7 @@ class DecompileMinecraft(
     override val hashFile: Path = outputJar.siblingHashesFile()
 
     override fun run(context: SetupHandler.Context) {
-        runForgeFlower(
+        runVineFlower(
             argsList = decompileArgs,
             logFile = outputJar.siblingLogFile(),
             workingDir = cache,

@@ -33,34 +33,31 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
-val forgeFlowerArgList: List<String> = listOf(
-    "-nns=true", // from mache
-    "-tcs=true", // from mache
-    "-vvm=true", // from mache
-    "-jrt=current", // from mache
-    "-dcc=true", // from mache
-    "-ind=    ", // same as mache
-    "-din=1", // is default
-    "-rbr=1", // is default
-    "-dgs=1", // is default
-    "-asc=0", // change for vineflower
-    "-rsy=1", // is default
-    "-iec=1", // same as mache
-    "-jvn=0", // same as mache
-    "-isl=0", // is default
-    "-iib=0", // change for vineflower
-    "-bsm=1", // no change
-    "-dcl=1", // no change
-    "-ovr=0", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
-//    "-pll=999999", // High line length to effectively disable formatter (only does anything on Vineflower)
-    "-log=TRACE",
-    "-cfg",
+val vineFlowerArgList: List<String> = listOf(
+    "--synthetic-not-set=true",
+    "--ternary-constant-simplification=true",
+    "--verify-merges=true",
+    "--include-runtime=current",
+    "--decompile-complex-constant-dynamic=true",
+    "--indent-string=    ",
+    "--decompile-inner=true",     // is default
+    "--remove-bridge=true",       // is default
+    "--decompile-generics=true",  // is default
+    "--ascii-strings=false",      // is default
+    "--remove-synthetic=true",    // is default
+    "--include-classpath=true",
+    "--inline-simple-lambdas=true",     // is default
+    "--ignore-invalid-bytecode=false",  // is default
+    "--bytecode-source-mapping=true",
+    "--dump-code-lines=true",
+    "--override-annotation=false", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
+    "-cfg", // this is required for some reason?
     "{libraries}",
     "{input}",
     "{output}"
 )
 
-private fun List<String>.createForgeFlowerArgs(
+private fun List<String>.createVineFlowerArgs(
     libraries: String,
     input: String,
     output: String,
@@ -73,7 +70,7 @@ private fun List<String>.createForgeFlowerArgs(
     }
 }
 
-fun runForgeFlower(
+fun runVineFlower(
     argsList: List<String>,
     logFile: Path,
     workingDir: Path,
@@ -92,12 +89,12 @@ fun runForgeFlower(
         tempFile.bufferedWriter().use { writer ->
             for (lib in libs) {
                 if (lib.isLibraryJar) {
-                    writer.appendLine("-e=${lib.absolutePathString()}")
+                    writer.appendLine("--add-external=${lib.absolutePathString()}")
                 }
             }
         }
 
-        val argList = argsList.createForgeFlowerArgs(
+        val argList = argsList.createVineFlowerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
             outputJar.absolutePathString(),
@@ -114,7 +111,7 @@ fun runForgeFlower(
 }
 
 @CacheableTask
-abstract class RunForgeFlower : JavaLauncherTask() {
+abstract class RunVineFlower : JavaLauncherTask() {
 
     @get:Classpath
     abstract val executable: ConfigurableFileCollection
@@ -140,8 +137,8 @@ abstract class RunForgeFlower : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        runForgeFlower(
-            forgeFlowerArgList,
+        runVineFlower(
+            vineFlowerArgList,
             layout.cache.resolve(paperTaskOutput("log")),
             layout.cache,
             executable,

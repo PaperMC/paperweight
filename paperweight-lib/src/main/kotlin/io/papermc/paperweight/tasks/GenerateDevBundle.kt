@@ -401,7 +401,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     private fun createDecompileRunner(): Runner {
         return Runner(
             dep = determineMavenDep(decompilerUrl, decompilerConfig),
-            args = forgeFlowerArgList
+            args = vineFlowerArgList
         )
     }
 
