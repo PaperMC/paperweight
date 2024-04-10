@@ -38,7 +38,6 @@ import org.gradle.jvm.toolchain.JavaLauncher
 val vineFlowerArgList: List<String> = listOf(
     "--synthetic-not-set=true",
     "--ternary-constant-simplification=true",
-    "--verify-merges=true",
     "--include-runtime=current",
     "--decompile-complex-constant-dynamic=true",
     "--indent-string=    ",
