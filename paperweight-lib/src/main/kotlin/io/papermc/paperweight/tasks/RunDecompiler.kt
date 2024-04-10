@@ -124,7 +124,7 @@ private fun isVineflower(executable: FileCollection) = executable.files.any {
         }
         manifest != null
             && manifest.mainAttributes.containsKey(Attributes.Name("Implementation-Name"))
-            && manifest.mainAttributes.getValue("Implementation-Name") == "Vineflower"
+            && manifest.mainAttributes.getValue("Implementation-Name").equals("Vineflower", ignoreCase = true)
     }
 }
 
