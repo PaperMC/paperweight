@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -70,7 +71,7 @@ private fun List<String>.createVineFlowerArgs(
     }
 }
 
-fun runVineFlower(
+fun runDecompiler(
     argsList: List<String>,
     logFile: Path,
     workingDir: Path,
@@ -86,10 +87,15 @@ fun runVineFlower(
     val tempFile = createTempFile("paperweight", "txt")
 
     try {
+        val vineflower = isVineflower(executable)
         tempFile.bufferedWriter().use { writer ->
             for (lib in libs) {
                 if (lib.isLibraryJar) {
-                    writer.appendLine("--add-external=${lib.absolutePathString()}")
+                    if (vineflower) {
+                        writer.appendLine("--add-external=${lib.absolutePathString()}")
+                    } else {
+                        writer.appendLine("-e=${lib.absolutePathString()}")
+                    }
                 }
             }
         }
@@ -107,6 +113,15 @@ fun runVineFlower(
         javaLauncher.runJar(executable, workingDir, logFile, jvmArgs = jvmArgs, args = argList.toTypedArray())
     } finally {
         tempFile.deleteForcefully()
+    }
+}
+
+private fun isVineflower(executable: FileCollection) = executable.files.any {
+    it.toPath().openZip().use { fs ->
+        val manifest = fs.getPath("META-INF/MANIFEST.MF").takeIf { f -> f.isRegularFile() }?.inputStream()?.buffered()?.use { reader ->
+            Manifest(reader)
+        }
+        manifest != null && manifest.mainAttributes.getValue("Implementation-Name") == "Vineflower"
     }
 }
 
@@ -137,7 +152,7 @@ abstract class RunVineFlower : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        runVineFlower(
+        runDecompiler(
             vineFlowerArgList,
             layout.cache.resolve(paperTaskOutput("log")),
             layout.cache,
