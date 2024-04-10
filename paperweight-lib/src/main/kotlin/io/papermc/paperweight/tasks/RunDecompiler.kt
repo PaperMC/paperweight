@@ -53,7 +53,7 @@ val vineFlowerArgList: List<String> = listOf(
     "--bytecode-source-mapping=true",
     "--dump-code-lines=true",
     "--override-annotation=false", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
-    "-cfg", // this is required for some reason?
+    "-cfg", // Pass the libraries as an argument file to avoid command line length limits
     "{libraries}",
     "{input}",
     "{output}"
