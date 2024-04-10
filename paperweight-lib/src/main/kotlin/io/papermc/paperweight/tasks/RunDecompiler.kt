@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import java.util.jar.Attributes
 import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
@@ -121,7 +122,9 @@ private fun isVineflower(executable: FileCollection) = executable.files.any {
         val manifest = fs.getPath("META-INF/MANIFEST.MF").takeIf { f -> f.isRegularFile() }?.inputStream()?.buffered()?.use { reader ->
             Manifest(reader)
         }
-        manifest != null && manifest.mainAttributes.getValue("Implementation-Name") == "Vineflower"
+        manifest != null
+            && manifest.mainAttributes.containsKey(Attributes.Name("Implementation-Name"))
+            && manifest.mainAttributes.getValue("Implementation-Name") == "Vineflower"
     }
 }
 
