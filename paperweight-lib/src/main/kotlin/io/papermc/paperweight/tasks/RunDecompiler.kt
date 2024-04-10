@@ -25,6 +25,8 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -33,29 +35,30 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
-val forgeFlowerArgList: List<String> = listOf(
-    "-ind=    ",
-    "-din=1",
-    "-rbr=1",
-    "-dgs=1",
-    "-asc=1",
-    "-rsy=1",
-    "-iec=1",
-    "-jvn=0",
-    "-isl=0",
-    "-iib=1",
-    "-bsm=1",
-    "-dcl=1",
-    "-ovr=0", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
-    "-pll=999999", // High line length to effectively disable formatter (only does anything on Vineflower)
-    "-log=TRACE",
-    "-cfg",
+val vineFlowerArgList: List<String> = listOf(
+    "--synthetic-not-set=true",
+    "--ternary-constant-simplification=true",
+    "--include-runtime=current",
+    "--decompile-complex-constant-dynamic=true",
+    "--indent-string=    ",
+    "--decompile-inner=true", // is default
+    "--remove-bridge=true", // is default
+    "--decompile-generics=true", // is default
+    "--ascii-strings=false", // is default
+    "--remove-synthetic=true", // is default
+    "--include-classpath=true",
+    "--inline-simple-lambdas=true", // is default
+    "--ignore-invalid-bytecode=false", // is default
+    "--bytecode-source-mapping=true",
+    "--dump-code-lines=true",
+    "--override-annotation=false", // We add override annotations ourselves. Vineflower's impl doesn't work as well yet and conflicts
+    "-cfg", // Pass the libraries as an argument file to avoid command line length limits
     "{libraries}",
     "{input}",
     "{output}"
 )
 
-private fun List<String>.createForgeFlowerArgs(
+private fun List<String>.createDecompilerArgs(
     libraries: String,
     input: String,
     output: String,
@@ -68,7 +71,7 @@ private fun List<String>.createForgeFlowerArgs(
     }
 }
 
-fun runForgeFlower(
+fun runDecompiler(
     argsList: List<String>,
     logFile: Path,
     workingDir: Path,
@@ -84,15 +87,20 @@ fun runForgeFlower(
     val tempFile = createTempFile("paperweight", "txt")
 
     try {
+        val vineflower = isVineflower(executable)
         tempFile.bufferedWriter().use { writer ->
             for (lib in libs) {
                 if (lib.isLibraryJar) {
-                    writer.appendLine("-e=${lib.absolutePathString()}")
+                    if (vineflower) {
+                        writer.appendLine("--add-external=${lib.absolutePathString()}")
+                    } else {
+                        writer.appendLine("-e=${lib.absolutePathString()}")
+                    }
                 }
             }
         }
 
-        val argList = argsList.createForgeFlowerArgs(
+        val argList = argsList.createDecompilerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
             outputJar.absolutePathString(),
@@ -108,8 +116,19 @@ fun runForgeFlower(
     }
 }
 
+private fun isVineflower(executable: FileCollection) = executable.files.any {
+    it.toPath().openZip().use { fs ->
+        val manifest = fs.getPath("META-INF/MANIFEST.MF").takeIf { f -> f.isRegularFile() }?.inputStream()?.buffered()?.use { reader ->
+            Manifest(reader)
+        }
+        manifest != null &&
+            manifest.mainAttributes.containsKey(Attributes.Name("Implementation-Name")) &&
+            manifest.mainAttributes.getValue("Implementation-Name").equals("Vineflower", ignoreCase = true)
+    }
+}
+
 @CacheableTask
-abstract class RunForgeFlower : JavaLauncherTask() {
+abstract class RunVineFlower : JavaLauncherTask() {
 
     @get:Classpath
     abstract val executable: ConfigurableFileCollection
@@ -135,8 +154,8 @@ abstract class RunForgeFlower : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        runForgeFlower(
-            forgeFlowerArgList,
+        runDecompiler(
+            vineFlowerArgList,
             layout.cache.resolve(paperTaskOutput("log")),
             layout.cache,
             executable,
