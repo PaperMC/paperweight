@@ -59,7 +59,7 @@ val vineFlowerArgList: List<String> = listOf(
     "{output}"
 )
 
-private fun List<String>.createVineFlowerArgs(
+private fun List<String>.createDecompilerArgs(
     libraries: String,
     input: String,
     output: String,
@@ -101,7 +101,7 @@ fun runDecompiler(
             }
         }
 
-        val argList = argsList.createVineFlowerArgs(
+        val argList = argsList.createDecompilerArgs(
             tempFile.absolutePathString(),
             inputJar.absolutePathString(),
             outputJar.absolutePathString(),
@@ -122,9 +122,9 @@ private fun isVineflower(executable: FileCollection) = executable.files.any {
         val manifest = fs.getPath("META-INF/MANIFEST.MF").takeIf { f -> f.isRegularFile() }?.inputStream()?.buffered()?.use { reader ->
             Manifest(reader)
         }
-        manifest != null
-            && manifest.mainAttributes.containsKey(Attributes.Name("Implementation-Name"))
-            && manifest.mainAttributes.getValue("Implementation-Name").equals("Vineflower", ignoreCase = true)
+        manifest != null &&
+            manifest.mainAttributes.containsKey(Attributes.Name("Implementation-Name")) &&
+            manifest.mainAttributes.getValue("Implementation-Name").equals("Vineflower", ignoreCase = true)
     }
 }
 
