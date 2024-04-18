@@ -44,13 +44,9 @@ abstract class IncludeMappings : BaseTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
-    @get:OutputFile
-    abstract val manifest: RegularFileProperty
-
     override fun init() {
         super.init()
         outputJar.convention(defaultOutput())
-        manifest.convention(defaultOutput("manifest"))
     }
 
     @TaskAction
@@ -65,8 +61,6 @@ abstract class IncludeMappings : BaseTask() {
             fs.modifyManifest {
                 mainAttributes.putValue("Included-Mappings-Hash", mappings.path.hashFile(HashingAlgorithm.SHA256).asHexString().uppercase())
             }
-            manifest.path.parent.createDirectories()
-            fs.getPath("META-INF/MANIFEST.MF").copyTo(manifest.path, overwrite = true)
         }
     }
 }
