@@ -41,7 +41,7 @@ import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
 
@@ -160,20 +160,19 @@ class PaperweightPatcher : Plugin<Project> {
             }
 
             val serverProj = patcher.serverProject.orNull ?: return@afterEvaluate
-            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
+            val serverJar = serverProj.tasks.register("serverJar", Zip::class)
 
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
                 spigotRecompiledClasses.pathProvider(upstreamData.map { it.spigotRecompiledClasses })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
             generateRelocatedReobfMappings {
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
             val (includeMappings, reobfJar) = serverProj.setupServerProject(
@@ -183,8 +182,8 @@ class PaperweightPatcher : Plugin<Project> {
                 patcher.mcDevSourceDir.path,
                 upstreamData.map { it.libFile },
                 mergedReobfPackagesToFix,
-                patchReobfMappings.flatMap { it.outputMappings },
-                generateRelocatedReobfMappings
+                generateRelocatedReobfMappings,
+                serverJar
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(

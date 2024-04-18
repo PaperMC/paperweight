@@ -37,7 +37,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
@@ -138,14 +138,13 @@ class PaperweightCore : Plugin<Project> {
             val cache = target.layout.cache
 
             val serverProj = target.ext.serverProject.orNull ?: return@afterEvaluate
-            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
+            val serverJar = serverProj.tasks.register("serverJar", Zip::class)
 
             tasks.generateReobfMappings {
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
             }
             tasks.generateRelocatedReobfMappings {
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
             val (includeMappings, reobfJar) = serverProj.setupServerProject(
@@ -155,8 +154,8 @@ class PaperweightCore : Plugin<Project> {
                 ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES_TXT),
                 ext.paper.reobfPackagesToFix,
-                tasks.patchReobfMappings.flatMap { it.outputMappings },
-                tasks.generateRelocatedReobfMappings
+                tasks.generateRelocatedReobfMappings,
+                serverJar
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(

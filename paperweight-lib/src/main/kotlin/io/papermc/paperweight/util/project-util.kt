@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.util
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import io.papermc.paperweight.extension.PaperweightServerExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
@@ -32,13 +31,13 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.attributes.Usage
-import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
@@ -49,8 +48,8 @@ fun Project.setupServerProject(
     mcDevSourceDir: Path,
     libsFile: Any,
     packagesToFix: Provider<List<String>?>,
-    reobfMappings: Provider<RegularFile>,
     relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>,
+    serverJar: TaskProvider<Zip>
 ): ServerTasks? {
     if (!projectDir.exists()) {
         return null
@@ -108,8 +107,7 @@ fun Project.setupServerProject(
 
     addMcDevSourcesRoot(mcDevSourceDir)
 
-    plugins.apply("com.github.johnrengelman.shadow")
-    return createBuildTasks(parent, serverExt, vanillaServer, packagesToFix, reobfMappings, relocatedReobfMappings)
+    return createBuildTasks(parent, serverExt, serverJar, vanillaServer, packagesToFix, relocatedReobfMappings)
 }
 
 private fun Project.exportRuntimeClasspathTo(parent: Project) {
@@ -143,18 +141,25 @@ private fun Project.exportRuntimeClasspathTo(parent: Project) {
 private fun Project.createBuildTasks(
     parent: Project,
     serverExt: PaperweightServerExtension,
+    serverJar: TaskProvider<Zip>,
     vanillaServer: Configuration,
     packagesToFix: Provider<List<String>?>,
-    reobfMappings: Provider<RegularFile>,
     relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>
 ): ServerTasks {
-    val shadowJar: TaskProvider<ShadowJar> = tasks.named("shadowJar", ShadowJar::class) {
+    serverJar {
+        destinationDirectory.set(layout.buildDirectory.dir("libs"))
+        archiveExtension.set("jar")
         archiveClassifier.set("mojang-mapped")
-        configurations = listOf(vanillaServer)
+        from(zipTree(tasks.named<Jar>("jar").flatMap { it.archiveFile }.map { it.asFile }))
+        from(vanillaServer.elements.map { it.map { f -> zipTree(f.asFile) } }) {
+            exclude("META-INF/MANIFEST.MF")
+        }
+        isReproducibleFileOrder = true
+        isPreserveFileTimestamps = false
     }
 
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
-        inputJar.set(shadowJar.flatMap { it.archiveFile })
+        inputJar.set(serverJar.flatMap { it.archiveFile })
         packagesToProcess.set(packagesToFix)
     }
 
@@ -164,19 +169,15 @@ private fun Project.createBuildTasks(
         mappingsDest.set("META-INF/mappings/reobf.tiny")
     }
 
-    val relocatedShadowJar by tasks.registering<ShadowJar> {
-        archiveClassifier.set("mojang-mapped-relocated")
-        from(zipTree(includeMappings.flatMap { it.outputJar }))
-        inputs.file(includeMappings.flatMap { it.manifest })
-            .withPathSensitivity(PathSensitivity.NONE)
-        doFirst {
-            manifest.from(includeMappings.flatMap { it.manifest })
-        }
+    // We only need to manually relocate references to CB class names in string constants, the actual relocation is handled by the mappings
+    val relocateConstants by tasks.registering<RelocateClassNameConstants> {
+        inputJar.set(includeMappings.flatMap { it.outputJar })
     }
     afterEvaluate {
-        relocatedShadowJar {
+        relocateConstants {
             relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${serverExt.craftBukkitPackageVersion.get()}") {
-                exclude("org.bukkit.craftbukkit.Main*")
+                // This is not actually needed as there are no string constant references to Main
+                // exclude("org.bukkit.craftbukkit.Main*")
             }
         }
     }
@@ -185,9 +186,9 @@ private fun Project.createBuildTasks(
         group = "paperweight"
         description = "Re-obfuscate the built jar to obf mappings"
 
-        inputJar.set(relocatedShadowJar.flatMap { it.archiveFile })
+        inputJar.set(relocateConstants.flatMap { it.outputJar })
 
-        mappingsFile.set(reobfMappings)
+        mappingsFile.set(relocatedReobfMappings.flatMap { it.outputMappings })
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
