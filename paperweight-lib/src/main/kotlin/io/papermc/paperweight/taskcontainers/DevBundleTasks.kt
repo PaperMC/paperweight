@@ -107,7 +107,6 @@ class DevBundleTasks(
             serverProject.set(serverProj)
             runtimeConfiguration.set(project.configurations.named(SERVER_RUNTIME_CLASSPATH))
 
-            relocations.set(gson.toJson(listOf<Relocation>()))
             decompiledJar.pathProvider(decompileJar)
             atFile.pathProvider(accessTransformFile)
 
