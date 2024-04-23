@@ -22,11 +22,8 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.util.defaultOutput
-import io.papermc.paperweight.util.openZip
-import io.papermc.paperweight.util.path
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
+import io.papermc.paperweight.util.*
+import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -60,6 +57,10 @@ abstract class IncludeMappings : BaseTask() {
             val dest = fs.getPath(mappingsDest.get())
             dest.parent.createDirectories()
             mappings.path.copyTo(dest)
+
+            fs.modifyManifest {
+                mainAttributes.putValue("Included-Mappings-Hash", mappings.path.hashFile(HashingAlgorithm.SHA256).asHexString().uppercase())
+            }
         }
     }
 }

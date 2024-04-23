@@ -33,6 +33,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import javax.inject.Inject
+import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleDependency
@@ -48,6 +49,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -156,6 +158,8 @@ abstract class PaperweightUser : Plugin<Project> {
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
 
+            decorateJarManifests()
+
             if (userdev.injectPaperRepository.get()) {
                 repositories.maven(PAPER_MAVEN_REPO_URL) {
                     content { onlyForConfigurations(DEV_BUNDLE_CONFIG) }
@@ -168,6 +172,18 @@ abstract class PaperweightUser : Plugin<Project> {
             configureRepositories(userdevSetup)
 
             cleanSharedCaches(this, sharedCacheRootRoot)
+        }
+    }
+
+    private fun Project.decorateJarManifests() {
+        val op = Action<Jar> {
+            manifest {
+                attributes(MAPPINGS_NAMESPACE_MANIFEST_KEY to DEOBF_NAMESPACE)
+            }
+        }
+        tasks.named("jar", Jar::class, op)
+        if ("shadowJar" in tasks.names) {
+            tasks.named("shadowJar", Jar::class, op)
         }
     }
 

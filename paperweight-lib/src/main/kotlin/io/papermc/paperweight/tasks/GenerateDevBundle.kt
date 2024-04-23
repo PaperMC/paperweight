@@ -23,8 +23,6 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.extension.Relocation
-import io.papermc.paperweight.extension.RelocationWrapper
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.*
@@ -35,10 +33,8 @@ import java.nio.file.Path
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
-import java.util.stream.Collectors
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.apache.tools.ant.types.selectors.SelectorUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -100,9 +96,6 @@ abstract class GenerateDevBundle : DefaultTask() {
 
     @get:Classpath
     abstract val runtimeConfiguration: Property<Configuration>
-
-    @get:Input
-    abstract val relocations: Property<String>
 
     @get:Input
     abstract val paramMappingsUrl: Property<String>
@@ -180,8 +173,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         workingDir.createDirectories()
         sourceDir.path.copyRecursivelyTo(workingDir)
 
-        relocate(relocations(), workingDir)
-
         Files.walk(workingDir).use { stream ->
             decompiledJar.path.openZip().use { decompJar ->
                 val decompRoot = decompJar.rootDirectories.single()
@@ -212,60 +203,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         }
 
         workingDir.deleteRecursive()
-    }
-
-    private fun relocate(relocations: List<Relocation>, workingDir: Path) {
-        val wrappedRelocations = relocations.map { RelocationWrapper(it) }
-
-        Files.walk(workingDir).use { stream ->
-            stream.filter { it.isRegularFile() && it.name.endsWith(".java") }
-                .forEach { path -> replaceRelocationsInFile(path, wrappedRelocations) }
-        }
-
-        relocateFiles(wrappedRelocations, workingDir)
-    }
-
-    private fun replaceRelocationsInFile(path: Path, relocations: List<RelocationWrapper>) {
-        var content = path.readText(Charsets.UTF_8)
-
-        // Use hashes as intermediary to avoid double relocating
-
-        for (relocation in relocations) {
-            content = content.replace(relocation.fromDot, '.' + relocation.hashCode().toString())
-                .replace(relocation.fromSlash, '/' + relocation.hashCode().toString())
-        }
-
-        for (relocation in relocations) {
-            content = content.replace('.' + relocation.hashCode().toString(), relocation.toDot)
-                .replace('/' + relocation.hashCode().toString(), relocation.toSlash)
-        }
-
-        path.writeText(content, Charsets.UTF_8)
-    }
-
-    private fun relocateFiles(relocations: List<RelocationWrapper>, workingDir: Path) {
-        Files.walk(workingDir).use { stream -> stream.collect(Collectors.toList()) }
-            .asSequence().filter { it.isRegularFile() && it.name.endsWith(".java") }
-            .forEach { path ->
-                val potential = path.relativeTo(workingDir).invariantSeparatorsPathString
-                for (relocation in relocations) {
-                    if (potential.startsWith(relocation.fromSlash)) {
-                        if (excluded(relocation.relocation, potential)) {
-                            break
-                        }
-                        val dest = workingDir.resolve(potential.replace(relocation.fromSlash, relocation.toSlash))
-                        dest.parent.createDirectories()
-                        path.moveTo(dest)
-                        break
-                    }
-                }
-            }
-    }
-
-    private fun excluded(relocation: Relocation, potential: String): Boolean = relocation.excludes.map {
-        it.replace('.', '/')
-    }.any { exclude ->
-        SelectorUtils.matchPath(exclude, potential, true)
     }
 
     private fun diffFiles(fileName: String, original: Path, patched: Path): String {
@@ -320,7 +257,7 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun asString(out: ByteArrayOutputStream) = String(out.toByteArray(), Charset.defaultCharset())
-        .replace(System.getProperty("line.separator"), "\n")
+        .replace(System.lineSeparator(), "\n")
 
     @Suppress("SameParameterValue")
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
@@ -336,8 +273,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         )
     }
 
-    private fun relocations(): List<Relocation> = gson.fromJson(relocations.get())
-
     private fun createBuildDataConfig(targetDir: String): BuildData {
         return BuildData(
             paramMappings = MavenDep(paramMappingsUrl.get(), listOf(paramMappingsCoordinates.get())),
@@ -348,7 +283,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             compileDependencies = determineLibraries(vanillaServerLibraries.get()).sorted(),
             runtimeDependencies = collectRuntimeDependencies().map { it.coordinates }.sorted(),
             libraryRepositories = libraryRepositories.get(),
-            relocations = relocations(),
+            relocations = emptyList(), // Nothing is relocated in the dev bundle as of 1.20.5
             minecraftRemapArgs = TinyRemapper.minecraftRemapArgs,
             pluginRemapArgs = TinyRemapper.pluginRemapArgs,
         )
@@ -381,13 +316,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             }
         }
 
-        val result = new.map { it.toString() }.toMutableSet()
-
-        // Remove relocated libraries
-        val libs = relocations().mapNotNull { it.owningLibraryCoordinates }
-        result.removeIf { coords -> libs.any { coords.startsWith(it) } }
-
-        return result
+        return new.map { it.toString() }.toSet()
     }
 
     private val ResolvedArtifactResult.coordinates: String

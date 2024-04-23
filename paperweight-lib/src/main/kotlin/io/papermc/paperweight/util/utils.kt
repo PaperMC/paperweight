@@ -36,6 +36,7 @@ import java.lang.management.ManagementFactory
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.URL
+import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
@@ -46,6 +47,8 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
@@ -379,4 +382,24 @@ inline fun <reified P> printId(pluginId: String, gradle: Gradle) {
         return
     }
     println("$pluginId v${P::class.java.`package`.implementationVersion} (running on '${System.getProperty("os.name")}')")
+}
+
+fun FileSystem.modifyManifest(create: Boolean = true, op: Manifest.() -> Unit) {
+    modifyManifest(getPath("META-INF/MANIFEST.MF"), create, op)
+}
+
+fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) {
+    val exists = path.exists()
+    if (exists || create) {
+        val mf = if (exists) {
+            path.inputStream().buffered().use { Manifest(it) }
+        } else {
+            path.parent.createDirectories()
+            val manifest = Manifest()
+            manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            manifest
+        }
+        op(mf)
+        path.outputStream().buffered().use { mf.write(it) }
+    }
 }

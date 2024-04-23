@@ -2,6 +2,10 @@ plugins {
     `config-kotlin`
 }
 
+repositories {
+    gradlePluginPortal()
+}
+
 dependencies {
     implementation(libs.httpclient)
     implementation(libs.bundles.kotson)

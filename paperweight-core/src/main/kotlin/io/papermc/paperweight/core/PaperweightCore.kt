@@ -37,7 +37,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
@@ -138,21 +138,24 @@ class PaperweightCore : Plugin<Project> {
             val cache = target.layout.cache
 
             val serverProj = target.ext.serverProject.orNull ?: return@afterEvaluate
-            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
+            val serverJar = serverProj.tasks.register("serverJar", Zip::class)
 
             tasks.generateReobfMappings {
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
+            }
+            tasks.generateRelocatedReobfMappings {
+                inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
-            val (_, reobfJar) = serverProj.setupServerProject(
+            val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 tasks.lineMapJar.flatMap { it.outputJar },
                 tasks.decompileJar.flatMap { it.outputJar },
                 ext.mcDevSourceDir.path,
                 cache.resolve(SERVER_LIBRARIES_TXT),
                 ext.paper.reobfPackagesToFix,
-                tasks.patchReobfMappings.flatMap { it.outputMappings }
+                tasks.generateRelocatedReobfMappings,
+                serverJar
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(
@@ -168,7 +171,7 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(ext.vanillaJarIncludes)
-                reobfMappingsFile.set(tasks.patchReobfMappings.flatMap { it.outputMappings })
+                reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
 
                 paramMappingsCoordinates.set(
                     target.provider {
@@ -183,7 +186,7 @@ class PaperweightCore : Plugin<Project> {
                 tasks.extractFromBundler.flatMap { it.versionJson },
                 tasks.extractFromBundler.flatMap { it.serverLibrariesList },
                 tasks.downloadServerJar.flatMap { it.outputJar },
-                shadowJar,
+                includeMappings.flatMap { it.outputJar },
                 reobfJar,
                 ext.minecraftVersion
             )

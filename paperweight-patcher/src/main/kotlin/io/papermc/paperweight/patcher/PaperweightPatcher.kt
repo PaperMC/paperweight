@@ -41,7 +41,7 @@ import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 import org.gradle.kotlin.dsl.registering
 
@@ -88,6 +88,11 @@ class PaperweightPatcher : Plugin<Project> {
 
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
+        }
+
+        val generateRelocatedReobfMappings by target.tasks.registering<GenerateRelocatedReobfMappings> {
+            inputMappings.set(patchReobfMappings.flatMap { it.outputMappings })
+            outputMappings.set(target.layout.cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
         }
 
         val prepareForDownstream = target.tasks.register<PaperweightPatcherPrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
@@ -155,27 +160,30 @@ class PaperweightPatcher : Plugin<Project> {
             }
 
             val serverProj = patcher.serverProject.orNull ?: return@afterEvaluate
-            serverProj.apply(plugin = "com.github.johnrengelman.shadow")
-            val shadowJar = serverProj.tasks.named("shadowJar", Jar::class)
+            val serverJar = serverProj.tasks.register("serverJar", Zip::class)
 
             generateReobfMappings {
                 inputMappings.pathProvider(upstreamData.map { it.mappings })
                 notchToSpigotMappings.pathProvider(upstreamData.map { it.notchToSpigotMappings })
                 sourceMappings.pathProvider(upstreamData.map { it.sourceMappings })
-                inputJar.set(shadowJar.flatMap { it.archiveFile })
+                inputJar.set(serverJar.flatMap { it.archiveFile })
                 spigotRecompiledClasses.pathProvider(upstreamData.map { it.spigotRecompiledClasses })
 
                 reobfMappings.set(target.layout.cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
             }
+            generateRelocatedReobfMappings {
+                inputJar.set(serverJar.flatMap { it.archiveFile })
+            }
 
-            val (_, reobfJar) = serverProj.setupServerProject(
+            val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
                 upstreamData.map { it.decompiledJar },
                 patcher.mcDevSourceDir.path,
                 upstreamData.map { it.libFile },
                 mergedReobfPackagesToFix,
-                patchReobfMappings.flatMap { it.outputMappings }
+                generateRelocatedReobfMappings,
+                serverJar
             ) ?: return@afterEvaluate
 
             devBundleTasks.configure(
@@ -191,7 +199,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(layout, providers)
             ) {
                 vanillaJarIncludes.set(upstreamData.map { it.vanillaIncludes })
-                reobfMappingsFile.set(patchReobfMappings.flatMap { it.outputMappings })
+                reobfMappingsFile.set(generateRelocatedReobfMappings.flatMap { it.outputMappings })
 
                 paramMappingsCoordinates.set(upstreamData.map { it.paramMappings.coordinates.single() })
                 paramMappingsUrl.set(upstreamData.map { it.paramMappings.url })
@@ -202,7 +210,7 @@ class PaperweightPatcher : Plugin<Project> {
                 upstreamData.map { it.bundlerVersionJson }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.serverLibrariesList }.convertToFileProvider(target.layout, target.providers),
                 upstreamData.map { it.vanillaJar }.convertToFileProvider(target.layout, target.providers),
-                shadowJar,
+                includeMappings.flatMap { it.outputJar },
                 reobfJar,
                 upstreamData.map { it.mcVersion }
             )
