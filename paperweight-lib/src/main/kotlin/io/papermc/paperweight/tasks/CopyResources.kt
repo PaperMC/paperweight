@@ -49,6 +49,16 @@ abstract class CopyResources : BaseTask() {
 
     override fun init() {
         outputJar.convention(defaultOutput())
+        includes.convention(
+            listOf(
+                "/data/**",
+                "/assets/**",
+                "version.json",
+                "yggdrasil_session_pubkey.der",
+                "pack.mcmeta",
+                "flightrecorder-config.jfc",
+            )
+        )
     }
 
     @TaskAction
