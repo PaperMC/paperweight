@@ -31,6 +31,7 @@ import kotlin.io.path.*
 
 private val supported = mapOf(
     2 to DevBundleV2.Config::class, // 1.17.1
+    3 to GenerateDevBundle.DevBundleConfig::class,
     GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class,
 )
 

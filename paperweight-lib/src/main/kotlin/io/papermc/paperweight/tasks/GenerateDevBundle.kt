@@ -372,7 +372,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 3
+        const val currentDataVersion = 4
 
         fun createCoordinatesFor(project: Project): String =
             sequenceOf(project.group, project.name.lowercase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")
