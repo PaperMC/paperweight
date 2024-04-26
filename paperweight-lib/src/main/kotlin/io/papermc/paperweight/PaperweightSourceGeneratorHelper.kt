@@ -63,7 +63,6 @@ abstract class PaperweightSourceGeneratorHelper : Plugin<Project> {
             vanilla.name(files(copyResources.flatMap { it.outputJar }))
         }
 
-
         afterEvaluate {
             if (ext.addVanillaServerToImplementation.get()) {
                 configurations.named("implementation") {
