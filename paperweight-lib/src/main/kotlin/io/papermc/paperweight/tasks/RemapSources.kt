@@ -113,7 +113,7 @@ abstract class RemapSources : JavaLauncherTask() {
         testsOutputZip.convention(defaultOutput("$name-tests", "jar"))
         generatedAt.convention(defaultOutput("at"))
         spigotRecompiledClasses.convention(defaultOutput("spigotRecompiledClasses", "txt"))
-        sourceCompatibility.convention(17)
+        sourceCompatibility.convention(21)
     }
 
     @TaskAction
