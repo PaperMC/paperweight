@@ -82,7 +82,7 @@ class DevBundleTasks(
                 registerVersionArtifact(
                     bundlerJarName,
                     versionJsonFile,
-                    serverProj.tasks.named<FixJarForReobf>("fixJarForReobf").flatMap { it.inputJar }
+                    serverProj.tasks.named<IncludeMappings>("includeMappings").flatMap { it.inputJar }
                 )
             }
         }
