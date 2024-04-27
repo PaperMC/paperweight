@@ -60,6 +60,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -94,10 +95,22 @@ val ProjectLayout.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
+
+fun ProjectLayout.maybeInitSubmodules(offline: Boolean, logger: Logger) {
+    if (offline) {
+        Git.checkForGit()
+        logger.lifecycle("Offline mode enabled, not initializing submodules. This may cause problems if submodules are not already initialized.")
+    } else {
+        initSubmodules()
+    }
+}
+
 fun ProjectLayout.initSubmodules() {
     Git.checkForGit()
     Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
 }
+
+fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
 
 fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T?> {
     return flatMap { project.provider { it.takeIf { f -> f.path.exists() } } }

@@ -26,17 +26,27 @@ import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 
+@Suppress("LeakingThis")
 @UntrackedTask(because = "Git tracks the state")
 abstract class InitSubmodules : DefaultTask() {
 
     @get:Inject
     abstract val layout: ProjectLayout
 
+    @get:Input
+    abstract val offlineMode: Property<Boolean>
+
+    init {
+        offlineMode.convention(false)
+    }
+
     @TaskAction
     fun run() {
-        layout.initSubmodules()
+        layout.maybeInitSubmodules(offlineMode.get(), logger)
     }
 }

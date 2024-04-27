@@ -40,7 +40,9 @@ open class GeneralTasks(
 ) : InitialTasks(project) {
 
     // Configuration won't necessarily always run, so do it as the first task when it's needed as well
-    val initSubmodules by tasks.registering<InitSubmodules>()
+    val initSubmodules by tasks.registering<InitSubmodules> {
+        offlineMode.set(project.offlineMode())
+    }
 
     val buildDataInfo: Provider<BuildDataInfo> = project.contents(extension.craftBukkit.buildDataInfo) {
         gson.fromJson(it)

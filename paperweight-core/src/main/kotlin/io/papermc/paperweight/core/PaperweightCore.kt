@@ -35,12 +35,17 @@ import io.papermc.paperweight.util.constants.*
 import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
+    companion object {
+        private val logger = Logging.getLogger(PaperweightCore::class.java)
+    }
+
     override fun apply(target: Project) {
         checkJavaVersion()
         Git.checkForGit()
@@ -58,7 +63,7 @@ class PaperweightCore : Plugin<Project> {
 
         // Make sure the submodules are initialized, since there are files there
         // which are required for configuration
-        target.layout.initSubmodules()
+        target.layout.maybeInitSubmodules(target.offlineMode(), logger)
 
         target.configurations.create(PARAM_MAPPINGS_CONFIG)
         target.configurations.create(REMAPPER_CONFIG)
