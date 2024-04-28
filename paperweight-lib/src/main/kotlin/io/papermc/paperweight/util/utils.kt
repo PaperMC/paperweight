@@ -350,7 +350,7 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
     return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain).orElse(
         launcherFor {
             // If the java plugin isn't applied, or no toolchain value was set
-            languageVersion.set(JavaLanguageVersion.of(17))
+            languageVersion.set(JavaLanguageVersion.of(21))
         }
     )
 }
