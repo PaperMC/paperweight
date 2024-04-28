@@ -243,10 +243,17 @@ abstract class PaperweightUser : Plugin<Project> {
 
         fun makeRemapperConfig(name: String) {
             target.configurations.register(name) {
-                isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
                 defaultDependencies {
                     for (dep in userdevSetup.get().remapper.coordinates) {
-                        add(target.dependencies.create(dep))
+                        // we use a fat jar for tiny-remapper, so we don't need its transitive deps
+                        val fatTiny = dep.contains(":tiny-remapper:") && dep.endsWith(":fat")
+                        add(
+                            target.dependencies.create(dep) {
+                                if (fatTiny) {
+                                    isTransitive = false
+                                }
+                            }
+                        )
                     }
                 }
             }
