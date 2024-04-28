@@ -68,7 +68,7 @@ abstract class ScanJar : JavaLauncherTask() {
     override fun init() {
         super.init()
 
-        jvmArgs.convention(listOf("-Xmx512m"))
+        jvmArgs.convention(listOf("-Xmx768m"))
         log.set(layout.cache.resolve(paperTaskOutput("txt")))
     }
 
