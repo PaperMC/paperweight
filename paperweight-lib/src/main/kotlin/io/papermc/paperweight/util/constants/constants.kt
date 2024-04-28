@@ -41,6 +41,7 @@ const val MAVEN_CENTRAL_URL = "https://repo.maven.apache.org/maven2/"
 
 const val PARAM_MAPPINGS_CONFIG = "paramMappings"
 const val REMAPPER_CONFIG = "remapper"
+const val PLUGIN_REMAPPER_CONFIG = "pluginRemapper"
 const val DECOMPILER_CONFIG = "decompiler"
 const val PAPERCLIP_CONFIG = "paperclip"
 const val DEV_BUNDLE_CONFIG = "paperweightDevelopmentBundle"

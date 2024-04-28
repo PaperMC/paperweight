@@ -124,7 +124,7 @@ abstract class PaperweightUser : Plugin<Project> {
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
 
-            remapper.from(project.configurations.named(REMAPPER_CONFIG))
+            remapper.from(project.configurations.named(PLUGIN_REMAPPER_CONFIG))
             remapperArgs.set(target.provider { userdevSetup.pluginRemapArgs })
         }
 
@@ -241,14 +241,18 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
-        target.configurations.register(REMAPPER_CONFIG) {
-            isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
-            defaultDependencies {
-                for (dep in userdevSetup.get().remapper.coordinates) {
-                    add(target.dependencies.create(dep))
+        fun makeRemapperConfig(name: String) {
+            target.configurations.register(name) {
+                isTransitive = false // we use a fat jar for tiny-remapper, so we don't need it's transitive deps
+                defaultDependencies {
+                    for (dep in userdevSetup.get().remapper.coordinates) {
+                        add(target.dependencies.create(dep))
+                    }
                 }
             }
         }
+        makeRemapperConfig(REMAPPER_CONFIG)
+        makeRemapperConfig(PLUGIN_REMAPPER_CONFIG)
 
         val mojangMappedServerConfig = target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
             exclude("junit", "junit") // json-simple exposes junit for some reason
