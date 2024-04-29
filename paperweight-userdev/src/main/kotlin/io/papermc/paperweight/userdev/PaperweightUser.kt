@@ -194,7 +194,7 @@ abstract class PaperweightUser : Plugin<Project> {
 
     private fun Project.applyJunitExclusionRule() = dependencies {
         components {
-            withModule<JunitExclusionRule>("com.googlecode.json-simple:json-simple")
+            withModule<JunitExclusionRule>(JunitExclusionRule.TARGET)
         }
     }
 

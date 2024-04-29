@@ -31,6 +31,10 @@ import org.gradle.api.artifacts.ComponentMetadataRule
  */
 @CacheableRule
 abstract class JunitExclusionRule : ComponentMetadataRule {
+    companion object {
+        const val TARGET = "com.googlecode.json-simple:json-simple"
+    }
+
     override fun execute(ctx: ComponentMetadataContext) {
         ctx.details.allVariants {
             withDependencies {

@@ -51,9 +51,9 @@ abstract class PaperweightUserExtension(
     val injectPaperRepository: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     /**
-     * Whether to patch dependencies to exclude `junit:junit` from the transitive dependencies.
+     * Whether to patch dependencies to exclude `junit:junit` from the transitive dependencies of `com.googlecode.json-simple:json-simple`.
      *
-     * True by default to avoid `junit:junit` appearing on the `compileClasspath`.
+     * True by default to avoid `junit:junit` appearing on the `compileClasspath` with older versions of Paper.
      */
     val applyJunitExclusionRule: Property<Boolean> = objects.property<Boolean>().convention(true)
 
