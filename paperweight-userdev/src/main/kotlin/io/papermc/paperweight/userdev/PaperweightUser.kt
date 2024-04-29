@@ -26,6 +26,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
+import io.papermc.paperweight.userdev.internal.JunitExclusionRule
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.util.*
@@ -166,6 +167,10 @@ abstract class PaperweightUser : Plugin<Project> {
                 }
             }
 
+            if (userdev.applyJunitExclusionRule.get()) {
+                applyJunitExclusionRule()
+            }
+
             // Print a friendly error message if the dev bundle is missing before we call anything else that will try and resolve it
             checkForDevBundle()
 
@@ -184,6 +189,12 @@ abstract class PaperweightUser : Plugin<Project> {
         tasks.named("jar", Jar::class, op)
         if ("shadowJar" in tasks.names) {
             tasks.named("shadowJar", Jar::class, op)
+        }
+    }
+
+    private fun Project.applyJunitExclusionRule() = dependencies {
+        components {
+            withModule<JunitExclusionRule>(JunitExclusionRule.TARGET)
         }
     }
 
@@ -262,7 +273,6 @@ abstract class PaperweightUser : Plugin<Project> {
         makeRemapperConfig(PLUGIN_REMAPPER_CONFIG)
 
         val mojangMappedServerConfig = target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
-            exclude("junit", "junit") // json-simple exposes junit for some reason
             defaultDependencies {
                 val ctx = createContext(target)
                 userdevSetup.get().let { setup ->
