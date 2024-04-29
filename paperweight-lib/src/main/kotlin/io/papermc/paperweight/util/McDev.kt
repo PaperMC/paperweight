@@ -45,7 +45,8 @@ object McDev {
         val (javaPatchLines, dataPatchLines) = readPatchLines(patches)
 
         decompJar.openZip().use { zipFile ->
-            val decompFiles = mutableSetOf<String>()
+            val decompSourceFiles = mutableSetOf<String>()
+            val decompDataFiles = mutableSetOf<String>()
 
             zipFile.walk().use { stream ->
                 for (zipEntry in stream) {
@@ -53,7 +54,10 @@ object McDev {
                     val path = zipEntry.invariantSeparatorsPathString.substring(1)
 
                     if (path.endsWith(".java")) {
-                        decompFiles += path
+                        decompSourceFiles += path
+                    }
+                    if (path.startsWith("data/")) {
+                        decompDataFiles += path
                     }
 
                     // pull in all package-info classes
@@ -70,9 +74,14 @@ object McDev {
                 }
             }
 
-            val exactJavaImports = javaPatchLines.filter { decompFiles.contains(it) }
+            val exactJavaImports = javaPatchLines.filter { decompSourceFiles.contains(it) }
                 .map { targetDir.resolve(it) }
-            val exactDataImports = if (dataTargetDir != null) dataPatchLines.map { dataTargetDir.resolve("data/minecraft/$it") } else listOf()
+            val exactDataImports = if (dataTargetDir != null) {
+                dataPatchLines.map { "data/minecraft/$it" }.filter { decompDataFiles.contains(it) }
+                    .map { dataTargetDir.resolve(it) }
+            } else {
+                listOf()
+            }
 
             val (additionalSrcImports, additionalDataImports) = readAdditionalImports(importsFile)
 
