@@ -46,6 +46,7 @@ fun interface ReobfArtifactConfiguration {
          * The `reobfJar` will have no classifier. [BasePluginExtension.getArchivesName] is used to name
          * the `reobfJar`, falling back to the project name if it is not configured.
          */
+        @JvmStatic
         val REOBF_PRODUCTION: ReobfArtifactConfiguration = ReobfArtifactConfiguration { project, reobfJar ->
             val jar = project.tasks.named<AbstractArchiveTask>(JavaPlugin.JAR_TASK_NAME) {
                 archiveClassifier.set("dev")
@@ -71,6 +72,7 @@ fun interface ReobfArtifactConfiguration {
          * Does not modify `jar` or `shadowJar` classifier, [BasePluginExtension.getArchivesName] is used to name
          * the `reobfJar`, falling back to the project name if it is not configured.
          */
+        @JvmStatic
         val MOJANG_PRODUCTION: ReobfArtifactConfiguration = ReobfArtifactConfiguration { project, reobfJar ->
             val devJarTask = try {
                 project.tasks.named<AbstractArchiveTask>("shadowJar")
