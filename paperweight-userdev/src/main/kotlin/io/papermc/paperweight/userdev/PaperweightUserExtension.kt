@@ -81,5 +81,5 @@ abstract class PaperweightUserExtension(
      */
     val minecraftVersion: Provider<String> = objects.property<String>().value(
         setup.map { it.minecraftVersion }
-    ).withDisallowChanges().withDisallowUnsafeRead()
+    ).withDisallowChanges()
 }
