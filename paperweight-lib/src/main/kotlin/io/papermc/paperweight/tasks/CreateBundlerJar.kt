@@ -200,7 +200,7 @@ abstract class CreateBundlerJar : ZippedTask() {
             return when (val ident = id.componentIdentifier) {
                 is ModuleComponentIdentifier -> ModuleId.fromIdentifier(id)
                 is ProjectComponentIdentifier -> {
-                    val capability = variant.capabilities.single()
+                    val capability = variant.capabilities.first()
                     val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
                     ModuleId(capability.group, capability.name, version)
                 }
