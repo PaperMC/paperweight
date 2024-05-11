@@ -80,9 +80,6 @@ abstract class GenerateDevBundle : DefaultTask() {
     abstract val apiCoordinates: Property<String>
 
     @get:Input
-    abstract val mojangApiCoordinates: Property<String>
-
-    @get:Input
     abstract val vanillaJarIncludes: ListProperty<String>
 
     @get:Input
@@ -265,7 +262,6 @@ abstract class GenerateDevBundle : DefaultTask() {
             minecraftVersion = minecraftVersion.get(),
             mappedServerCoordinates = serverCoordinates.get(),
             apiCoordinates = "${apiCoordinates.get()}:${serverVersion.get()}",
-            mojangApiCoordinates = "${mojangApiCoordinates.get()}:${serverVersion.get()}",
             buildData = createBuildDataConfig(dataTargetDir),
             decompile = createDecompileRunner(),
             remapper = createRemapDep(),
@@ -341,7 +337,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         val minecraftVersion: String,
         val mappedServerCoordinates: String,
         val apiCoordinates: String,
-        val mojangApiCoordinates: String,
+        val mojangApiCoordinates: String? = null,
         val buildData: BuildData,
         val decompile: Runner,
         val remapper: MavenDep,
@@ -372,7 +368,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 4
+        const val currentDataVersion = 5
 
         fun createCoordinatesFor(project: Project): String =
             sequenceOf(project.group, project.name.lowercase(Locale.ENGLISH), "userdev-" + project.version).joinToString(":")

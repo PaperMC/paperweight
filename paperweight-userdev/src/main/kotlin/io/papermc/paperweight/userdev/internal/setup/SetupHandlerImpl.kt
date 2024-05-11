@@ -167,9 +167,10 @@ class SetupHandlerImpl(
 
         applyMojangMappedPaperclipPatch(context)
 
-        val deps = bundle.config.buildData.compileDependencies.toList() +
-            bundle.config.apiCoordinates +
-            bundle.config.mojangApiCoordinates
+        val deps = mutableListOf<String>()
+        deps.addAll(bundle.config.buildData.compileDependencies)
+        deps.add(bundle.config.apiCoordinates)
+        bundle.config.mojangApiCoordinates?.let { deps.add(it) }
         installPaperServer(
             cache,
             bundle.config.mappedServerCoordinates,
@@ -193,7 +194,7 @@ class SetupHandlerImpl(
     }
 
     override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        listOf(
+        listOfNotNull(
             bundle.config.mappedServerCoordinates,
             bundle.config.apiCoordinates,
             bundle.config.mojangApiCoordinates

@@ -31,8 +31,9 @@ import kotlin.io.path.*
 
 private val supported = mapOf(
     2 to DevBundleV2.Config::class, // 1.17.1
-    3 to GenerateDevBundle.DevBundleConfig::class,
-    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class,
+    3 to GenerateDevBundle.DevBundleConfig::class, // up to 1.20.4
+    4 to GenerateDevBundle.DevBundleConfig::class, // 1.20.5, early 1.20.6
+    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class, // 1.20.6+ (nullable mojangApiCoordinates)
 )
 
 data class ExtractedBundle<C>(
