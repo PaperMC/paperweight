@@ -22,8 +22,14 @@ jobs:
         run: ./gradlew build --no-daemon --stacktrace
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
-        if: success() || failure()
+        if:  always()
         with:
           report_paths: '**/build/test-results/test/TEST-*.xml'
           detailed_summary: true
           annotate_notice: true
+      - name: Upload build reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-reports
+          path: '**/build/reports/tests/'
