@@ -7,6 +7,7 @@ dependencies {
     shade(projects.paperweightLib)
 
     implementation(libs.bundles.kotson)
+    implementation(libs.coroutines)
 }
 
 gradlePlugin {
