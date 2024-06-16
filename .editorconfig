@@ -86,3 +86,6 @@ ij_kotlin_import_nested_classes = false
 
 [*.patch]
 trim_trailing_whitespace=false
+
+[*.patch]
+trim_trailing_whitespace=false
