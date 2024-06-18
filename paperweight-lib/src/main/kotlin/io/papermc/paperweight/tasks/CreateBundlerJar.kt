@@ -109,10 +109,26 @@ abstract class CreateBundlerJar : ZippedTask() {
         rootDir.resolve("META-INF/main-class").writeText(mainClass.get())
 
         // copy version.json file
-        vanillaBundlerJar.path.openZip().use { fs ->
-            fs.getPath("/").resolve(FileEntry.VERSION_JSON).copyTo(rootDir.resolve("version.json"))
+        val versionJson = vanillaBundlerJar.path.openZip().use { fs ->
+            val source = fs.getPath("/").resolve(FileEntry.VERSION_JSON)
+            source.copyTo(rootDir.resolve("version.json"))
+            source.bufferedReader().use {
+                gson.fromJson(it, VersionJson::class.java)
+            }
+        }
+
+        modifyManifest(rootDir.resolve("META-INF/MANIFEST.MF")) {
+            mainAttributes.putValue("Minecraft-Version", versionJson.name)
+            mainAttributes.putValue("Java-Runtime-Major-Version", versionJson.java_version)
         }
     }
+
+    data class VersionJson(
+        val id: String,
+        val name: String,
+        @Suppress("PropertyName")
+        val java_version: String,
+    )
 
     private fun handleServerDependencies(rootDir: Path): List<FileEntry<ModuleId>> {
         val libraries = mutableListOf<FileEntry<ModuleId>>()
