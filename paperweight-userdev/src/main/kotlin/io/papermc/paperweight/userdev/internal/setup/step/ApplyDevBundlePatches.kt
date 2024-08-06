@@ -76,8 +76,7 @@ class ApplyDevBundlePatches(
                     op.operate().throwOnError()
                 } catch (ex: Exception) {
                     throw PaperweightException(
-                        "Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details. " +
-                            "Usually, the issue is with the dev bundle itself, and not the userdev project.",
+                        "Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details.",
                         ex
                     )
                 }
