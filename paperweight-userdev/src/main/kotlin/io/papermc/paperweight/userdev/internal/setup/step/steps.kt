@@ -83,7 +83,7 @@ object StepExecutor {
             for (step in steps) {
                 step.hashFile.deleteIfExists()
             }
-            throw PaperweightException("Failed to execute steps, invalidated relevant caches", ex)
+            throw PaperweightException("Failed to execute steps, invalidated relevant caches. Run with --stacktrace for more details.", ex)
         }
     }
 
