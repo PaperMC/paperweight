@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunction
@@ -29,6 +30,7 @@ import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.buildHashFunction
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
@@ -73,8 +75,15 @@ object StepExecutor {
             }
         }
 
-        for (step in steps) {
-            executeStep(context, step)
+        try {
+            for (step in steps) {
+                executeStep(context, step)
+            }
+        } catch (ex: Exception) {
+            for (step in steps) {
+                step.hashFile.deleteIfExists()
+            }
+            throw PaperweightException("Failed to execute steps, invalidated relevant caches. Run with --stacktrace for more details.", ex)
         }
     }
 
