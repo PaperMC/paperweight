@@ -97,7 +97,7 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
         git("fetch", "--all", "--prune").runSilently(silenceErr = true)
         git(
             "format-patch",
-            "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
+            "--diff-algorithm=myers", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
             "-o", patchFolder.absolutePathString(),
             baseRef.get()
         ).executeSilently()
@@ -131,7 +131,7 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
         try {
             for (patch in patchFiles) {
                 futures += executor.submit {
-                    val hasNoChanges = git("diff", "--staged", patch.name).getText().lineSequence()
+                    val hasNoChanges = git("diff", "--diff-algorithm=myers", "--staged", patch.name).getText().lineSequence()
                         .filter { it.startsWith('+') || it.startsWith('-') }
                         .filterNot { it.startsWith("+++") || it.startsWith("---") }
                         .all { it.startsWith("+index") || it.startsWith("-index") }
