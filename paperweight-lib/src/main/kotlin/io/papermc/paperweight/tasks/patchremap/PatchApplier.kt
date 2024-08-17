@@ -103,7 +103,7 @@ class PatchApplier(
         target.createDirectories()
         git("checkout", remappedBranch).executeSilently()
         git(
-            "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
+            "format-patch", "--diff-algorith=myers", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
             target.absolutePathString(), remappedBaseTag
         ).executeOut()
     }
