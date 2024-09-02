@@ -32,18 +32,13 @@ abstract class FinalizePaperHistory : BaseTask() {
     @TaskAction
     fun run() {
         Git.checkForGit()
+        val deletionsArr = deletions.get().toTypedArray()
+        if (deletionsArr.isEmpty()) {
+            return
+        }
         Git(paperDir).let { git ->
-            val paperMojangApi = outputDir.path.resolve("Paper-MojangAPI/src/main/java")
-            paperMojangApi.copyRecursivelyTo(outputDir.path.resolve("paper-api/src/main/java"))
-            paperMojangApi.deleteRecursive()
-            git("add", "paper-api/src/main/java", "Paper-MojangAPI").execute()
-            git("commit", "--message", "Merge Paper-MojangAPI into Paper API", "--author=Automated <auto@mated.null>").execute()
-
-            val deletionsArr = deletions.get().toTypedArray()
-            if (deletionsArr.isNotEmpty()) {
-                git("rm", "-r", *deletionsArr).execute()
-                git("commit", "-m", "OWW! That fork is HARD!", "--author=Automated <auto@mated.null>").execute()
-            }
+            git("rm", "-r", *deletionsArr).execute()
+            git("commit", "-m", "OWW! That fork is HARD!", "--author=Automated <auto@mated.null>").execute()
         }
     }
 }

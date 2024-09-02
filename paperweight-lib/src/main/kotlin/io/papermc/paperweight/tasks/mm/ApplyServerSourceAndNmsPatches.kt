@@ -59,6 +59,10 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
             if (paperDecompiledSource.isPresent && Files.notExists(nmsFile)) {
                 nmsFile = paperDecompiledSource.file(fileName).get().path
             }
+            if (Files.notExists(nmsFile)) {
+                // we add new files within src/main/resources/data/minecraft/ but they don't exist in the nms source
+                return@forEach
+            }
             val patchFile = patchDir.resolve(fileName).resolveSibling((patchedFile.name + ".patch")) // keep extension
 
             val commandText =
@@ -85,9 +89,9 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
                 val patchName = patch.name.split("-", limit = 2)[1]
                 println("Applying Patch: $patchName")
                 val excludeArray = directoriesToPatch.get().map { "--exclude=$it/**" }.toTypedArray()
-                git("am", "--ignore-whitespace", *excludeArray, patch.toPath().absolutePathString()).execute()
+                git("am", "--ignore-whitespace", "--include=src/main/resources/data/minecraft/datapacks/paper/**", *excludeArray, "--include=**", patch.toPath().absolutePathString()).execute()
                 val includeArray = directoriesToPatch.get().map { "--include=$it/**" }.toTypedArray()
-                git("apply", "--ignore-whitespace", *includeArray, patch.toPath().absolutePathString()).execute()
+                git("apply", "--ignore-whitespace", "--exclude=src/main/resources/data/minecraft/datapacks/paper/**", *includeArray, patch.toPath().absolutePathString()).execute()
 
                 val (sourceFiles, dataFiles) = McDev.readPatchLines(listOf(patch.toPath()))
                 createPerFileDiff(sourcePatchesDir, sourceFiles, "src/main/java/")
