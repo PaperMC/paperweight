@@ -76,6 +76,13 @@ abstract class RemapJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
+        if (inputJar.path.absolute().normalize() == outputJar.path.absolute().normalize()) {
+            throw PaperweightException(
+                "Invalid configuration, inputJar and outputJar point to the same path: ${inputJar.path}\n" +
+                    "Consider removing customization of output locations, following the default Gradle conventions."
+            )
+        }
+
         if (toNamespace.get() != fromNamespace.get()) {
             val logFile = layout.cache.resolve(paperTaskOutput("log"))
             TinyRemapper.run(
