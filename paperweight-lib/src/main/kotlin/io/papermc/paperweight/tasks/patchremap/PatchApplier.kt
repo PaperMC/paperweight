@@ -103,7 +103,7 @@ class PatchApplier(
         target.createDirectories()
         git("checkout", remappedBranch).executeSilently()
         git(
-            "format-patch", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
+            "format-patch", "--diff-algorith=myers", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N", "-o",
             target.absolutePathString(), remappedBaseTag
         ).executeOut()
     }
@@ -114,7 +114,7 @@ class PatchApplier(
         }
 
         git("update-index", "--refresh").executeSilently()
-        if (git("diff-index", "--quiet", "HEAD", "--").runSilently() == 0) {
+        if (git("diff-index", "--diff-algorithm=myers", "--quiet", "HEAD", "--").runSilently() == 0) {
             return git("log", unmappedBranch, "-1", "--pretty=%B").getText().trim() !=
                 git("log", remappedBranch, "-1", "--pretty=%B").getText().trim()
         }
