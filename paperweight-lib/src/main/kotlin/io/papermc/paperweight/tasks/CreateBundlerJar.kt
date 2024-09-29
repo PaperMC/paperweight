@@ -200,9 +200,14 @@ abstract class CreateBundlerJar : ZippedTask() {
             return when (val ident = id.componentIdentifier) {
                 is ModuleComponentIdentifier -> ModuleId.fromIdentifier(id)
                 is ProjectComponentIdentifier -> {
-                    val capability = variant.capabilities.first()
-                    val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
-                    ModuleId(capability.group, capability.name, version)
+                    val mainCap = variant.attributes.getAttribute(mainCapabilityAttribute)
+                    if (mainCap != null) {
+                        ModuleId.parse(mainCap)
+                    } else {
+                        val capability = variant.capabilities.first()
+                        val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
+                        ModuleId(capability.group, capability.name, version)
+                    }
                 }
                 else -> throw PaperweightException("Unknown artifact result type: ${ident::class.java.name}")
             }

@@ -53,6 +53,7 @@ import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
@@ -416,3 +417,5 @@ fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) 
         path.outputStream().buffered().use { mf.write(it) }
     }
 }
+
+val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperweight.main-capability", String::class.java)
