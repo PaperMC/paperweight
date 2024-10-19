@@ -1,0 +1,114 @@
+{
+  "minecraftVersion": "fake",
+  "macheVersion": "fake",
+  "dependencies": {
+    "codebook": [
+      {
+        "group": "io.papermc.codebook",
+        "name": "codebook-cli",
+        "version": "1.0.10",
+        "classifier": "all"
+      }
+    ],
+    "paramMappings": [
+      {
+        "group": "org.parchmentmc.data",
+        "name": "parchment-1.21",
+        "version": "2024.07.28",
+        "extension": "zip"
+      }
+    ],
+    "constants": [
+    ],
+    "remapper": [
+      {
+        "group": "net.neoforged",
+        "name": "AutoRenamingTool",
+        "version": "1.0.14",
+        "classifier": "all"
+      }
+    ],
+    "decompiler": [
+      {
+        "group": "org.vineflower",
+        "name": "vineflower",
+        "version": "1.11.0-20240829.184116-48"
+      }
+    ]
+  },
+  "repositories": [
+    {
+      "url": "https://maven.fabricmc.net/",
+      "name": "FabricMC",
+      "groups": [
+        "net.fabricmc"
+      ]
+    },
+    {
+      "url": "https://maven.neoforged.net/releases/",
+      "name": "NeoForged",
+      "groups": [
+        "net.neoforged",
+        "net.minecraftforge"
+      ]
+    },
+    {
+      "url": "https://repo.papermc.io/repository/maven-public/",
+      "name": "PaperMC",
+      "groups": [
+        "io.papermc"
+      ]
+    },
+    {
+      "url": "https://maven.parchmentmc.org/",
+      "name": "ParchmentMC",
+      "groups": [
+        "org.parchmentmc"
+      ]
+    },
+    {
+      "url": "https://s01.oss.sonatype.org/content/repositories/snapshots/",
+      "name": "sonatype snapshots",
+      "groups": [
+        "org.vineflower"
+      ]
+    }
+  ],
+  "decompilerArgs": [
+    "--synthetic-not-set=true",
+    "--ternary-constant-simplification=true",
+    "--include-runtime=current",
+    "--decompile-complex-constant-dynamic=true",
+    "--indent-string=    ",
+    "--decompile-inner=true",
+    "--remove-bridge=true",
+    "--decompile-generics=true",
+    "--ascii-strings=false",
+    "--remove-synthetic=true",
+    "--include-classpath=true",
+    "--inline-simple-lambdas=true",
+    "--ignore-invalid-bytecode=false",
+    "--bytecode-source-mapping=true",
+    "--dump-code-lines=true",
+    "--override-annotation=false",
+    "--skip-extra-files=true"
+  ],
+  "remapperArgs": [
+    "--temp-dir={tempDir}",
+    "--remapper-file={remapperFile}",
+    "--mappings-file={mappingsFile}",
+    "--params-file={paramsFile}",
+    "--output={output}",
+    "--input={input}",
+    "--input-classpath={inputClasspath}"
+  ],
+  "additionalCompileDependencies": {
+    "compileOnly": [
+      {
+        "group": "org.jetbrains",
+        "name": "annotations",
+        "version": "24.0.1"
+      }
+    ]
+  }
+}
