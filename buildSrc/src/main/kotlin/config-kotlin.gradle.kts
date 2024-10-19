@@ -1,5 +1,7 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     idea
@@ -79,6 +81,15 @@ testing {
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
                 implementation("org.junit.platform:junit-platform-launcher:1.10.1")
+            }
+
+            targets.configureEach {
+                testTask {
+                    testLogging {
+                        events(TestLogEvent.FAILED)
+                        exceptionFormat = TestExceptionFormat.FULL
+                    }
+                }
             }
         }
     }
