@@ -13,8 +13,8 @@
     "paramMappings": [
       {
         "group": "org.parchmentmc.data",
-        "name": "parchment-1.20.4",
-        "version": "2024.02.25",
+        "name": "parchment-1.21",
+        "version": "2024.07.28",
         "extension": "zip"
       }
     ],
@@ -32,7 +32,7 @@
       {
         "group": "org.vineflower",
         "name": "vineflower",
-        "version": "1.10.0-20240212.003104-88"
+        "version": "1.11.0-20240829.184116-48"
       }
     ]
   },
@@ -75,17 +75,23 @@
     }
   ],
   "decompilerArgs": [
-    "-nns=true",
-    "-tcs=true",
-    "-ovr=false",
-    "-vvm=true",
-    "-iec=true",
-    "-jrt=current",
-    "-ind=    ",
-    "-jvn=false",
-    "-dcc=true",
-    "-sef=true",
-    "-nls=1"
+    "--synthetic-not-set=true",
+    "--ternary-constant-simplification=true",
+    "--include-runtime=current",
+    "--decompile-complex-constant-dynamic=true",
+    "--indent-string=    ",
+    "--decompile-inner=true",
+    "--remove-bridge=true",
+    "--decompile-generics=true",
+    "--ascii-strings=false",
+    "--remove-synthetic=true",
+    "--include-classpath=true",
+    "--inline-simple-lambdas=true",
+    "--ignore-invalid-bytecode=false",
+    "--bytecode-source-mapping=true",
+    "--dump-code-lines=true",
+    "--override-annotation=false",
+    "--skip-extra-files=true"
   ],
   "remapperArgs": [
     "--temp-dir={tempDir}",

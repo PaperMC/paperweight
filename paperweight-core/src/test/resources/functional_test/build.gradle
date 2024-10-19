@@ -19,7 +19,7 @@ dependencies {
     if (fake) {
         mache files('mache.zip') // use fake mache for testing
     } else {
-        mache 'io.papermc:mache:1.20.4+build.3'
+        mache 'io.papermc:mache:1.21.1+build.1'
     }
 }
 
@@ -41,7 +41,7 @@ paperweight {
             paperServerDir.set(file('test-server'))
         }
     } else {
-        minecraftVersion = '1.20.4'
+        minecraftVersion = '1.21.1'
 
         paper {
             paperServerDir.set(file('test-server'))
