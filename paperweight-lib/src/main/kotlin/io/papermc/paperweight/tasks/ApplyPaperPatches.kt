@@ -165,9 +165,11 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
 
-            applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get(), verbose.get())
-
-            makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir, mcDataDir)
+            try {
+                applyGitPatches(git, target, outputFile, patchDir.path, printOutput.get(), verbose.get())
+            } finally {
+                makeMcDevSrc(layout.cache, sourceMcDevJar.path, mcDevSources.path, outputDir.path, sourceDir, mcDataDir)
+            }
         }
     }
 
