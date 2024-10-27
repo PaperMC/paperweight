@@ -25,6 +25,7 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
+import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
 import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
@@ -53,7 +54,9 @@ class PaperweightCore : Plugin<Project> {
 
         val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
 
-        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {}
+        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+            parameters.projectPath.set(target.projectDir)
+        }
 
         target.tasks.register<Delete>("cleanCache") {
             group = "paper"
@@ -61,14 +64,17 @@ class PaperweightCore : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        // Make sure the submodules are initialized, since there are files there
-        // which are required for configuration
-        target.layout.maybeInitSubmodules(target.offlineMode(), logger)
+        if (!ext.softSpoon.get()) {
+            // Make sure the submodules are initialized, since there are files there
+            // which are required for configuration
+            target.layout.maybeInitSubmodules(target.offlineMode(), logger)
+        }
 
         target.configurations.create(PARAM_MAPPINGS_CONFIG)
         target.configurations.create(REMAPPER_CONFIG)
         target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
+        target.configurations.create(MACHE_CONFIG)
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {
@@ -90,10 +96,12 @@ class PaperweightCore : Plugin<Project> {
             ext.mainClass
         )
 
+        val softSpoonTasks = SoftSpoonTasks(target, tasks)
+
         target.createPatchRemapTask(tasks)
 
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-            dependsOn(tasks.applyPatches)
+            dependsOn(tasks.applyPatchesLegacy)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
@@ -124,19 +132,33 @@ class PaperweightCore : Plugin<Project> {
         }
 
         target.afterEvaluate {
+            println("SoftSpoon: ${ext.softSpoon.get()}")
+
             target.repositories {
-                maven(ext.paramMappingsRepo) {
-                    name = PARAM_MAPPINGS_REPO_NAME
-                    content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+                if (!ext.softSpoon.get()) {
+                    maven(ext.paramMappingsRepo) {
+                        name = PARAM_MAPPINGS_REPO_NAME
+                        content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+                    }
+                    maven(ext.remapRepo) {
+                        name = REMAPPER_REPO_NAME
+                        content { onlyForConfigurations(REMAPPER_CONFIG) }
+                    }
+                    maven(ext.decompileRepo) {
+                        name = DECOMPILER_REPO_NAME
+                        content { onlyForConfigurations(DECOMPILER_CONFIG) }
+                    }
+                } else {
+                    maven(ext.macheRepo) {
+                        name = MACHE_REPO_NAME
+                        content { onlyForConfigurations(MACHE_CONFIG) }
+                    }
                 }
-                maven(ext.remapRepo) {
-                    name = REMAPPER_REPO_NAME
-                    content { onlyForConfigurations(REMAPPER_CONFIG) }
-                }
-                maven(ext.decompileRepo) {
-                    name = DECOMPILER_REPO_NAME
-                    content { onlyForConfigurations(DECOMPILER_CONFIG) }
-                }
+            }
+
+            if (ext.softSpoon.get()) {
+                softSpoonTasks.afterEvaluate()
+                return@afterEvaluate
             }
 
             // Setup the server jar

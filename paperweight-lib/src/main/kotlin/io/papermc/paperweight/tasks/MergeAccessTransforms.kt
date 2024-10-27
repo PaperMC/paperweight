@@ -34,6 +34,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import writeLF
 
 @CacheableTask
 abstract class MergeAccessTransforms : BaseTask() {
@@ -67,6 +68,6 @@ abstract class MergeAccessTransforms : BaseTask() {
             outputAt.merge(at)
         }
 
-        AccessTransformFormats.FML.write(outputFile.path, outputAt)
+        AccessTransformFormats.FML.writeLF(outputFile.path, outputAt)
     }
 }

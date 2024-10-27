@@ -20,33 +20,14 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.util.data.mache
 
-import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.*
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
-
-@CacheableTask
-abstract class DownloadServerJar : BaseTask() {
-
-    @get:Input
-    abstract val downloadUrl: Property<String>
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val downloader: Property<DownloadService>
-
-    @get:Nested
-    abstract val expectedHash: Property<Hash>
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    fun run() = downloader.get().download(downloadUrl, outputJar, expectedHash.orNull)
-}
+data class MacheMeta(
+    val minecraftVersion: String,
+    val macheVersion: String,
+    val dependencies: MacheDependencies,
+    val repositories: List<MacheRepository>,
+    val decompilerArgs: List<String>,
+    val remapperArgs: List<String>,
+    val additionalCompileDependencies: MacheAdditionalDependencies? = null,
+)

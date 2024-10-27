@@ -20,33 +20,34 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
-
-import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.util.*
-import org.gradle.api.file.RegularFileProperty
+package io.papermc.paperweight.tasks.softspoon
+import codechicken.diffpatch.util.PatchMode
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.options.Option
 
-@CacheableTask
-abstract class DownloadServerJar : BaseTask() {
+@UntrackedTask(because = "Always apply patches")
+abstract class ApplyFilePatchesFuzzy : ApplyFilePatches() {
 
     @get:Input
-    abstract val downloadUrl: Property<String>
+    @get:Option(
+        option = "min-fuzz",
+        description = "Min fuzz. The minimum quality needed for a patch to be applied. Default is 0.5.",
+    )
+    abstract val minFuzz: Property<String>
 
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val downloader: Property<DownloadService>
-
-    @get:Nested
-    abstract val expectedHash: Property<Hash>
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
+    init {
+        run {
+            minFuzz.convention("0.5")
+        }
     }
 
-    @TaskAction
-    fun run() = downloader.get().download(downloadUrl, outputJar, expectedHash.orNull)
+    override fun mode(): PatchMode {
+        return PatchMode.FUZZY
+    }
+
+    override fun minFuzz(): Float {
+        return minFuzz.get().toFloat()
+    }
 }

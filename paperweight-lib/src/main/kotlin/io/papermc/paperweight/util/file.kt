@@ -25,16 +25,22 @@ package io.papermc.paperweight.util
 import io.papermc.paperweight.PaperweightException
 import java.io.InputStream
 import java.net.URI
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
+import java.nio.file.attribute.FileAttribute
 import java.util.Arrays
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 import kotlin.streams.asSequence
 import org.gradle.api.Project
@@ -142,11 +148,39 @@ private fun Path.jarUri(): URI {
 }
 
 fun Path.openZip(): FileSystem {
-    return FileSystems.newFileSystem(jarUri(), emptyMap<String, Any>())
+    return try {
+        FileSystems.getFileSystem(jarUri())
+    } catch (e: FileSystemNotFoundException) {
+        FileSystems.newFileSystem(jarUri(), emptyMap<String, Any>())
+    }
 }
 
 fun Path.writeZip(): FileSystem {
     return FileSystems.newFileSystem(jarUri(), mapOf("create" to "true"))
+}
+
+inline fun Path.writeZipStream(func: (ZipOutputStream) -> Unit) {
+    ZipOutputStream(this.outputStream().buffered()).use(func)
+}
+
+inline fun Path.readZipStream(func: (ZipInputStream, ZipEntry) -> Unit) {
+    ZipInputStream(this.inputStream().buffered()).use { zis ->
+        var entry = zis.nextEntry
+        while (entry != null) {
+            func(zis, entry)
+            entry = zis.nextEntry
+        }
+    }
+}
+
+fun copyEntry(input: InputStream, output: ZipOutputStream, entry: ZipEntry) {
+    val newEntry = ZipEntry(entry)
+    output.putNextEntry(newEntry)
+    try {
+        input.copyTo(output)
+    } finally {
+        output.closeEntry()
+    }
 }
 
 fun FileSystem.walk(): Stream<Path> {
@@ -255,5 +289,16 @@ private fun relativeCopyOrMove(baseDir: Path, file: Path, outputDir: Path, move:
         file.moveTo(destination, overwrite = true)
     } else {
         file.copyTo(destination, overwrite = true)
+    }
+}
+
+fun Path.createParentDirectories(vararg attributes: FileAttribute<*>): Path = also {
+    val parent = it.parent
+    if (parent != null && !parent.isDirectory()) {
+        try {
+            parent.createDirectories(*attributes)
+        } catch (e: FileAlreadyExistsException) {
+            if (!parent.isDirectory()) throw e
+        }
     }
 }

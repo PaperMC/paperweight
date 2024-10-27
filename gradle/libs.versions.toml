@@ -1,7 +1,9 @@
 [versions]
-asm = "9.7"
+asm = "9.7.1"
 lorenz = "0.5.8"
-hypo = "1.2.4"
+hypo = "2.3.0"
+serialize = "1.5.1"
+feather = "1.1.0"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -9,6 +11,8 @@ asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 
 httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
+coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+jgit = "org.eclipse.jgit:org.eclipse.jgit:6.6.0.202305301015-r"
 gson = "com.google.code.gson:gson:2.10.1"
 
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
@@ -17,6 +21,7 @@ cadix-lorenz-proguard = { module = "org.cadixdev:lorenz-io-proguard", version.re
 cadix-atlas = "org.cadixdev:atlas:0.2.1"
 cadix-at = "org.cadixdev:at:0.1.0-rc1"
 cadix-mercury = "org.cadixdev:mercury:0.1.2-paperweight-SNAPSHOT"
+cadix-bombe-jar = "org.cadixdev:bombe-jar:0.4.4"
 
 hypo-model = { module = "dev.denwav.hypo:hypo-model", version.ref = "hypo" }
 hypo-core = { module = "dev.denwav.hypo:hypo-core", version.ref = "hypo" }
@@ -29,18 +34,29 @@ slf4j-jdk14 = "org.slf4j:slf4j-jdk14:1.7.32"
 lorenzTiny = "net.fabricmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
-diffpatch = "codechicken:DiffPatch:1.5.0.29"
+feather-core = { module = "org.parchmentmc:feather", version.ref = "feather" }
+feather-gson = { module = "org.parchmentmc.feather:io-gson", version.ref = "feather" }
+
+diffpatch = "codechicken:DiffPatch:1.5.0.30"
+
+serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
+serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
+
+restamp = "io.papermc.restamp:restamp:1.1.1-SNAPSHOT"
+
+# test
+mockk = "io.mockk:mockk:1.13.8"
 
 # Gradle
 gradle-licenser = "net.kyori:indra-licenser-spotless:3.1.3"
 gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:6.23.1"
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1"
-gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.3.0"
+gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:4.5.0"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.2.1"
 
 [bundles]
 asm = ["asm-core", "asm-tree"]
-cadix = ["cadix-lorenz-core", "cadix-lorenz-asm", "cadix-lorenz-proguard", "cadix-atlas", "cadix-at", "cadix-mercury"]
+cadix = ["cadix-lorenz-core", "cadix-lorenz-asm", "cadix-lorenz-proguard", "cadix-atlas", "cadix-at", "cadix-mercury", "cadix-bombe-jar"]
 hypo = ["hypo-model", "hypo-core", "hypo-hydrate", "hypo-asm-core", "hypo-asm-hydrate", "hypo-mappings"]
 kotson = ["kotson", "gson"]

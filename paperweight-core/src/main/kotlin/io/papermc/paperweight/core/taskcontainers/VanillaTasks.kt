@@ -49,7 +49,9 @@ open class VanillaTasks(
 
     val remapJar by tasks.registering<RemapJar> {
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
-        mappingsFile.set(generateMappings.flatMap { it.outputMappings })
+        // TODO fix hypo for v1 stuff
+        // mappingsFile.set(generateMappings.flatMap { it.outputMappings })
+        mappingsFile.set(Path.of("D:\\IntellijProjects\\PaperClean\\.gradle\\caches\\paperweight\\mappings\\official-mojang+yarn.tiny"))
         fromNamespace.set(OBF_NAMESPACE)
         toNamespace.set(DEOBF_NAMESPACE)
         remapper.from(project.configurations.named(REMAPPER_CONFIG))

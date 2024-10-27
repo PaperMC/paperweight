@@ -35,16 +35,17 @@ object McDev {
 
     fun importMcDev(
         patches: Iterable<Path>,
-        decompJar: Path,
+        decompJar: Path?,
         importsFile: Path?,
         targetDir: Path,
         dataTargetDir: Path? = null,
         librariesDirs: List<Path> = listOf(),
-        printOutput: Boolean = true
+        printOutput: Boolean = true,
+        javaSourceSet: String = "/src/main/java"
     ) {
-        val (javaPatchLines, dataPatchLines) = readPatchLines(patches)
+        val (javaPatchLines, dataPatchLines) = readPatchLines(patches, javaSourceSet)
 
-        decompJar.openZip().use { zipFile ->
+        decompJar?.openZip()?.use { zipFile ->
             val decompSourceFiles = mutableSetOf<String>()
             val decompDataFiles = mutableSetOf<String>()
 
@@ -127,7 +128,7 @@ object McDev {
         }
 
         // Import library classes
-        val imports = findLibraries(importsFile, libFiles, javaPatchLines)
+        val imports = findLibraries(importsFile, libFiles, javaPatchLines, javaSourceSet)
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", imports.size)
 
         for ((libraryFileName, importFilePath) in imports) {
@@ -170,11 +171,11 @@ object McDev {
         }
     }
 
-    private fun readPatchLines(patches: Iterable<Path>): Pair<Set<String>, Set<String>> {
+    private fun readPatchLines(patches: Iterable<Path>, javaSourceSet: String): Pair<Set<String>, Set<String>> {
         val srcResult = hashSetOf<String>()
         val dataResult = hashSetOf<String>()
 
-        val javaPrefix = "+++ b/src/main/java/"
+        val javaPrefix = "+++ b$javaSourceSet/"
         val dataPrefix = "+++ b/src/main/resources/data/minecraft/"
 
         for (patch in patches) {
@@ -216,7 +217,7 @@ object McDev {
         return Pair(srcResult, dataResult)
     }
 
-    private fun findLibraries(libraryImports: Path?, libFiles: List<Path>, patchLines: Set<String>): Set<LibraryImport> {
+    private fun findLibraries(libraryImports: Path?, libFiles: List<Path>, patchLines: Set<String>, javaSourceSet: String): Set<LibraryImport> {
         val result = hashSetOf<LibraryImport>()
 
         // Imports from library-imports.txt
@@ -233,15 +234,15 @@ object McDev {
         }
 
         // Scan patches for necessary imports
-        result += findNeededLibraryImports(patchLines, libFiles)
+        result += findNeededLibraryImports(patchLines, libFiles, javaSourceSet)
 
         return result
     }
 
-    private fun findNeededLibraryImports(patchLines: Set<String>, libFiles: List<Path>): Set<LibraryImport> {
+    private fun findNeededLibraryImports(patchLines: Set<String>, libFiles: List<Path>, javaSourceSet: String): Set<LibraryImport> {
         val knownImportMap = findPossibleLibraryImports(libFiles)
             .associateBy { it.importFilePath }
-        val prefix = "+++ b/src/main/java/"
+        val prefix = "+++ b$javaSourceSet/"
         return patchLines.map { it.substringAfter(prefix) }
             .mapNotNull { knownImportMap[it] }
             .toSet()

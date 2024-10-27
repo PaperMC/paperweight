@@ -70,12 +70,12 @@ class SetupHandlerImplV2(
             override val hashFile: Path = cache.resolve(paperSetupOutput("minecraftLibraries", "hashes"))
 
             override fun run(context: SetupHandler.Context) {
-                downloadMinecraftLibraries(
+                downloadLibraries(
                     download = parameters.downloadService,
                     workerExecutor = context.workerExecutor,
                     targetDir = minecraftLibraryJars,
                     repositories = listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL),
-                    mcLibraries = bundle.config.buildData.vanillaServerLibraries,
+                    libraries = bundle.config.buildData.vanillaServerLibraries,
                     sources = false
                 ).await()
             }

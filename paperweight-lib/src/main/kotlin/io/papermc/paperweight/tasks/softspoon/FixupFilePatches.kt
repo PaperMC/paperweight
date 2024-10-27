@@ -20,33 +20,26 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.tasks.softspoon
 
-import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
-@CacheableTask
-abstract class DownloadServerJar : BaseTask() {
+@UntrackedTask(because = "Always fixup when requested")
+abstract class FixupFilePatches : BaseTask() {
 
-    @get:Input
-    abstract val downloadUrl: Property<String>
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val downloader: Property<DownloadService>
-
-    @get:Nested
-    abstract val expectedHash: Property<Hash>
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
-    }
+    @get:InputDirectory
+    abstract val repo: DirectoryProperty
 
     @TaskAction
-    fun run() = downloader.get().download(downloadUrl, outputJar, expectedHash.orNull)
+    fun run() {
+        val git = Git(repo)
+        git("commit", "add", ".").executeOut()
+        git("commit", "--fixup", "file").executeOut()
+        git("-c", "sequence.editor=:", "rebase", "-i", "--autosquash", "mache/main").executeOut()
+    }
 }

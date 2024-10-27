@@ -102,6 +102,17 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
 
             throw PaperweightException("You must have git installed and available on your PATH in order to use paperweight.")
         }
+
+        fun checkForGitRepo(directory: Path): Boolean {
+            try {
+                val proc = ProcessBuilder("git", "status").redirectErrorStream(true).directory(directory).start()
+                proc.inputStream.copyTo(UselessOutputStream)
+                if (proc.waitFor() == 0) {
+                    return true
+                }
+            } catch (_: Exception) {}
+            return false
+        }
     }
 }
 

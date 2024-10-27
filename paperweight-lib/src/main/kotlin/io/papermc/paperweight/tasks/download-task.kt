@@ -73,6 +73,9 @@ abstract class DownloadTask : DefaultTask() {
 }
 
 @CacheableTask
+abstract class CacheableDownloadTask : DownloadTask()
+
+@CacheableTask
 abstract class DownloadMcLibraries : BaseTask() {
 
     @get:InputFile
@@ -101,7 +104,7 @@ abstract class DownloadMcLibraries : BaseTask() {
 
     @TaskAction
     fun run() {
-        downloadMinecraftLibraries(
+        downloadLibraries(
             downloader,
             workerExecutor,
             outputDir.path,
@@ -112,20 +115,62 @@ abstract class DownloadMcLibraries : BaseTask() {
     }
 }
 
-fun downloadMinecraftLibraries(
+@CacheableTask
+abstract class DownloadPaperLibraries : BaseTask() {
+
+    @get:Input
+    abstract val paperDependencies: ListProperty<String>
+
+    @get:Input
+    abstract val repositories: ListProperty<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Internal
+    abstract val downloader: Property<DownloadService>
+
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
+    @get:Input
+    abstract val sources: Property<Boolean>
+
+    override fun init() {
+        super.init()
+        sources.convention(false)
+    }
+
+    @TaskAction
+    fun run() {
+        downloadLibraries(
+            downloader,
+            workerExecutor,
+            outputDir.path,
+            repositories.get(),
+            paperDependencies.get(),
+            sources.get()
+        )
+    }
+}
+
+fun downloadLibraries(
     download: Provider<DownloadService>,
     workerExecutor: WorkerExecutor,
     targetDir: Path,
     repositories: List<String>,
-    mcLibraries: List<String>,
+    libraries: List<String>,
     sources: Boolean
 ): WorkQueue {
     val excludes = listOf(targetDir.fileSystem.getPathMatcher("glob:*.etag"))
     targetDir.deleteRecursive(excludes)
+    if (!targetDir.exists()) {
+        targetDir.createDirectories()
+    }
 
     val queue = workerExecutor.noIsolation()
 
-    for (lib in mcLibraries) {
+    for (lib in libraries) {
         if (sources) {
             queue.submit(DownloadSourcesToDirAction::class) {
                 repos.set(repositories)

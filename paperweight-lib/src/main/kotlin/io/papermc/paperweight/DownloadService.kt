@@ -32,6 +32,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.apache.http.HttpHost
 import org.apache.http.HttpStatus
 import org.apache.http.client.config.CookieSpecs
@@ -41,12 +43,17 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.DateUtils
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClientBuilder
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 
-abstract class DownloadService : BuildService<BuildServiceParameters.None>, AutoCloseable {
+abstract class DownloadService : BuildService<DownloadService.Params>, AutoCloseable {
+
+    interface Params : BuildServiceParameters {
+        val projectPath: DirectoryProperty
+    }
 
     private companion object {
         val LOGGER: Logger = Logging.getLogger(DownloadService::class.java)
@@ -64,13 +71,19 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
         download(url, file, hash)
     }
 
+    suspend fun downloadAsync(source: Any, target: Any, hash: Hash? = null) = coroutineScope {
+        async {
+            download(source.convertToUrl(), target.convertToPath(), hash, false)
+        }
+    }
+
     private fun download(source: URL, target: Path, hash: Hash?, retry: Boolean = false) {
         download(source, target)
         if (hash == null) {
             return
         }
         val dlHash = target.hashFile(hash.algorithm).asHexString().lowercase(Locale.ENGLISH)
-        if (dlHash == hash.valueLower) {
+        if (hash.value == "" || dlHash == hash.valueLower) {
             return
         }
         LOGGER.warn(
@@ -90,6 +103,15 @@ abstract class DownloadService : BuildService<BuildServiceParameters.None>, Auto
 
     private fun download(source: URL, target: Path) {
         target.parent.createDirectories()
+
+        if (source.protocol == "file") {
+            var path = source.toString().replace("file://", "")
+            if (source.host == "project") {
+                path = path.replace("project", parameters.projectPath.path.absolutePathString())
+            }
+            Path.of(path).copyTo(target, overwrite = true)
+            return
+        }
 
         val etagDir = target.resolveSibling("etags")
         etagDir.createDirectories()

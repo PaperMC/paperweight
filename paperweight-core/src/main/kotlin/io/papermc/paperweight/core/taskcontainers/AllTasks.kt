@@ -101,6 +101,23 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
+    val downloadPaperLibrariesSources by tasks.registering<DownloadPaperLibraries> {
+        paperDependencies.set(
+            project.ext.serverProject.map { p ->
+                val configuration = p.configurations["implementation"]
+                configuration.isCanBeResolved = true
+                configuration.resolvedConfiguration.resolvedArtifacts.map {
+                    "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
+                }
+            }
+        )
+        repositories.set(listOf(MAVEN_CENTRAL_URL, PAPER_MAVEN_REPO_URL))
+        outputDir.set(cache.resolve(PAPER_SOURCES_JARS_PATH))
+        sources.set(true)
+
+        downloader.set(downloadService)
+    }
+
     @Suppress("DuplicatedCode")
     val applyServerPatches by tasks.registering<ApplyPaperPatches> {
         group = "paper"
@@ -126,7 +143,7 @@ open class AllTasks(
         mcDevSources.set(extension.mcDevSourceDir)
     }
 
-    val applyPatches by tasks.registering<Task> {
+    val applyPatchesLegacy by tasks.registering<Task> {
         group = "paper"
         description = "Set up the Paper development environment"
         dependsOn(applyApiPatches, applyServerPatches)
@@ -151,7 +168,7 @@ open class AllTasks(
     }
 
     @Suppress("unused")
-    val rebuildPatches by tasks.registering<Task> {
+    val rebuildPatchesLegacy by tasks.registering<Task> {
         group = "paper"
         description = "Rebuilds patches to api and server"
         dependsOn(rebuildApiPatches, rebuildServerPatches)

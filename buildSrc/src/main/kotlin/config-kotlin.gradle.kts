@@ -1,5 +1,7 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     idea
@@ -11,7 +13,7 @@ java {
 }
 
 tasks.withType(JavaCompile::class).configureEach {
-    options.release = 11
+    options.release = 17
 }
 
 kotlin {
@@ -21,8 +23,8 @@ kotlin {
     target {
         compilations.configureEach {
             kotlinOptions {
-                jvmTarget = "11"
-                freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=11")
+                jvmTarget = "17"
+                freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
             }
         }
     }
@@ -38,6 +40,28 @@ repositories {
         mavenContent {
             includeGroup("codechicken")
             includeGroup("net.fabricmc")
+            includeGroupAndSubgroups("io.papermc")
+        }
+    }
+    maven("https://maven.parchmentmc.org") {
+        name = "ParchmentMC"
+        mavenContent {
+            releasesOnly()
+            includeGroupAndSubgroups("org.parchmentmc")
+        }
+    }
+    maven("https://maven.neoforged.net/releases") {
+        name = "NeoForged"
+        mavenContent {
+            releasesOnly()
+            includeGroupAndSubgroups("net.neoforged")
+        }
+    }
+    maven("https://maven.fabricmc.net") {
+        name = "FabricMC"
+        mavenContent {
+            releasesOnly()
+            includeGroupAndSubgroups("net.fabricmc")
         }
     }
     mavenCentral()
@@ -55,6 +79,16 @@ testing {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
+                implementation("org.junit.platform:junit-platform-launcher:1.10.1")
+            }
+
+            targets.configureEach {
+                testTask {
+                    testLogging {
+                        events(TestLogEvent.FAILED)
+                        exceptionFormat = TestExceptionFormat.FULL
+                    }
+                }
             }
         }
     }

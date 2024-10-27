@@ -1,7 +1,7 @@
 name: Deploy Snapshot
 on:
   push:
-    branches: [ 'main' ]
+    branches: [ 'main', 'softspoon-v2' ]
     paths-ignore:
       - 'license/*'
       - 'readme.md'
@@ -29,7 +29,7 @@ jobs:
           echo version=$project_version >> $GITHUB_OUTPUT
       - name: Deploy snapshot version
         if: endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
-        run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace
+        run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace -Dorg.gradle.internal.http.socketTimeout=90000 -Dorg.gradle.internal.http.connectionTimeout=90000
         env:
           ORG_GRADLE_PROJECT_paperUsername: ${{ secrets.DEPLOY_USER }}
           ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.DEPLOY_PASS }}

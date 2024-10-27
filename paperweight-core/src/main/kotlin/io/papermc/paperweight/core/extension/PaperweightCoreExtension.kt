@@ -36,10 +36,13 @@ import org.gradle.kotlin.dsl.*
 
 open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
 
+    val softSpoon: Property<Boolean> = objects.property<Boolean>().convention(false)
+
     @Suppress("MemberVisibilityCanBePrivate")
     val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
 
     val minecraftVersion: Property<String> = objects.property()
+    val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
     val serverProject: Property<Project> = objects.property()
 
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
@@ -50,6 +53,10 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     val paramMappingsRepo: Property<String> = objects.property()
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()
+    val macheRepo: Property<String> = objects.property<String>().convention("https://repo.papermc.io/repository/maven-public/")
+
+    val macheOldPath: DirectoryProperty = objects.directoryProperty()
+    val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     val vanillaJarIncludes: ListProperty<String> = objects.listProperty<String>().convention(
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")

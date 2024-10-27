@@ -127,7 +127,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
                 upstreamGit("checkout", "-b", upstreamBranch.get()).executeSilently(silenceErr = true)
                 upstreamGit.disableAutoGpgSigningInRepo()
                 upstreamGit("add", ".").executeSilently(silenceErr = true)
-                upstreamGit("commit", "-m", "Initial Source", "--author=Initial <auto@mated.null>").executeSilently(silenceErr = true)
+                upstreamGit("commit", "-m", "Initial Source", "--author=Initial <noreply+automated@papermc.io>").executeSilently(silenceErr = true)
             }
         }
 
@@ -157,7 +157,7 @@ abstract class PatcherApplyGitPatches : ControllableOutputTask() {
         }
 
         git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-        git("commit", "--allow-empty", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+        git("commit", "--allow-empty", "-m", "Initial", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
         git("tag", "-d", "base").runSilently(silenceErr = true)
         git("tag", "base").executeSilently()
 
