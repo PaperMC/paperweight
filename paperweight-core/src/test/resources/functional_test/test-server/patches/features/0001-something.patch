@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MiniDigger | Martin <admin@benndorf.dev>
+Date: Sun, 31 Mar 2024 17:01:32 +0200
+Subject: [PATCH] Example
+
+
+diff --git a/net/minecraft/server/dedicated/DedicatedServer.java b/net/minecraft/server/dedicated/DedicatedServer.java
+index 28def15b5789d34bcfc2a16a17444c9c72dc2c8f..a8f735100a8d4db72dae9be3eeeca0d417be3eee 100644
+--- a/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -106,6 +106,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+         thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
+         thread.start();
+         LOGGER.info("Starting minecraft server version {}", SharedConstants.getCurrentVersion().getName());
++        LOGGER.info("Wooooooooooooooooooo");
+         if (Runtime.getRuntime().maxMemory() / 1024L / 1024L < 512L) {
+             LOGGER.warn("To start the server with more ram, launch it as \"java -Xmx1024M -Xms1024M -jar minecraft_server.jar\"");
+         }

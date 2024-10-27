@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MiniDigger | Martin <admin@benndorf.dev>
+Date: Sun, 27 Oct 2024 09:06:58 +0100
+Subject: [PATCH] Remove rotten apples
+
+
+diff --git a/oshi/SystemInfo.java b/oshi/SystemInfo.java
+index 86a360a772f253d354533ba91f673d734bc51dbd..6b17e8669a9364f3e5bfd7651f3764532300d6c8 100644
+--- a/oshi/SystemInfo.java
++++ b/oshi/SystemInfo.java
+@@ -83,8 +83,6 @@ public class SystemInfo {
+         case LINUX:
+         case ANDROID:
+             return new LinuxOperatingSystem();
+-        case MACOS:
+-            return new MacOperatingSystem();
+         case SOLARIS:
+             return new SolarisOperatingSystem();
+         case FREEBSD:
+@@ -114,8 +112,6 @@ public class SystemInfo {
+         case LINUX:
+         case ANDROID:
+             return new LinuxHardwareAbstractionLayer();
+-        case MACOS:
+-            return new MacHardwareAbstractionLayer();
+         case SOLARIS:
+             return new SolarisHardwareAbstractionLayer();
+         case FREEBSD:

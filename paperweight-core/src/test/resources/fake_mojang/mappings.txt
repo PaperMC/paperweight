@@ -1,0 +1,19 @@
+com.mojang.math.Axis -> a:
+# {"fileName":"Axis.java","id":"sourceFile"}
+    com.mojang.math.Axis XN -> a
+    com.mojang.math.Axis XP -> b
+    com.mojang.math.Axis YN -> c
+    com.mojang.math.Axis YP -> d
+    com.mojang.math.Axis ZN -> e
+    com.mojang.math.Axis ZP -> f
+    17:17:com.mojang.math.Axis of(org.joml.Vector3f) -> of
+    org.joml.Quaternionf rotation(float) -> rotation
+    23:23:org.joml.Quaternionf rotationDegrees(float) -> rotationDegrees
+    17:17:org.joml.Quaternionf lambda$of$6(org.joml.Vector3f,float) -> a
+    14:14:org.joml.Quaternionf lambda$static$5(float) -> a
+    13:13:org.joml.Quaternionf lambda$static$4(float) -> b
+    12:12:org.joml.Quaternionf lambda$static$3(float) -> c
+    11:11:org.joml.Quaternionf lambda$static$2(float) -> d
+    10:10:org.joml.Quaternionf lambda$static$1(float) -> e
+    9:9:org.joml.Quaternionf lambda$static$0(float) -> f
+    9:14:void <clinit>() -> <clinit>

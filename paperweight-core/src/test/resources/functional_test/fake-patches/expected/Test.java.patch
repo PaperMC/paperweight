@@ -1,0 +1,15 @@
+--- a/Test.java
++++ b/Test.java
+@@ -7,10 +_,10 @@
+     }
+ 
+     public final String getTest() {
+-        return this.test;
++        return this.test; // WOOOO
+     }
+ 
+     private final String getTest2() {
+-        return this.test + "2";
++        return this.test + "2"; // Woo
+     }
+ }

@@ -1,0 +1,18 @@
+pluginManagement {
+    // includeBuild '..'
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        maven {
+            url "https://repo.papermc.io/repository/maven-public/"
+        }
+        maven {
+            url "https://maven.parchmentmc.org"
+        }
+    }
+}
+
+rootProject.name = 'functional_test'
+
+include 'test-api'
+include 'test-server'

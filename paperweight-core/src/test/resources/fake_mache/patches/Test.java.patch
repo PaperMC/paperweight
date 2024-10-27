@@ -1,0 +1,9 @@
+--- a/Test.java
++++ b/Test.java
+@@ -1,5 +_,5 @@
+ public class Test {
+-    public int dum;
++    public int dum2;
+     private final String test;
+ 
+     public Test(String var1) {

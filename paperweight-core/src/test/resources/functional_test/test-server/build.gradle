@@ -1,0 +1,8 @@
+plugins {
+    id "java"
+    id "com.github.johnrengelman.shadow"
+}
+
+dependencies {
+    implementation project(":test-api")
+}

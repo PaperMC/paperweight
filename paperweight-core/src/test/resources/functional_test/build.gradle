@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
+    id 'io.papermc.paperweight.core'
+}
+
+allprojects {
+    apply plugin: 'java'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+def fake = Boolean.getBoolean("fake")
+
+dependencies {
+    if (fake) {
+        mache files('mache.zip') // use fake mache for testing
+    } else {
+        mache 'io.papermc:mache:1.21.1+build.1'
+    }
+}
+
+paperweight {
+    softSpoon = true
+
+    if (fake) {
+        // use fake mojang data for testing
+        minecraftVersion = 'fake'
+        minecraftManifestUrl = 'file://project/fake_mojang/version_manifest.json'
+
+        paper {
+            sourcePatchDir.set(file('fake-patches/sources'))
+            resourcePatchDir.set(file('fake-patches/resources'))
+            featurePatchDir.set(file('fake-patches/features'))
+
+            additionalAts.set(file('build-data/fake.at'))
+
+            paperServerDir.set(file('test-server'))
+        }
+    } else {
+        minecraftVersion = '1.21.1'
+
+        paper {
+            paperServerDir.set(file('test-server'))
+        }
+    }
+
+    serverProject = project(':test-server')
+}
