@@ -56,10 +56,39 @@ abstract class RewritePartialPaperHistory : BaseTask() {
             git("filter-repo", "--force", "--commit-callback", callbackArg).executeOut()
 
             firstCommit = git("log", "--grep=Rename to PaperSpigot", "--format=%H").getText().trim()
-            println("Removing index and line number changes from patch diff")
+            println("Removing index and line number changes from patch diff and renaming patch files")
             val tempFile = Files.createTempFile("paperweight", "filter-repo")
             Files.writeString(tempFile, REPLACE_TEXT.trimIndent())
-            git("filter-repo", "--replace-text", tempFile.toAbsolutePath().toString(), "--refs", "$firstCommit..HEAD").executeOut()
+            git(
+                "filter-repo",
+                "--replace-text", tempFile.toAbsolutePath().toString(),
+                "--path", "patches/removed/",
+                "--path", "removed/",
+                "--invert-paths",
+                "--filename-callback", """
+                    import re
+                    import string
+                    import random
+
+                    # filter-repo bug where it will pass None for removed files...
+                    if filename is None:
+                        return b""
+
+                    pattern = re.compile(br"^((?:patches|Spigot-(?:API|Server)-Patches)/.*?)/\d{4}-(.*)")
+                    match = pattern.match(filename)
+                    if match:
+                        # Avoid remaining conflicts manually
+                        if match.group(2) in {b"fixup-MC-Utils.patch"}:
+                            prefix = b''.join(random.choice(string.ascii_lowercase).encode('utf-8') for _ in range(4))
+                            return match.group(1) + b"/" + prefix + b"-" + match.group(2)
+
+                        # Dir, subdirs if present, then the filename without the numbered prefix
+                        return match.group(1) + b"/" + match.group(2)
+                    else:
+                        return filename
+                    """.trimIndent(),
+                "--refs", "$firstCommit..HEAD"
+            ).executeOut()
             Files.deleteIfExists(tempFile)
         }
     }
