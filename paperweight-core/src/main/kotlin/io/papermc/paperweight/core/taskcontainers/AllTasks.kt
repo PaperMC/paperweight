@@ -339,6 +339,13 @@ open class AllTasks(
     val rewriteCraftBukkitSpigotHistory by tasks.registering<RewriteCommits> {
         targetDir.set(remapSpigot.flatMap { it.remappedSpigotSource })
         commitCallback.value(RewriteCommits.CRAFTBUKKIT_CALLBACK)
+        invertPaths.set(true)
+        paths.set(listOf(
+            "src/main/java/net/minecraft/",
+            "paper-server/src/java/main/net/minecraft/",
+            "src/main/java/jline/",
+            "paper-server/src/java/main/jline/"
+        ))
     }
 
     val importPaperMcDevFiles by tasks.registering<ImportMcDevFiles> {

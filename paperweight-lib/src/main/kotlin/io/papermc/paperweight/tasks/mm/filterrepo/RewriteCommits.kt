@@ -80,6 +80,9 @@ abstract class RewriteCommits : BaseTask() {
     abstract val targetDir: DirectoryProperty
 
     @get:Input
+    abstract val invertPaths: Property<Boolean>
+
+    @get:Input
     abstract val paths: ListProperty<String>
 
     @get:Input
@@ -96,6 +99,7 @@ abstract class RewriteCommits : BaseTask() {
         outputDir.convention(targetDir)
         paths.convention(objects.listProperty())
         pathGlobs.convention(objects.listProperty())
+        invertPaths.convention(false)
         commitCallback.convention(RESET_CALLBACK)
     }
 
@@ -105,6 +109,11 @@ abstract class RewriteCommits : BaseTask() {
 
         val pathsArr = paths.get().map { "--path=$it" }.toTypedArray()
         val pathGlobsArr = pathGlobs.get().map { "--path-glob=$it" }.toTypedArray()
-        Git(targetDir)("filter-repo", *pathsArr, *pathGlobsArr, "--force", "--commit-callback", commitCallback.get()).executeOut()
+        val invertPathsFlag = if (invertPaths.getOrElse(false)) arrayOf("--invert-paths") else emptyArray()
+        Git(targetDir)(
+            "filter-repo", "--force",
+            *pathsArr, *pathGlobsArr, *invertPathsFlag,
+            "--commit-callback", commitCallback.get(),
+        ).executeOut()
     }
 }
