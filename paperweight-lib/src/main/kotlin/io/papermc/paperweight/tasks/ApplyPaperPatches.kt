@@ -154,7 +154,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             }
 
             git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-            git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+            git("commit", "-m", "Initial", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
             val remapSources = git("format-patch", "--no-stat", "-N", "--zero-commit", "--full-index", "--no-signature", "HEAD~1")
             remapSourcesPatch.path.deleteForcefully()
             Files.move(outputFile.resolve(remapSources.getText().trim()), remapSourcesPatch.path)
@@ -173,7 +173,7 @@ abstract class ApplyPaperPatches : ControllableOutputTask() {
             )
 
             git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-            git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+            git("commit", "-m", "Initial", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
             git("tag", "-d", "base").runSilently(silenceErr = true)
             git("tag", "base").executeSilently()
 

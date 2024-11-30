@@ -178,7 +178,7 @@ abstract class RemapSpigot : JavaLauncherTask() {
                 remappedSpigotSource.path.resolve(path).deleteRecursive()
                 mappedGit(*Git.add(false, path)).executeSilently()
             }
-            mappedGit("commit", "-m", "Removed unneeded files", "--author=Initial Source <auto@mated.null>").executeSilently()
+            mappedGit("commit", "-m", "Removed unneeded files", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
         }
     }
 

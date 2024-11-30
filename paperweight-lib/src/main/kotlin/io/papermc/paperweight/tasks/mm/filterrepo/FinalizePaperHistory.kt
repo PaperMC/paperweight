@@ -38,7 +38,7 @@ abstract class FinalizePaperHistory : BaseTask() {
         }
         Git(paperDir).let { git ->
             git("rm", "-r", *deletionsArr).execute()
-            git("commit", "-m", "OWW! That fork is HARD!", "--author=Automated <auto@mated.null>").execute()
+            git("commit", "-m", "That's a really hard fork!", "--author=Automated <noreply+automated@papermc.io>").execute()
         }
     }
 }

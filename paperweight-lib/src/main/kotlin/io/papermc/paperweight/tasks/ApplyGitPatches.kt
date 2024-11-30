@@ -107,7 +107,7 @@ abstract class ApplyGitPatches : ControllableOutputTask() {
                 if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                     unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursive() }
                     git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-                    git("commit", "-m", "Initial", "--author=Initial Source <auto@mated.null>").executeSilently()
+                    git("commit", "-m", "Initial", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
                 }
 
                 git("tag", "-d", "base").runSilently(silenceErr = true)

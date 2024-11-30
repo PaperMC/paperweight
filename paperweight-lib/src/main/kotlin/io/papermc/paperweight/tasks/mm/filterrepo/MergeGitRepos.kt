@@ -52,9 +52,9 @@ abstract class MergeGitRepos : BaseTask() {
 
             git("merge", "bukkit/${cloneBranch.get()}", "--no-edit").execute()
             git("merge", "craftbukkit/${cloneBranch.get()}", "--no-edit", "--allow-unrelated-histories").execute()
-            git("commit", "--amend", "--no-edit", "--author=Initial Source <auto@mated.null>").execute()
+            git("commit", "--amend", "--no-edit", "--author=Initial Source <noreply+automated@papermc.io>").execute()
             git("merge", "paper/$currentBranch", "--no-edit", "--allow-unrelated-histories").execute()
-            git("commit", "--amend", "--no-edit", "--author=Initial Source <auto@mated.null>").execute()
+            git("commit", "--amend", "--no-edit", "--author=Initial Source <noreply+automated@papermc.io>").execute()
         }
 
 //        bukkitDir.path.deleteRecursively()

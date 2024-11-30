@@ -107,7 +107,7 @@ abstract class ApplyServerSourceAndNmsPatches : BaseTask() {
                     outputDir.path.resolve(path).deleteRecursive()
                     git(*Git.add(false, path)).executeSilently()
                 }
-                git("commit", "-m", "Removed unneeded files", "--author=Initial Source <auto@mated.null>").executeSilently()
+                git("commit", "-m", "Removed unneeded files", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
             }
         }
 
