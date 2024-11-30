@@ -52,7 +52,7 @@ abstract class RebuildPerFilePatches : BaseTask() {
 
         Git(targetDir).let { git ->
             git("add", sourcePatchesDir.absolutePathString(), "src/test", "src/main/java/org").execute()
-            git("commit", "-m", commitMsg.get(), "--author=Initial Source <auto@mated.null>").execute()
+            git("commit", "-m", commitMsg.get(), "--author=Initial Source <noreply+automated@papermc.io>").execute()
         }
     }
 

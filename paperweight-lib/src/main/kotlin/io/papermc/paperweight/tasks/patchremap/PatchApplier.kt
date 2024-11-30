@@ -54,7 +54,7 @@ class PatchApplier(
 
     fun commitPlain(message: String) {
         git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-        git("commit", "-m", message, "--author=Initial <auto@mated.null>").executeSilently()
+        git("commit", "-m", message, "--author=Initial <noreply+automated@papermc.io>").executeSilently()
     }
 
     fun createBranches() {
@@ -64,7 +64,7 @@ class PatchApplier(
 
     fun commitInitialRemappedSource() {
         git(*Git.add(ignoreGitIgnore, ".")).executeSilently()
-        git("commit", "-m", "Initial Remapped Source", "--author=Initial <auto@mated.null>").executeSilently()
+        git("commit", "-m", "Initial Remapped Source", "--author=Initial <noreply+automated@papermc.io>").executeSilently()
         git("tag", remappedBaseTag).executeSilently()
     }
 

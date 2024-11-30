@@ -74,6 +74,6 @@ abstract class SetupCraftBukkit : BaseTask() {
             git("add", patchFile.absolutePathString()).execute()
         }
 
-        git("commit", "-m", "Move CraftBukkit per-file patches", "--author=Initial <auto@mated.null>").execute()
+        git("commit", "-m", "Move CraftBukkit per-file patches", "--author=Initial <noreply+automated@papermc.io>").execute()
     }
 }

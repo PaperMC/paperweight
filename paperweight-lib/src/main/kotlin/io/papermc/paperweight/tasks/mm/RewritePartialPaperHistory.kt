@@ -51,7 +51,7 @@ abstract class RewritePartialPaperHistory : BaseTask() {
             if ${commitsToRewrite.joinToString(" or ")}:
                 ${RewriteCommits.COMMIT_MSG.lines().joinToString("\n") { "    $it" }}
                 commit.author_name = b'Spigot'
-                commit.author_email = b'spigot@github.com'
+                commit.author_email = b'noreply+git-spigot@papermc.io'
             ${RewriteCommits.RESET_CALLBACK}""".trimIndent()
             git("filter-repo", "--force", "--commit-callback", callbackArg).executeOut()
 

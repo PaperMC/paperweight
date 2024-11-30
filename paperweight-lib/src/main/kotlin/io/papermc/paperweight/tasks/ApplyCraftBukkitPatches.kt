@@ -120,7 +120,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
             }
 
             git(*Git.add(ignoreGitIgnore, "src")).setupOut().execute()
-            git("commit", "-m", "Vanilla $ ${Date()}", "--author=Vanilla <auto@mated.null>").setupOut().execute()
+            git("commit", "-m", "Vanilla $ ${Date()}", "--author=Vanilla <noreply+automated@papermc.io>").setupOut().execute()
 
             // Apply patches
             for (file in patchList) {
@@ -135,7 +135,7 @@ abstract class ApplyCraftBukkitPatches : ControllableOutputTask() {
             }
 
             git(*Git.add(ignoreGitIgnore, "src")).setupOut().execute()
-            git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <auto@mated.null>").setupOut().execute()
+            git("commit", "-m", "CraftBukkit $ ${Date()}", "--author=CraftBukkit <noreply+automated@papermc.io>").setupOut().execute()
         } finally {
             if (rootPatchDir != patchDir.pathOrNull) {
                 rootPatchDir.deleteRecursive()

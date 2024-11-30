@@ -45,7 +45,7 @@ abstract class RewriteCommits : BaseTask() {
             $UTILS
             $COMMIT_MSG
             commit.author_name     = b'CraftBukkit/Spigot'
-            commit.author_email    = b'craftbukkit.spigot@github.com'
+            commit.author_email    = b'noreply+git-craftbukkit@papermc.io'
             $RESET_CALLBACK
             """
 
@@ -53,7 +53,7 @@ abstract class RewriteCommits : BaseTask() {
             $UTILS
             $COMMIT_MSG
             commit.author_name     = b'Bukkit/Spigot'
-            commit.author_email    = b'bukkit.spigot@github.com'
+            commit.author_email    = b'noreply+git-bukkit@papermc.io'
             $RESET_CALLBACK
             """
 
@@ -70,7 +70,7 @@ abstract class RewriteCommits : BaseTask() {
             author = commit.author_email.decode('utf-8')
             if author == 'aikar@aikar.co' and (msg.startswith('[CI-SKIP] [Auto]') or msg.startswith('[Auto]')):
                 commit.author_name   = b'Automated'
-                commit.author_email  = b'auto@mated.null'
+                commit.author_email  = b'noreply+automated@papermc.io'
             $MOVE_BACK_CALLBACK
             $RESET_CALLBACK
         """

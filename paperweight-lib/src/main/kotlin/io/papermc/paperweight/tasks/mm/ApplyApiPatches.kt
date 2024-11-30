@@ -39,7 +39,7 @@ abstract class ApplyApiPatches : BaseTask() {
             if (unneededFiles.isPresent && unneededFiles.get().size > 0) {
                 unneededFiles.get().forEach { path -> outputDir.path.resolve(path).deleteRecursive() }
                 git(*Git.add(false, ".")).executeSilently()
-                git("commit", "-m", "Removed unneeded files", "--author=Initial Source <auto@mated.null>").executeSilently()
+                git("commit", "-m", "Removed unneeded files", "--author=Initial Source <noreply+automated@papermc.io>").executeSilently()
             }
             patchesDir.asFileTree.files.sorted().forEach { patch ->
                 git("am", patch.absolutePath).execute()
