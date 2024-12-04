@@ -34,6 +34,7 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
@@ -72,6 +73,10 @@ abstract class CreateBundlerJar : ZippedTask() {
     @get:Classpath
     abstract val vanillaBundlerJar: RegularFileProperty
 
+    @get:Input
+    @get:Optional
+    abstract val extraManifestMainAttributes: MapProperty<String, String>
+
     @get:OutputFile
     abstract val libraryChangesJson: RegularFileProperty
 
@@ -103,6 +108,12 @@ abstract class CreateBundlerJar : ZippedTask() {
         librariesFile.bufferedWriter().use { writer ->
             for (l in libraries.sortedBy { it.id }) {
                 writer.append(l.toString()).append('\n')
+            }
+        }
+
+        if (extraManifestMainAttributes.isPresent) {
+            modifyManifest(rootDir.resolve("META-INF/MANIFEST.MF")) {
+                extraManifestMainAttributes.get().forEach { (k, v) -> mainAttributes.putValue(k, v) }
             }
         }
 

@@ -31,6 +31,7 @@ import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.attributes.java.TargetJvmEnvironment
@@ -202,11 +203,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
         for (repo in spigotRepos) {
             resolver.repositories.maven(repo)
         }
-        val config = resolver.configurations.create("spigotDependencies") {
-            attributes {
-                attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
-            }
-        }
+        val deps = mutableListOf<Dependency>()
         for (artifact in artifacts) {
             val gav = artifact.gav.let {
                 if (it == "com.google.guava:guava:32.1.2-jre") {
@@ -216,7 +213,7 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                     it
                 }
             }
-            config.dependencies.add(
+            deps.add(
                 dependencyFactory.create(gav).also {
                     it.artifact {
                         artifact.classifier?.let { s -> classifier = s }
@@ -224,6 +221,11 @@ abstract class DownloadSpigotDependencies : BaseTask() {
                     }
                 }
             )
+        }
+
+        val config = resolver.configurations.detachedConfiguration(*deps.toTypedArray())
+        config.attributes {
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
         }
 
         // The source variants don't have transitives
@@ -234,27 +236,27 @@ abstract class DownloadSpigotDependencies : BaseTask() {
             flatComponents += artifact.id.componentIdentifier
         }
 
-        val sourcesConfig = resolver.configurations.create("spigotDependenciesSources") {
-            attributes {
-                // Mojang libs & Guava don't resolve metadata correctly, so we set the classifier below instead...
-
-                // attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-                // attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
-                // attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
-                // attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-
-                // Needed since we set the classifier instead of using above attributes
-                attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
-            }
-        }
+        val sourcesDeps = mutableListOf<Dependency>()
         for (component in flatComponents) {
-            sourcesConfig.dependencies.add(
+            sourcesDeps.add(
                 dependencyFactory.create(component.displayName).also {
                     it.artifact {
                         classifier = "sources"
                     }
                 }
             )
+        }
+        val sourcesConfig = resolver.configurations.detachedConfiguration(*sourcesDeps.toTypedArray())
+        sourcesConfig.attributes {
+            // Mojang libs & Guava don't resolve metadata correctly, so we set the classifier below instead...
+
+            // attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            // attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+            // attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
+            // attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+
+            // Needed since we set the classifier instead of using above attributes
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
         }
         val sourcesView = sourcesConfig.incoming.artifactView {
             componentFilter {
