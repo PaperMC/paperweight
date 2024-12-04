@@ -3,6 +3,7 @@ package io.papermc.paperweight.tasks.mm
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mm.filterrepo.RewriteCommits
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Files
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputDirectory
@@ -17,6 +18,21 @@ abstract class RewritePartialPaperHistory : BaseTask() {
         const val REPLACE_TEXT = """
             regex:@@\s-\d+,\d+\s\+\d+,\d+\s@@==>@@ -0,0 +0,0 @@
             regex:index\s([a-fA-F0-9]{40})\.\.([a-fA-F0-9]{40})==>index 0000000000000000000000000000000000000000..0000000000000000000000000000000000000000
+        """
+
+        const val UPDATE_AUTHOR = """
+            replacements = {
+                %s
+            }
+            for original, replacement in replacements.items():
+                commit.message = commit.message.replace(original, replacement[0] + b' <' + replacement[1] + b'>')
+            fullDetails = commit.author_name + b' <' + commit.author_email + b'>'
+            if fullDetails in replacements:
+                replacement = replacements[fullDetails]
+                commit.author_name = replacement[0]
+                commit.author_email = replacement[1]
+                commit.committer_name  = commit.author_name
+                commit.committer_email = commit.author_email
         """
     }
 
@@ -58,13 +74,25 @@ abstract class RewritePartialPaperHistory : BaseTask() {
             firstCommit = git("log", "--grep=Rename to PaperSpigot", "--format=%H").getText().trim()
             println("Removing index and line number changes from patch diff and renaming patch files")
             val tempFile = Files.createTempFile("paperweight", "filter-repo")
-            Files.writeString(tempFile, REPLACE_TEXT.trimIndent())
+
+            // Update author details in patch files and commit details
+            var replaceText = "";
+            var dictCode = "";
+            AuthorDetails.readAuthorChanges().forEach { authorDetails ->
+                authorDetails.oldDetails.forEach{ oldDetail ->
+                    replaceText += "\n" + "${oldDetail}==>${authorDetails.newName} <${authorDetails.newEmail}>"
+                    dictCode += "\n" + "b'${oldDetail}': (b'${authorDetails.newName}', b'${authorDetails.newEmail}'),"
+                }
+            }
+
+            Files.writeString(tempFile, REPLACE_TEXT.trimIndent() + replaceText)
             git(
                 "filter-repo",
                 "--replace-text", tempFile.toAbsolutePath().toString(),
                 "--path", "patches/removed/",
                 "--path", "removed/",
                 "--invert-paths",
+                "--commit-callback", UPDATE_AUTHOR.format(dictCode).trimIndent(),
                 "--filename-callback", """
                     import re
                     import string
