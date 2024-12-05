@@ -98,9 +98,11 @@ fun Project.setupServerProject(
                 val libs = libsFile.convertToPathOrNull()
                 if (libs != null && libs.exists()) {
                     libs.forEachLine { line ->
-                        add(create(line) {
-                            isTransitive = false
-                        })
+                        add(
+                            create(line) {
+                                isTransitive = false
+                            }
+                        )
                     }
                 }
             }
