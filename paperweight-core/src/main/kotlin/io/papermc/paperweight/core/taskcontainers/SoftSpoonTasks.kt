@@ -277,11 +277,6 @@ open class SoftSpoonTasks(
                     }
                 }
             }
-
-            maven(MC_LIBRARY_URL) {
-                name = "Minecraft"
-            }
-            mavenCentral()
         }
 
         // setup mc deps
@@ -321,13 +316,6 @@ open class SoftSpoonTasks(
         // impl extends minecraft
         project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
             extendsFrom(macheMinecraft.get())
-        }
-
-        // repos
-        project.repositories {
-            mavenCentral()
-            maven(PAPER_MAVEN_REPO_URL)
-            maven(MC_LIBRARY_URL)
         }
 
         // add vanilla source set
