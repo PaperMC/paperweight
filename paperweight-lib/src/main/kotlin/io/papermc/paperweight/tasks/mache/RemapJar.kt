@@ -88,7 +88,7 @@ abstract class RemapJar : DefaultTask() {
                     remapperArgs.get().forEach { arg ->
                         args(
                             arg
-                                .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
+                                .replace(Regex("\\{tempDir}")) { temporaryDir.absolutePath }
                                 .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
                                 .replace(Regex("\\{mappingsFile}")) { serverMappings.get().asFile.absolutePath }
                                 .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }

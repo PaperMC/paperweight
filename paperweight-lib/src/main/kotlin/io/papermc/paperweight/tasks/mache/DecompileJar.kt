@@ -75,7 +75,7 @@ abstract class DecompileJar : DefaultTask() {
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
 
-        val cfgFile = layout.buildDirectory.file(DECOMP_CFG).convertToPath().ensureClean()
+        val cfgFile = layout.cache.resolve(DECOMP_CFG).ensureClean()
         val cfgText = buildString {
             for (file in minecraftClasspath.files) {
                 append("-e=")
