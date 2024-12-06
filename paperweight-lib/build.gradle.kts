@@ -16,7 +16,6 @@ dependencies {
     implementation(libs.bundles.asm)
 
     implementation(libs.bundles.hypo)
-    implementation(libs.slf4j.jdk14) // slf4j impl for hypo
     implementation(libs.bundles.cadix)
 
     implementation(libs.lorenzTiny)

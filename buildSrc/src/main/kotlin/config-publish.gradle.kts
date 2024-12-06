@@ -26,6 +26,7 @@ fun ShadowJar.configureStandard() {
 
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
+        exclude(dependency("org.slf4j:.*:.*"))
     }
 
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "OSGI-INF/**", "*.profile", "module-info.class", "ant_tasks/**")
@@ -83,7 +84,7 @@ val shadowJar by tasks.existing(ShadowJar::class) {
         "org.objectweb.asm",
         "org.osgi",
         "org.tukaani.xz",
-        "org.slf4j",
+        //"org.slf4j",
         "codechicken.diffpatch",
         "codechicken.repack"
     ).forEach { pack ->
