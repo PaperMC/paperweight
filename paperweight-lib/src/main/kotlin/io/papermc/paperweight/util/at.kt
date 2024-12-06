@@ -29,7 +29,6 @@ import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
-import org.cadixdev.at.io.AccessTransformFormats
 
 fun atFromString(input: String): AccessTransform {
     var last = input.length - 1
