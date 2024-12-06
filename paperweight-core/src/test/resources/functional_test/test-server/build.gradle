@@ -6,6 +6,9 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven {
+        url "https://repo.papermc.io/repository/maven-public/"
+    }
 }
 
 def fake = Boolean.getBoolean("fake")
