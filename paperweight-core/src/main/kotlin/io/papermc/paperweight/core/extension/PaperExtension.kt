@@ -46,7 +46,7 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val featurePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/features")
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
+    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "../build-data")
     val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")

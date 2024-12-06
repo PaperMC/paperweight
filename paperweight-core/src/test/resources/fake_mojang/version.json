@@ -2,11 +2,11 @@
   "downloads": {
     "server": {
       "sha1": "",
-      "url": "file://project/fake_mojang/bundle.jar"
+      "url": "file://project/../fake_mojang/bundle.jar"
     },
     "server_mappings": {
       "sha1": "",
-      "url": "file://project/fake_mojang/mappings.txt"
+      "url": "file://project/../fake_mojang/mappings.txt"
     }
   }
 }

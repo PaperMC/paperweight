@@ -68,7 +68,7 @@ fun atToString(at: AccessTransform): String {
 fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
     val stringWriter = StringWriter()
     val writer = BufferedWriter(stringWriter)
-    AccessTransformFormats.FML.write(writer, at)
+    write(writer, at)
     writer.close()
     // unify line endings
     val lines = stringWriter.toString().replace("\r\n", "\n").split("\n")

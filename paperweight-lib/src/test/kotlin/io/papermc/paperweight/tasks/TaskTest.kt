@@ -106,7 +106,7 @@ open class TaskTest {
         val git = Git.init().setDirectory(directory).setInitialBranch(mainBranch).call()
 
         git.add().addFilepattern(".").call()
-        git.commit().setMessage("Test").call()
+        git.commit().setSign(false).setMessage("Test").call()
         if (tag != null) {
             git.tag().setName(tag).call()
         }

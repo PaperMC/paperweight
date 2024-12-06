@@ -74,7 +74,9 @@ class PaperweightCore : Plugin<Project> {
         target.configurations.create(REMAPPER_CONFIG)
         target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
-        target.configurations.create(MACHE_CONFIG)
+        target.configurations.create(MACHE_CONFIG) {
+            attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
+        }
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {

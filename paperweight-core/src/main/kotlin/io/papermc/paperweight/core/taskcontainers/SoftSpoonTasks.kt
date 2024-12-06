@@ -36,7 +36,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -119,7 +118,10 @@ open class SoftSpoonTasks(
         ats.set(mergeCollectedAts.flatMap { it.outputFile })
         minecraftClasspath.from(macheMinecraft)
 
-        libraries.from(allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir }, allTasks.downloadMcLibrariesSources.flatMap { it.outputDir })
+        libraries.from(
+            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
+            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
+        )
         paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
         devImports.set(project.ext.paper.devImports.fileExists(project))
 
@@ -142,7 +144,7 @@ open class SoftSpoonTasks(
         description = "Applies patches to the vanilla sources"
 
         input.set(setupMacheSources.flatMap { it.outputDir })
-        output.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        output.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.sourcePatchDir)
         rejects.set(project.ext.paper.rejectsDir)
         gitFilePatches.set(project.ext.gitFilePatches)
@@ -153,7 +155,7 @@ open class SoftSpoonTasks(
         description = "Applies patches to the vanilla sources"
 
         input.set(setupMacheSources.flatMap { it.outputDir })
-        output.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        output.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.sourcePatchDir)
         rejects.set(project.ext.paper.rejectsDir)
         gitFilePatches.set(project.ext.gitFilePatches)
@@ -164,7 +166,7 @@ open class SoftSpoonTasks(
         description = "Applies patches to the vanilla resources"
 
         input.set(setupMacheResources.flatMap { it.outputDir })
-        output.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/resources") })
+        output.set(layout.projectDirectory.dir("src/vanilla/resources"))
         patches.set(project.ext.paper.resourcePatchDir)
     }
 
@@ -179,7 +181,7 @@ open class SoftSpoonTasks(
         description = "Applies all feature patches"
         dependsOn(applyFilePatches)
 
-        repo.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        repo.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.featurePatchDir)
     }
 
@@ -198,7 +200,7 @@ open class SoftSpoonTasks(
         atFileOut.set(project.ext.paper.additionalAts.fileExists(project))
 
         base.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
-        input.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        input.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.sourcePatchDir)
         gitFilePatches.set(project.ext.gitFilePatches)
     }
@@ -208,7 +210,7 @@ open class SoftSpoonTasks(
         description = "Rebuilds patches to the vanilla resources"
 
         base.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
-        input.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/resources") })
+        input.set(layout.projectDirectory.dir("src/vanilla/resources"))
         patches.set(project.ext.paper.resourcePatchDir)
     }
 
@@ -223,7 +225,7 @@ open class SoftSpoonTasks(
         description = "Rebuilds all feature patches"
         dependsOn(rebuildFilePatches)
 
-        inputDir.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        inputDir.set(layout.projectDirectory.dir("src/vanilla/java"))
         patchDir.set(project.ext.paper.featurePatchDir)
         baseRef.set("file")
     }
@@ -238,14 +240,14 @@ open class SoftSpoonTasks(
         group = "softspoon"
         description = "Puts the currently tracked source changes into the file patches commit"
 
-        repo.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/java") })
+        repo.set(layout.projectDirectory.dir("src/vanilla/java"))
     }
 
     val fixupResourcePatches by tasks.registering(FixupFilePatches::class) {
         group = "softspoon"
         description = "Puts the currently tracked resource changes into the file patches commit"
 
-        repo.set(project.ext.serverProject.map { it.layout.projectDirectory.dir("src/vanilla/resources") })
+        repo.set(layout.projectDirectory.dir("src/vanilla/resources"))
     }
 
     val setupPaperScript by tasks.registering(SetupPaperScript::class) {
@@ -282,27 +284,18 @@ open class SoftSpoonTasks(
             mavenCentral()
         }
 
-        val libsFile = project.layout.cache.resolve(SERVER_LIBRARIES_TXT)
-
         // setup mc deps
         macheMinecraft {
-            withDependencies {
-                project.dependencies {
-                    val libs = libsFile.convertToPathOrNull()
-                    if (libs != null && libs.exists()) {
-                        libs.forEachLine { line ->
-                            add(create(line))
-                        }
-                    }
-                }
-            }
+            extendsFrom(project.configurations.getByName(MACHE_CONFIG))
         }
         macheMinecraftExtended {
             extendsFrom(macheMinecraft.get())
             withDependencies {
-                project.dependencies {
-                    add(create(project.files(project.layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))))
-                }
+                add(
+                    project.dependencies.create(
+                        project.files(macheRemapJar.flatMap { it.outputJar })
+                    )
+                )
             }
         }
 
@@ -325,48 +318,25 @@ open class SoftSpoonTasks(
             }
         }
 
-        this.project.ext.serverProject.get().setupServerProject(libsFile)
-    }
-
-    private fun Project.setupServerProject(libsFile: Path) {
-        if (!projectDir.exists()) {
-            return
-        }
-
-        // minecraft deps
-        val macheMinecraft by configurations.creating {
-            withDependencies {
-                dependencies {
-                    // setup mc deps
-                    val libs = libsFile.convertToPathOrNull()
-                    if (libs != null && libs.exists()) {
-                        libs.forEachLine { line ->
-                            add(create(line))
-                        }
-                    }
-                }
-            }
-        }
-
         // impl extends minecraft
-        configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
-            extendsFrom(macheMinecraft)
+        project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
+            extendsFrom(macheMinecraft.get())
         }
 
         // repos
-        repositories {
+        project.repositories {
             mavenCentral()
             maven(PAPER_MAVEN_REPO_URL)
             maven(MC_LIBRARY_URL)
         }
 
         // add vanilla source set
-        the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
+        project.the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
             java {
-                srcDirs(projectDir.resolve("src/vanilla/java"))
+                srcDirs(project.projectDir.resolve("src/vanilla/java"))
             }
             resources {
-                srcDirs(projectDir.resolve("src/vanilla/resources"))
+                srcDirs(project.projectDir.resolve("src/vanilla/resources"))
             }
         }
     }

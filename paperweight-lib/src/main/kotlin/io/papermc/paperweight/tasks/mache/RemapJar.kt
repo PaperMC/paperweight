@@ -74,11 +74,6 @@ abstract class RemapJar : DefaultTask() {
 
     @TaskAction
     fun run() {
-        if (minecraftClasspath.files.isEmpty()) {
-            // TODO this shouldn't happen, ideally we somehow make the minecraft classpath available on the first run too
-            throw RuntimeException("Could not resolve minecraft dependencies, try again")
-        }
-
         val out = outputJar.convertToPath().ensureClean()
 
         val logFile = out.resolveSibling("${out.name}.log")

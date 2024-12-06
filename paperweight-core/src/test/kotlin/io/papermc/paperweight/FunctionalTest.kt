@@ -68,14 +68,6 @@ class FunctionalTest {
 
         val gradleRunner = tempDir.copyProject("functional_test").gradleRunner()
 
-        println("\nrunning extractFromBundler\n")
-        val extractFromBundler = gradleRunner
-            .withArguments("extractFromBundler", "--stacktrace", "-Dfake=true")
-            .withDebug(debug)
-            .build()
-
-        assertEquals(extractFromBundler.task(":extractFromBundler")?.outcome, TaskOutcome.SUCCESS)
-
         // appP -> works
         println("\nrunning applyPatches dependencies\n")
         val appP = gradleRunner
@@ -83,7 +75,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(appP.task(":applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(appP.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
 
         // clean rebuild rebP -> changes nothing
         println("\nrunning rebuildPatches\n")
@@ -92,7 +84,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP.task(":rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/sources/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -119,7 +111,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP2.task(":rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP2.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/expected/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -142,7 +134,7 @@ class FunctionalTest {
             .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
-        assertEquals(rebP3.task(":rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP3.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/expected/0001-Feature.patch").readText(),
             tempDir.resolve("fake-patches/features/0001-Feature.patch").readText()
@@ -170,7 +162,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(appP2.task(":applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(appP2.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
         assertContains(tempDir.resolve("test-server/src/vanilla/java/oshi/PlatformEnum.java").readText(), "Windows CE")
         assertFalse(tempDir.resolve("test-server/src/vanilla/java/oshi/SystemInfo.java").readText().contains("MACOS"))
         assertContains(tempDir.resolve("test-server/src/vanilla/java/org/alcibiade/asciiart/widget/PictureWidget.java").readText(), "Trollface")
@@ -181,19 +173,12 @@ class FunctionalTest {
         println("running in $tempDir")
         val gradleRunner = tempDir.copyProject("functional_test").gradleRunner()
 
-        val extractFromBundler = gradleRunner
-            .withArguments("extractFromBundler", "--stacktrace", "-Dfake=false")
-            .withDebug(debug)
-            .build()
-
-        assertEquals(extractFromBundler.task(":extractFromBundler")?.outcome, TaskOutcome.SUCCESS)
-
         val result = gradleRunner
-            .withArguments("applyPatches", "-Dfake=false")
+            .withArguments("applyPatches", ":test-server:dependencies", "--stacktrace", "-Dfake=false")
             .withDebug(debug)
             .build()
 
-        assertEquals(result.task(":applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(result.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
     }
 
     fun setupMache(macheName: String, target: Path) {
@@ -224,11 +209,11 @@ class FunctionalTest {
         versionFolder.createDirectories()
         serverFolder.resolve("server.jar").copyTo(versionFolder.resolve("server.jar"))
 
-        val oshiFolder = target.resolve("bundle/META-INF/libraries/com/github/oshi/oshi-core/6.4.5/")
+        val oshiFolder = target.resolve("bundle/META-INF/libraries/com/github/oshi/oshi-core/6.6.5/")
         oshiFolder.createDirectories()
         oshiFolder.resolve(
-            "oshi-core-6.4.5.jar"
-        ).writeBytes(URL("https://libraries.minecraft.net/com/github/oshi/oshi-core/6.4.5/oshi-core-6.4.5.jar").readBytes())
+            "oshi-core-6.6.5.jar"
+        ).writeBytes(URL("https://libraries.minecraft.net/com/github/oshi/oshi-core/6.6.5/oshi-core-6.6.5.jar").readBytes())
         zip(target.resolve("bundle"), target.resolve("bundle.jar"))
     }
 

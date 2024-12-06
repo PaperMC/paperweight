@@ -31,6 +31,8 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -103,11 +105,12 @@ open class AllTasks(
 
     val downloadPaperLibrariesSources by tasks.registering<DownloadPaperLibraries> {
         paperDependencies.set(
-            project.ext.serverProject.map { p ->
-                val configuration = p.configurations["implementation"]
-                configuration.isCanBeResolved = true
-                configuration.resolvedConfiguration.resolvedArtifacts.map {
-                    "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
+            project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).flatMap { configuration ->
+                configuration.incoming.artifacts.resolvedArtifacts
+            }.map { artifacts ->
+                artifacts.mapNotNull {
+                    val id = it.id.componentIdentifier as? ModuleComponentIdentifier ?: return@mapNotNull null
+                    "${id.group}:${id.module}:${id.version}"
                 }
             }
         )
