@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
     shade(projects.paperweightLib)
-    download(libs.restamp)
 
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)

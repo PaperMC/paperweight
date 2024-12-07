@@ -16,13 +16,9 @@ if (noRelocate) {
     }
 }
 
-val download: Configuration by configurations.creating
-configurations.shadowRuntimeElements {
-    extendsFrom(download)
-}
 val shade: Configuration by configurations.creating
 configurations.implementation {
-    extendsFrom(shade, download)
+    extendsFrom(shade)
 }
 
 fun ShadowJar.configureStandard() {
