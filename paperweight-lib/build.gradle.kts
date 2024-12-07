@@ -25,7 +25,7 @@ dependencies {
 
     implementation(libs.jbsdiff)
 
-    implementation(libs.restamp)
+    compileOnly(libs.restamp)
 
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
