@@ -208,7 +208,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
             val outputMappings = mergeSpigotWithMojangMemberMappings(obfToSpigot, obfToMojang, spigotToMojang)
 
-            val spigotRecompiles = setOf<String>() // TODO parameters.spigotRecompiles.path.readLines().toSet()
+            val spigotRecompiles = parameters.spigotRecompiles.pathOrNull?.readLines()?.toSet() ?: emptySet()
 
             val cleanedOutputMappings = HypoContext.builder()
                 .withConfig(HypoConfig.builder().setRequireFullClasspath(false).withParallelism(1).build())
