@@ -128,12 +128,17 @@ abstract class SetupVanilla : BaseTask() {
             .forEach {
                 val target = outputPath.resolve(it.toString().substring(1))
                 target.parent.createDirectories()
-                // make sure we have a trailing newline
-                var content = it.readText()
-                if (!content.endsWith("\n")) {
-                    content += "\n"
+                if (it.toString().endsWith(".nbt")) {
+                    // nbt files are binary, so we can't just copy them
+                    it.copyTo(target)
+                } else {
+                    // make sure we have a trailing newline
+                    var content = it.readText()
+                    if (!content.endsWith("\n")) {
+                        content += "\n"
+                    }
+                    target.writeText(content)
                 }
-                target.writeText(content)
             }
 
         println("Setup git repo...")
