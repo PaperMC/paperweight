@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.tasks.softspoon
 
-import atFromString
 import codechicken.diffpatch.cli.DiffOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.LoggingOutputStream
@@ -46,7 +45,6 @@ import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
 import org.intellij.lang.annotations.Language
 import org.openrewrite.InMemoryExecutionContext
-import writeLF
 
 @UntrackedTask(because = "Always rebuild patches")
 abstract class RebuildFilePatches : BaseTask() {

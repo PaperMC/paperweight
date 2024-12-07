@@ -51,7 +51,6 @@ import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
-import writeLF
 
 @CacheableTask
 abstract class RemapSources : JavaLauncherTask() {
