@@ -129,10 +129,10 @@ abstract class SetupVanilla : BaseTask() {
                 val target = outputPath.resolve(it.toString().substring(1))
                 target.parent.createDirectories()
                 if (it.toString().endsWith(".nbt")) {
-                    // nbt files are binary, so we can't just copy them
+                    // nbt files are binary, so we can just copy them
                     it.copyTo(target)
                 } else {
-                    // make sure we have a trailing newline
+                    // for text files we make sure we have a trailing newline
                     var content = it.readText()
                     if (!content.endsWith("\n")) {
                         content += "\n"
