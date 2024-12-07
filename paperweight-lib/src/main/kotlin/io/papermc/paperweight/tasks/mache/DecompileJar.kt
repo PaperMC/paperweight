@@ -22,32 +22,18 @@
 
 package io.papermc.paperweight.tasks.mache
 
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import javax.inject.Inject
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.name
-import kotlin.io.path.outputStream
-import kotlin.io.path.writeText
-import org.gradle.api.DefaultTask
+import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import org.gradle.process.ExecOperations
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.*
 
 @CacheableTask
-abstract class DecompileJar : DefaultTask() {
+abstract class DecompileJar : JavaLauncherTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -65,11 +51,13 @@ abstract class DecompileJar : DefaultTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
-    @get:Inject
-    abstract val exec: ExecOperations
+    @get:Input
+    abstract val memory: Property<String>
 
-    @get:Inject
-    abstract val layout: ProjectLayout
+    override fun init() {
+        super.init()
+        memory.convention("4G")
+    }
 
     @TaskAction
     fun run() {
@@ -87,23 +75,23 @@ abstract class DecompileJar : DefaultTask() {
 
         val logs = out.resolveSibling("${out.name}.log")
 
-        logs.outputStream().buffered().use { log ->
-            exec.javaexec {
-                classpath(decompiler)
-                mainClass.set("org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler")
+        val args = mutableListOf<String>()
 
-                maxHeapSize = "3G"
+        args += decompilerArgs.get()
 
-                args(decompilerArgs.get())
-                args("-cfg", cfgFile.absolutePathString())
+        args += "-cfg"
+        args += cfgFile.absolutePathString()
 
-                args(inputJar.convertToPath().absolutePathString())
-                args(out.absolutePathString())
+        args += inputJar.convertToPath().absolutePathString()
+        args += out.absolutePathString()
 
-                standardOutput = log
-                errorOutput = log
-            }
-        }
+        launcher.runJar(
+            decompiler,
+            temporaryDir,
+            logs,
+            jvmArgs = listOf("-Xmx${memory.get()}"),
+            args = args.toTypedArray()
+        )
 
         out.openZip().use { root ->
             root.getPath("META-INF", "MANIFEST.MF").deleteIfExists()
