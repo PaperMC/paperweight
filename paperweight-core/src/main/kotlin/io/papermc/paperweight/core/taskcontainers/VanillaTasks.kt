@@ -42,7 +42,7 @@ open class VanillaTasks(
         libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
-        paramMappings.fileProvider(project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile })
+        // paramMappings.fileProvider(project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile })
 
         outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }

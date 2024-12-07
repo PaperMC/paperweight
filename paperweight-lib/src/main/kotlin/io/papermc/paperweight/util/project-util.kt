@@ -36,6 +36,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
@@ -111,7 +112,7 @@ fun Project.setupServerProject(
 
     addMcDevSourcesRoot(mcDevSourceDir)
 
-    return createBuildTasks(parent, serverExt, serverJar, vanillaServer, packagesToFix, relocatedReobfMappings)
+    error("No longer implemented")
 }
 
 private fun Project.exportRuntimeClasspathTo(parent: Project) {
@@ -142,28 +143,13 @@ private fun Project.exportRuntimeClasspathTo(parent: Project) {
     }
 }
 
-private fun Project.createBuildTasks(
-    parent: Project,
-    serverExt: PaperweightServerExtension,
-    serverJar: TaskProvider<Zip>,
-    vanillaServer: Configuration,
+fun Project.createBuildTasks(
+    craftBukkitPackageVersion: Provider<String>,
     packagesToFix: Provider<List<String>?>,
     relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>
 ): ServerTasks {
-    serverJar {
-        destinationDirectory.set(layout.buildDirectory.dir("libs"))
-        archiveExtension.set("jar")
-        archiveClassifier.set("mojang-mapped")
-        from(zipTree(tasks.named<Jar>("jar").flatMap { it.archiveFile }.map { it.asFile }))
-        from(vanillaServer.elements.map { it.map { f -> zipTree(f.asFile) } }) {
-            exclude("META-INF/MANIFEST.MF")
-        }
-        isReproducibleFileOrder = true
-        isPreserveFileTimestamps = false
-    }
-
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
-        inputJar.set(serverJar.flatMap { it.archiveFile })
+        inputJar.set(tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile })
         packagesToProcess.set(packagesToFix)
     }
 
@@ -179,7 +165,7 @@ private fun Project.createBuildTasks(
     }
     afterEvaluate {
         relocateConstants {
-            relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${serverExt.craftBukkitPackageVersion.get()}") {
+            relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${craftBukkitPackageVersion.get()}") {
                 // This is not actually needed as there are no string constant references to Main
                 // exclude("org.bukkit.craftbukkit.Main*")
             }
@@ -197,7 +183,7 @@ private fun Project.createBuildTasks(
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
 
-        remapper.from(parent.configurations.named(REMAPPER_CONFIG))
+        remapper.from(configurations.named(REMAPPER_CONFIG))
         remapperArgs.set(TinyRemapper.minecraftRemapArgs)
 
         outputJar.set(layout.buildDirectory.map { it.dir("libs").file("${project.name}-${project.version}-reobf.jar") })

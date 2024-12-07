@@ -1,7 +1,7 @@
 [versions]
 asm = "9.7.1"
 lorenz = "0.5.8"
-hypo = "2.3.0"
+hypo = "1.2.4"
 serialize = "1.5.1"
 feather = "1.1.0"
 

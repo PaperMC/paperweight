@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
@@ -44,6 +45,19 @@ open class SpigotTasks(
     downloadService: Provider<DownloadService> = project.download,
 ) : VanillaTasks(project) {
 
+    val cloneSpigotBuildData by tasks.registering<CloneRepo> {
+        url.set("https://hub.spigotmc.org/stash/scm/spigot/builddata.git")
+        ref.set(project.ext.spigot.buildDataRef)
+    }
+
+    val unpackSpigotBuildData by tasks.registering<UnpackSpigotBuildData> {
+        buildDataZip.set(cloneSpigotBuildData.flatMap { it.outputZip })
+    }
+
+    val buildDataInfo: Provider<BuildDataInfo> = unpackSpigotBuildData
+        .flatMap { it.buildDataInfoFile }
+        .map { gson.fromJson(it.path) }
+
     val addAdditionalSpigotMappings by tasks.registering<AddAdditionalSpigotMappings> {
         dependsOn(initSubmodules)
         classSrg.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.classMappings }))
@@ -51,11 +65,11 @@ open class SpigotTasks(
     }
 
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
-        classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
+        classMappings.set(unpackSpigotBuildData.flatMap { it.classMappings })
 
         // todo hypo update breaks generate mappings, hardcode for now
-        // sourceMappings.set(generateMappings.flatMap { it.outputMappings })
-        sourceMappings.set(Path.of("D:\\IntellijProjects\\PaperClean\\.gradle\\caches\\paperweight\\mappings\\official-mojang+yarn.tiny"))
+        // sourceMappings.set(Path.of("D:\\IntellijProjects\\PaperClean\\.gradle\\caches\\paperweight\\mappings\\official-mojang+yarn.tiny"))
+        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
         notchToSpigotMappings.set(cache.resolve(OBF_SPIGOT_MAPPINGS))
@@ -64,17 +78,17 @@ open class SpigotTasks(
 
     val spigotRemapJar by tasks.registering<SpigotRemapJar> {
         inputJar.set(filterVanillaJar.flatMap { it.outputJar })
-        classMappings.set(addAdditionalSpigotMappings.flatMap { it.outputClassSrg })
-        accessTransformers.set(extension.craftBukkit.mappingsDir.file(buildDataInfo.map { it.accessTransforms }))
+        classMappings.set(unpackSpigotBuildData.flatMap { it.classMappings })
+        accessTransformers.set(unpackSpigotBuildData.flatMap { it.atFile })
 
         memberMappings.set(generateSpigotMappings.flatMap { it.spigotMemberMappings })
 
         mcVersion.set(extension.minecraftVersion)
 
-        workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })
+        // workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })
 
-        specialSourceJar.set(extension.craftBukkit.specialSourceJar)
-        specialSource2Jar.set(extension.craftBukkit.specialSource2Jar)
+        specialSourceJar.set(unpackSpigotBuildData.flatMap { it.specialSourceJar })
+        specialSource2Jar.set(unpackSpigotBuildData.flatMap { it.specialSource2Jar })
 
         classMapCommand.set(buildDataInfo.map { it.classMapCommand })
         memberMapCommand.set(buildDataInfo.map { it.memberMapCommand })
@@ -109,7 +123,7 @@ open class SpigotTasks(
 
     val filterSpigotExcludes by tasks.registering<FilterSpigotExcludes> {
         inputZip.set(spigotRemapJar.flatMap { it.outputJar })
-        excludesFile.set(extension.craftBukkit.excludesFile)
+        excludesFile.set(unpackSpigotBuildData.flatMap { it.excludesFile })
     }
 
     val spigotDecompileJar by tasks.registering<SpigotDecompileJar> {
@@ -180,7 +194,7 @@ open class SpigotTasks(
     val remapSpigotAt by tasks.registering<RemapSpigotAt> {
         inputJar.set(spigotRemapJar.flatMap { it.outputJar })
         mapping.set(patchMappings.flatMap { it.outputMappings })
-        spigotAt.set(extension.craftBukkit.atFile)
+        spigotAt.set(unpackSpigotBuildData.flatMap { it.atFile })
     }
 
     @Suppress("DuplicatedCode")

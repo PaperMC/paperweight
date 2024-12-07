@@ -66,7 +66,7 @@ fun generateMappings(
     vanillaJarPath: Path,
     libraryPaths: List<Path>,
     vanillaMappingsPath: Path,
-    paramMappingsPath: Path,
+    paramMappingsPath: Path?,
     outputMappingsPath: Path,
     workerExecutor: WorkerExecutor,
     launcher: JavaLauncher,
@@ -102,6 +102,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
     abstract val vanillaMappings: RegularFileProperty
 
     @get:InputFile
+    @get:Optional
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val paramMappings: RegularFileProperty
 
@@ -126,7 +127,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
             vanillaJar.path,
             libraries.files.map { it.toPath() },
             vanillaMappings.path,
-            paramMappings.path,
+            paramMappings.pathOrNull,
             outputMappings.path,
             workerExecutor,
             launcher.get(),
@@ -147,19 +148,23 @@ abstract class GenerateMappings : JavaLauncherTask() {
         override fun execute() {
             val vanillaMappings = MappingFormats.PROGUARD.createReader(parameters.vanillaMappings.path).use { it.read() }.reverse()
 
-            val paramMappings = parameters.paramMappings.path.openZip().use { fs ->
-                val path = fs.getPath("mappings", "mappings.tiny")
-                MappingFormats.TINY.read(path, "official", "named")
+            val paramMappings = parameters.paramMappings.orNull?.let { mappingsFile ->
+                mappingsFile.path.openZip().use { fs ->
+                    val path = fs.getPath("mappings", "mappings.tiny")
+                    MappingFormats.TINY.read(path, "official", "named")
+                }
             }
 
-            val merged = MappingSetMerger.create(
-                vanillaMappings,
-                paramMappings,
-                MergeConfig.builder()
-                    .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
-                    .withMergeHandler(ParamsMergeHandler())
-                    .build()
-            ).merge()
+            val merged = paramMappings?.let {
+                MappingSetMerger.create(
+                    vanillaMappings,
+                    it,
+                    MergeConfig.builder()
+                        .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
+                        .withMergeHandler(ParamsMergeHandler())
+                        .build()
+                ).merge()
+            } ?: vanillaMappings
 
             val filledMerged = HypoContext.builder()
                 .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.vanillaJar.path)))

@@ -29,6 +29,7 @@ import io.papermc.paperweight.util.constants.*
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
@@ -121,7 +122,7 @@ class BundlerJarTasks(
         vanillaJar: Provider<RegularFile>,
         serverJar: Provider<RegularFile>,
     ) = this {
-        libraryArtifacts.set(project.configurations.named(SERVER_RUNTIME_CLASSPATH))
+        libraryArtifacts.set(project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
         serverLibrariesList.set(serverLibrariesListFile)
         vanillaBundlerJar.set(vanillaJar)
 

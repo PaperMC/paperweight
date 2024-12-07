@@ -181,7 +181,8 @@ open class AllTasks(
         inputMappings.set(patchMappings.flatMap { it.outputMappings })
         notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
-        spigotRecompiledClasses.set(remapSpigotSources.flatMap { it.spigotRecompiledClasses })
+        // TODO: spigot uses javac now(?) so is this needed anymore?
+        // spigotRecompiledClasses.set(remapSpigotSources.flatMap { it.spigotRecompiledClasses })
 
         reobfMappings.set(cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
     }
@@ -199,5 +200,6 @@ open class AllTasks(
     val generateRelocatedReobfMappings by tasks.registering<GenerateRelocatedReobfMappings> {
         inputMappings.set(patchReobfMappings.flatMap { it.outputMappings })
         outputMappings.set(cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
+        craftBukkitPackageVersion.set(extension.spigot.packageVersion)
     }
 }

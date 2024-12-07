@@ -80,6 +80,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
     abstract val workerExecutor: WorkerExecutor
 
     @get:InputFile
+    @get:Optional
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val spigotRecompiledClasses: RegularFileProperty
 
@@ -101,7 +102,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
             notchToSpigotMappings.set(this@GenerateReobfMappings.notchToSpigotMappings)
             sourceMappings.set(this@GenerateReobfMappings.sourceMappings)
             inputJar.set(this@GenerateReobfMappings.inputJar)
-            spigotRecompiles.set(spigotRecompiledClasses.path)
+            spigotRecompiles.set(spigotRecompiledClasses.pathOrNull)
 
             reobfMappings.set(this@GenerateReobfMappings.reobfMappings)
         }
@@ -207,7 +208,7 @@ abstract class GenerateReobfMappings : JavaLauncherTask() {
 
             val outputMappings = mergeSpigotWithMojangMemberMappings(obfToSpigot, obfToMojang, spigotToMojang)
 
-            val spigotRecompiles = parameters.spigotRecompiles.path.readLines().toSet()
+            val spigotRecompiles = setOf<String>() // TODO parameters.spigotRecompiles.path.readLines().toSet()
 
             val cleanedOutputMappings = HypoContext.builder()
                 .withConfig(HypoConfig.builder().setRequireFullClasspath(false).withParallelism(1).build())

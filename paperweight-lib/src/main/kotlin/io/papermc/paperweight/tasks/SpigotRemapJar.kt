@@ -51,9 +51,6 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val accessTransformers: RegularFileProperty
 
-    @get:Input
-    abstract val workDirName: Property<String>
-
     @get:Classpath
     abstract val specialSourceJar: RegularFileProperty
 
@@ -95,7 +92,7 @@ abstract class SpigotRemapJar : JavaLauncherTask() {
 
         val spigotMembersPath = memberMappings.path.absolutePathString()
 
-        val work = layout.projectDirectory.file(workDirName.get())
+        val work = temporaryDir.toPath()
 
         val spigotEmptyMappings = layout.cache.resolve("spigot-empty-package-mappings.csrg")
         spigotEmptyMappings.writeText("")

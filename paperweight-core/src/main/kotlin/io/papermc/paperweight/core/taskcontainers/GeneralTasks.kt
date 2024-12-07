@@ -44,10 +44,6 @@ open class GeneralTasks(
         offlineMode.set(project.offlineMode())
     }
 
-    val buildDataInfo: Provider<BuildDataInfo> = project.contents(extension.craftBukkit.buildDataInfo) {
-        gson.fromJson(it)
-    }
-
     val filterVanillaJar by tasks.registering<FilterJar> {
         inputJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(extension.vanillaJarIncludes)

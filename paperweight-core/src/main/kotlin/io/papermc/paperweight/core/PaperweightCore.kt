@@ -39,6 +39,7 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 
@@ -99,6 +100,27 @@ class PaperweightCore : Plugin<Project> {
         )
 
         val softSpoonTasks = SoftSpoonTasks(target, tasks)
+
+        val jar = target.tasks.named("jar", AbstractArchiveTask::class)
+        tasks.generateReobfMappings {
+            inputJar.set(jar.flatMap { it.archiveFile })
+        }
+        tasks.generateRelocatedReobfMappings {
+            inputJar.set(jar.flatMap { it.archiveFile })
+        }
+        val (includeMappings, reobfJar) = target.createBuildTasks(
+            ext.spigot.packageVersion,
+            ext.paper.reobfPackagesToFix,
+            tasks.generateRelocatedReobfMappings
+        )
+        bundlerJarTasks.configureBundlerTasks(
+            tasks.extractFromBundler.flatMap { it.versionJson },
+            tasks.extractFromBundler.flatMap { it.serverLibrariesList },
+            tasks.downloadServerJar.flatMap { it.outputJar },
+            includeMappings.flatMap { it.outputJar },
+            reobfJar,
+            ext.minecraftVersion
+        )
 
         target.createPatchRemapTask(tasks)
 
