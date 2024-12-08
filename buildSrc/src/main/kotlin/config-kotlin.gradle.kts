@@ -2,6 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     idea
@@ -20,13 +21,9 @@ kotlin {
     jvmToolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
-    target {
-        compilations.configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-                freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
-            }
-        }
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
     }
 }
 
@@ -70,7 +67,6 @@ repositories {
 
 dependencies {
     compileOnly(gradleApi())
-    compileOnly(kotlin("stdlib-jdk8"))
 }
 
 testing {
@@ -99,7 +95,6 @@ configurations.all {
         return@all
     }
     dependencies.remove(project.dependencies.gradleApi())
-    dependencies.removeIf { it.group == "org.jetbrains.kotlin" }
 }
 
 tasks.jar {

@@ -21,6 +21,10 @@ configurations.implementation {
     extendsFrom(shade)
 }
 
+configurations.shadowRuntimeElements {
+    compatibilityAttributes(objects)
+}
+
 fun ShadowJar.configureStandard() {
     configurations = listOf(shade)
 

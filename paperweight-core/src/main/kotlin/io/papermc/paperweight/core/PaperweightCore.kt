@@ -44,11 +44,10 @@ class PaperweightCore : Plugin<Project> {
     }
 
     override fun apply(target: Project) {
-        checkJavaVersion()
         Git.checkForGit()
         printId<PaperweightCore>("paperweight-core", target.gradle)
 
-        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
+        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)
 
         target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
             parameters.projectPath.set(target.projectDir)
@@ -77,15 +76,7 @@ class PaperweightCore : Plugin<Project> {
         }
 
         val tasks = AllTasks(target)
-
         val devBundleTasks = DevBundleTasks(target)
-
-        val bundlerJarTasks = BundlerJarTasks(
-            target,
-            ext.bundlerJarName,
-            ext.mainClass
-        )
-
         val softSpoonTasks = SoftSpoonTasks(target, tasks)
 
         val jar = target.tasks.named("jar", AbstractArchiveTask::class)
@@ -99,6 +90,11 @@ class PaperweightCore : Plugin<Project> {
             ext.spigot.packageVersion,
             ext.paper.reobfPackagesToFix,
             tasks.generateRelocatedReobfMappings
+        )
+        val bundlerJarTasks = BundlerJarTasks(
+            target,
+            ext.bundlerJarName,
+            ext.mainClass
         )
         bundlerJarTasks.configureBundlerTasks(
             tasks.extractFromBundler.flatMap { it.versionJson },
@@ -144,12 +140,10 @@ class PaperweightCore : Plugin<Project> {
 
         target.afterEvaluate {
             target.repositories {
-                /* TODO
                 maven(ext.remapRepo) {
                     name = REMAPPER_REPO_NAME
                     content { onlyForConfigurations(REMAPPER_CONFIG) }
                 }
-                 */
                 maven(ext.macheRepo) {
                     name = MACHE_REPO_NAME
                     content { onlyForConfigurations(MACHE_CONFIG) }

@@ -10,8 +10,8 @@ configurations.implementation {
 
 dependencies {
     shade(projects.paperweightLib)
-    shade(project(projects.paperweightLib.dependencyProject.path, "sharedRuntime"))
-    restamp(project(projects.paperweightLib.dependencyProject.path, "restampRuntime"))
+    shade(project(projects.paperweightLib.path, "sharedRuntime"))
+    restamp(project(projects.paperweightLib.path, "restampRuntime"))
 
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
@@ -41,6 +41,7 @@ val finalRuntimeElements by configurations.registering {
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
         attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
     }
+    compatibilityAttributes(objects)
     outgoing.artifact(finalJar)
 }
 val javaComponent = project.components.getByName("java") as AdhocComponentWithVariants
