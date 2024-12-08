@@ -53,9 +53,6 @@ class DevBundleTasks(
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "paperweight"
 
-        remapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
-        decompilerConfig.set(project.configurations.named(DECOMPILER_CONFIG))
-
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
 
         ignoreUnsupportedEnvironment.set(project.providers.gradleProperty(GenerateDevBundle.unsupportedEnvironmentPropName).map { it.toBoolean() })

@@ -62,15 +62,8 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
     )
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    val craftBukkit = CraftBukkitExtension(objects, workDir)
-    val spigot = SpigotExtension(objects, workDir)
+    val spigot = SpigotExtension(objects)
     val paper = PaperExtension(objects, layout)
-
-    @Suppress("unused")
-    fun craftBukkit(action: Action<in CraftBukkitExtension>) {
-        action.execute(craftBukkit)
-    }
 
     @Suppress("unused")
     fun spigot(action: Action<in SpigotExtension>) {

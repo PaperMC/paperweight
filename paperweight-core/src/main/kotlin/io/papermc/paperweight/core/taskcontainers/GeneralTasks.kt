@@ -37,11 +37,6 @@ open class GeneralTasks(
     extension: PaperweightCoreExtension = project.ext,
 ) : InitialTasks(project) {
 
-    // Configuration won't necessarily always run, so do it as the first task when it's needed as well
-    val initSubmodules by tasks.registering<InitSubmodules> {
-        offlineMode.set(project.offlineMode())
-    }
-
     val filterVanillaJar by tasks.registering<FilterJar> {
         inputJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(extension.vanillaJarIncludes)

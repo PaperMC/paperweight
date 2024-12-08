@@ -36,7 +36,6 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
-import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
@@ -61,15 +60,7 @@ class PaperweightCore : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        if (!ext.softSpoon.get()) {
-            // Make sure the submodules are initialized, since there are files there
-            // which are required for configuration
-            target.layout.maybeInitSubmodules(target.offlineMode(), logger)
-        }
-
-        target.configurations.create(PARAM_MAPPINGS_CONFIG)
         target.configurations.create(REMAPPER_CONFIG)
-        target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
         target.configurations.create(MACHE_CONFIG) {
             attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
@@ -156,17 +147,9 @@ class PaperweightCore : Plugin<Project> {
 
             target.repositories {
                 if (!ext.softSpoon.get()) {
-                    maven(ext.paramMappingsRepo) {
-                        name = PARAM_MAPPINGS_REPO_NAME
-                        content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
-                    }
                     maven(ext.remapRepo) {
                         name = REMAPPER_REPO_NAME
                         content { onlyForConfigurations(REMAPPER_CONFIG) }
-                    }
-                    maven(ext.decompileRepo) {
-                        name = DECOMPILER_REPO_NAME
-                        content { onlyForConfigurations(DECOMPILER_CONFIG) }
                     }
                 } else {
                     maven(ext.macheRepo) {
@@ -181,6 +164,7 @@ class PaperweightCore : Plugin<Project> {
                 return@afterEvaluate
             }
 
+            /*
             // Setup the server jar
             val cache = target.layout.cache
 
@@ -194,7 +178,6 @@ class PaperweightCore : Plugin<Project> {
                 inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
-            /*
             val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 tasks.lineMapJar.flatMap { it.outputJar },

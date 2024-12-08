@@ -22,21 +22,12 @@
 
 package io.papermc.paperweight.core.extension
 
-import io.papermc.paperweight.util.*
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-open class SpigotExtension(objects: ObjectFactory, workDir: DirectoryProperty) {
+open class SpigotExtension(objects: ObjectFactory) {
 
     val buildDataRef: Property<String> = objects.property()
     val packageVersion: Property<String> = objects.property()
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    val spigotDir: DirectoryProperty = objects.dirFrom(workDir, "Spigot")
-    val spigotApiDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-API")
-    val spigotServerDir: DirectoryProperty = objects.dirFrom(spigotDir, "Spigot-Server")
-    val bukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "Bukkit-Patches")
-    val craftBukkitPatchDir: DirectoryProperty = objects.dirFrom(spigotDir, "CraftBukkit-Patches")
 }
