@@ -23,22 +23,20 @@
 package io.papermc.paperweight.core
 
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
-import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
+import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
 class PaperweightCore : Plugin<Project> {
@@ -47,13 +45,14 @@ class PaperweightCore : Plugin<Project> {
     }
 
     override fun apply(target: Project) {
-        checkJavaVersion()
         Git.checkForGit()
         printId<PaperweightCore>("paperweight-core", target.gradle)
 
-        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target)
+        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)
 
-        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {}
+        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+            parameters.projectPath.set(target.projectDir)
+        }
 
         target.tasks.register<Delete>("cleanCache") {
             group = "paper"
@@ -61,14 +60,11 @@ class PaperweightCore : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        // Make sure the submodules are initialized, since there are files there
-        // which are required for configuration
-        target.layout.maybeInitSubmodules(target.offlineMode(), logger)
-
-        target.configurations.create(PARAM_MAPPINGS_CONFIG)
         target.configurations.create(REMAPPER_CONFIG)
-        target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
+        target.configurations.create(MACHE_CONFIG) {
+            attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
+        }
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {
@@ -81,19 +77,38 @@ class PaperweightCore : Plugin<Project> {
         }
 
         val tasks = AllTasks(target)
-
         val devBundleTasks = DevBundleTasks(target)
+        val softSpoonTasks = SoftSpoonTasks(target, tasks)
 
+        val jar = target.tasks.named("jar", AbstractArchiveTask::class)
+        tasks.generateReobfMappings {
+            inputJar.set(jar.flatMap { it.archiveFile })
+        }
+        tasks.generateRelocatedReobfMappings {
+            inputJar.set(jar.flatMap { it.archiveFile })
+        }
+        val (includeMappings, reobfJar) = target.createBuildTasks(
+            ext.spigot.packageVersion,
+            ext.paper.reobfPackagesToFix,
+            tasks.generateRelocatedReobfMappings
+        )
         val bundlerJarTasks = BundlerJarTasks(
             target,
             ext.bundlerJarName,
             ext.mainClass
         )
+        bundlerJarTasks.configureBundlerTasks(
+            tasks.extractFromBundler.flatMap { it.versionJson },
+            tasks.extractFromBundler.flatMap { it.serverLibrariesList },
+            tasks.downloadServerJar.flatMap { it.outputJar },
+            includeMappings.flatMap { it.outputJar },
+            reobfJar,
+            ext.minecraftVersion
+        )
 
-        target.createPatchRemapTask(tasks)
-
+        /*
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-            dependsOn(tasks.applyPatches)
+            dependsOn(tasks.applyPatchesLegacy)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
             remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
             decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
@@ -122,23 +137,23 @@ class PaperweightCore : Plugin<Project> {
                 )
             )
         }
+         */
 
         target.afterEvaluate {
             target.repositories {
-                maven(ext.paramMappingsRepo) {
-                    name = PARAM_MAPPINGS_REPO_NAME
-                    content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
-                }
                 maven(ext.remapRepo) {
                     name = REMAPPER_REPO_NAME
                     content { onlyForConfigurations(REMAPPER_CONFIG) }
                 }
-                maven(ext.decompileRepo) {
-                    name = DECOMPILER_REPO_NAME
-                    content { onlyForConfigurations(DECOMPILER_CONFIG) }
+                maven(ext.macheRepo) {
+                    name = MACHE_REPO_NAME
+                    content { onlyForConfigurations(MACHE_CONFIG) }
                 }
             }
 
+            softSpoonTasks.afterEvaluate()
+
+            /*
             // Setup the server jar
             val cache = target.layout.cache
 
@@ -162,31 +177,22 @@ class PaperweightCore : Plugin<Project> {
                 tasks.generateRelocatedReobfMappings,
                 serverJar
             ) ?: return@afterEvaluate
+             */
 
             devBundleTasks.configure(
-                ext.serverProject.get(),
                 ext.bundlerJarName.get(),
                 ext.mainClass,
                 ext.minecraftVersion,
-                tasks.decompileJar.map { it.outputJar.path },
-                tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
+                softSpoonTasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
-                tasks.mergeAdditionalAts.map { it.outputFile.path },
                 tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
             ) {
-                vanillaJarIncludes.set(ext.vanillaJarIncludes)
                 reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
-
-                paramMappingsCoordinates.set(
-                    target.provider {
-                        determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
-                    }
-                )
-                paramMappingsUrl.set(ext.paramMappingsRepo)
             }
             devBundleTasks.configureAfterEvaluate()
 
+            /*
             bundlerJarTasks.configureBundlerTasks(
                 tasks.extractFromBundler.flatMap { it.versionJson },
                 tasks.extractFromBundler.flatMap { it.serverLibrariesList },
@@ -195,50 +201,7 @@ class PaperweightCore : Plugin<Project> {
                 reobfJar,
                 ext.minecraftVersion
             )
-        }
-    }
-
-    private fun Project.createPatchRemapTask(allTasks: AllTasks) {
-        val extension: PaperweightCoreExtension = ext
-
-        /*
-         * To ease the waiting time for debugging this task, all of the task dependencies have been removed (notice all
-         * of those .get() calls). This means when you make changes to paperweight Gradle won't know that this task
-         * technically depends on the output of all of those other tasks.
-         *
-         * In order to run all of the other necessary tasks before running this task in order to setup the inputs, run:
-         *
-         *   ./gradlew patchPaper applyVanillaSrgAt
-         *
-         * Then you should be able to run `./gradlew remapPatches` without having to worry about all of the other tasks
-         * running whenever you make changes to paperweight.
-         */
-
-        @Suppress("UNUSED_VARIABLE")
-        val remapPatches: TaskProvider<RemapPatches> by tasks.registering<RemapPatches> {
-            group = "paperweight"
-            description = "NOT FOR TYPICAL USE: Attempt to remap Paper's patches from Spigot mappings to Mojang mappings."
-
-            inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
-            apiPatchDir.set(extension.paper.spigotApiPatchDir)
-
-            mappingsFile.set(allTasks.patchMappings.flatMap { it.outputMappings }.get())
-            ats.set(allTasks.remapSpigotSources.flatMap { it.generatedAt }.get())
-
-            // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
-            classpathJars.from(allTasks.applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
-            classpathJars.from(allTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
-            classpathJars.from(allTasks.extractFromBundler.flatMap { it.serverJar }.get()) // pure vanilla jar
-
-            spigotApiDir.set(allTasks.patchSpigotApi.flatMap { it.outputDir }.get())
-            spigotServerDir.set(allTasks.patchSpigotServer.flatMap { it.outputDir }.get())
-            spigotDecompJar.set(allTasks.spigotDecompileJar.flatMap { it.outputJar }.get())
-
-            // library class imports
-            mcLibrarySourcesDir.set(allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }.get())
-            devImports.set(extension.paper.devImports)
-
-            outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
+             */
         }
     }
 }

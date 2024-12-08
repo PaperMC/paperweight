@@ -21,14 +21,19 @@ configurations.implementation {
     extendsFrom(shade)
 }
 
+configurations.shadowRuntimeElements {
+    compatibilityAttributes(objects)
+}
+
 fun ShadowJar.configureStandard() {
     configurations = listOf(shade)
 
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
+        exclude(dependency("org.slf4j:.*:.*"))
     }
 
-    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "OSGI-INF/**", "*.profile", "module-info.class", "ant_tasks/**")
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "OSGI-INF/**", "*.profile", "module-info.class", "ant_tasks/**", "OSGI-OPT/**", "META-INF/*.pro")
 
     mergeServiceFiles()
 }
@@ -66,26 +71,36 @@ val shadowJar by tasks.existing(ShadowJar::class) {
 
     val prefix = "paper.libs"
     listOf(
+        "codechicken.diffpatch",
+        /* -> */ "codechicken.repack",
         "com.github.salomonbrys.kotson",
-        "com.google.errorprone.annotations",
         "com.google.gson",
         "dev.denwav.hypo",
+        /* -> */ "org.jgrapht",
+        /* -> */ "org.jheaps",
+        /* -> */ "com.google.errorprone.annotations",
+        /* -> */ "org.objectweb.asm",
         "io.sigpipe.jbsdiff",
-        "me.jamiemansfield",
+        /* -> */ "org.tukaani.xz",
         "net.fabricmc",
-        "org.apache.commons",
-        "org.apache.felix",
         "org.apache.http",
+        /* -> */ "org.apache.commons",
         "org.cadixdev",
-        "org.eclipse",
-        "org.jgrapht",
-        "org.jheaps",
-        "org.objectweb.asm",
-        "org.osgi",
-        "org.tukaani.xz",
-        "org.slf4j",
-        "codechicken.diffpatch",
-        "codechicken.repack"
+        /* -> */ "me.jamiemansfield",
+        "org.parchmentmc.feather",
+        /* -> */ "com.google.common",
+        /* ----> */ "com.google.j2objc",
+        /* ----> */ "com.google.thirdparty",
+        /* ----> */ "org.checkerframework",
+        /* ----> */ "javax.annotation",
+        "org.eclipse.jgit",
+        /* -> */ "com.googlecode.javaewah",
+        /* -> */ "com.googlecode.javaewah32",
+        "kotlinx.coroutines",
+        //"org.slf4j",
+        // used by multiple
+        "org.intellij.lang",
+        "org.jetbrains.annotations"
     ).forEach { pack ->
         relocate(pack, "$prefix.$pack")
     }

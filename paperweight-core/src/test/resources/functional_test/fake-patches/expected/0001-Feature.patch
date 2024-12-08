@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MiniDigger | Martin <admin@benndorf.dev>
+Date: Sun, 20 Oct 2024 09:24:36 +0200
+Subject: [PATCH] Feature
+
+
+diff --git a/Test.java b/Test.java
+index 372d9f877b361130deb341f1918d8f8c3ed0cf27..b24553b410c3b559c568dad6c811adc0a0bc6540 100644
+--- a/Test.java
++++ b/Test.java
+@@ -13,4 +13,8 @@ public class Test {
+     private final String getTest2() {
+         return this.test + "2"; // Woo
+     }
++
++    public String feature() {
++        return "amazing feature";
++    }
+ }

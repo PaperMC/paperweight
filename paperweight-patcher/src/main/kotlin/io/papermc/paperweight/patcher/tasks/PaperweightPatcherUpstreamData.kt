@@ -36,6 +36,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.build.NestedRootBuildRunner
+import org.gradle.internal.service.ServiceRegistry
 
 @UntrackedTask(because = "Nested build does it's own up-to-date checking")
 abstract class PaperweightPatcherUpstreamData : BaseTask() {
@@ -64,6 +65,11 @@ abstract class PaperweightPatcherUpstreamData : BaseTask() {
 
         params.systemPropertiesArgs[PAPERWEIGHT_DEBUG] = System.getProperty(PAPERWEIGHT_DEBUG, "false")
 
-        NestedRootBuildRunner.runNestedRootBuild(null, params as StartParameterInternal, services)
+        NestedRootBuildRunner::class.java.getDeclaredMethod(
+            "runNestedRootBuild",
+            String::class.java,
+            StartParameterInternal::class.java,
+            ServiceRegistry::class.java
+        ).invoke(null, null, params, services)
     }
 }

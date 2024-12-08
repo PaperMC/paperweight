@@ -27,9 +27,9 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -53,24 +53,20 @@ class DevBundleTasks(
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "paperweight"
 
-        remapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
-        decompilerConfig.set(project.configurations.named(DECOMPILER_CONFIG))
-
+        macheConfig.set(project.configurations.named(MACHE_CONFIG))
+        pluginRemapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
 
         ignoreUnsupportedEnvironment.set(project.providers.gradleProperty(GenerateDevBundle.unsupportedEnvironmentPropName).map { it.toBoolean() })
     }
 
     fun configure(
-        serverProj: Project,
         bundlerJarName: String,
         mainClassName: Property<String>,
         minecraftVer: Provider<String>,
-        decompileJar: Provider<Path>,
-        serverLibrariesTxt: Provider<Path>,
+        vanillaJava: Provider<Directory>,
         serverLibrariesListFile: Provider<Path>,
         vanillaBundlerJarFile: Provider<Path>,
-        accessTransformFile: Provider<Path>,
         versionJsonFile: Provider<RegularFile>,
         devBundleConfiguration: GenerateDevBundle.() -> Unit
     ) {
@@ -82,7 +78,7 @@ class DevBundleTasks(
                 registerVersionArtifact(
                     bundlerJarName,
                     versionJsonFile,
-                    serverProj.tasks.named<IncludeMappings>("includeMappings").flatMap { it.outputJar }
+                    project.tasks.named<IncludeMappings>("includeMappings").flatMap { it.outputJar }
                 )
             }
         }
@@ -93,22 +89,12 @@ class DevBundleTasks(
         }
 
         generateDevelopmentBundle {
-            sourceDir.set(serverProj.layout.projectDirectory.dir("src/main/java"))
+            mainJavaDir.set(project.layout.projectDirectory.dir("src/main/java"))
+            vanillaJavaDir.set(vanillaJava)
+            patchedJavaDir.set(project.layout.projectDirectory.dir("src/vanilla/java"))
+
             minecraftVersion.set(minecraftVer)
             mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })
-            vanillaServerLibraries.set(
-                serverLibrariesTxt.map { txt ->
-                    txt.readLines(Charsets.UTF_8).filter { it.isNotBlank() }
-                }
-            )
-
-            serverVersion.set(serverProj.version.toString())
-            serverCoordinates.set(GenerateDevBundle.createCoordinatesFor(serverProj))
-            serverProject.set(serverProj)
-            runtimeConfiguration.set(project.configurations.named(SERVER_RUNTIME_CLASSPATH))
-
-            decompiledJar.pathProvider(decompileJar)
-            atFile.pathProvider(accessTransformFile)
 
             devBundleConfiguration(this)
         }
@@ -116,8 +102,8 @@ class DevBundleTasks(
 
     fun configureAfterEvaluate() {
         generateDevelopmentBundle {
-            remapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
-            decompilerUrl.set(project.repositories.named<MavenArtifactRepository>(DECOMPILER_REPO_NAME).map { it.url.toString() })
+            pluginRemapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
+            macheUrl.set(project.repositories.named<MavenArtifactRepository>(MACHE_REPO_NAME).map { it.url.toString() })
         }
     }
 }

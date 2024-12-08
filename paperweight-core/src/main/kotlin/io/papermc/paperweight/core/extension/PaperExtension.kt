@@ -32,26 +32,18 @@ import org.gradle.kotlin.dsl.*
 
 open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    val baseTargetDir: DirectoryProperty = objects.dirWithDefault(layout, ".")
-    val spigotApiPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/api")
-    val spigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server")
-    val remappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server-remapped")
-    val unmappedSpigotServerPatchDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "patches/server-unmapped")
-    val paperApiDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-API")
-    val paperServerDir: DirectoryProperty = objects.dirFrom(baseTargetDir, "Paper-Server")
+    val paperServerDir: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory)
+    val rejectsDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/rejected")
+    val sourcePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/sources")
+    val resourcePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/resources")
+    val featurePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/features")
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "build-data")
-    val additionalSpigotClassMappings: RegularFileProperty = objects.fileProperty()
+    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "../build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
-
-    val craftBukkitPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
-    val spigotServerPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
-    val spigotApiPatchPatchesDir: DirectoryProperty = objects.directoryProperty()
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 }
