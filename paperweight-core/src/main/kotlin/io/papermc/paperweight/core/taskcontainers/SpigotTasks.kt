@@ -196,26 +196,4 @@ open class SpigotTasks(
         mapping.set(patchMappings.flatMap { it.outputMappings })
         spigotAt.set(unpackSpigotBuildData.flatMap { it.atFile })
     }
-
-    @Suppress("DuplicatedCode")
-    val remapSpigotSources by tasks.registering<RemapSources> {
-        spigotServerDir.set(patchSpigotServer.flatMap { it.outputDir })
-        spigotApiDir.set(patchSpigotApi.flatMap { it.outputDir })
-        mappings.set(cleanupSourceMappings.flatMap { it.outputMappings })
-        vanillaJar.set(extractFromBundler.flatMap { it.serverJar })
-        mojangMappedVanillaJar.set(fixJar.flatMap { it.outputJar })
-        vanillaRemappedSpigotJar.set(filterSpigotExcludes.flatMap { it.outputZip })
-        spigotDeps.from(downloadSpigotDependencies.map { it.outputDir.asFileTree })
-        additionalAts.set(mergePaperAts.flatMap { it.outputFile })
-    }
-
-    val remapGeneratedAt by tasks.registering<RemapAccessTransform> {
-        inputFile.set(remapSpigotSources.flatMap { it.generatedAt })
-        mappings.set(patchMappings.flatMap { it.outputMappings })
-    }
-
-    val mergeGeneratedAts by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(remapGeneratedAt.flatMap { it.outputFile })
-        secondFile.set(remapSpigotAt.flatMap { it.outputFile })
-    }
 }

@@ -26,19 +26,15 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
-import io.papermc.paperweight.core.tasks.PaperweightCorePrepareForDownstream
 import io.papermc.paperweight.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.patchremap.RemapPatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.io.File
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
@@ -122,8 +118,7 @@ class PaperweightCore : Plugin<Project> {
             ext.minecraftVersion
         )
 
-        target.createPatchRemapTask(tasks)
-
+        /*
         target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
             dependsOn(tasks.applyPatchesLegacy)
             vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
@@ -154,6 +149,7 @@ class PaperweightCore : Plugin<Project> {
                 )
             )
         }
+         */
 
         target.afterEvaluate {
             println("SoftSpoon: ${ext.softSpoon.get()}")
@@ -198,6 +194,7 @@ class PaperweightCore : Plugin<Project> {
                 inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
+            /*
             val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 tasks.lineMapJar.flatMap { it.outputJar },
@@ -241,50 +238,7 @@ class PaperweightCore : Plugin<Project> {
                 reobfJar,
                 ext.minecraftVersion
             )
-        }
-    }
-
-    private fun Project.createPatchRemapTask(allTasks: AllTasks) {
-        val extension: PaperweightCoreExtension = ext
-
-        /*
-         * To ease the waiting time for debugging this task, all of the task dependencies have been removed (notice all
-         * of those .get() calls). This means when you make changes to paperweight Gradle won't know that this task
-         * technically depends on the output of all of those other tasks.
-         *
-         * In order to run all of the other necessary tasks before running this task in order to setup the inputs, run:
-         *
-         *   ./gradlew patchPaper applyVanillaSrgAt
-         *
-         * Then you should be able to run `./gradlew remapPatches` without having to worry about all of the other tasks
-         * running whenever you make changes to paperweight.
-         */
-
-        @Suppress("UNUSED_VARIABLE")
-        val remapPatches: TaskProvider<RemapPatches> by tasks.registering<RemapPatches> {
-            group = "paperweight"
-            description = "NOT FOR TYPICAL USE: Attempt to remap Paper's patches from Spigot mappings to Mojang mappings."
-
-            inputPatchDir.set(extension.paper.unmappedSpigotServerPatchDir)
-            apiPatchDir.set(extension.paper.spigotApiPatchDir)
-
-            mappingsFile.set(allTasks.patchMappings.flatMap { it.outputMappings }.get())
-            ats.set(allTasks.remapSpigotSources.flatMap { it.generatedAt }.get())
-
-            // Pull in as many jars as possible to reduce the possibility of type bindings not resolving
-            classpathJars.from(allTasks.applyMergedAt.flatMap { it.outputJar }.get()) // final remapped jar
-            classpathJars.from(allTasks.remapSpigotSources.flatMap { it.vanillaRemappedSpigotJar }.get()) // Spigot remapped jar
-            classpathJars.from(allTasks.extractFromBundler.flatMap { it.serverJar }.get()) // pure vanilla jar
-
-            spigotApiDir.set(allTasks.patchSpigotApi.flatMap { it.outputDir }.get())
-            spigotServerDir.set(allTasks.patchSpigotServer.flatMap { it.outputDir }.get())
-            spigotDecompJar.set(allTasks.spigotDecompileJar.flatMap { it.outputJar }.get())
-
-            // library class imports
-            mcLibrarySourcesDir.set(allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }.get())
-            devImports.set(extension.paper.devImports)
-
-            outputPatchDir.set(extension.paper.remappedSpigotServerPatchDir)
+             */
         }
     }
 }

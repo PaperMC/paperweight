@@ -31,6 +31,9 @@ val finalJar = tasks.register("finalJar", Zip::class) {
         exclude("META-INF/MANIFEST.MF")
     }
 }
+tasks.assemble {
+    dependsOn(finalJar)
+}
 val finalRuntimeElements by configurations.registering {
     attributes {
         attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
