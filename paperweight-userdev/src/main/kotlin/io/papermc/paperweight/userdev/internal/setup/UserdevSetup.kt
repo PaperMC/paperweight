@@ -97,6 +97,10 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         return setup.serverJar(context)
     }
 
+    override fun afterEvaluate(context: SetupHandler.Context) {
+        setup.afterEvaluate(context)
+    }
+
     override val serverJar: Path
         get() = setup.serverJar
 
@@ -109,14 +113,17 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     override val pluginRemapArgs: List<String>
         get() = setup.pluginRemapArgs
 
-    override val paramMappings: MavenDep
+    override val paramMappings: MavenDep?
         get() = setup.paramMappings
 
-    override val decompiler: MavenDep
+    override val decompiler: MavenDep?
         get() = setup.decompiler
 
     override val remapper: MavenDep
         get() = setup.remapper
+
+    override val mache: MavenDep?
+        get() = setup.mache
 
     override val libraryRepositories: List<String>
         get() = setup.libraryRepositories

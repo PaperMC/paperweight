@@ -42,6 +42,7 @@ class ApplyDevBundlePatches(
     @Input private val decompiledJar: Path,
     private val devBundlePatches: Path,
     @Output private val outputJar: Path,
+    @Input private val resourcesJar: Path? = null,
 ) : SetupStep {
     override val name: String = "apply patches to decompiled jar"
 
@@ -88,6 +89,25 @@ class ApplyDevBundlePatches(
 
             ensureDeleted(outputJar)
             zip(outputDir, outputJar)
+
+            // Bring in resources
+            resourcesJar?.let { jarWithResources ->
+                outputJar.openZip().use { fs ->
+                    val out = fs.getPath("/")
+                    jarWithResources.openZip().use { resources ->
+                        val vanilla = resources.getPath("/")
+
+                        vanilla.walk()
+                            .filter { it.isRegularFile() }
+                            .filterNot { it.name.endsWith(".class") }
+                            .forEach { resourceFile ->
+                                val copyTo = out.resolve(resourceFile.relativeTo(vanilla).invariantSeparatorsPathString)
+                                copyTo.createParentDirectories()
+                                resourceFile.copyTo(copyTo)
+                            }
+                    }
+                }
+            }
         } finally {
             ensureDeleted(outputDir, tempPatchDir)
         }

@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.v2
+package io.papermc.paperweight.userdev.internal.setup.v5
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.ExtractedBundle
@@ -32,13 +32,14 @@ import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.kotlin.dsl.*
 
-class SetupHandlerImplV2(
+class SetupHandlerImplV5(
     private val parameters: UserdevSetup.Parameters,
-    private val bundle: ExtractedBundle<DevBundleV2.Config>,
+    private val bundle: ExtractedBundle<DevBundleV5.Config>,
     private val cache: Path = parameters.cache.path,
 ) : SetupHandler {
     private val vanillaSteps by lazy {
@@ -49,8 +50,9 @@ class SetupHandlerImplV2(
             bundle.changed,
         )
     }
-    private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
+    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("vanillaServerJar", "jar"))
     private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
+    private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
     private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
     private val mappedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("mappedMinecraftServerJar", "jar"))
     private val fixedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("fixedMinecraftServerJar", "jar"))
@@ -59,36 +61,14 @@ class SetupHandlerImplV2(
     private val patchedSourcesJar: Path = cache.resolve(paperSetupOutput("patchedSourcesJar", "jar"))
     private val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("applyMojangMappedPaperclipPatch", "jar"))
 
-    private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.listDirectoryEntries("*.jar")
+    private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.filesMatchingRecursive("*.jar")
 
     private fun generateSources(context: SetupHandler.Context) {
         vanillaSteps.downloadVanillaServerJar()
 
-        val downloadMcLibs = object : SetupStep {
-            override val name: String = "download minecraft libraries"
+        val extractStep = createExtractFromBundlerStep()
 
-            override val hashFile: Path = cache.resolve(paperSetupOutput("minecraftLibraries", "hashes"))
-
-            override fun run(context: SetupHandler.Context) {
-                downloadLibraries(
-                    download = parameters.downloadService,
-                    workerExecutor = context.workerExecutor,
-                    targetDir = minecraftLibraryJars,
-                    repositories = listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL),
-                    libraries = bundle.config.buildData.vanillaServerLibraries,
-                    sources = false
-                ).await()
-            }
-
-            override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-                builder.include(MC_LIBRARY_URL)
-                builder.include(bundle.config.buildData.vanillaServerLibraries)
-                builder.include(minecraftLibraryJars())
-                builder.includePaperweightHash = false
-            }
-        }
-
-        val filterVanillaJarStep = FilterVanillaJar(vanillaSteps.mojangJar, bundle.config.buildData.vanillaJarIncludes, filteredVanillaServerJar)
+        val filterVanillaJarStep = FilterVanillaJar(vanillaServerJar, bundle.config.buildData.vanillaJarIncludes, filteredVanillaServerJar)
 
         val genMappingsStep = GenerateMappingsStep.create(
             context,
@@ -100,7 +80,7 @@ class SetupHandlerImplV2(
 
         val remapMinecraftStep = RemapMinecraft.create(
             context,
-            bundle.config.remap.args,
+            bundle.config.buildData.minecraftRemapArgs,
             filteredVanillaServerJar,
             ::minecraftLibraryJars,
             mojangPlusYarnMappings,
@@ -108,12 +88,7 @@ class SetupHandlerImplV2(
             cache,
         )
 
-        val fixStep = FixMinecraftJar(
-            mappedMinecraftServerJar,
-            fixedMinecraftServerJar,
-            vanillaSteps.mojangJar,
-            true,
-        )
+        val fixStep = FixMinecraftJar(mappedMinecraftServerJar, fixedMinecraftServerJar, vanillaServerJar)
 
         val atStep = AccessTransformMinecraft(
             bundle.dir.resolve(bundle.config.buildData.accessTransformFile),
@@ -139,7 +114,7 @@ class SetupHandlerImplV2(
         StepExecutor.executeSteps(
             bundle.changed,
             context,
-            downloadMcLibs,
+            extractStep,
             filterVanillaJarStep,
             genMappingsStep,
             remapMinecraftStep,
@@ -147,18 +122,6 @@ class SetupHandlerImplV2(
             atStep,
             decomp,
             applyDevBundlePatchesStep,
-        )
-
-        applyMojangMappedPaperclipPatch(context)
-
-        StepExecutor.executeStep(
-            context,
-            FilterPaperShadowJar(
-                patchedSourcesJar,
-                mojangMappedPaperJar,
-                filteredMojangMappedPaperJar,
-                bundle.config.buildData.relocations,
-            )
         )
     }
 
@@ -179,13 +142,10 @@ class SetupHandlerImplV2(
                     mojangMappedPaperJar,
                     vanillaSteps.mojangJar,
                     minecraftVersion,
-                    false,
                 )
             )
         }
     }
-
-    private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
 
     private var setupCompleted = false
 
@@ -201,17 +161,27 @@ class SetupHandlerImplV2(
     }
 
     private fun createOrUpdateIvyRepositoryDirect(context: SetupHandler.Context) {
-        generateSources(context)
+        val source = if (parameters.genSources.get()) {
+            generateSources(context)
+            patchedSourcesJar
+        } else {
+            vanillaSteps.downloadVanillaServerJar()
+            StepExecutor.executeStep(context, createExtractFromBundlerStep())
+            null
+        }
 
-        val deps = bundle.config.buildData.libraryDependencies.toList() +
-            bundle.config.apiCoordinates +
-            bundle.config.mojangApiCoordinates
+        applyMojangMappedPaperclipPatch(context)
+
+        val deps = mutableListOf<String>()
+        deps.addAll(bundle.config.buildData.compileDependencies)
+        deps.add(bundle.config.apiCoordinates)
+        bundle.config.mojangApiCoordinates?.let { deps.add(it) }
         installPaperServer(
             cache,
             bundle.config.mappedServerCoordinates,
             deps,
-            filteredMojangMappedPaperJar,
-            patchedSourcesJar,
+            mojangMappedPaperJar,
+            source,
             minecraftVersion,
         )
 
@@ -229,7 +199,23 @@ class SetupHandlerImplV2(
     }
 
     override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        dependencySet.add(context.project.dependencies.create(context.project.files(serverJar(context))))
+        listOfNotNull(
+            bundle.config.mappedServerCoordinates,
+            bundle.config.apiCoordinates,
+            bundle.config.mojangApiCoordinates
+        ).forEach { coordinate ->
+            val dep = context.project.dependencies.create(coordinate).also {
+                (it as ExternalModuleDependency).isTransitive = false
+            }
+            dependencySet.add(dep)
+        }
+
+        for (coordinates in bundle.config.buildData.runtimeDependencies) {
+            val dep = context.project.dependencies.create(coordinates).also {
+                (it as ExternalModuleDependency).isTransitive = false
+            }
+            dependencySet.add(dep)
+        }
     }
 
     override fun serverJar(context: SetupHandler.Context): Path {
@@ -247,7 +233,7 @@ class SetupHandlerImplV2(
         get() = bundle.config.minecraftVersion
 
     override val pluginRemapArgs: List<String>
-        get() = TinyRemapper.pluginRemapArgs // plugin remap args were not included in v2 bundles, if these change check this
+        get() = bundle.config.buildData.pluginRemapArgs
 
     override val paramMappings: MavenDep
         get() = bundle.config.buildData.paramMappings
@@ -256,11 +242,48 @@ class SetupHandlerImplV2(
         get() = bundle.config.decompile.dep
 
     override val remapper: MavenDep
-        get() = bundle.config.remap.dep
+        get() = bundle.config.remapper
 
     override val mache: MavenDep?
         get() = null
 
     override val libraryRepositories: List<String>
         get() = bundle.config.buildData.libraryRepositories
+
+    private fun createExtractFromBundlerStep(): ExtractFromBundlerStep = ExtractFromBundlerStep(
+        cache,
+        vanillaSteps,
+        vanillaServerJar,
+        minecraftLibraryJars,
+        ::minecraftLibraryJars
+    )
+
+    private class ExtractFromBundlerStep(
+        cache: Path,
+        private val vanillaSteps: VanillaSteps,
+        private val vanillaServerJar: Path,
+        private val minecraftLibraryJars: Path,
+        private val listMinecraftLibraryJars: () -> List<Path>,
+    ) : SetupStep {
+        override val name: String = "extract libraries and server from downloaded jar"
+
+        override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
+
+        override fun run(context: SetupHandler.Context) {
+            ServerBundler.extractFromBundler(
+                vanillaSteps.mojangJar,
+                vanillaServerJar,
+                minecraftLibraryJars,
+                null,
+                null,
+                null,
+                null,
+            )
+        }
+
+        override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
+            builder.include(vanillaSteps.mojangJar, vanillaServerJar)
+            builder.include(listMinecraftLibraryJars())
+        }
+    }
 }

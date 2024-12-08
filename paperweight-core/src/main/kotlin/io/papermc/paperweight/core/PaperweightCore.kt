@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core
 
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
@@ -176,31 +177,22 @@ class PaperweightCore : Plugin<Project> {
                 tasks.generateRelocatedReobfMappings,
                 serverJar
             ) ?: return@afterEvaluate
+             */
 
             devBundleTasks.configure(
-                ext.serverProject.get(),
                 ext.bundlerJarName.get(),
                 ext.mainClass,
                 ext.minecraftVersion,
-                tasks.decompileJar.map { it.outputJar.path },
-                tasks.extractFromBundler.map { it.serverLibrariesTxt.path },
+                softSpoonTasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
-                tasks.mergeAdditionalAts.map { it.outputFile.path },
                 tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
             ) {
-                vanillaJarIncludes.set(ext.vanillaJarIncludes)
                 reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
-
-                paramMappingsCoordinates.set(
-                    target.provider {
-                        determineArtifactCoordinates(target.configurations.getByName(PARAM_MAPPINGS_CONFIG)).single()
-                    }
-                )
-                paramMappingsUrl.set(ext.paramMappingsRepo)
             }
             devBundleTasks.configureAfterEvaluate()
 
+            /*
             bundlerJarTasks.configureBundlerTasks(
                 tasks.extractFromBundler.flatMap { it.versionJson },
                 tasks.extractFromBundler.flatMap { it.serverLibrariesList },

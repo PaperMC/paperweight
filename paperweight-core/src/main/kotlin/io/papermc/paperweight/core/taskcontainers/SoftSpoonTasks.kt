@@ -38,7 +38,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
-import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.plugins.JavaPlugin
@@ -56,19 +55,19 @@ open class SoftSpoonTasks(
 
     private val mache: Property<MacheMeta> = project.objects.property()
 
-    val macheCodebook by project.configurations.registering {
+    val macheCodebook = project.configurations.register(MACHE_CODEBOOK_CONFIG) {
         isTransitive = false
     }
-    val macheRemapper by project.configurations.registering {
+    val macheRemapper = project.configurations.register(MACHE_REMAPPER_CONFIG) {
         isTransitive = false
     }
-    val macheDecompiler by project.configurations.registering {
+    val macheDecompiler = project.configurations.register(MACHE_DECOMPILER_CONFIG) {
         isTransitive = false
     }
-    val macheParamMappings by project.configurations.registering {
+    val macheParamMappings = project.configurations.register(MACHE_PARAM_MAPPINGS_CONFIG) {
         isTransitive = false
     }
-    val macheConstants by project.configurations.registering {
+    val macheConstants = project.configurations.register(MACHE_CONSTANTS_CONFIG) {
         isTransitive = false
     }
     val macheMinecraftLibraries by project.configurations.registering
@@ -117,28 +116,37 @@ open class SoftSpoonTasks(
         secondFile.set(collectAccessTransform.flatMap { it.outputFile })
     }
 
-    val setupMacheSources by tasks.registering(SetupVanilla::class) {
+    private fun SetupVanilla.configureSetupMacheSources() {
         group = "mache"
-        description = "Setup vanilla source dir (applying mache patches and paper ATs)."
 
         mache.from(project.configurations.named(MACHE_CONFIG))
         macheOld.set(project.ext.macheOldPath)
         machePatches.set(layout.cache.resolve(PATCHES_FOLDER))
-        ats.set(mergeCollectedAts.flatMap { it.outputFile })
         minecraftClasspath.from(macheMinecraftLibraries)
 
-        libraries.from(
-            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
-            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
-        )
         paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
         devImports.set(project.ext.paper.devImports.fileExists(project))
 
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
-        outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+    }
 
+    val setupMacheSources by tasks.registering(SetupVanilla::class) {
+        description = "Setup vanilla source dir (applying mache patches and paper ATs)."
+        configureSetupMacheSources()
+        libraries.from(
+            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
+            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
+        )
+        ats.set(mergeCollectedAts.flatMap { it.outputFile })
+        outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
         restamp.from(restampConfig)
+    }
+
+    val setupMacheSourcesForDevBundle by tasks.registering(SetupVanilla::class) {
+        description = "Setup vanilla source dir (applying mache patches)."
+        configureSetupMacheSources()
+        outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle"))
     }
 
     val setupMacheResources by tasks.registering(SetupVanilla::class) {
@@ -272,11 +280,7 @@ open class SoftSpoonTasks(
 
     fun afterEvaluate() {
         // load mache
-        mache.set(
-            project.configurations.getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
-                gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readLines().joinToString("\n"))
-            }
-        )
+        mache.set(project.configurations.resolveMacheMeta())
         val mache = mache.get()
         println("Loaded mache ${mache.macheVersion} for minecraft ${mache.minecraftVersion}")
 
@@ -285,19 +289,7 @@ open class SoftSpoonTasks(
         }
 
         // setup repos
-        this.project.repositories {
-            println("setup repos for ${project.name}")
-            for (repository in mache.repositories) {
-                maven(repository.url) {
-                    name = repository.name
-                    mavenContent {
-                        for (group in repository.groups ?: listOf()) {
-                            includeGroupByRegex(group + ".*")
-                        }
-                    }
-                }
-            }
-        }
+        mache.addRepositories(project)
 
         // setup mc deps
         macheMinecraftLibraries {
@@ -315,23 +307,7 @@ open class SoftSpoonTasks(
         }
 
         // setup mache deps
-        this.project.dependencies {
-            mache.dependencies.codebook.forEach {
-                "macheCodebook"(it.toMavenString())
-            }
-            mache.dependencies.paramMappings.forEach {
-                "macheParamMappings"(it.toMavenString())
-            }
-            mache.dependencies.constants.forEach {
-                "macheConstants"(it.toMavenString())
-            }
-            mache.dependencies.remapper.forEach {
-                "macheRemapper"(it.toMavenString())
-            }
-            mache.dependencies.decompiler.forEach {
-                "macheDecompiler"(it.toMavenString())
-            }
-        }
+        mache.addDependencies(project)
 
         // impl extends minecraft
         project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {

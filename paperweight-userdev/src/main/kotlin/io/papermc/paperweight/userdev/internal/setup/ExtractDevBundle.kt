@@ -25,15 +25,17 @@ package io.papermc.paperweight.userdev.internal.setup
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
+import io.papermc.paperweight.userdev.internal.setup.v5.DevBundleV5
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
 private val supported = mapOf(
     2 to DevBundleV2.Config::class, // 1.17.1
-    3 to GenerateDevBundle.DevBundleConfig::class, // up to 1.20.4
-    4 to GenerateDevBundle.DevBundleConfig::class, // 1.20.5, early 1.20.6
-    GenerateDevBundle.currentDataVersion to GenerateDevBundle.DevBundleConfig::class, // 1.20.6+ (nullable mojangApiCoordinates)
+    3 to DevBundleV5.Config::class, // up to 1.20.4
+    4 to DevBundleV5.Config::class, // 1.20.5, early 1.20.6
+    5 to DevBundleV5.Config::class, // 1.20.6+ (nullable mojangApiCoordinates)
+    6 to GenerateDevBundle.DevBundleConfig::class // TODO update comment
 )
 
 data class ExtractedBundle<C>(

@@ -24,6 +24,8 @@ package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.attribute.DevBundleOutput
+import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.JunitExclusionRule
@@ -37,9 +39,11 @@ import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
@@ -62,6 +66,9 @@ abstract class PaperweightUser : Plugin<Project> {
     @get:Inject
     abstract val javaToolchainService: JavaToolchainService
 
+    @get:Inject
+    abstract val dependencyFactory: DependencyFactory
+
     override fun apply(target: Project) {
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
 
@@ -81,7 +88,9 @@ abstract class PaperweightUser : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.register(DEV_BUNDLE_CONFIG)
+        target.configurations.register(DEV_BUNDLE_CONFIG) {
+            attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
+        }
 
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
         val userdevSetup by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
@@ -165,6 +174,8 @@ abstract class PaperweightUser : Plugin<Project> {
 
             configureRepositories(userdevSetup)
 
+            userdevSetup.afterEvaluate(createContext(this))
+
             cleanSharedCaches(this, sharedCacheRoot)
         }
     }
@@ -188,17 +199,27 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
-        maven(userdevSetup.paramMappings.url) {
-            name = PARAM_MAPPINGS_REPO_NAME
-            content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+        userdevSetup.mache?.url?.let {
+            maven(it) {
+                name = MACHE_REPO_NAME
+                content { onlyForConfigurations(MACHE_CONFIG) }
+            }
+        }
+        userdevSetup.paramMappings?.url?.let {
+            maven(it) {
+                name = PARAM_MAPPINGS_REPO_NAME
+                content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+            }
         }
         maven(userdevSetup.remapper.url) {
             name = REMAPPER_REPO_NAME
             content { onlyForConfigurations(REMAPPER_CONFIG) }
         }
-        maven(userdevSetup.decompiler.url) {
-            name = DECOMPILER_REPO_NAME
-            content { onlyForConfigurations(DECOMPILER_CONFIG) }
+        userdevSetup.decompiler?.url?.let {
+            maven(it) {
+                name = DECOMPILER_REPO_NAME
+                content { onlyForConfigurations(DECOMPILER_CONFIG) }
+            }
         }
         for (repo in userdevSetup.libraryRepositories) {
             maven(repo)
@@ -213,7 +234,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
         if (hasDevBundle.isFailure || !hasDevBundle.getOrThrow()) {
             val message = "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration, as" +
-                " well as a repository to resolve it from in order to function. Use the paperweightDevBundle extension function to do this easily."
+                " well as a repository to resolve it from in order to function. Use the dependencies.paperweight extension to do this easily."
             throw PaperweightException(
                 message,
                 hasDevBundle.exceptionOrNull()?.let { PaperweightException("Failed to resolve dev bundle", it) }
@@ -221,40 +242,39 @@ abstract class PaperweightUser : Plugin<Project> {
         }
     }
 
+    private fun Configuration.dependenciesFrom(
+        transitive: (String) -> Boolean = { true },
+        supplier: () -> MavenDep?
+    ) {
+        defaultDependencies {
+            for (dep in supplier()?.coordinates ?: emptyList()) {
+                val dependency = dependencyFactory.create(dep)
+                dependency.isTransitive = transitive(dep)
+                add(dependency)
+            }
+        }
+    }
+
     private fun createConfigurations(
         target: Project,
         userdevSetup: Provider<UserdevSetup>
     ) {
-        target.configurations.register(DECOMPILER_CONFIG) {
-            defaultDependencies {
-                for (dep in userdevSetup.get().decompiler.coordinates) {
-                    add(target.dependencies.create(dep))
-                }
-            }
+        target.configurations.register(MACHE_CONFIG) {
+            dependenciesFrom { userdevSetup.get().mache }
+            attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
         }
-
+        target.configurations.register(DECOMPILER_CONFIG) {
+            dependenciesFrom { userdevSetup.get().decompiler }
+        }
         target.configurations.register(PARAM_MAPPINGS_CONFIG) {
-            defaultDependencies {
-                for (dep in userdevSetup.get().paramMappings.coordinates) {
-                    add(target.dependencies.create(dep))
-                }
-            }
+            dependenciesFrom { userdevSetup.get().paramMappings }
         }
 
         fun makeRemapperConfig(name: String) {
             target.configurations.register(name) {
-                defaultDependencies {
-                    for (dep in userdevSetup.get().remapper.coordinates) {
-                        // we use a fat jar for tiny-remapper, so we don't need its transitive deps
-                        val fatTiny = dep.contains(":tiny-remapper:") && dep.endsWith(":fat")
-                        add(
-                            target.dependencies.create(dep) {
-                                if (fatTiny) {
-                                    isTransitive = false
-                                }
-                            }
-                        )
-                    }
+                // when using a fat jar for tiny-remapper we don't need its transitive deps
+                dependenciesFrom({ !it.contains(":tiny-remapper:") || !it.endsWith(":fat") }) {
+                    userdevSetup.get().remapper
                 }
             }
         }
@@ -271,23 +291,16 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
 
+        target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG)
+
         target.plugins.withType<JavaPlugin>().configureEach {
             listOf(
                 JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
-                JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
+                JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
+                MOJANG_MAPPED_SERVER_RUNTIME_CONFIG
             ).map(target.configurations::named).forEach { config ->
                 config {
                     extendsFrom(mojangMappedServerConfig.get())
-                }
-            }
-        }
-
-        target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
-            defaultDependencies {
-                val ctx = createContext(target)
-                userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
-                    setup.populateRuntimeConfiguration(ctx, this)
                 }
             }
         }

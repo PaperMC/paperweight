@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.attribute
 
 import org.gradle.api.Named
 import org.gradle.api.attributes.Attribute

@@ -29,6 +29,7 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.mache.*
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -52,6 +53,7 @@ import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
@@ -411,3 +413,7 @@ fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) 
 }
 
 val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperweight.main-capability", String::class.java)
+
+fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
+    gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readText())
+}

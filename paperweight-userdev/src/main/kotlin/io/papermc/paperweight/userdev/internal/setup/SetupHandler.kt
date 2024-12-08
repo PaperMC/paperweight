@@ -26,6 +26,8 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
 import io.papermc.paperweight.userdev.internal.setup.v2.SetupHandlerImplV2
+import io.papermc.paperweight.userdev.internal.setup.v5.DevBundleV5
+import io.papermc.paperweight.userdev.internal.setup.v5.SetupHandlerImplV5
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import org.gradle.api.Project
@@ -46,6 +48,9 @@ interface SetupHandler {
 
     fun serverJar(context: Context): Path
 
+    fun afterEvaluate(context: Context) {
+    }
+
     val serverJar: Path
 
     val reobfMappings: Path
@@ -54,11 +59,13 @@ interface SetupHandler {
 
     val pluginRemapArgs: List<String>
 
-    val paramMappings: MavenDep
+    val paramMappings: MavenDep?
 
-    val decompiler: MavenDep
+    val decompiler: MavenDep?
 
     val remapper: MavenDep
+
+    val mache: MavenDep?
 
     val libraryRepositories: List<String>
 
@@ -81,10 +88,17 @@ interface SetupHandler {
                 parameters,
                 extractedBundle as ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
             )
+
+            is DevBundleV5.Config -> SetupHandlerImplV5(
+                parameters,
+                extractedBundle as ExtractedBundle<DevBundleV5.Config>
+            )
+
             is DevBundleV2.Config -> SetupHandlerImplV2(
                 parameters,
                 extractedBundle as ExtractedBundle<DevBundleV2.Config>
             )
+
             else -> throw PaperweightException("Unknown dev bundle config type: ${extractedBundle.config::class.java.typeName}")
         }
     }

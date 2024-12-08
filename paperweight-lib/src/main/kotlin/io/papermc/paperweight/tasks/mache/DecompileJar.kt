@@ -24,13 +24,15 @@ package io.papermc.paperweight.tasks.mache
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import org.gradle.jvm.toolchain.JavaLauncher
 
 @CacheableTask
 abstract class DecompileJar : JavaLauncherTask() {
@@ -61,40 +63,62 @@ abstract class DecompileJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val out = outputJar.convertToPath().ensureClean()
-
-        val cfgFile = layout.cache.resolve(DECOMP_CFG).ensureClean()
-        val cfgText = buildString {
-            for (file in minecraftClasspath.files) {
-                append("-e=")
-                append(file.toPath().absolutePathString())
-                append(System.lineSeparator())
-            }
-        }
-        cfgFile.writeText(cfgText)
-
-        val logs = out.resolveSibling("${out.name}.log")
-
-        val args = mutableListOf<String>()
-
-        args += decompilerArgs.get()
-
-        args += "-cfg"
-        args += cfgFile.absolutePathString()
-
-        args += inputJar.convertToPath().absolutePathString()
-        args += out.absolutePathString()
-
-        launcher.runJar(
+        macheDecompileJar(
+            outputJar.path,
+            minecraftClasspath.files.map { it.toPath() },
+            decompilerArgs.get(),
+            inputJar.path,
+            launcher.get(),
             decompiler,
-            temporaryDir,
-            logs,
-            jvmArgs = listOf("-Xmx${memory.get()}"),
-            args = args.toTypedArray()
+            temporaryDir.toPath(),
+            memory.get()
         )
+    }
+}
 
-        out.openZip().use { root ->
-            root.getPath("META-INF", "MANIFEST.MF").deleteIfExists()
+fun macheDecompileJar(
+    outputJar: Path,
+    minecraftClasspath: List<Path>,
+    decompilerArgs: List<String>,
+    inputJar: Path,
+    launcher: JavaLauncher,
+    decompiler: FileCollection,
+    workDir: Path,
+    memory: String = "4G"
+) {
+    val out = outputJar.ensureClean()
+
+    val cfgFile = out.resolveSibling("${out.name}.cfg")
+    val cfgText = buildString {
+        for (file in minecraftClasspath) {
+            append("-e=")
+            append(file.absolutePathString())
+            append(System.lineSeparator())
         }
+    }
+    cfgFile.writeText(cfgText)
+
+    val logs = out.resolveSibling("${out.name}.log")
+
+    val args = mutableListOf<String>()
+
+    args += decompilerArgs
+
+    args += "-cfg"
+    args += cfgFile.absolutePathString()
+
+    args += inputJar.convertToPath().absolutePathString()
+    args += out.absolutePathString()
+
+    launcher.runJar(
+        decompiler,
+        workDir,
+        logs,
+        jvmArgs = listOf("-Xmx$memory"),
+        args = args.toTypedArray()
+    )
+
+    out.openZip().use { root ->
+        root.getPath("META-INF", "MANIFEST.MF").deleteIfExists()
     }
 }
