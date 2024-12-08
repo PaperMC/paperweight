@@ -143,26 +143,20 @@ class PaperweightCore : Plugin<Project> {
          */
 
         target.afterEvaluate {
-            println("SoftSpoon: ${ext.softSpoon.get()}")
-
             target.repositories {
-                if (!ext.softSpoon.get()) {
-                    maven(ext.remapRepo) {
-                        name = REMAPPER_REPO_NAME
-                        content { onlyForConfigurations(REMAPPER_CONFIG) }
-                    }
-                } else {
-                    maven(ext.macheRepo) {
-                        name = MACHE_REPO_NAME
-                        content { onlyForConfigurations(MACHE_CONFIG) }
-                    }
+                /* TODO
+                maven(ext.remapRepo) {
+                    name = REMAPPER_REPO_NAME
+                    content { onlyForConfigurations(REMAPPER_CONFIG) }
+                }
+                 */
+                maven(ext.macheRepo) {
+                    name = MACHE_REPO_NAME
+                    content { onlyForConfigurations(MACHE_CONFIG) }
                 }
             }
 
-            if (ext.softSpoon.get()) {
-                softSpoonTasks.afterEvaluate()
-                return@afterEvaluate
-            }
+            softSpoonTasks.afterEvaluate()
 
             /*
             // Setup the server jar

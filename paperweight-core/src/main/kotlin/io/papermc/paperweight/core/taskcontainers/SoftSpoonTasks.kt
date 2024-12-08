@@ -25,8 +25,9 @@ package io.papermc.paperweight.core.taskcontainers
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.restamp.RestampVersion
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.mache.*
+import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
+import io.papermc.paperweight.tasks.mache.SetupVanilla
 import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatchesFuzzy
@@ -42,6 +43,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -52,7 +54,7 @@ open class SoftSpoonTasks(
     tasks: TaskContainer = project.tasks
 ) {
 
-    lateinit var mache: MacheMeta
+    private val mache: Property<MacheMeta> = project.objects.property()
 
     val macheCodebook by project.configurations.registering {
         isTransitive = false
@@ -69,8 +71,9 @@ open class SoftSpoonTasks(
     val macheConstants by project.configurations.registering {
         isTransitive = false
     }
+    val macheMinecraftLibraries by project.configurations.registering
+    val mappedJarOutgoing = project.configurations.consumable("mappedJarOutgoing") // For source generator modules
     val macheMinecraft by project.configurations.registering
-    val macheMinecraftExtended by project.configurations.registering
     val restampConfig = project.configurations.register(RESTAMP_CONFIG) {
         defaultDependencies {
             add(project.dependencies.create("io.papermc.restamp:restamp:${RestampVersion.VERSION}"))
@@ -82,9 +85,9 @@ open class SoftSpoonTasks(
         serverJar.set(allTasks.extractFromBundler.flatMap { it.serverJar })
         serverMappings.set(allTasks.downloadMappings.flatMap { it.outputFile })
 
-        remapperArgs.set(mache.remapperArgs)
+        remapperArgs.set(mache.map { it.remapperArgs })
         codebookClasspath.from(macheCodebook)
-        minecraftClasspath.from(macheMinecraft)
+        minecraftClasspath.from(macheMinecraftLibraries)
         remapperClasspath.from(macheRemapper)
         paramMappings.from(macheParamMappings)
         constants.from(macheConstants)
@@ -95,9 +98,9 @@ open class SoftSpoonTasks(
     val macheDecompileJar by tasks.registering(DecompileJar::class) {
         group = "mache"
         inputJar.set(macheRemapJar.flatMap { it.outputJar })
-        decompilerArgs.set(mache.decompilerArgs)
+        decompilerArgs.set(mache.map { it.decompilerArgs })
 
-        minecraftClasspath.from(macheMinecraft)
+        minecraftClasspath.from(macheMinecraftLibraries)
         decompiler.from(macheDecompiler)
 
         outputJar.set(layout.cache.resolve(FINAL_DECOMPILE_JAR))
@@ -122,7 +125,7 @@ open class SoftSpoonTasks(
         macheOld.set(project.ext.macheOldPath)
         machePatches.set(layout.cache.resolve(PATCHES_FOLDER))
         ats.set(mergeCollectedAts.flatMap { it.outputFile })
-        minecraftClasspath.from(macheMinecraft)
+        minecraftClasspath.from(macheMinecraftLibraries)
 
         libraries.from(
             allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
@@ -203,7 +206,7 @@ open class SoftSpoonTasks(
         group = "softspoon"
         description = "Rebuilds patches to the vanilla sources"
 
-        minecraftClasspath.from(macheMinecraftExtended)
+        minecraftClasspath.from(macheMinecraft)
         atFile.set(project.ext.paper.additionalAts.fileExists(project))
         atFileOut.set(project.ext.paper.additionalAts.fileExists(project))
 
@@ -269,10 +272,17 @@ open class SoftSpoonTasks(
 
     fun afterEvaluate() {
         // load mache
-        mache = this.project.configurations.named(MACHE_CONFIG).get().singleFile.toPath().openZip().use { zip ->
-            return@use gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readLines().joinToString("\n"))
-        }
+        mache.set(
+            project.configurations.getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
+                gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readLines().joinToString("\n"))
+            }
+        )
+        val mache = mache.get()
         println("Loaded mache ${mache.macheVersion} for minecraft ${mache.minecraftVersion}")
+
+        mappedJarOutgoing {
+            outgoing.artifact(macheRemapJar)
+        }
 
         // setup repos
         this.project.repositories {
@@ -290,11 +300,11 @@ open class SoftSpoonTasks(
         }
 
         // setup mc deps
-        macheMinecraft {
+        macheMinecraftLibraries {
             extendsFrom(project.configurations.getByName(MACHE_CONFIG))
         }
-        macheMinecraftExtended {
-            extendsFrom(macheMinecraft.get())
+        macheMinecraft {
+            extendsFrom(macheMinecraftLibraries.get())
             withDependencies {
                 add(
                     project.dependencies.create(
@@ -325,7 +335,7 @@ open class SoftSpoonTasks(
 
         // impl extends minecraft
         project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
-            extendsFrom(macheMinecraft.get())
+            extendsFrom(macheMinecraftLibraries.get())
         }
 
         // add vanilla source set

@@ -25,8 +25,6 @@ package io.papermc.paperweight
 import io.papermc.paperweight.extension.PaperweightSourceGeneratorExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
-import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.*
@@ -35,32 +33,17 @@ abstract class PaperweightSourceGeneratorHelper : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         val ext = extensions.create("paperweight", PaperweightSourceGeneratorExt::class)
 
+        val minecraftJar by configurations.registering
+
         val applyAts by tasks.registering<ApplyAccessTransform> {
-            inputJar.set(rootProject.tasks.named<FixJarTask>("fixJar").flatMap { it.outputJar })
+            inputJar.set(layout.file(minecraftJar.flatMap { it.elements }.map { it.single().asFile }))
             atFile.set(ext.atFile)
         }
 
-        val copyResources by tasks.registering<CopyResources> {
-            inputJar.set(applyAts.flatMap { it.outputJar })
-            vanillaJar.set(rootProject.tasks.named<ExtractFromBundler>("extractFromBundler").flatMap { it.serverJar })
-        }
-
-        val libsFile = rootProject.layout.cache.resolve(SERVER_LIBRARIES_TXT)
-        val vanilla = configurations.register("vanillaServer") {
-            withDependencies {
-                dependencies {
-                    val libs = libsFile.convertToPathOrNull()
-                    if (libs != null && libs.exists()) {
-                        libs.forEachLine { line ->
-                            add(create(line))
-                        }
-                    }
-                }
-            }
-        }
+        val vanilla = configurations.register("vanillaServer")
 
         dependencies {
-            vanilla.name(files(copyResources.flatMap { it.outputJar }))
+            vanilla.name(files(applyAts.flatMap { it.outputJar }))
         }
 
         afterEvaluate {

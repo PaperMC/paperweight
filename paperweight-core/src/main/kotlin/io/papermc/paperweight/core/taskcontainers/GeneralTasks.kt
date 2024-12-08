@@ -26,6 +26,8 @@ import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -34,6 +36,7 @@ import org.gradle.kotlin.dsl.*
 open class GeneralTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
+    cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
 ) : InitialTasks(project) {
 
@@ -42,12 +45,12 @@ open class GeneralTasks(
         includes.set(extension.vanillaJarIncludes)
     }
 
-    val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
-        patchDir.set(extension.paper.spigotServerPatchDir)
-    }
+    val generateMappings by tasks.registering<GenerateMappings> {
+        vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
-    val mergePaperAts by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(extension.paper.additionalAts.fileExists(project))
-        secondFile.set(collectAtsFromPatches.flatMap { it.outputFile })
+        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
+
+        outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }
 }

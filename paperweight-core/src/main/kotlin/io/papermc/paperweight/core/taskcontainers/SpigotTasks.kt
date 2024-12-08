@@ -39,7 +39,7 @@ open class SpigotTasks(
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
-) : VanillaTasks(project) {
+) : GeneralTasks(project) {
 
     val cloneSpigotBuildData by tasks.registering<CloneRepo> {
         url.set("https://hub.spigotmc.org/stash/scm/spigot/builddata.git")
@@ -57,8 +57,6 @@ open class SpigotTasks(
     val generateSpigotMappings by tasks.registering<GenerateSpigotMappings> {
         classMappings.set(unpackSpigotBuildData.flatMap { it.classMappings })
 
-        // todo hypo update breaks generate mappings, hardcode for now
-        // sourceMappings.set(Path.of("D:\\IntellijProjects\\PaperClean\\.gradle\\caches\\paperweight\\mappings\\official-mojang+yarn.tiny"))
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
         outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
@@ -74,8 +72,6 @@ open class SpigotTasks(
         memberMappings.set(generateSpigotMappings.flatMap { it.spigotMemberMappings })
 
         mcVersion.set(extension.minecraftVersion)
-
-        // workDirName.set(extension.craftBukkit.buildDataInfo.asFile.map { it.parentFile.parentFile.name })
 
         specialSourceJar.set(unpackSpigotBuildData.flatMap { it.specialSourceJar })
         specialSource2Jar.set(unpackSpigotBuildData.flatMap { it.specialSource2Jar })

@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.core.extension
 
-import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.util.Locale
 import org.gradle.api.Action
@@ -36,23 +35,13 @@ import org.gradle.kotlin.dsl.*
 
 open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
 
-    val softSpoon: Property<Boolean> = objects.property<Boolean>().convention(false)
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
-
     val minecraftVersion: Property<String> = objects.property()
     val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
-    val serverProject: Property<Project> = objects.property()
 
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
     val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.lowercase(Locale.ENGLISH))
 
-    val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
-
-    val paramMappingsRepo: Property<String> = objects.property()
-    val decompileRepo: Property<String> = objects.property()
-    val remapRepo: Property<String> = objects.property()
+    val remapRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
     val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
     val macheOldPath: DirectoryProperty = objects.directoryProperty()
