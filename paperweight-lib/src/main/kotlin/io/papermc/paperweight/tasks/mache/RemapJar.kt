@@ -22,19 +22,16 @@
 
 package io.papermc.paperweight.tasks.mache
 
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import javax.inject.Inject
 import kotlin.io.path.*
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
-import org.gradle.process.ExecOperations
 
 @CacheableTask
-abstract class RemapJar : DefaultTask() {
+abstract class RemapJar : JavaLauncherTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -66,45 +63,32 @@ abstract class RemapJar : DefaultTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
-    @get:Inject
-    abstract val exec: ExecOperations
-
-    @get:Inject
-    abstract val layout: ProjectLayout
-
     @TaskAction
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
 
         val logFile = out.resolveSibling("${out.name}.log")
 
-        try {
-            logFile.outputStream().buffered().use { log ->
-                exec.javaexec {
-                    classpath(codebookClasspath.singleFile)
+        val args = mutableListOf<String>()
 
-                    maxHeapSize = "2G"
-
-                    remapperArgs.get().forEach { arg ->
-                        args(
-                            arg
-                                .replace(Regex("\\{tempDir}")) { temporaryDir.absolutePath }
-                                .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
-                                .replace(Regex("\\{mappingsFile}")) { serverMappings.get().asFile.absolutePath }
-                                .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }
-                                .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
-                                .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
-                                .replace(Regex("\\{input}")) { serverJar.get().asFile.absolutePath }
-                                .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.files.joinToString(":") { it.absolutePath } }
-                        )
-                    }
-
-                    standardOutput = log
-                    errorOutput = log
-                }
-            }
-        } catch (e: Exception) {
-            throw RuntimeException("Error while running codebook, see ${logFile.pathString} for details", e)
+        remapperArgs.get().forEach { arg ->
+            args += arg
+                .replace(Regex("\\{tempDir}")) { temporaryDir.absolutePath }
+                .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
+                .replace(Regex("\\{mappingsFile}")) { serverMappings.get().asFile.absolutePath }
+                .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }
+                .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
+                .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
+                .replace(Regex("\\{input}")) { serverJar.get().asFile.absolutePath }
+                .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.files.joinToString(":") { it.absolutePath } }
         }
+
+        launcher.runJar(
+            codebookClasspath,
+            temporaryDir.toPath(),
+            logFile,
+            jvmArgs = listOf("-Xmx2G"),
+            args = args.toTypedArray()
+        )
     }
 }
