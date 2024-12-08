@@ -22,21 +22,18 @@
 
 package io.papermc.paperweight.util
 
-import java.io.BufferedWriter
-import java.io.StringWriter
+import io.papermc.paperweight.PaperweightException
+import java.io.File
 import java.nio.file.Path
-import kotlin.io.path.*
-import org.cadixdev.at.AccessTransformSet
-import org.cadixdev.at.io.AccessTransformFormat
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.provider.Provider
 
-// This is copy-pasted into restamp-utils.kt, make sure to update it
-fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
-    val stringWriter = StringWriter()
-    val writer = BufferedWriter(stringWriter)
-    write(writer, at)
-    writer.close()
-    // unify line endings
-    val lines = stringWriter.toString().replace("\r\n", "\n").split("\n")
-    // remove last empty line, sort, then add it back
-    path.writeText(lines.subList(0, lines.size - 1).sorted().joinToString("\n", header, "\n"), Charsets.UTF_8)
+fun Any.convertToPath(): Path {
+    return when (this) {
+        is Path -> this
+        is File -> this.toPath()
+        is FileSystemLocation -> this.path
+        is Provider<*> -> this.get().convertToPath()
+        else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
+    }
 }

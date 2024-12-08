@@ -25,15 +25,13 @@ package io.papermc.paperweight.tasks.mache
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.papermc.paperweight.restamp.SetupVanillaRestampWorker
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.restamp.Restamp
-import io.papermc.restamp.RestampContextConfiguration
-import io.papermc.restamp.RestampInput
 import java.nio.file.Path
 import java.util.function.Predicate
+import javax.inject.Inject
 import kotlin.io.path.*
-import org.cadixdev.at.io.AccessTransformFormats
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand
 import org.eclipse.jgit.lib.PersonIdent
@@ -44,9 +42,10 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
-import org.openrewrite.InMemoryExecutionContext
+import org.gradle.kotlin.dsl.*
+import org.gradle.workers.WorkerExecutor
 
-abstract class SetupVanilla : BaseTask() {
+abstract class SetupVanilla : JavaLauncherTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -89,6 +88,12 @@ abstract class SetupVanilla : BaseTask() {
     @get:Optional
     @get:InputDirectory
     abstract val macheOld: DirectoryProperty
+
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
+
+    @get:CompileClasspath
+    abstract val restamp: ConfigurableFileCollection
 
     @TaskAction
     fun run() {
@@ -175,23 +180,20 @@ abstract class SetupVanilla : BaseTask() {
             classPath.add(outputPath)
 
             println("Applying access transformers...")
-            val configuration = RestampContextConfiguration.builder()
-                .accessTransformers(ats.convertToPath(), AccessTransformFormats.FML)
-                .sourceRoot(outputPath)
-                .sourceFilesFromAccessTransformers(false)
-                .classpath(classPath)
-                .executionContext(InMemoryExecutionContext { it.printStackTrace() })
-                .failWithNotApplicableAccessTransformers()
-                .build()
 
-            val parsedInput = RestampInput.parseFrom(configuration)
-            val results = Restamp.run(parsedInput).allResults
-
-            results.forEach { result ->
-                if (result.after != null) {
-                    outputPath.resolve(result.after!!.sourcePath).writeText(result.after!!.printAll())
+            val queue = workerExecutor.processIsolation {
+                forkOptions {
+                    maxHeapSize = "2G"
+                    executable(launcher.get().executablePath.path.absolutePathString())
+                    classpath.from(restamp)
                 }
             }
+            queue.submit(SetupVanillaRestampWorker::class) {
+                this.ats.set(this@SetupVanilla.ats.pathOrNull)
+                this.outputPath.set(outputPath)
+                this.classpath.from(classPath)
+            }
+            queue.await()
 
             commitAndTag(git, "ATs")
         }

@@ -25,6 +25,7 @@ package io.papermc.paperweight.tasks.softspoon
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.papermc.paperweight.restamp.ApplySourceATWorker
 import io.papermc.paperweight.tasks.*
 import java.nio.file.Path
 import kotlin.test.BeforeTest
@@ -48,8 +49,8 @@ class ApplySourceATTest : TaskTest() {
 
         every { task.worker } returns workerExecutor
         every { workerExecutor.processIsolation(any()) } returns workQueue
-        every { workQueue.submit(RestampWorker::class, any()) } answers {
-            val action = object : RestampWorker() {
+        every { workQueue.submit(ApplySourceATWorker::class, any()) } answers {
+            val action = object : ApplySourceATWorker() {
                 override fun getParameters(): Params {
                     return mockk<Params>().also {
                         every { it.inputJar.get() } returns task.inputJar.get()

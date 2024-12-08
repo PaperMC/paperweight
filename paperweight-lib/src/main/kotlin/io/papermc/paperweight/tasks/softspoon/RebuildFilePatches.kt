@@ -25,29 +25,25 @@ package io.papermc.paperweight.tasks.softspoon
 import codechicken.diffpatch.cli.DiffOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.LoggingOutputStream
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.restamp.RebuildFilePatchesRestampWorker
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import io.papermc.restamp.Restamp
-import io.papermc.restamp.RestampContextConfiguration
-import io.papermc.restamp.RestampInput
 import java.io.PrintStream
 import java.nio.file.Path
+import javax.inject.Inject
 import kotlin.io.path.*
-import org.cadixdev.at.AccessTransformSet
-import org.cadixdev.at.io.AccessTransformFormats
-import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
+import org.gradle.kotlin.dsl.*
+import org.gradle.workers.WorkerExecutor
 import org.intellij.lang.annotations.Language
-import org.openrewrite.InMemoryExecutionContext
 
 @UntrackedTask(because = "Always rebuild patches")
-abstract class RebuildFilePatches : BaseTask() {
+abstract class RebuildFilePatches : JavaLauncherTask() {
 
     @get:Input
     @get:Option(
@@ -84,7 +80,14 @@ abstract class RebuildFilePatches : BaseTask() {
     @get:Input
     abstract val gitFilePatches: Property<Boolean>
 
+    @get:Inject
+    abstract val worker: WorkerExecutor
+
+    @get:CompileClasspath
+    abstract val restamp: ConfigurableFileCollection
+
     override fun init() {
+        super.init()
         contextLines.convention(3)
         verbose.convention(false)
         gitFilePatches.convention(false)
@@ -97,38 +100,28 @@ abstract class RebuildFilePatches : BaseTask() {
         val inputDir = input.convertToPath()
         val baseDir = base.convertToPath()
 
-        val oldAts = if (atFile.isPresent) AccessTransformFormats.FML.read(atFile.convertToPath()) else AccessTransformSet.create()
-
         val git = Git(inputDir)
         git("stash", "push").executeSilently(silenceErr = true)
         git("checkout", "file").executeSilently(silenceErr = true)
 
-        // handle AT
-        val filesWithNewAts = mutableListOf<String>()
-        baseDir.walk()
-            .map { it.relativeTo(baseDir).toString().replace("\\", "/") }
-            .filter {
-                !it.startsWith(".git") && !it.endsWith(".nbt") && !it.endsWith(".mcassetsroot")
+        val queue = worker.processIsolation {
+            forkOptions {
+                maxHeapSize = "2G"
+                executable(launcher.get().executablePath.path.absolutePathString())
+                classpath.from(restamp)
             }
-            .forEach {
-                val ats = AccessTransformSet.create()
-                val source = inputDir.resolve(it)
-                val decomp = baseDir.resolve(it)
-                val className = it.replace(".java", "")
-                if (handleATInSource(source, ats, className)) {
-                    handleATInBase(decomp, ats, baseDir)
-                    filesWithNewAts.add(it)
-                }
-                oldAts.merge(ats)
-            }
-
-        if (atFileOut.isPresent) {
-            AccessTransformFormats.FML.writeLF(
-                atFileOut.convertToPath(),
-                oldAts,
-                "# This file is auto generated, any changes may be overridden!\n# See CONTRIBUTING.md on how to add access transformers.\n"
-            )
         }
+        val filesWithNewAtsPath = temporaryDir.toPath().resolve("filesWithNewAts.txt")
+        queue.submit(RebuildFilePatchesRestampWorker::class) {
+            this.baseDir.set(baseDir)
+            this.inputDir.set(inputDir)
+            this.atFile.set(this@RebuildFilePatches.atFile.orNull)
+            this.atFileOut.set(this@RebuildFilePatches.atFileOut.orNull)
+            this.minecraftClasspath.from(this@RebuildFilePatches.minecraftClasspath)
+            this.filesWithNewAts.set(filesWithNewAtsPath)
+        }
+        queue.await()
+        val filesWithNewAts = filesWithNewAtsPath.readLines()
 
         if (filesWithNewAts.isNotEmpty()) {
             git("status").executeOut()
@@ -223,74 +216,5 @@ abstract class RebuildFilePatches : BaseTask() {
             .build()
             .operate()
         return result.summary.changedFiles
-    }
-
-    private fun handleATInBase(decomp: Path, newAts: AccessTransformSet, decompRoot: Path) {
-        if (newAts.classes.isEmpty()) {
-            return
-        }
-
-        val configuration = RestampContextConfiguration.builder()
-            .accessTransformSet(newAts)
-            .sourceRoot(decompRoot)
-            .sourceFiles(listOf(decomp))
-            .classpath(minecraftClasspath.files.map { it.toPath() })
-            .executionContext(InMemoryExecutionContext { it.printStackTrace() })
-            .build()
-
-        // mmmh, maybe add comment to base too?
-
-        val parsedInput = RestampInput.parseFrom(configuration)
-        val results = Restamp.run(parsedInput).allResults
-
-        if (results.size != 1) {
-            logger.lifecycle("Failed to apply AT to ${decomp.fileName} (doesn't it already exist?): $results")
-            return
-        }
-
-        val result = results[0].after?.printAll()
-        if (result != null) {
-            decomp.writeText(result, Charsets.UTF_8)
-        }
-    }
-
-    private fun handleATInSource(source: Path, newAts: AccessTransformSet, className: String): Boolean {
-        val sourceLines = source.readLines()
-        var foundNew = false
-        val fixedLines = ArrayList<String>(sourceLines.size)
-        sourceLines.forEach { line ->
-            if (!line.contains("// Paper-AT: ")) {
-                fixedLines.add(line)
-                return@forEach
-            }
-
-            foundNew = true
-
-            val split = line.split("// Paper-AT: ")
-            val at = split[1]
-            try {
-                val atClass = newAts.getOrCreateClass(className)
-                val parts = at.split(" ")
-                val accessTransform = atFromString(parts[0])
-                val name = parts[1]
-                val index = name.indexOf('(')
-                if (index == -1) {
-                    atClass.mergeField(name, accessTransform)
-                } else {
-                    atClass.mergeMethod(MethodSignature.of(name.substring(0, index), name.substring(index)), accessTransform)
-                }
-                logger.lifecycle("Found new AT in $className: $at -> $accessTransform")
-            } catch (ex: Exception) {
-                throw PaperweightException("Found invalid AT '$at' in class $className")
-            }
-
-            fixedLines.add(split[0])
-        }
-
-        if (foundNew) {
-            source.writeText(fixedLines.joinToString("\n", postfix = "\n"), Charsets.UTF_8)
-        }
-
-        return foundNew
     }
 }

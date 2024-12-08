@@ -196,16 +196,6 @@ class DelegatingOutputStream(vararg delegates: OutputStream) : OutputStream() {
     }
 }
 
-fun Any.convertToPath(): Path {
-    return when (this) {
-        is Path -> this
-        is File -> this.toPath()
-        is FileSystemLocation -> this.path
-        is Provider<*> -> this.get().convertToPath()
-        else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
-    }
-}
-
 fun Path.ensureClean(): Path {
     try {
         deleteRecursively()

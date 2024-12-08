@@ -53,7 +53,7 @@ open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, la
     val paramMappingsRepo: Property<String> = objects.property()
     val decompileRepo: Property<String> = objects.property()
     val remapRepo: Property<String> = objects.property()
-    val macheRepo: Property<String> = objects.property<String>().convention("https://repo.papermc.io/repository/maven-public/")
+    val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
     val macheOldPath: DirectoryProperty = objects.directoryProperty()
     val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)

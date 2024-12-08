@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.ext
+import io.papermc.paperweight.restamp.RestampVersion
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.*
 import io.papermc.paperweight.tasks.mache.RemapJar
@@ -70,6 +71,11 @@ open class SoftSpoonTasks(
     }
     val macheMinecraft by project.configurations.registering
     val macheMinecraftExtended by project.configurations.registering
+    val restampConfig = project.configurations.register(RESTAMP_CONFIG) {
+        defaultDependencies {
+            add(project.dependencies.create("io.papermc.restamp:restamp:${RestampVersion.VERSION}"))
+        }
+    }
 
     val macheRemapJar by tasks.registering(RemapJar::class) {
         group = "mache"
@@ -128,6 +134,8 @@ open class SoftSpoonTasks(
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+
+        restamp.from(restampConfig)
     }
 
     val setupMacheResources by tasks.registering(SetupVanilla::class) {
@@ -203,6 +211,8 @@ open class SoftSpoonTasks(
         input.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.sourcePatchDir)
         gitFilePatches.set(project.ext.gitFilePatches)
+
+        restamp.from(restampConfig)
     }
 
     val rebuildResourcePatches by tasks.registering(RebuildFilePatches::class) {

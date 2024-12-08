@@ -20,16 +20,39 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.restamp
 
 import java.io.BufferedWriter
 import java.io.StringWriter
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.cadixdev.at.AccessChange
+import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
+import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
 
-// This is copy-pasted into restamp-utils.kt, make sure to update it
+fun atFromString(input: String): AccessTransform {
+    var last = input.length - 1
+
+    val final = if (input[last] == 'f') {
+        if (input[--last] == '-') ModifierChange.REMOVE else ModifierChange.ADD
+    } else {
+        ModifierChange.NONE
+    }
+
+    val access = when (input.split("+", "-").first()) {
+        "public" -> AccessChange.PUBLIC
+        "protected" -> AccessChange.PROTECTED
+        "private" -> AccessChange.PRIVATE
+        else -> AccessChange.NONE
+    }
+
+    return AccessTransform.of(access, final)
+}
+
+// TODO: Don't copy paste this somehow
+// Start copied from at.kt
 fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
     val stringWriter = StringWriter()
     val writer = BufferedWriter(stringWriter)
@@ -40,3 +63,4 @@ fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: St
     // remove last empty line, sort, then add it back
     path.writeText(lines.subList(0, lines.size - 1).sorted().joinToString("\n", header, "\n"), Charsets.UTF_8)
 }
+// End copied from at.kt

@@ -20,23 +20,8 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.restamp
 
-import java.io.BufferedWriter
-import java.io.StringWriter
-import java.nio.file.Path
-import kotlin.io.path.*
-import org.cadixdev.at.AccessTransformSet
-import org.cadixdev.at.io.AccessTransformFormat
-
-// This is copy-pasted into restamp-utils.kt, make sure to update it
-fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
-    val stringWriter = StringWriter()
-    val writer = BufferedWriter(stringWriter)
-    write(writer, at)
-    writer.close()
-    // unify line endings
-    val lines = stringWriter.toString().replace("\r\n", "\n").split("\n")
-    // remove last empty line, sort, then add it back
-    path.writeText(lines.subList(0, lines.size - 1).sorted().joinToString("\n", header, "\n"), Charsets.UTF_8)
+object RestampVersion {
+    const val VERSION: String = "{{ restamp_version }}"
 }
