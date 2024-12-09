@@ -154,7 +154,7 @@ open class SoftSpoonTasks(
         description = "Setup vanilla resources dir"
 
         inputFile.set(allTasks.extractFromBundler.flatMap { it.serverJar })
-        predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") && !it.toString().endsWith(".nbt") }
+        predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") }
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
 
