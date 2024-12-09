@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     shade(projects.paperweightLib)
+    shade(project(projects.paperweightLib.path, "sharedRuntime"))
     implementation(libs.bundles.kotson)
 }
 

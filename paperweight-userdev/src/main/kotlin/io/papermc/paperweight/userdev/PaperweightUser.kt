@@ -24,12 +24,18 @@ package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.attribute.DevBundleOutput
+import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.JunitExclusionRule
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.*
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
+import io.papermc.paperweight.userdev.internal.setup.util.cleanSharedCaches
+import io.papermc.paperweight.userdev.internal.setup.util.genSources
+import io.papermc.paperweight.userdev.internal.setup.util.paperweightHash
+import io.papermc.paperweight.userdev.internal.setup.util.sharedCaches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -37,18 +43,22 @@ import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.build.event.BuildEventsListenerRegistry
+import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -62,12 +72,18 @@ abstract class PaperweightUser : Plugin<Project> {
     @get:Inject
     abstract val javaToolchainService: JavaToolchainService
 
-    override fun apply(target: Project) {
-        checkJavaVersion()
+    @get:Inject
+    abstract val dependencyFactory: DependencyFactory
 
+    @get:Inject
+    abstract val buildEventsListenerRegistry: BuildEventsListenerRegistry
+
+    override fun apply(target: Project) {
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
 
-        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {}
+        target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+            parameters.projectPath.set(target.projectDir)
+        }
 
         val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
             group = "paperweight"
@@ -81,19 +97,22 @@ abstract class PaperweightUser : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.register(DEV_BUNDLE_CONFIG)
+        target.configurations.register(DEV_BUNDLE_CONFIG) {
+            attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
+        }
+
+        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {}
 
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
-        val userdevSetup by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
+        val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
+        val userdevSetup by lazy { userdevSetupProvider.get() }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
-            target,
-            workerExecutor,
-            javaToolchainService,
             target.provider { userdevSetup },
-            target.objects
+            target.objects,
+            target,
         )
 
         target.dependencies.extensions.create(
@@ -102,14 +121,14 @@ abstract class PaperweightUser : Plugin<Project> {
             target.dependencies
         )
 
-        createConfigurations(target, target.provider { userdevSetup })
+        createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
         val reobfJar by target.tasks.registering<RemapJar> {
             group = "paperweight"
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
             mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })
-            remapClasspath.from(target.provider { userdevSetup.serverJar })
+            remapClasspath.from(setupTask.flatMap { it.mappedServerJar })
 
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
@@ -145,6 +164,13 @@ abstract class PaperweightUser : Plugin<Project> {
                 return@afterEvaluate
             }
 
+            if (isIDEASync()) {
+                val startParameter = gradle.startParameter
+                val taskRequests = startParameter.taskRequests.toMutableList()
+                taskRequests.add(DefaultTaskExecutionRequest(listOf(setupTask.name)))
+                startParameter.setTaskRequests(taskRequests)
+            }
+
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
 
@@ -164,6 +190,13 @@ abstract class PaperweightUser : Plugin<Project> {
             checkForDevBundle()
 
             configureRepositories(userdevSetup)
+
+            setupTask.configure { setupService.set(userdevSetupProvider) }
+            userdevSetup.afterEvaluate(this)
+
+            userdev.addServerDependencyTo.get().forEach {
+                it.extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+            }
 
             cleanSharedCaches(this, sharedCacheRoot)
         }
@@ -188,23 +221,31 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
-        maven(userdevSetup.paramMappings.url) {
-            name = PARAM_MAPPINGS_REPO_NAME
-            content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+        userdevSetup.mache?.url?.let {
+            maven(it) {
+                name = MACHE_REPO_NAME
+                content { onlyForConfigurations(MACHE_CONFIG) }
+            }
+        }
+        userdevSetup.paramMappings?.url?.let {
+            maven(it) {
+                name = PARAM_MAPPINGS_REPO_NAME
+                content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
+            }
         }
         maven(userdevSetup.remapper.url) {
             name = REMAPPER_REPO_NAME
             content { onlyForConfigurations(REMAPPER_CONFIG) }
         }
-        maven(userdevSetup.decompiler.url) {
-            name = DECOMPILER_REPO_NAME
-            content { onlyForConfigurations(DECOMPILER_CONFIG) }
+        userdevSetup.decompiler?.url?.let {
+            maven(it) {
+                name = DECOMPILER_REPO_NAME
+                content { onlyForConfigurations(DECOMPILER_CONFIG) }
+            }
         }
         for (repo in userdevSetup.libraryRepositories) {
             maven(repo)
         }
-
-        userdevSetup.addIvyRepository(project)
     }
 
     private fun Project.checkForDevBundle() {
@@ -213,7 +254,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
         if (hasDevBundle.isFailure || !hasDevBundle.getOrThrow()) {
             val message = "paperweight requires a development bundle to be added to the 'paperweightDevelopmentBundle' configuration, as" +
-                " well as a repository to resolve it from in order to function. Use the paperweightDevBundle extension function to do this easily."
+                " well as a repository to resolve it from in order to function. Use the dependencies.paperweight extension to do this easily."
             throw PaperweightException(
                 message,
                 hasDevBundle.exceptionOrNull()?.let { PaperweightException("Failed to resolve dev bundle", it) }
@@ -221,82 +262,66 @@ abstract class PaperweightUser : Plugin<Project> {
         }
     }
 
-    private fun createConfigurations(
-        target: Project,
-        userdevSetup: Provider<UserdevSetup>
+    private fun Configuration.dependenciesFrom(
+        transitive: (String) -> Boolean = { true },
+        supplier: () -> MavenDep?
     ) {
-        target.configurations.register(DECOMPILER_CONFIG) {
-            defaultDependencies {
-                for (dep in userdevSetup.get().decompiler.coordinates) {
-                    add(target.dependencies.create(dep))
-                }
+        defaultDependencies {
+            val deps = supplier()?.coordinates ?: emptyList()
+            for (dep in deps) {
+                val dependency = dependencyFactory.create(dep)
+                dependency.isTransitive = transitive(dep)
+                add(dependency)
             }
         }
+    }
 
+    private fun createConfigurations(
+        target: Project,
+        userdevSetup: Provider<UserdevSetup>,
+        setupTask: TaskProvider<UserdevSetupTask>,
+    ) {
+        target.configurations.register(MACHE_CONFIG) {
+            dependenciesFrom { userdevSetup.get().mache }
+            attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
+        }
+        target.configurations.register(DECOMPILER_CONFIG) {
+            dependenciesFrom { userdevSetup.get().decompiler }
+        }
         target.configurations.register(PARAM_MAPPINGS_CONFIG) {
-            defaultDependencies {
-                for (dep in userdevSetup.get().paramMappings.coordinates) {
-                    add(target.dependencies.create(dep))
-                }
-            }
+            dependenciesFrom { userdevSetup.get().paramMappings }
         }
 
         fun makeRemapperConfig(name: String) {
             target.configurations.register(name) {
-                defaultDependencies {
-                    for (dep in userdevSetup.get().remapper.coordinates) {
-                        // we use a fat jar for tiny-remapper, so we don't need its transitive deps
-                        val fatTiny = dep.contains(":tiny-remapper:") && dep.endsWith(":fat")
-                        add(
-                            target.dependencies.create(dep) {
-                                if (fatTiny) {
-                                    isTransitive = false
-                                }
-                            }
-                        )
-                    }
+                // when using a fat jar for tiny-remapper we don't need its transitive deps
+                dependenciesFrom({ !it.contains(":tiny-remapper:") || !it.endsWith(":fat") }) {
+                    userdevSetup.get().remapper
                 }
             }
         }
         makeRemapperConfig(REMAPPER_CONFIG)
         makeRemapperConfig(PLUGIN_REMAPPER_CONFIG)
 
-        val mojangMappedServerConfig = target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
+        target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {
-                val ctx = createContext(target)
-                userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
-                    setup.populateCompileConfiguration(ctx, this)
-                }
-            }
-        }
-
-        target.plugins.withType<JavaPlugin>().configureEach {
-            listOf(
-                JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
-                JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
-            ).map(target.configurations::named).forEach { config ->
-                config {
-                    extendsFrom(mojangMappedServerConfig.get())
-                }
+                userdevSetup.get()
+                    .populateCompileConfiguration(createContext(target, setupTask), this)
             }
         }
 
         target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
             defaultDependencies {
-                val ctx = createContext(target)
-                userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
-                    setup.populateRuntimeConfiguration(ctx, this)
-                }
+                userdevSetup.get()
+                    .populateRuntimeConfiguration(createContext(target, setupTask), this)
             }
         }
     }
 
-    private fun createContext(project: Project): SetupHandler.Context =
-        SetupHandler.Context(project, workerExecutor, javaToolchainService)
+    private fun createContext(project: Project, setupTask: TaskProvider<UserdevSetupTask>): SetupHandler.ConfigurationContext =
+        SetupHandler.ConfigurationContext(project, dependencyFactory, setupTask)
 
-    private fun createSetup(target: Project, sharedCacheRoot: Path): UserdevSetup {
+    private fun createSetup(target: Project, sharedCacheRoot: Path): Provider<UserdevSetup> {
         val bundleConfig = target.configurations.named(DEV_BUNDLE_CONFIG)
         val devBundleZip = bundleConfig.map { it.singleFile }.convertToPath()
         val bundleHash = devBundleZip.sha256asHex()
@@ -318,8 +343,9 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val serviceName = "paperweight-userdev:setupService:$bundleHash"
-        return target.gradle.sharedServices
+        val ret = target.gradle.sharedServices
             .registerIfAbsent(serviceName, UserdevSetup::class) {
+                maxParallelUsages = 1
                 parameters {
                     cache.set(cacheDir)
                     bundleZip.set(devBundleZip)
@@ -328,6 +354,7 @@ abstract class PaperweightUser : Plugin<Project> {
                     genSources.set(target.genSources)
                 }
             }
-            .get()
+        buildEventsListenerRegistry.onTaskCompletion(ret)
+        return ret
     }
 }

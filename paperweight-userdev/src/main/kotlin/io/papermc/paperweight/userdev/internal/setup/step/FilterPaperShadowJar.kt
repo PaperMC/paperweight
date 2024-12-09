@@ -37,11 +37,11 @@ class FilterPaperShadowJar(
     @Output private val outputJar: Path,
     private val relocations: List<Relocation>,
 ) : SetupStep {
-    override val name: String = "filter mojang mapped paper jar"
+    override val name: String = "filter and merge mojang mapped paper jar"
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         filterPaperJar(sourcesJar, inputJar, outputJar, relocations)
     }
 
@@ -75,6 +75,12 @@ class FilterPaperShadowJar(
                 includedFiles.contains(str.split("$")[0] + ".class")
             } else {
                 includedFiles.contains(str)
+            }
+        }
+
+        outputJar.openZip().use { outFs ->
+            sourcesJar.openZip().use { sourcesFs ->
+                sourcesFs.getPath("/").copyRecursivelyTo(outFs.getPath("/"))
             }
         }
     }

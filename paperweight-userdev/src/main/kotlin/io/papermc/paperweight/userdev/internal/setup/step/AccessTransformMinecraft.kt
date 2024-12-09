@@ -36,13 +36,13 @@ class AccessTransformMinecraft(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         applyAccessTransform(
             inputJarPath = inputJar,
             outputJarPath = outputJar,
             atFilePath = at,
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher
+            launcher = context.javaLauncher
         ).await()
     }
 }

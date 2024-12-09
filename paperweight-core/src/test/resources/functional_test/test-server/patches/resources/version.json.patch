@@ -1,0 +1,11 @@
+--- a/version.json
++++ b/version.json
+@@ -1,6 +_,6 @@
+ {
+-    "id": "1.21.4",
+-    "name": "1.21.4",
++    "id": "1.21.4-paper",
++    "name": "1.21.4 - Paper",
+     "world_version": 4189,
+     "series_id": "main",
+     "protocol_version": 769,

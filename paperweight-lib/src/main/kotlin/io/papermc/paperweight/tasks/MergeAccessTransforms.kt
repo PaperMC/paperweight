@@ -67,6 +67,6 @@ abstract class MergeAccessTransforms : BaseTask() {
             outputAt.merge(at)
         }
 
-        AccessTransformFormats.FML.write(outputFile.path, outputAt)
+        AccessTransformFormats.FML.writeLF(outputFile.path, outputAt)
     }
 }

@@ -48,7 +48,6 @@ import org.gradle.kotlin.dsl.registering
 class PaperweightPatcher : Plugin<Project> {
 
     override fun apply(target: Project) {
-        checkJavaVersion()
         Git.checkForGit()
         printId<PaperweightPatcher>("paperweight-patcher", target.gradle)
 
@@ -62,7 +61,6 @@ class PaperweightPatcher : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.create(DECOMPILER_CONFIG)
         target.configurations.create(REMAPPER_CONFIG)
         target.configurations.create(PAPERCLIP_CONFIG)
 
@@ -128,10 +126,6 @@ class PaperweightPatcher : Plugin<Project> {
                     name = REMAPPER_REPO_NAME
                     content { onlyForConfigurations(REMAPPER_CONFIG) }
                 }
-                maven(patcher.decompileRepo) {
-                    name = DECOMPILER_REPO_NAME
-                    content { onlyForConfigurations(DECOMPILER_CONFIG) }
-                }
             }
 
             val upstreamDataTask = upstreamDataTaskRef.get() ?: return@afterEvaluate
@@ -175,6 +169,7 @@ class PaperweightPatcher : Plugin<Project> {
                 inputJar.set(serverJar.flatMap { it.archiveFile })
             }
 
+            /*
             val (includeMappings, reobfJar) = serverProj.setupServerProject(
                 target,
                 upstreamData.map { it.remappedJar },
@@ -214,6 +209,7 @@ class PaperweightPatcher : Plugin<Project> {
                 reobfJar,
                 upstreamData.map { it.mcVersion }
             )
+             */
         }
     }
 

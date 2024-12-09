@@ -59,11 +59,6 @@ abstract class ExtractFromBundler : BaseTask() {
     @get:OutputFile
     abstract val serverVersionsList: RegularFileProperty
 
-    override fun init() {
-        super.init()
-        serverJar.set(defaultOutput())
-    }
-
     @TaskAction
     fun run() {
         ServerBundler.extractFromBundler(
@@ -99,16 +94,16 @@ object ServerBundler {
     }
 
     private fun extractServerJar(bundlerZip: Path, serverJar: Path, outputVersionJson: Path?) {
-        val serverVersionJson = bundlerZip.resolve("version.json")
+        val serverVersionJson = bundlerZip.resolve(FileEntry.VERSION_JSON)
         outputVersionJson?.let { output ->
             serverVersionJson.copyTo(output, overwrite = true)
         }
 
         val versionId = gson.fromJson<JsonObject>(serverVersionJson)["id"].asString
-        val versions = bundlerZip.resolve("/META-INF/versions.list").readLines()
+        val versions = bundlerZip.resolve(FileEntry.VERSIONS_LIST).readLines()
             .map { it.split('\t') }
             .associate { it[1] to it[2] }
-        val serverJarPath = bundlerZip.resolve("/META-INF/versions/${versions[versionId]}")
+        val serverJarPath = bundlerZip.resolve("${FileEntry.VERSIONS_DIR}/${versions[versionId]}")
 
         serverJar.parent.createDirectories()
         serverJarPath.copyTo(serverJar, overwrite = true)
@@ -117,7 +112,7 @@ object ServerBundler {
     private fun extractLibraryJars(bundlerZip: Path, serverLibraryJars: Path) {
         serverLibraryJars.deleteRecursive()
         serverLibraryJars.parent.createDirectories()
-        bundlerZip.resolve("/META-INF/libraries").copyRecursivelyTo(serverLibraryJars)
+        bundlerZip.resolve(FileEntry.LIBRARIES_DIR).copyRecursivelyTo(serverLibraryJars)
     }
 
     private fun writeLibrariesTxt(bundlerZip: Path, serverLibrariesTxt: Path) {

@@ -22,13 +22,13 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import com.github.salomonbrys.kotson.fromJson
 import io.papermc.paperweight.core.ext
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import org.gradle.api.Project
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -36,29 +36,21 @@ import org.gradle.kotlin.dsl.*
 open class GeneralTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
+    cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.ext,
 ) : InitialTasks(project) {
-
-    // Configuration won't necessarily always run, so do it as the first task when it's needed as well
-    val initSubmodules by tasks.registering<InitSubmodules> {
-        offlineMode.set(project.offlineMode())
-    }
-
-    val buildDataInfo: Provider<BuildDataInfo> = project.contents(extension.craftBukkit.buildDataInfo) {
-        gson.fromJson(it)
-    }
 
     val filterVanillaJar by tasks.registering<FilterJar> {
         inputJar.set(extractFromBundler.flatMap { it.serverJar })
         includes.set(extension.vanillaJarIncludes)
     }
 
-    val collectAtsFromPatches by tasks.registering<CollectATsFromPatches> {
-        patchDir.set(extension.paper.spigotServerPatchDir)
-    }
+    val generateMappings by tasks.registering<GenerateMappings> {
+        vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
 
-    val mergePaperAts by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(extension.paper.additionalAts.fileExists(project))
-        secondFile.set(collectAtsFromPatches.flatMap { it.outputFile })
+        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
+
+        outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }
 }

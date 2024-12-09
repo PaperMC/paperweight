@@ -29,10 +29,10 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.mache.*
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.management.ManagementFactory
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.URL
@@ -53,6 +53,7 @@ import kotlin.io.path.*
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
@@ -62,6 +63,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -74,6 +76,8 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
+
+val whitespace = Regex("\\s+")
 
 val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
 
@@ -108,7 +112,9 @@ fun ProjectLayout.maybeInitSubmodules(offline: Boolean, logger: Logger) {
 
 fun ProjectLayout.initSubmodules() {
     Git.checkForGit()
-    Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+    if (Git.checkForGitRepo(projectDirectory.path)) {
+        Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
+    }
 }
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
@@ -192,14 +198,16 @@ class DelegatingOutputStream(vararg delegates: OutputStream) : OutputStream() {
     }
 }
 
-fun Any.convertToPath(): Path {
-    return when (this) {
-        is Path -> this
-        is File -> this.toPath()
-        is FileSystemLocation -> this.path
-        is Provider<*> -> this.get().convertToPath()
-        else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
+fun Path.ensureClean(): Path {
+    try {
+        deleteRecursively()
+    } catch (e: Exception) {
+        println("Failed to delete $this: ${e.javaClass.name}: ${e.message}")
+        e.suppressedExceptions.forEach { println("Suppressed exception: $it") }
+        throw PaperweightException("Failed to delete $this", e)
     }
+    parent.createDirectories()
+    return this
 }
 
 fun Any.convertToFileProvider(layout: ProjectLayout, providers: ProviderFactory): Provider<RegularFile> {
@@ -378,19 +386,6 @@ private fun javaVersion(): Int {
     }
 }
 
-fun checkJavaVersion() {
-    val minimumJava = 11
-    val ver = javaVersion()
-    if (ver < minimumJava) {
-        var msg = "paperweight requires Gradle to be run with a Java $minimumJava runtime or newer."
-        val runtimeMX = ManagementFactory.getRuntimeMXBean()
-        if (runtimeMX != null) {
-            msg += " Current runtime: Java ${runtimeMX.specVersion} (${runtimeMX.vmName} ${runtimeMX.vmVersion})"
-        }
-        throw PaperweightException(msg)
-    }
-}
-
 inline fun <reified P> printId(pluginId: String, gradle: Gradle) {
     if (gradle.startParameter.logLevel == LogLevel.QUIET) {
         return
@@ -419,3 +414,27 @@ fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) 
 }
 
 val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperweight.main-capability", String::class.java)
+
+fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
+    gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readText())
+}
+
+fun isIDEASync(): Boolean =
+    java.lang.Boolean.getBoolean("idea.sync.active")
+
+inline fun <reified T> ObjectFactory.providerSet(
+    vararg providers: Provider<out T>
+): Provider<Set<T>> {
+    if (providers.isEmpty()) {
+        return setProperty()
+    }
+    var current: Provider<Set<T>>? = null
+    for (provider in providers) {
+        if (current == null) {
+            current = provider.map { setOf(it) }
+        } else {
+            current = current.zip(provider) { set, add -> set + add }
+        }
+    }
+    return current!!
+}

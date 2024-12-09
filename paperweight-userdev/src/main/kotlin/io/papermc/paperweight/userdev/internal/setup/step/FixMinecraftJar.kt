@@ -37,10 +37,10 @@ class FixMinecraftJar(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         fixJar(
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher,
+            launcher = context.javaLauncher,
             vanillaJarPath = vanillaServerJar,
             inputJarPath = inputJar,
             outputJarPath = outputJar,

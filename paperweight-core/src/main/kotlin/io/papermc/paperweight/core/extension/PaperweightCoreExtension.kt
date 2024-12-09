@@ -22,11 +22,8 @@
 
 package io.papermc.paperweight.core.extension
 
-import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.util.Locale
 import org.gradle.api.Action
-import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
@@ -34,36 +31,26 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-open class PaperweightCoreExtension(project: Project, objects: ObjectFactory, layout: ProjectLayout) {
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    val workDir: DirectoryProperty = objects.dirWithDefault(layout, "work")
+open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     val minecraftVersion: Property<String> = objects.property()
-    val serverProject: Property<Project> = objects.property()
+    val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
 
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
-    val bundlerJarName: Property<String> = objects.property<String>().convention(project.name.lowercase(Locale.ENGLISH))
+    val bundlerJarName: Property<String> = objects.property<String>().convention("paper")
 
-    val mcDevSourceDir: DirectoryProperty = objects.directoryProperty().convention(serverProject.map { it.layout.cacheDir(MC_DEV_SOURCES_DIR) })
+    val remapRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
+    val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
-    val paramMappingsRepo: Property<String> = objects.property()
-    val decompileRepo: Property<String> = objects.property()
-    val remapRepo: Property<String> = objects.property()
+    val macheOldPath: DirectoryProperty = objects.directoryProperty()
+    val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)
 
     val vanillaJarIncludes: ListProperty<String> = objects.listProperty<String>().convention(
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
     )
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    val craftBukkit = CraftBukkitExtension(objects, workDir)
-    val spigot = SpigotExtension(objects, workDir)
+    val spigot = SpigotExtension(objects)
     val paper = PaperExtension(objects, layout)
-
-    @Suppress("unused")
-    fun craftBukkit(action: Action<in CraftBukkitExtension>) {
-        action.execute(craftBukkit)
-    }
 
     @Suppress("unused")
     fun spigot(action: Action<in SpigotExtension>) {

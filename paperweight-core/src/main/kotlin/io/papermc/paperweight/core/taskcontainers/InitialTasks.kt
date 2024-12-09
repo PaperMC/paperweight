@@ -45,7 +45,7 @@ open class InitialTasks(
 ) {
 
     val downloadMcManifest by tasks.registering<DownloadTask> {
-        url.set(MC_MANIFEST_URL)
+        url.set(project.ext.minecraftManifestUrl)
         outputFile.set(cache.resolve(MC_MANIFEST))
 
         doNotTrackState("The Minecraft manifest is a changing resource")
@@ -54,7 +54,7 @@ open class InitialTasks(
     }
     private val mcManifest = downloadMcManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftManifest>(it) }
 
-    val downloadMcVersionManifest by tasks.registering<DownloadTask> {
+    val downloadMcVersionManifest by tasks.registering<CacheableDownloadTask> {
         url.set(
             mcManifest.zip(extension.minecraftVersion) { manifest, version ->
                 manifest.versions.first { it.id == version }.url
@@ -71,7 +71,7 @@ open class InitialTasks(
     }
     private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftVersionManifest>(it) }
 
-    val downloadMappings by tasks.registering<DownloadTask> {
+    val downloadMappings by tasks.registering<CacheableDownloadTask> {
         url.set(versionManifest.map { version -> version.serverMappingsDownload().url })
         expectedHash.set(versionManifest.map { version -> version.serverMappingsDownload().hash() })
         outputFile.set(cache.resolve(SERVER_MAPPINGS))
@@ -94,5 +94,6 @@ open class InitialTasks(
         serverLibrariesList.set(cache.resolve(SERVER_LIBRARIES_LIST))
         serverVersionsList.set(cache.resolve(SERVER_VERSIONS_LIST))
         serverLibraryJars.set(cache.resolve(MINECRAFT_JARS_PATH))
+        serverJar.set(cache.resolve(SERVER_JAR))
     }
 }

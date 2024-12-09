@@ -108,7 +108,7 @@ abstract class RemapSpigotAt : BaseTask() {
         val mappings = MappingFormats.TINY.read(mapping.path, SPIGOT_NAMESPACE, DEOBF_NAMESPACE)
         val remappedAt = outputAt.remap(mappings)
 
-        AccessTransformFormats.FML.write(outputFile.path, remappedAt)
+        AccessTransformFormats.FML.writeLF(outputFile.path, remappedAt)
     }
 
     private fun parseAccess(text: String): AccessTransform {

@@ -36,7 +36,7 @@ class FilterVanillaJar(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         filterJar(vanillaJar, outputJar, includes)
     }
 }
