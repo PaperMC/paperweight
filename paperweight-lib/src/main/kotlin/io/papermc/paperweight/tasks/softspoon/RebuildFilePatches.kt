@@ -214,7 +214,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
             .level(if (verbose.get()) LogLevel.ALL else LogLevel.INFO)
             .lineEnding("\n")
             .ignorePrefix(".git")
-            .ignorePrefix("data/minecraft/structures")
+            .ignorePrefix("data/minecraft/structure")
             .ignorePrefix("data/.mc")
             .ignorePrefix("assets/.mc")
             .context(contextLines.get())
