@@ -134,17 +134,13 @@ abstract class SetupVanilla : JavaLauncherTask() {
             .forEach {
                 val target = outputPath.resolve(it.toString().substring(1))
                 target.parent.createDirectories()
-                if (it.toString().endsWith(".nbt")) {
-                    // nbt files are binary, so we can just copy them
-                    it.copyTo(target)
-                } else {
-                    // for text files we make sure we have a trailing newline
-                    var content = it.readText()
-                    if (!content.endsWith("\n")) {
-                        content += "\n"
-                    }
-                    target.writeText(content)
+
+                var content = it.readText()
+                // make sure we have a newline at the end of the file
+                if (!content.endsWith("\n")) {
+                    content += "\n"
                 }
+                target.writeText(content)
             }
 
         println("Setup git repo...")
