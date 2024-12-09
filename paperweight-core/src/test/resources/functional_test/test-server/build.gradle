@@ -23,7 +23,7 @@ dependencies {
         // this could be resolved by creating a fake maven repo that holds proper module metadata
         implementation 'com.github.oshi:oshi-core:6.6.5'
     } else {
-        mache 'io.papermc:mache:1.21.4+build.3'
+        mache 'io.papermc:mache:1.21.4+build.4'
     }
 }
 
