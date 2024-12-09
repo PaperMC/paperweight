@@ -45,7 +45,7 @@ class PaperweightCore : Plugin<Project> {
     }
 
     override fun apply(target: Project) {
-        Git.checkForGit()
+        Git.checkForGit(target.providers)
         printId<PaperweightCore>("paperweight-core", target.gradle)
 
         val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class)

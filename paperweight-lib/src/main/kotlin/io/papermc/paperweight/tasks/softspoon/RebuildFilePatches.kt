@@ -104,24 +104,28 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
         git("stash", "push").executeSilently(silenceErr = true)
         git("checkout", "file").executeSilently(silenceErr = true)
 
-        val queue = worker.processIsolation {
-            forkOptions {
-                maxHeapSize = "2G"
-                executable(launcher.get().executablePath.path.absolutePathString())
-                classpath.from(restamp)
+        val filesWithNewAts = if (!restamp.isEmpty) {
+            val queue = worker.processIsolation {
+                forkOptions {
+                    maxHeapSize = "2G"
+                    executable(launcher.get().executablePath.path.absolutePathString())
+                    classpath.from(restamp)
+                }
             }
+            val filesWithNewAtsPath = temporaryDir.toPath().resolve("filesWithNewAts.txt")
+            queue.submit(RebuildFilePatchesRestampWorker::class) {
+                this.baseDir.set(baseDir)
+                this.inputDir.set(inputDir)
+                this.atFile.set(this@RebuildFilePatches.atFile.orNull)
+                this.atFileOut.set(this@RebuildFilePatches.atFileOut.orNull)
+                this.minecraftClasspath.from(this@RebuildFilePatches.minecraftClasspath)
+                this.filesWithNewAts.set(filesWithNewAtsPath)
+            }
+            queue.await()
+            filesWithNewAtsPath.readLines()
+        } else {
+            emptyList()
         }
-        val filesWithNewAtsPath = temporaryDir.toPath().resolve("filesWithNewAts.txt")
-        queue.submit(RebuildFilePatchesRestampWorker::class) {
-            this.baseDir.set(baseDir)
-            this.inputDir.set(inputDir)
-            this.atFile.set(this@RebuildFilePatches.atFile.orNull)
-            this.atFileOut.set(this@RebuildFilePatches.atFileOut.orNull)
-            this.minecraftClasspath.from(this@RebuildFilePatches.minecraftClasspath)
-            this.filesWithNewAts.set(filesWithNewAtsPath)
-        }
-        queue.await()
-        val filesWithNewAts = filesWithNewAtsPath.readLines()
 
         if (filesWithNewAts.isNotEmpty()) {
             git("status").executeOut()

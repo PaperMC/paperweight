@@ -53,8 +53,6 @@ class DevBundleTasks(
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "paperweight"
 
-        macheConfig.set(project.configurations.named(MACHE_CONFIG))
-        pluginRemapperConfig.set(project.configurations.named(REMAPPER_CONFIG))
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
 
         ignoreUnsupportedEnvironment.set(project.providers.gradleProperty(GenerateDevBundle.unsupportedEnvironmentPropName).map { it.toBoolean() })
@@ -104,6 +102,8 @@ class DevBundleTasks(
         generateDevelopmentBundle {
             pluginRemapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
             macheUrl.set(project.repositories.named<MavenArtifactRepository>(MACHE_REPO_NAME).map { it.url.toString() })
+            macheDep.set(determineArtifactCoordinates(project.configurations.getByName(MACHE_CONFIG)).single())
+            pluginRemapperDep.set(determineArtifactCoordinates(project.configurations.getByName(REMAPPER_CONFIG)))
         }
     }
 }

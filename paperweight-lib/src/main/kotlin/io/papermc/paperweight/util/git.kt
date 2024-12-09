@@ -46,8 +46,26 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
 
     fun withEnv(env: Map<String, String>): Git = Git(repo, env)
 
+    private fun cmd(args: Array<out String>) =
+        arrayOf("git", "-c", "commit.gpgsign=false", "-c", "core.safecrlf=false", *args)
+
+    fun exec(providers: ProviderFactory, vararg args: String): Provider<String> {
+        val cmd = cmd(args)
+        val exec = providers.exec {
+            workingDir = repo.toFile()
+            commandLine = cmd.toMutableList()
+            environment.putAll(env)
+        }
+        return exec.standardOutput.asText.zip(exec.result) { output, result ->
+            if (result.exitValue != 0) {
+                throw PaperweightException("Failed to execute command: '${cmd.joinToString(separator = " ")}'; Exit code ${result.exitValue}")
+            }
+            return@zip output
+        }
+    }
+
     operator fun invoke(vararg args: String): Command {
-        val cmd = arrayOf("git", "-c", "commit.gpgsign=false", "-c", "core.safecrlf=false", *args)
+        val cmd = cmd(args)
         return try {
             val builder = ProcessBuilder(*cmd).directory(repo)
             builder.environment().putAll(env)
@@ -91,6 +109,15 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
             }
         }
 
+        fun checkForGit(providers: ProviderFactory) {
+            val result = providers.exec {
+                commandLine("git", "--version")
+            }.result.get()
+            if (result.exitValue != 0) {
+                missingGit()
+            }
+        }
+
         fun checkForGit() {
             try {
                 val proc = ProcessBuilder("git", "--version").redirectErrorStream(true).start()
@@ -98,8 +125,12 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
                 if (proc.waitFor() == 0) {
                     return
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
+            missingGit()
+        }
 
+        private fun missingGit(): Nothing {
             throw PaperweightException("You must have git installed and available on your PATH in order to use paperweight.")
         }
 

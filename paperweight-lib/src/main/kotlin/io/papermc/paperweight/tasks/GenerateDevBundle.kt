@@ -34,13 +34,11 @@ import java.util.regex.Pattern
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -71,14 +69,14 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:Input
     abstract val pluginRemapperUrl: Property<String>
 
-    @get:Classpath
-    abstract val pluginRemapperConfig: Property<Configuration>
+    @get:Input
+    abstract val pluginRemapperDep: ListProperty<String>
 
     @get:Input
     abstract val macheUrl: Property<String>
 
-    @get:Classpath
-    abstract val macheConfig: Property<Configuration>
+    @get:Input
+    abstract val macheDep: Property<String>
 
     @get:InputFile
     abstract val reobfMappingsFile: RegularFileProperty
@@ -234,10 +232,10 @@ abstract class GenerateDevBundle : DefaultTask() {
     }
 
     private fun createRemapDep(): MavenDep =
-        determineMavenDep(pluginRemapperUrl, pluginRemapperConfig)
+        pluginRemapperUrl.zip(pluginRemapperDep) { url, dep -> MavenDep(url, dep) }.get()
 
     private fun createMacheDep(): MavenDep =
-        determineMavenDep(macheUrl, macheConfig)
+        macheUrl.zip(macheDep) { url, dep -> MavenDep(url, listOf(dep)) }.get()
 
     data class DevBundleConfig(
         val minecraftVersion: String,
