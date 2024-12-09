@@ -23,6 +23,7 @@
 package io.papermc.paperweight.tasks.softspoon
 
 import io.papermc.paperweight.restamp.ApplySourceATWorker
+import io.papermc.paperweight.restamp.setSnappyTempDir
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import javax.inject.Inject
@@ -65,6 +66,7 @@ abstract class ApplySourceAT : JavaLauncherTask() {
             forkOptions {
                 maxHeapSize = "2G"
                 executable(launcher.get().executablePath.path.absolutePathString())
+                setSnappyTempDir(temporaryDir)
             }
         }
 

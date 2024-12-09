@@ -26,6 +26,7 @@ import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.restamp.SetupVanillaRestampWorker
+import io.papermc.paperweight.restamp.setSnappyTempDir
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
@@ -186,6 +187,7 @@ abstract class SetupVanilla : JavaLauncherTask() {
                     maxHeapSize = "2G"
                     executable(launcher.get().executablePath.path.absolutePathString())
                     classpath.from(restamp)
+                    setSnappyTempDir(temporaryDir)
                 }
             }
             queue.submit(SetupVanillaRestampWorker::class) {

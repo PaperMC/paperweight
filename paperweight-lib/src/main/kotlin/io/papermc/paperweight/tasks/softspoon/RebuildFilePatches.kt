@@ -26,6 +26,7 @@ import codechicken.diffpatch.cli.DiffOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.LoggingOutputStream
 import io.papermc.paperweight.restamp.RebuildFilePatchesRestampWorker
+import io.papermc.paperweight.restamp.setSnappyTempDir
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
@@ -110,6 +111,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
                     maxHeapSize = "2G"
                     executable(launcher.get().executablePath.path.absolutePathString())
                     classpath.from(restamp)
+                    setSnappyTempDir(temporaryDir)
                 }
             }
             val filesWithNewAtsPath = temporaryDir.toPath().resolve("filesWithNewAts.txt")

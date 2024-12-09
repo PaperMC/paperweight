@@ -23,6 +23,7 @@
 package io.papermc.paperweight.restamp
 
 import java.io.BufferedWriter
+import java.io.File
 import java.io.StringWriter
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -31,6 +32,11 @@ import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
+import org.gradle.process.JavaForkOptions
+
+fun JavaForkOptions.setSnappyTempDir(dir: File) {
+    systemProperties["org.xerial.snappy.tempdir"] = dir.absolutePath
+}
 
 fun atFromString(input: String): AccessTransform {
     var last = input.length - 1
