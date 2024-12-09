@@ -29,11 +29,10 @@ import io.papermc.paperweight.tasks.mache.macheDecompileJar
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.ensureClean
 import java.nio.file.Path
-import kotlin.io.path.*
-import org.gradle.api.artifacts.Configuration
+import kotlin.io.path.name
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 
 class MinecraftSourcesMache(
@@ -42,14 +41,14 @@ class MinecraftSourcesMache(
     private val cache: Path,
     private val minecraftLibraryJars: () -> List<Path>,
     @Input private val decompileArgs: List<String>,
-    private val decompiler: Configuration,
-    private val mache: Configuration,
+    private val decompiler: FileCollection,
+    private val mache: FileCollection,
 ) : SetupStep {
     override val name: String = "decompile and setup sources with mache"
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         // Decompile
         val tempOut = outputJar.resolveSibling("${outputJar.name}.tmp")
         macheDecompileJar(
@@ -57,7 +56,7 @@ class MinecraftSourcesMache(
             minecraftLibraryJars(),
             decompileArgs,
             inputJar,
-            context.defaultJavaLauncher,
+            context.javaLauncher,
             decompiler,
             cache,
         )
@@ -65,7 +64,7 @@ class MinecraftSourcesMache(
         // Apply mache patches
         outputJar.ensureClean()
         val result = PatchOperation.builder()
-            .logTo(LoggingOutputStream(context.project.logger, LogLevel.LIFECYCLE))
+            .logTo(LoggingOutputStream(context.logger, LogLevel.LIFECYCLE))
             .basePath(tempOut, ArchiveFormat.ZIP)
             .outputPath(outputJar, ArchiveFormat.ZIP)
             .patchesPath(mache.singleFile.toPath(), ArchiveFormat.ZIP)
@@ -89,7 +88,7 @@ class MinecraftSourcesMache(
 
     companion object {
         fun create(
-            context: SetupHandler.Context,
+            context: SetupHandler.ExecutionContext,
             inputJar: Path,
             outputJar: Path,
             cache: Path,
@@ -97,8 +96,8 @@ class MinecraftSourcesMache(
             decompileArgs: List<String>,
         ): MinecraftSourcesMache {
             // resolve dependencies
-            val decompiler = context.project.configurations.getByName(MACHE_DECOMPILER_CONFIG).also { it.resolve() }
-            val mache = context.project.configurations.getByName(MACHE_CONFIG).also { it.resolve() }
+            val decompiler = context.macheDecompilerConfig.also { it.files.size }
+            val mache = context.macheConfig.also { it.files.size }
             return MinecraftSourcesMache(inputJar, outputJar, cache, minecraftLibraryJars, decompileArgs, decompiler, mache)
         }
     }

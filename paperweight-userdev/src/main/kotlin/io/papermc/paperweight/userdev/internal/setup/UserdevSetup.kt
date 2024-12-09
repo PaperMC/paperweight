@@ -30,16 +30,16 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
-import org.gradle.kotlin.dsl.*
+import org.gradle.tooling.events.FinishEvent
+import org.gradle.tooling.events.OperationCompletionListener
 
-abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandler {
+abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandler, AutoCloseable, OperationCompletionListener {
 
     companion object {
         val LOGGER: Logger = Logging.getLogger(UserdevSetup::class.java)
@@ -68,41 +68,31 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     private fun createSetup(): SetupHandler =
         SetupHandler.create(parameters, extractDevBundle)
 
-    fun addIvyRepository(project: Project) {
-        project.repositories {
-            setupIvyRepository(parameters.cache.path.resolve(IVY_REPOSITORY)) {
-                configureIvyRepo(this)
-            }
-        }
+    override fun onFinish(event: FinishEvent?) {
+        // no-op, a workaround to keep the service alive for the entire build
+        // see https://github.com/diffplug/spotless/pull/720#issuecomment-713399731
+    }
+
+    override fun close() {
+        // see comments in onFinish
     }
 
     // begin delegate to setup
-    override fun createOrUpdateIvyRepository(context: SetupHandler.Context) {
-        setup.createOrUpdateIvyRepository(context)
-    }
-
-    override fun configureIvyRepo(repo: IvyArtifactRepository) {
-        setup.configureIvyRepo(repo)
-    }
-
-    override fun populateCompileConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
+    override fun populateCompileConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
         setup.populateCompileConfiguration(context, dependencySet)
     }
 
-    override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
+    override fun populateRuntimeConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
         setup.populateRuntimeConfiguration(context, dependencySet)
     }
 
-    override fun serverJar(context: SetupHandler.Context): Path {
-        return setup.serverJar(context)
+    override fun combinedOrClassesJar(context: SetupHandler.ExecutionContext): Path {
+        return setup.combinedOrClassesJar(context)
     }
 
-    override fun afterEvaluate(context: SetupHandler.Context) {
-        setup.afterEvaluate(context)
+    override fun afterEvaluate(project: Project) {
+        setup.afterEvaluate(project)
     }
-
-    override val serverJar: Path
-        get() = setup.serverJar
 
     override val reobfMappings: Path
         get() = setup.reobfMappings

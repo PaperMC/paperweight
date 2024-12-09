@@ -27,14 +27,16 @@ import io.papermc.paperweight.userdev.internal.setup.ExtractedBundle
 import io.papermc.paperweight.userdev.internal.setup.RunPaperclip
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
 import io.papermc.paperweight.userdev.internal.setup.step.*
 import io.papermc.paperweight.userdev.internal.setup.util.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImplV2(
     private val parameters: UserdevSetup.Parameters,
@@ -61,7 +63,7 @@ class SetupHandlerImplV2(
 
     private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.listDirectoryEntries("*.jar")
 
-    private fun generateSources(context: SetupHandler.Context) {
+    private fun generateSources(context: SetupHandler.ExecutionContext) {
         vanillaSteps.downloadVanillaServerJar()
 
         val downloadMcLibs = object : SetupStep {
@@ -69,7 +71,7 @@ class SetupHandlerImplV2(
 
             override val hashFile: Path = cache.resolve(paperSetupOutput("minecraftLibraries", "hashes"))
 
-            override fun run(context: SetupHandler.Context) {
+            override fun run(context: SetupHandler.ExecutionContext) {
                 downloadLibraries(
                     download = parameters.downloadService,
                     workerExecutor = context.workerExecutor,
@@ -166,7 +168,7 @@ class SetupHandlerImplV2(
     // PaperweightUserExtension, possibly by a task running in a separate
     // thread to dependency resolution.
     @Synchronized
-    private fun applyMojangMappedPaperclipPatch(context: SetupHandler.Context) {
+    private fun applyMojangMappedPaperclipPatch(context: SetupHandler.ExecutionContext) {
         if (setupCompleted) {
             return
         }
@@ -187,58 +189,47 @@ class SetupHandlerImplV2(
 
     private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
 
+    override fun populateCompileConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
+        dependencySet.add(context.dependencyFactory.create(context.layout.files(context.setupTask.flatMap { it.mappedServerJar })))
+        listOfNotNull(
+            bundle.config.apiCoordinates,
+            bundle.config.mojangApiCoordinates
+        ).forEach { coordinate ->
+            dependencySet.add(context.dependencyFactory.create(coordinate))
+        }
+        for (coordinates in bundle.config.buildData.libraryDependencies) {
+            dependencySet.add(context.dependencyFactory.create(coordinates))
+        }
+    }
+
+    override fun populateRuntimeConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
+        dependencySet.add(context.dependencyFactory.create(context.layout.files(context.setupTask.flatMap { it.legacyPaperclipResult })))
+    }
+
     private var setupCompleted = false
 
     @Synchronized
-    override fun createOrUpdateIvyRepository(context: SetupHandler.Context) {
+    override fun combinedOrClassesJar(context: SetupHandler.ExecutionContext): Path {
         if (setupCompleted) {
-            return
+            return filteredMojangMappedPaperJar
         }
 
         lockSetup(cache) {
-            createOrUpdateIvyRepositoryDirect(context)
+            generateSources(context)
         }
-    }
-
-    private fun createOrUpdateIvyRepositoryDirect(context: SetupHandler.Context) {
-        generateSources(context)
-
-        val deps = bundle.config.buildData.libraryDependencies.toList() +
-            bundle.config.apiCoordinates +
-            bundle.config.mojangApiCoordinates
-        installPaperServer(
-            cache,
-            bundle.config.mappedServerCoordinates,
-            deps,
-            filteredMojangMappedPaperJar,
-            patchedSourcesJar,
-            minecraftVersion,
-        )
 
         setupCompleted = true
+
+        return filteredMojangMappedPaperJar
     }
 
-    override fun configureIvyRepo(repo: IvyArtifactRepository) {
-        repo.content {
-            includeFromDependencyNotation(bundle.config.mappedServerCoordinates)
+    override fun afterEvaluate(project: Project) {
+        super.afterEvaluate(project)
+        project.tasks.withType(UserdevSetupTask::class).configureEach {
+            mappedServerJar.set(filteredMojangMappedPaperJar)
+            legacyPaperclipResult.set(mojangMappedPaperJar)
         }
     }
-
-    override fun populateCompileConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        dependencySet.add(context.project.dependencies.create(bundle.config.mappedServerCoordinates))
-    }
-
-    override fun populateRuntimeConfiguration(context: SetupHandler.Context, dependencySet: DependencySet) {
-        dependencySet.add(context.project.dependencies.create(context.project.files(serverJar(context))))
-    }
-
-    override fun serverJar(context: SetupHandler.Context): Path {
-        applyMojangMappedPaperclipPatch(context)
-        return mojangMappedPaperJar
-    }
-
-    override val serverJar: Path
-        get() = mojangMappedPaperJar
 
     override val reobfMappings: Path
         get() = bundle.dir.resolve(bundle.config.buildData.reobfMappingsFile)

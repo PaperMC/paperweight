@@ -31,7 +31,11 @@ import io.papermc.paperweight.userdev.attribute.Obfuscation
 import io.papermc.paperweight.userdev.internal.JunitExclusionRule
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
-import io.papermc.paperweight.userdev.internal.setup.util.*
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
+import io.papermc.paperweight.userdev.internal.setup.util.cleanSharedCaches
+import io.papermc.paperweight.userdev.internal.setup.util.genSources
+import io.papermc.paperweight.userdev.internal.setup.util.paperweightHash
+import io.papermc.paperweight.userdev.internal.setup.util.sharedCaches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -49,10 +53,12 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.build.event.BuildEventsListenerRegistry
+import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
@@ -68,6 +74,9 @@ abstract class PaperweightUser : Plugin<Project> {
 
     @get:Inject
     abstract val dependencyFactory: DependencyFactory
+
+    @get:Inject
+    abstract val buildEventsListenerRegistry: BuildEventsListenerRegistry
 
     override fun apply(target: Project) {
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
@@ -92,17 +101,18 @@ abstract class PaperweightUser : Plugin<Project> {
             attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
         }
 
+        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {}
+
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
-        val userdevSetup by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
+        val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
+        val userdevSetup by lazy { userdevSetupProvider.get() }
 
         val userdev = target.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserExtension::class,
-            target,
-            workerExecutor,
-            javaToolchainService,
             target.provider { userdevSetup },
-            target.objects
+            target.objects,
+            target,
         )
 
         target.dependencies.extensions.create(
@@ -111,14 +121,14 @@ abstract class PaperweightUser : Plugin<Project> {
             target.dependencies
         )
 
-        createConfigurations(target, target.provider { userdevSetup })
+        createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
         val reobfJar by target.tasks.registering<RemapJar> {
             group = "paperweight"
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
             mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })
-            remapClasspath.from(target.provider { userdevSetup.serverJar })
+            remapClasspath.from(setupTask.flatMap { it.mappedServerJar })
 
             fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
@@ -154,6 +164,13 @@ abstract class PaperweightUser : Plugin<Project> {
                 return@afterEvaluate
             }
 
+            if (isIDEASync()) {
+                val startParameter = gradle.startParameter
+                val taskRequests = startParameter.taskRequests.toMutableList()
+                taskRequests.add(DefaultTaskExecutionRequest(listOf(setupTask.name)))
+                startParameter.setTaskRequests(taskRequests)
+            }
+
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
 
@@ -174,7 +191,12 @@ abstract class PaperweightUser : Plugin<Project> {
 
             configureRepositories(userdevSetup)
 
-            userdevSetup.afterEvaluate(createContext(this))
+            setupTask.configure { setupService.set(userdevSetupProvider) }
+            userdevSetup.afterEvaluate(this)
+
+            userdev.addServerDependencyTo.get().forEach {
+                it.extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+            }
 
             cleanSharedCaches(this, sharedCacheRoot)
         }
@@ -224,8 +246,6 @@ abstract class PaperweightUser : Plugin<Project> {
         for (repo in userdevSetup.libraryRepositories) {
             maven(repo)
         }
-
-        userdevSetup.addIvyRepository(project)
     }
 
     private fun Project.checkForDevBundle() {
@@ -247,7 +267,8 @@ abstract class PaperweightUser : Plugin<Project> {
         supplier: () -> MavenDep?
     ) {
         defaultDependencies {
-            for (dep in supplier()?.coordinates ?: emptyList()) {
+            val deps = supplier()?.coordinates ?: emptyList()
+            for (dep in deps) {
                 val dependency = dependencyFactory.create(dep)
                 dependency.isTransitive = transitive(dep)
                 add(dependency)
@@ -257,7 +278,8 @@ abstract class PaperweightUser : Plugin<Project> {
 
     private fun createConfigurations(
         target: Project,
-        userdevSetup: Provider<UserdevSetup>
+        userdevSetup: Provider<UserdevSetup>,
+        setupTask: TaskProvider<UserdevSetupTask>,
     ) {
         target.configurations.register(MACHE_CONFIG) {
             dependenciesFrom { userdevSetup.get().mache }
@@ -281,35 +303,25 @@ abstract class PaperweightUser : Plugin<Project> {
         makeRemapperConfig(REMAPPER_CONFIG)
         makeRemapperConfig(PLUGIN_REMAPPER_CONFIG)
 
-        val mojangMappedServerConfig = target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
+        target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {
-                val ctx = createContext(target)
-                userdevSetup.get().let { setup ->
-                    setup.createOrUpdateIvyRepository(ctx)
-                    setup.populateCompileConfiguration(ctx, this)
-                }
+                userdevSetup.get()
+                    .populateCompileConfiguration(createContext(target, setupTask), this)
             }
         }
 
-        target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG)
-
-        target.plugins.withType<JavaPlugin>().configureEach {
-            listOf(
-                JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME,
-                JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME,
-                MOJANG_MAPPED_SERVER_RUNTIME_CONFIG
-            ).map(target.configurations::named).forEach { config ->
-                config {
-                    extendsFrom(mojangMappedServerConfig.get())
-                }
+        target.configurations.register(MOJANG_MAPPED_SERVER_RUNTIME_CONFIG) {
+            defaultDependencies {
+                userdevSetup.get()
+                    .populateRuntimeConfiguration(createContext(target, setupTask), this)
             }
         }
     }
 
-    private fun createContext(project: Project): SetupHandler.Context =
-        SetupHandler.Context(project, workerExecutor, javaToolchainService)
+    private fun createContext(project: Project, setupTask: TaskProvider<UserdevSetupTask>): SetupHandler.ConfigurationContext =
+        SetupHandler.ConfigurationContext(project, dependencyFactory, setupTask)
 
-    private fun createSetup(target: Project, sharedCacheRoot: Path): UserdevSetup {
+    private fun createSetup(target: Project, sharedCacheRoot: Path): Provider<UserdevSetup> {
         val bundleConfig = target.configurations.named(DEV_BUNDLE_CONFIG)
         val devBundleZip = bundleConfig.map { it.singleFile }.convertToPath()
         val bundleHash = devBundleZip.sha256asHex()
@@ -331,8 +343,9 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val serviceName = "paperweight-userdev:setupService:$bundleHash"
-        return target.gradle.sharedServices
+        val ret = target.gradle.sharedServices
             .registerIfAbsent(serviceName, UserdevSetup::class) {
+                maxParallelUsages = 1
                 parameters {
                     cache.set(cacheDir)
                     bundleZip.set(devBundleZip)
@@ -341,6 +354,7 @@ abstract class PaperweightUser : Plugin<Project> {
                     genSources.set(target.genSources)
                 }
             }
-            .get()
+        buildEventsListenerRegistry.onTaskCompletion(ret)
+        return ret
     }
 }

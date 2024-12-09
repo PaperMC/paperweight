@@ -29,29 +29,31 @@ import io.papermc.paperweight.userdev.internal.setup.v2.SetupHandlerImplV2
 import io.papermc.paperweight.userdev.internal.setup.v5.DevBundleV5
 import io.papermc.paperweight.userdev.internal.setup.v5.SetupHandlerImplV5
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.dsl.DependencyFactory
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.logging.Logger
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.toolchain.JavaLauncher
-import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
-    fun createOrUpdateIvyRepository(context: Context)
+    fun populateCompileConfiguration(context: ConfigurationContext, dependencySet: DependencySet)
 
-    fun configureIvyRepo(repo: IvyArtifactRepository)
+    fun populateRuntimeConfiguration(context: ConfigurationContext, dependencySet: DependencySet)
 
-    fun populateCompileConfiguration(context: Context, dependencySet: DependencySet)
+    fun combinedOrClassesJar(context: ExecutionContext): Path
 
-    fun populateRuntimeConfiguration(context: Context, dependencySet: DependencySet)
-
-    fun serverJar(context: Context): Path
-
-    fun afterEvaluate(context: Context) {
+    fun afterEvaluate(project: Project) {
+        project.tasks.withType(UserdevSetupTask::class).configureEach {
+            devBundleCoordinates.set(determineArtifactCoordinates(project.configurations.getByName(DEV_BUNDLE_CONFIG)).single())
+        }
     }
-
-    val serverJar: Path
 
     val reobfMappings: Path
 
@@ -69,14 +71,41 @@ interface SetupHandler {
 
     val libraryRepositories: List<String>
 
-    data class Context(
+    data class ConfigurationContext(
         val project: Project,
-        val workerExecutor: WorkerExecutor,
-        val javaToolchainService: JavaToolchainService
+        val dependencyFactory: DependencyFactory,
+        val devBundleCoordinates: String,
+        val setupTask: TaskProvider<UserdevSetupTask>,
+        val layout: ProjectLayout = project.layout,
     ) {
-        val defaultJavaLauncher: JavaLauncher
-            get() = javaToolchainService.defaultJavaLauncher(project).get()
+        constructor(
+            project: Project,
+            dependencyFactory: DependencyFactory,
+            setupTask: TaskProvider<UserdevSetupTask>
+        ) : this(
+            project,
+            dependencyFactory,
+            determineArtifactCoordinates(project.configurations.getByName(DEV_BUNDLE_CONFIG)).single(),
+            setupTask,
+        )
     }
+
+    data class ExecutionContext(
+        val workerExecutor: WorkerExecutor,
+        val javaLauncher: JavaLauncher,
+        val layout: ProjectLayout,
+        val logger: Logger,
+
+        val decompilerConfig: FileCollection,
+        val paramMappingsConfig: FileCollection,
+        val macheDecompilerConfig: FileCollection,
+        val macheConfig: FileCollection,
+        val remapperConfig: FileCollection,
+        val macheRemapperConfig: FileCollection,
+        val macheParamMappingsConfig: FileCollection,
+        val macheConstantsConfig: FileCollection,
+        val macheCodebookConfig: FileCollection,
+    )
 
     companion object {
         @Suppress("unchecked_cast")

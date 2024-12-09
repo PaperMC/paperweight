@@ -42,13 +42,14 @@ class ApplyDevBundlePatches(
     @Input private val decompiledJar: Path,
     private val devBundlePatches: Path,
     @Output private val outputJar: Path,
-    @Input private val resourcesJar: Path? = null,
+    @Input private val patchedJar: Path? = null,
 ) : SetupStep {
-    override val name: String = "apply patches to decompiled jar"
+    override val name: String
+        get() = if (patchedJar == null) "apply patches to decompiled jar" else "apply source patches and merge jars"
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         val tempPatchDir = findOutputDir(outputJar)
         val outputDir = findOutputDir(outputJar)
         val log = outputJar.siblingLogFile()
@@ -90,20 +91,19 @@ class ApplyDevBundlePatches(
             ensureDeleted(outputJar)
             zip(outputDir, outputJar)
 
-            // Bring in resources
-            resourcesJar?.let { jarWithResources ->
+            // Merge classes and resources in
+            patchedJar?.let { patched ->
                 outputJar.openZip().use { fs ->
                     val out = fs.getPath("/")
-                    jarWithResources.openZip().use { resources ->
-                        val vanilla = resources.getPath("/")
+                    patched.openZip().use { patchedFs ->
+                        val patchedRoot = patchedFs.getPath("/")
 
-                        vanilla.walk()
+                        patchedRoot.walk()
                             .filter { it.isRegularFile() }
-                            .filterNot { it.name.endsWith(".class") }
-                            .forEach { resourceFile ->
-                                val copyTo = out.resolve(resourceFile.relativeTo(vanilla).invariantSeparatorsPathString)
+                            .forEach { file ->
+                                val copyTo = out.resolve(file.relativeTo(patchedRoot).invariantSeparatorsPathString)
                                 copyTo.createParentDirectories()
-                                resourceFile.copyTo(copyTo)
+                                file.copyTo(copyTo)
                             }
                     }
                 }

@@ -63,6 +63,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -416,4 +417,24 @@ val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperw
 
 fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
     gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readText())
+}
+
+fun isIDEASync(): Boolean =
+    java.lang.Boolean.getBoolean("idea.sync.active")
+
+inline fun <reified T> ObjectFactory.providerSet(
+    vararg providers: Provider<out T>
+): Provider<Set<T>> {
+    if (providers.isEmpty()) {
+        return setProperty()
+    }
+    var current: Provider<Set<T>>? = null
+    for (provider in providers) {
+        if (current == null) {
+            current = provider.map { setOf(it) }
+        } else {
+            current = current.zip(provider) { set, add -> set + add }
+        }
+    }
+    return current!!
 }

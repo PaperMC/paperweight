@@ -26,8 +26,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 
 class GenerateMappingsStep(
@@ -41,7 +39,7 @@ class GenerateMappingsStep(
 
     override val hashFile: Path = outputMappings.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         generateMappings(
             vanillaJarPath = filteredVanillaJar,
             libraryPaths = minecraftLibraryJars(),
@@ -49,7 +47,7 @@ class GenerateMappingsStep(
             paramMappingsPath = paramMappings,
             outputMappingsPath = outputMappings,
             workerExecutor = context.workerExecutor,
-            launcher = context.defaultJavaLauncher
+            launcher = context.javaLauncher
         ).await()
     }
 
@@ -60,7 +58,7 @@ class GenerateMappingsStep(
 
     companion object {
         fun create(
-            context: SetupHandler.Context,
+            context: SetupHandler.ExecutionContext,
             vanillaSteps: VanillaSteps,
             filteredVanillaJar: Path,
             minecraftLibraryJars: () -> List<Path>,
@@ -69,7 +67,7 @@ class GenerateMappingsStep(
             vanillaSteps.downloadServerMappings()
 
             // resolve param mappings
-            val paramMappings = context.project.configurations.named(PARAM_MAPPINGS_CONFIG).map { it.singleFile }.convertToPath()
+            val paramMappings = context.paramMappingsConfig.singleFile.toPath()
 
             return GenerateMappingsStep(vanillaSteps, filteredVanillaJar, paramMappings, minecraftLibraryJars, outputMappings)
         }

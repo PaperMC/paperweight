@@ -22,27 +22,37 @@
 
 package io.papermc.paperweight.userdev.internal.setup.step
 
-import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.ServerBundler
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
+import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
+import io.papermc.paperweight.util.constants.paperSetupOutput
 import java.nio.file.Path
 
-class AccessTransformMinecraft(
-    @Input private val at: Path,
-    @Input private val inputJar: Path,
-    @Output private val outputJar: Path,
+class ExtractFromBundlerStep(
+    cache: Path,
+    private val vanillaSteps: VanillaSteps,
+    private val vanillaServerJar: Path,
+    private val minecraftLibraryJars: Path,
+    private val listMinecraftLibraryJars: () -> List<Path>,
 ) : SetupStep {
-    override val name: String = "access transform minecraft server jar"
+    override val name: String = "extract libraries and server from downloaded jar"
 
-    override val hashFile: Path = outputJar.siblingHashesFile()
+    override val hashFile: Path = cache.resolve(paperSetupOutput("extractFromServerBundler", "hashes"))
 
     override fun run(context: SetupHandler.ExecutionContext) {
-        applyAccessTransform(
-            inputJarPath = inputJar,
-            outputJarPath = outputJar,
-            atFilePath = at,
-            workerExecutor = context.workerExecutor,
-            launcher = context.javaLauncher
-        ).await()
+        ServerBundler.extractFromBundler(
+            vanillaSteps.mojangJar,
+            vanillaServerJar,
+            minecraftLibraryJars,
+            null,
+            null,
+            null,
+            null,
+        )
+    }
+
+    override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
+        builder.include(vanillaSteps.mojangJar, vanillaServerJar)
+        builder.include(listMinecraftLibraryJars())
     }
 }

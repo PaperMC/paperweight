@@ -26,11 +26,10 @@ import io.papermc.paperweight.tasks.mache.macheRemapJar
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.deleteRecursive
 import java.nio.file.Path
-import kotlin.io.path.*
-import org.gradle.api.artifacts.Configuration
+import kotlin.io.path.createTempDirectory
+import org.gradle.api.file.FileCollection
 
 class RemapMinecraftMache(
     @Input private val minecraftRemapArgs: List<String>,
@@ -39,8 +38,8 @@ class RemapMinecraftMache(
     @Input private val mappings: Path,
     @Input private val paramMappings: Path,
     @Input private val constants: Path?,
-    private val codebook: Configuration,
-    private val remapper: Configuration,
+    private val codebook: FileCollection,
+    private val remapper: FileCollection,
     @Output private val outputJar: Path,
     private val cache: Path,
 ) : SetupStep {
@@ -48,10 +47,10 @@ class RemapMinecraftMache(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         val temp = createTempDirectory(cache, "remap")
         macheRemapJar(
-            context.defaultJavaLauncher,
+            context.javaLauncher,
             codebook,
             outputJar,
             minecraftRemapArgs,
@@ -75,7 +74,7 @@ class RemapMinecraftMache(
 
     companion object {
         fun create(
-            context: SetupHandler.Context,
+            context: SetupHandler.ExecutionContext,
             minecraftRemapArgs: List<String>,
             vanillaJar: Path,
             minecraftLibraryJars: () -> List<Path>,
@@ -84,10 +83,10 @@ class RemapMinecraftMache(
             cache: Path,
         ): RemapMinecraftMache {
             // resolve dependencies
-            val remapper = context.project.configurations.getByName(MACHE_REMAPPER_CONFIG).also { it.resolve() }
-            val paramMappings = context.project.configurations.getByName(MACHE_PARAM_MAPPINGS_CONFIG).singleFile.toPath()
-            val constants = context.project.configurations.getByName(MACHE_CONSTANTS_CONFIG).files.singleOrNull()?.toPath()
-            val codebook = context.project.configurations.getByName(MACHE_CODEBOOK_CONFIG).also { it.resolve() }
+            val remapper = context.macheRemapperConfig.also { it.files.size }
+            val paramMappings = context.macheParamMappingsConfig.singleFile.toPath()
+            val constants = context.macheConstantsConfig.files.singleOrNull()?.toPath()
+            val codebook = context.macheCodebookConfig.also { it.files.size }
             return RemapMinecraftMache(
                 minecraftRemapArgs,
                 vanillaJar,
