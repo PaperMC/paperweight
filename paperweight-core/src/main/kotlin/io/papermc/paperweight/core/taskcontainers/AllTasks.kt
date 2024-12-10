@@ -344,7 +344,9 @@ open class AllTasks(
             "src/main/java/net/minecraft/",
             "paper-server/src/java/main/net/minecraft/",
             "src/main/java/jline/",
-            "paper-server/src/java/main/jline/"
+            "paper-server/src/java/main/jline/",
+            "src/net/minecraft/",
+            "paper-server/src/net/minecraft/"
         ))
     }
 
