@@ -415,7 +415,9 @@ fun modifyManifest(path: Path, create: Boolean = true, op: Manifest.() -> Unit) 
 
 val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperweight.main-capability", String::class.java)
 
-fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).singleFile.toPath().openZip().use { zip ->
+fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).resolveMacheMeta()
+
+fun FileCollection.resolveMacheMeta() = singleFile.toPath().openZip().use { zip ->
     gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readText())
 }
 

@@ -31,6 +31,7 @@ import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.file.FileCollection
 import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImpl(
@@ -57,6 +58,7 @@ class SetupHandlerImpl(
     private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.filesMatchingRecursive("*.jar")
 
     private fun generateSources(context: SetupHandler.ExecutionContext) {
+        setupMacheMeta(context.macheConfig) // If the config cache is reused then the mache config may not be populated
         vanillaSteps.downloadVanillaServerJar()
         vanillaSteps.downloadServerMappings()
         applyMojangMappedPaperclipPatch(context)
@@ -161,14 +163,19 @@ class SetupHandlerImpl(
 
     private fun macheMeta(): MacheMeta = requireNotNull(macheMeta) { "Mache meta is not setup yet" }
 
-    override fun afterEvaluate(project: Project) {
-        super.afterEvaluate(project)
-        val configurations = project.configurations
+    private fun setupMacheMeta(macheFiles: FileCollection) {
         if (macheMeta == null) {
             synchronized(this) {
-                macheMeta = configurations.resolveMacheMeta()
+                macheMeta = macheFiles.resolveMacheMeta()
             }
         }
+    }
+
+    override fun afterEvaluate(project: Project) {
+        super.afterEvaluate(project)
+        setupMacheMeta(project.configurations.getByName(MACHE_CONFIG))
+
+        val configurations = project.configurations
 
         val macheCodebook = configurations.register(MACHE_CODEBOOK_CONFIG) {
             isTransitive = false
