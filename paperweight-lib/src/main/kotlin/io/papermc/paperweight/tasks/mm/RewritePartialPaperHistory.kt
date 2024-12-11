@@ -105,13 +105,17 @@ abstract class RewritePartialPaperHistory : BaseTask() {
                     pattern = re.compile(br"^((?:patches|Spigot-(?:API|Server)-Patches)(?:/.*?)?)/\d{4}-(.*)")
                     match = pattern.match(filename)
                     if match:
-                        # Avoid remaining conflicts manually
-                        if match.group(2) in {b"fixup-MC-Utils.patch", b"Brand-support.patch"}:
-                            prefix = b''.join(random.choice(string.ascii_lowercase).encode('utf-8') for _ in range(4))
-                            return match.group(1) + b"/" + prefix + b"-" + match.group(2)
+                        folder = match.group(1)
+                        patch_name = match.group(2)
+
+                        # Keep numbered prefix to avoid conflict in these two...
+                        if patch_name == b"fixup-MC-Utils.patch":
+                            return filename
+                        if patch_name == b"Brand-support.patch" and folder.startswith(b"Spigot"):
+                            return filename
 
                         # Dir, subdirs if present, then the filename without the numbered prefix
-                        return match.group(1) + b"/" + match.group(2)
+                        return folder + b"/" + patch_name
                     else:
                         return filename
                     """.trimIndent(),
