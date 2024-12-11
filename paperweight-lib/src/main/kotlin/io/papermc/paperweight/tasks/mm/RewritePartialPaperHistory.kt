@@ -18,6 +18,9 @@ abstract class RewritePartialPaperHistory : BaseTask() {
         const val REPLACE_TEXT = """
             regex:@@\s-\d+,\d+\s\+\d+,\d+\s@@==>@@ -0,0 +0,0 @@
             regex:index\s([a-fA-F0-9]{40})\.\.([a-fA-F0-9]{40})==>index 0000000000000000000000000000000000000000..0000000000000000000000000000000000000000
+            regex:index\s([a-fA-F0-9]{7})\.\.([a-fA-F0-9]{7})==>index 0000000000000000000000000000000000000000..0000000000000000000000000000000000000000
+            regex:From\s([a-fA-F0-9]{40})==>From 0000000000000000000000000000000000000000
+            regex:--\s*\d+\.\d+\.\d+(\.windows\.\d+)?\s*${'$'}==>--
         """
 
         const val UPDATE_AUTHOR = """
@@ -91,6 +94,9 @@ abstract class RewritePartialPaperHistory : BaseTask() {
                 "--replace-text", tempFile.toAbsolutePath().toString(),
                 "--path", "patches/removed/",
                 "--path", "removed/",
+                "--path", "patches/server-unmapped/",
+                "--path", "Remapped-Spigot-Server-Patches/",
+                "--path", "Unmapped-Spigot-Server-Patches/",
                 "--invert-paths",
                 "--commit-callback", UPDATE_AUTHOR.format(dictCode).trimIndent(),
                 "--filename-callback", """
