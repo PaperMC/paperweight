@@ -102,11 +102,11 @@ abstract class RewritePartialPaperHistory : BaseTask() {
                     if filename is None:
                         return b""
 
-                    pattern = re.compile(br"^((?:patches|Spigot-(?:API|Server)-Patches)/.*?)/\d{4}-(.*)")
+                    pattern = re.compile(br"^((?:patches|Spigot-(?:API|Server)-Patches)(?:/.*?)?)/\d{4}-(.*)")
                     match = pattern.match(filename)
                     if match:
                         # Avoid remaining conflicts manually
-                        if match.group(2) in {b"fixup-MC-Utils.patch"}:
+                        if match.group(2) in {b"fixup-MC-Utils.patch", b"Brand-support.patch"}:
                             prefix = b''.join(random.choice(string.ascii_lowercase).encode('utf-8') for _ in range(4))
                             return match.group(1) + b"/" + prefix + b"-" + match.group(2)
 

@@ -57,21 +57,12 @@ abstract class RewriteCommits : BaseTask() {
             $RESET_CALLBACK
             """
 
-        private const val MOVE_BACK_CALLBACK = """
-            $UTILS
-            import time
-            date = commit.author_date.decode('utf-8').split(' ')
-            commit.author_date = f'{int(date[0]) - 500000000} {date[1]}'.encode('utf-8')
-            insert_into_commit_msg(b'Original-Date: ' + time.ctime(int(date[0])).encode("utf-8"))
-        """
-
         const val PAPER_CALLBACK = """
             msg    = commit.message.decode('utf-8')
             author = commit.author_email.decode('utf-8')
             if author == 'aikar@aikar.co' and (msg.startswith('[CI-SKIP] [Auto]') or msg.startswith('[Auto]')):
                 commit.author_name   = b'Automated'
                 commit.author_email  = b'noreply+automated@papermc.io'
-            $MOVE_BACK_CALLBACK
             $RESET_CALLBACK
         """
     }
