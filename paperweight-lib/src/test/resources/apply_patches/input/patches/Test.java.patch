@@ -1,0 +1,10 @@
+--- a/Test.java
++++ b/Test.java
+@@ -8,6 +_,6 @@
+     }
+ 
+     public String getTest() {
+-        return test;
++        return test + "Test"; // Test
+     }
+ }

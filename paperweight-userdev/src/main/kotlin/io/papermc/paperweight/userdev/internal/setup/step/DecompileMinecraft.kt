@@ -27,9 +27,8 @@ import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
-import io.papermc.paperweight.util.constants.DECOMPILER_CONFIG
 import java.nio.file.Path
-import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.FileCollection
 
 class DecompileMinecraft(
     @Input private val inputJar: Path,
@@ -37,13 +36,13 @@ class DecompileMinecraft(
     private val cache: Path,
     private val minecraftLibraryJars: () -> List<Path>,
     @Input private val decompileArgs: List<String>,
-    private val decompiler: Configuration,
+    private val decompiler: FileCollection,
 ) : SetupStep {
     override val name: String = "decompile transformed minecraft server jar"
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         runDecompiler(
             argsList = decompileArgs,
             logFile = outputJar.siblingLogFile(),
@@ -52,7 +51,7 @@ class DecompileMinecraft(
             inputJar = inputJar,
             libraries = minecraftLibraryJars(),
             outputJar = outputJar,
-            javaLauncher = context.defaultJavaLauncher
+            javaLauncher = context.javaLauncher
         )
     }
 
@@ -64,14 +63,14 @@ class DecompileMinecraft(
 
     companion object {
         fun create(
-            context: SetupHandler.Context,
+            context: SetupHandler.ExecutionContext,
             inputJar: Path,
             outputJar: Path,
             cache: Path,
             minecraftLibraryJars: () -> List<Path>,
             decompileArgs: List<String>,
         ): DecompileMinecraft {
-            val decompiler = context.project.configurations.getByName(DECOMPILER_CONFIG).also { it.resolve() } // resolve decompiler
+            val decompiler = context.decompilerConfig.also { it.files.size } // resolve decompiler
             return DecompileMinecraft(inputJar, outputJar, cache, minecraftLibraryJars, decompileArgs, decompiler)
         }
     }

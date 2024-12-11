@@ -50,7 +50,7 @@ interface SetupStep {
 
     val hashFile: Path
 
-    fun run(context: SetupHandler.Context)
+    fun run(context: SetupHandler.ExecutionContext)
 
     fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {}
 }
@@ -64,7 +64,7 @@ object StepExecutor {
     private val inputOutputDataCache: MutableMap<KClass<out SetupStep>, InputOutputData> =
         ConcurrentHashMap<KClass<out SetupStep>, InputOutputData>()
 
-    fun executeSteps(expectingChange: Boolean, context: SetupHandler.Context, vararg steps: SetupStep) {
+    fun executeSteps(expectingChange: Boolean, context: SetupHandler.ExecutionContext, vararg steps: SetupStep) {
         // if we aren't expecting change, assume the last step is the output that matters
         // and only verify its inputs/outputs - if it fails then we need to go back through
         // and check each step anyway
@@ -87,7 +87,7 @@ object StepExecutor {
         }
     }
 
-    fun executeStep(context: SetupHandler.Context, step: SetupStep) {
+    fun executeStep(context: SetupHandler.ExecutionContext, step: SetupStep) {
         val hashFunction = makeHashFunction(step)
 
         if (hashFunction.upToDate(step.hashFile)) {

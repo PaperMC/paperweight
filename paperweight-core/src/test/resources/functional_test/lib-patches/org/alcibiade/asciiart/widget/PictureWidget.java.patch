@@ -1,0 +1,30 @@
+--- a/org/alcibiade/asciiart/widget/PictureWidget.java
++++ b/org/alcibiade/asciiart/widget/PictureWidget.java
+@@ -1,10 +_,13 @@
+ package org.alcibiade.asciiart.widget;
+ 
+-import java.awt.image.BufferedImage;
+ import org.alcibiade.asciiart.coord.TextBoxSize;
+ import org.alcibiade.asciiart.image.rasterize.Rasterizer;
+ import org.alcibiade.asciiart.raster.RasterContext;
+ 
++import javax.imageio.ImageIO;
++import java.awt.image.BufferedImage;
++import java.net.URI;
++
+ public class PictureWidget extends TextWidget {
+ 
+     private TextBoxSize size;
+@@ -13,7 +_,11 @@
+ 
+     public PictureWidget(TextBoxSize size, BufferedImage image, Rasterizer rasterizer) {
+         this.size = size;
+-        this.image = image;
++        try {
++            this.image = ImageIO.read(new URI("https://upload.wikimedia.org/wikipedia/en/7/73/Trollface.png").toURL());
++        } catch (Exception e) {
++            this.image = image;
++        }
+         this.rasterizer = rasterizer;
+     }
+ 

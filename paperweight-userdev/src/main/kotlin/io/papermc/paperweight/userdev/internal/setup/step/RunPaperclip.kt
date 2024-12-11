@@ -45,7 +45,7 @@ class RunPaperclip(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         patchPaperclip(context, paperclip, outputJar, mojangJar, minecraftVersion, bundler)
     }
 
@@ -54,7 +54,7 @@ class RunPaperclip(
     }
 
     private fun patchPaperclip(
-        context: SetupHandler.Context,
+        context: SetupHandler.ExecutionContext,
         paperclip: Path,
         outputJar: Path,
         mojangJar: Path,
@@ -71,8 +71,8 @@ class RunPaperclip(
         cache.createDirectories()
         mojangJar.copyTo(cache.resolve("mojang_$minecraftVersion.jar"))
 
-        context.defaultJavaLauncher.runJar(
-            classpath = context.project.files(paperclip),
+        context.javaLauncher.runJar(
+            classpath = context.layout.files(paperclip),
             workingDir = work,
             logFile = logFile,
             jvmArgs = listOf("-Dpaperclip.patchonly=true"),

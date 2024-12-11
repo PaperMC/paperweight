@@ -29,14 +29,14 @@ import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.FileCollection
 
 class RemapMinecraft(
     @Input private val minecraftRemapArgs: List<String>,
     @Input private val filteredVanillaJar: Path,
     private val minecraftLibraryJars: () -> List<Path>,
     @Input private val mappings: Path,
-    private val remapper: Configuration,
+    private val remapper: FileCollection,
     @Output private val outputJar: Path,
     private val cache: Path,
 ) : SetupStep {
@@ -44,7 +44,7 @@ class RemapMinecraft(
 
     override val hashFile: Path = outputJar.siblingHashesFile()
 
-    override fun run(context: SetupHandler.Context) {
+    override fun run(context: SetupHandler.ExecutionContext) {
         TinyRemapper.run(
             argsList = minecraftRemapArgs,
             logFile = outputJar.siblingLogFile(),
@@ -55,7 +55,7 @@ class RemapMinecraft(
             remapClasspath = minecraftLibraryJars(),
             remapper = remapper,
             outputJar = outputJar,
-            launcher = context.defaultJavaLauncher,
+            launcher = context.javaLauncher,
             workingDir = cache
         )
     }
@@ -68,7 +68,7 @@ class RemapMinecraft(
 
     companion object {
         fun create(
-            context: SetupHandler.Context,
+            context: SetupHandler.ExecutionContext,
             minecraftRemapArgs: List<String>,
             filteredVanillaJar: Path,
             minecraftLibraryJars: () -> List<Path>,
@@ -76,7 +76,7 @@ class RemapMinecraft(
             outputJar: Path,
             cache: Path,
         ): RemapMinecraft {
-            val remapper = context.project.configurations.getByName(REMAPPER_CONFIG).also { it.resolve() } // resolve remapper
+            val remapper = context.remapperConfig.also { it.files.size } // resolve remapper
             return RemapMinecraft(
                 minecraftRemapArgs,
                 filteredVanillaJar,
