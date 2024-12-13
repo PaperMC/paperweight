@@ -28,6 +28,7 @@ import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
@@ -43,6 +44,7 @@ abstract class CollectATsFromPatches : BaseTask() {
     @get:Input
     abstract val header: Property<String>
 
+    @get:IgnoreEmptyDirectories
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 
@@ -60,6 +62,11 @@ abstract class CollectATsFromPatches : BaseTask() {
 
     @TaskAction
     fun run() {
+        if (patchDir.isPresent.not() && extraPatchDir.isPresent.not()) {
+            outputFile.path.writeText("")
+            return
+        }
+
         outputFile.path.deleteForcefully()
         val patches = patchDir.path.listDirectoryEntries("*.patch") +
             (extraPatchDir.pathOrNull?.listDirectoryEntries("*.patch") ?: emptyList())

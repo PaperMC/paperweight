@@ -32,6 +32,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 
@@ -42,6 +43,7 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
     @get:InputDirectory
     abstract val repo: DirectoryProperty
 
+    @get:SkipWhenEmpty
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputDirectory
     abstract val patches: DirectoryProperty
