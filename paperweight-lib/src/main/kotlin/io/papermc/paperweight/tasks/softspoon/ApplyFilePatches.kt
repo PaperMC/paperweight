@@ -59,6 +59,7 @@ abstract class ApplyFilePatches : BaseTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputDirectory
+    @get:Optional
     abstract val patches: DirectoryProperty
 
     @get:Optional
@@ -87,7 +88,10 @@ abstract class ApplyFilePatches : BaseTask() {
 
         setupGitHook(outputPath)
 
-        val result = if (gitFilePatches.get()) {
+        val result = if (!patches.isPresent) {
+            commit()
+            0
+        } else if (gitFilePatches.get()) {
             applyWithGit(outputPath)
         } else {
             applyWithDiffPatch()
@@ -155,6 +159,7 @@ abstract class ApplyFilePatches : BaseTask() {
         git.commit()
             .setMessage("File Patches")
             .setAuthor(ident)
+            .setAllowEmpty(true)
             .setSign(false)
             .call()
         git.tagDelete().setTags("file").call()

@@ -164,7 +164,7 @@ open class SoftSpoonTasks(
 
         input.set(setupMacheSources.flatMap { it.outputDir })
         output.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.sourcePatchDir)
+        patches.set(project.ext.paper.sourcePatchDir.fileExists(project))
         rejects.set(project.ext.paper.rejectsDir)
         gitFilePatches.set(project.ext.gitFilePatches)
     }
@@ -175,7 +175,7 @@ open class SoftSpoonTasks(
 
         input.set(setupMacheSources.flatMap { it.outputDir })
         output.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.sourcePatchDir)
+        patches.set(project.ext.paper.sourcePatchDir.fileExists(project))
         rejects.set(project.ext.paper.rejectsDir)
         gitFilePatches.set(project.ext.gitFilePatches)
     }
@@ -186,7 +186,7 @@ open class SoftSpoonTasks(
 
         input.set(setupMacheResources.flatMap { it.outputDir })
         output.set(layout.projectDirectory.dir("src/vanilla/resources"))
-        patches.set(project.ext.paper.resourcePatchDir)
+        patches.set(project.ext.paper.resourcePatchDir.fileExists(project))
     }
 
     val applyFilePatches by tasks.registering(Task::class) {
