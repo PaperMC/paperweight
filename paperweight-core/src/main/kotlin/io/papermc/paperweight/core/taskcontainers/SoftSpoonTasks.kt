@@ -108,7 +108,7 @@ open class SoftSpoonTasks(
     val collectAccessTransform by tasks.registering(CollectATsFromPatches::class) {
         group = "mache"
 
-        patchDir.set(project.ext.paper.featurePatchDir)
+        patchDir.set(project.ext.paper.featurePatchDir.fileExists(project))
     }
 
     val mergeCollectedAts by tasks.registering<MergeAccessTransforms> {
