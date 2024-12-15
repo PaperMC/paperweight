@@ -135,7 +135,7 @@ class ServerPatchingTasks(
 
     fun setupAts(config: ForkConfig) {
         val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart()}ATsFromPatches") {
-            patchDir.set(featurePatchDir)
+            patchDir.set(featurePatchDir.fileExists(project))
         }
 
         val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart()}ATs") {
