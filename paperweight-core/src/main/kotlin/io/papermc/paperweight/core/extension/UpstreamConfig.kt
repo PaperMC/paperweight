@@ -73,8 +73,9 @@ abstract class UpstreamConfig @Inject constructor(
         patchSets.add(patchSet)
     }
 
-    fun patchedDir(name: String): Provider<DirectoryPatchSet> =
-        patchSets.map { it.filterIsInstance<DirectoryPatchSet>().single { s -> s.name.get() == name } }
+    fun patchedRepo(name: String): Provider<DirectoryPatchSet> = patchSets.map {
+        it.filterIsInstance<DirectoryPatchSet>().single { s -> s.name.get() == name }
+    }
 
     interface PatchSet
 
@@ -89,7 +90,6 @@ abstract class UpstreamConfig @Inject constructor(
     ) : PatchSet {
         abstract val name: Property<String>
         abstract val upstreamPath: Property<String>
-        abstract val upstreamDir: Property<DirectoryPatchSet>
         abstract val excludes: SetProperty<String>
 
         abstract val outputDir: DirectoryProperty
@@ -102,5 +102,9 @@ abstract class UpstreamConfig @Inject constructor(
 
     abstract class RepoPatchSet @Inject constructor(
         objects: ObjectFactory,
-    ) : DirectoryPatchSet(objects)
+    ) : DirectoryPatchSet(objects) {
+        abstract val upstreamRepo: Property<DirectoryPatchSet>
+
+        fun Provider<ForkConfig>.patchedRepo(name: String): Provider<DirectoryPatchSet> = flatMap { patchedRepo(name) }
+    }
 }
