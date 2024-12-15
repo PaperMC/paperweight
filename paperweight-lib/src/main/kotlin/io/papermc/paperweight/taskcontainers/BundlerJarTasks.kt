@@ -95,14 +95,14 @@ class BundlerJarTasks(
             mainClass.set(mainClassString)
             extraManifestMainAttributes.convention(mapOf("Enable-Native-Access" to "ALL-UNNAMED"))
 
-            outputZip.set(layout.buildDirectory.file("libs/${jarName("bundler", classifier)}"))
+            outputZip.set(layout.buildDirectory.file("libs/${rootProject.jarName("bundler", classifier)}"))
         }
         val paperclipJarTask = tasks.register<CreatePaperclipJar>(paperclipTaskName) {
             group = "paperweight"
             description = "Build a runnable paperclip jar"
 
             libraryChangesJson.set(bundlerJarTask.flatMap { it.libraryChangesJson })
-            outputZip.set(layout.buildDirectory.file("libs/${jarName("paperclip", classifier)}"))
+            outputZip.set(layout.buildDirectory.file("libs/${rootProject.jarName("paperclip", classifier)}"))
         }
         return bundlerJarTask to paperclipJarTask
     }
