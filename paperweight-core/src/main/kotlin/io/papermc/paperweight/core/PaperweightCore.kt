@@ -26,24 +26,19 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.AllTasks
+import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks
+import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
-import io.papermc.paperweight.taskcontainers.BundlerJarTasks
-import io.papermc.paperweight.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
-class PaperweightCore : Plugin<Project> {
-    companion object {
-        private val logger = Logging.getLogger(PaperweightCore::class.java)
-    }
-
+abstract class PaperweightCore : Plugin<Project> {
     override fun apply(target: Project) {
         Git.checkForGit(target.providers)
         printId<PaperweightCore>("paperweight-core", target.gradle)
@@ -55,7 +50,7 @@ class PaperweightCore : Plugin<Project> {
         }
 
         target.tasks.register<Delete>("cleanCache") {
-            group = "paper"
+            group = "paperweight"
             description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
@@ -116,39 +111,6 @@ class PaperweightCore : Plugin<Project> {
             ext.minecraftVersion
         )
 
-        /*
-        target.tasks.register<PaperweightCorePrepareForDownstream>(PAPERWEIGHT_PREPARE_DOWNSTREAM) {
-            dependsOn(tasks.applyPatchesLegacy)
-            vanillaJar.set(tasks.downloadServerJar.flatMap { it.outputJar })
-            remappedJar.set(tasks.lineMapJar.flatMap { it.outputJar })
-            decompiledJar.set(tasks.decompileJar.flatMap { it.outputJar })
-            mcVersion.set(target.ext.minecraftVersion)
-            mcLibrariesFile.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
-            mcLibrariesDir.set(tasks.extractFromBundler.flatMap { it.serverLibraryJars })
-            mcLibrariesSourcesDir.set(tasks.downloadMcLibrariesSources.flatMap { it.outputDir })
-            spigotLibrariesSourcesDir.set(tasks.downloadSpigotDependencies.flatMap { it.outputSourcesDir })
-            mappings.set(tasks.patchMappings.flatMap { it.outputMappings })
-            notchToSpigotMappings.set(tasks.generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-            sourceMappings.set(tasks.generateMappings.flatMap { it.outputMappings })
-            reobfPackagesToFix.set(ext.paper.reobfPackagesToFix)
-            reobfMappingsPatch.set(ext.paper.reobfMappingsPatch)
-            vanillaJarIncludes.set(ext.vanillaJarIncludes)
-            paramMappingsUrl.set(ext.paramMappingsRepo)
-            paramMappingsConfig.set(target.configurations.named(PARAM_MAPPINGS_CONFIG))
-            atFile.set(tasks.mergeAdditionalAts.flatMap { it.outputFile })
-            spigotRecompiledClasses.set(tasks.remapSpigotSources.flatMap { it.spigotRecompiledClasses })
-            bundlerVersionJson.set(tasks.extractFromBundler.flatMap { it.versionJson })
-            serverLibrariesTxt.set(tasks.extractFromBundler.flatMap { it.serverLibrariesTxt })
-            serverLibrariesList.set(tasks.extractFromBundler.flatMap { it.serverLibrariesList })
-
-            dataFile.set(
-                target.layout.file(
-                    providers.gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY).map { File(it) }
-                )
-            )
-        }
-         */
-
         target.afterEvaluate {
             target.repositories {
                 maven(ext.macheRepo) {
@@ -158,32 +120,6 @@ class PaperweightCore : Plugin<Project> {
             }
 
             softSpoonTasks.afterEvaluate()
-
-            /*
-            // Setup the server jar
-            val cache = target.layout.cache
-
-            val serverProj = target.ext.serverProject.orNull ?: return@afterEvaluate
-            val serverJar = serverProj.tasks.register("serverJar", Zip::class)
-
-            tasks.generateReobfMappings {
-                inputJar.set(serverJar.flatMap { it.archiveFile })
-            }
-            tasks.generateRelocatedReobfMappings {
-                inputJar.set(serverJar.flatMap { it.archiveFile })
-            }
-
-            val (includeMappings, reobfJar) = serverProj.setupServerProject(
-                target,
-                tasks.lineMapJar.flatMap { it.outputJar },
-                tasks.decompileJar.flatMap { it.outputJar },
-                ext.mcDevSourceDir.path,
-                cache.resolve(SERVER_LIBRARIES_TXT),
-                ext.paper.reobfPackagesToFix,
-                tasks.generateRelocatedReobfMappings,
-                serverJar
-            ) ?: return@afterEvaluate
-             */
 
             devBundleTasks.configure(
                 ext.bundlerJarName.get(),
@@ -197,17 +133,6 @@ class PaperweightCore : Plugin<Project> {
                 reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
             }
             devBundleTasks.configureAfterEvaluate()
-
-            /*
-            bundlerJarTasks.configureBundlerTasks(
-                tasks.extractFromBundler.flatMap { it.versionJson },
-                tasks.extractFromBundler.flatMap { it.serverLibrariesList },
-                tasks.downloadServerJar.flatMap { it.outputJar },
-                includeMappings.flatMap { it.outputJar },
-                reobfJar,
-                ext.minecraftVersion
-            )
-             */
         }
     }
 }

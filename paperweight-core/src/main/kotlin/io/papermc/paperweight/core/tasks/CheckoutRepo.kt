@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.patcher.tasks
+package io.papermc.paperweight.core.tasks
 
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
@@ -29,6 +29,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
@@ -37,6 +38,7 @@ import org.gradle.api.tasks.UntrackedTask
 abstract class CheckoutRepo : DefaultTask() {
 
     @get:Input
+    @get:Optional
     abstract val repoName: Property<String>
 
     @get:Input
@@ -66,7 +68,7 @@ abstract class CheckoutRepo : DefaultTask() {
             repoName.finalizeValueOnRead()
             url.finalizeValueOnRead()
             ref.finalizeValueOnRead()
-            shallowClone.convention(true).finalizeValueOnRead()
+            shallowClone.convention(false).finalizeValueOnRead()
             initializeSubmodules.convention(true).finalizeValueOnRead()
             initializeSubmodulesShallow.convention(false).finalizeValueOnRead()
 

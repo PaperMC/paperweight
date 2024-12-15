@@ -36,11 +36,13 @@ fun Project.createBuildTasks(
     relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>
 ): ServerTasks {
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
+        group = "build"
         inputJar.set(tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile })
         packagesToProcess.set(packagesToFix)
     }
 
     val includeMappings by tasks.registering<IncludeMappings> {
+        group = "build"
         inputJar.set(fixJarForReobf.flatMap { it.outputJar })
         mappings.set(relocatedReobfMappings.flatMap { it.outputMappings })
         mappingsDest.set("META-INF/mappings/reobf.tiny")
@@ -48,6 +50,7 @@ fun Project.createBuildTasks(
 
     // We only need to manually relocate references to CB class names in string constants, the actual relocation is handled by the mappings
     val relocateConstants by tasks.registering<RelocateClassNameConstants> {
+        group = "build"
         inputJar.set(includeMappings.flatMap { it.outputJar })
     }
     afterEvaluate {
@@ -60,7 +63,7 @@ fun Project.createBuildTasks(
     }
 
     val reobfJar by tasks.registering<RemapJar> {
-        group = "paperweight"
+        group = "build"
         description = "Re-obfuscate the built jar to obf mappings"
 
         inputJar.set(relocateConstants.flatMap { it.outputJar })

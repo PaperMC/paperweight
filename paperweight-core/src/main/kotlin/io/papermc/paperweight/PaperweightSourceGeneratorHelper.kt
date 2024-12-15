@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight
 
-import io.papermc.paperweight.extension.PaperweightSourceGeneratorExt
+import io.papermc.paperweight.core.extension.PaperweightSourceGeneratorExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import org.gradle.api.Plugin

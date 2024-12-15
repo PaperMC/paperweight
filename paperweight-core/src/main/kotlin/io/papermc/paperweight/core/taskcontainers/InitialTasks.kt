@@ -23,7 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.core.ext
+import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
@@ -40,12 +40,12 @@ open class InitialTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-    extension: PaperweightCoreExtension = project.ext,
+    extension: PaperweightCoreExtension = project.coreExt,
     downloadService: Provider<DownloadService> = project.download
 ) {
 
     val downloadMcManifest by tasks.registering<DownloadTask> {
-        url.set(project.ext.minecraftManifestUrl)
+        url.set(project.coreExt.minecraftManifestUrl)
         outputFile.set(cache.resolve(MC_MANIFEST))
 
         doNotTrackState("The Minecraft manifest is a changing resource")
@@ -95,5 +95,19 @@ open class InitialTasks(
         serverVersionsList.set(cache.resolve(SERVER_VERSIONS_LIST))
         serverLibraryJars.set(cache.resolve(MINECRAFT_JARS_PATH))
         serverJar.set(cache.resolve(SERVER_JAR))
+    }
+
+    val filterVanillaJar by tasks.registering<FilterJar> {
+        inputJar.set(extractFromBundler.flatMap { it.serverJar })
+        includes.set(extension.vanillaJarIncludes)
+    }
+
+    val generateMappings by tasks.registering<GenerateMappings> {
+        vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
+        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
+
+        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
+
+        outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
     }
 }

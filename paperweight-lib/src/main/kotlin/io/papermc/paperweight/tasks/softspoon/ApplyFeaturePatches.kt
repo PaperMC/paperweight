@@ -24,32 +24,30 @@ package io.papermc.paperweight.tasks.softspoon
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import javax.inject.Inject
+import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.UntrackedTask
 
-@UntrackedTask(because = "Always apply patches")
 abstract class ApplyFeaturePatches : ControllableOutputTask() {
 
-    @get:PathSensitive(PathSensitivity.NONE)
     @get:InputDirectory
+    @get:Optional
+    abstract val base: DirectoryProperty
+
+    @get:OutputDirectory
     abstract val repo: DirectoryProperty
 
-    @get:SkipWhenEmpty
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputDirectory
+    @get:Optional
     abstract val patches: DirectoryProperty
-
-    @get:Inject
-    abstract val providers: ProviderFactory
 
     @get:Input
     abstract val verbose: Property<Boolean>
@@ -63,7 +61,22 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
     fun run() {
         Git.checkForGit()
 
-        val repoPath = repo.convertToPath()
+        val base = base.pathOrNull
+        if (base != null && base.toAbsolutePath() != repo.path.toAbsolutePath()) {
+            val git = Git(repo.path.createDirectories())
+            checkoutRepoFromUpstream(
+                git,
+                base,
+                "file",
+                ref = true,
+            )
+        }
+
+        if (!patches.isPresent) {
+            return
+        }
+
+        val repoPath = repo.path
 
         val git = Git(repoPath)
 
@@ -73,6 +86,6 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
         git("reset", "--hard", "file").executeSilently(silenceErr = true)
         git("gc").runSilently(silenceErr = true)
 
-        applyGitPatches(git, "server repo", repoPath, patches.convertToPath(), printOutput.get(), verbose.get())
+        applyGitPatches(git, "server repo", repoPath, patches.path, printOutput.get(), verbose.get())
     }
 }

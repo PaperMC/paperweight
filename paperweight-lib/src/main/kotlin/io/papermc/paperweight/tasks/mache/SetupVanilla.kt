@@ -179,17 +179,19 @@ abstract class SetupVanilla : JavaLauncherTask() {
 
         git.close()
     }
+}
 
-    private fun commitAndTag(git: Git, name: String) {
-        val vanillaIdent = PersonIdent(name, "noreply+automated@papermc.io")
+fun commitAndTag(git: Git, name: String) {
+    val vanillaIdent = PersonIdent(name, "noreply+automated@papermc.io")
 
-        git.add().addFilepattern(".").call()
-        git.commit()
-            .setMessage(name)
-            .setAuthor(vanillaIdent)
-            .setSign(false)
-            .call()
-        git.tagDelete().setTags(name).call()
-        git.tag().setName(name).setTagger(vanillaIdent).setSigned(false).call()
-    }
+    git.add().addFilepattern(".").call()
+    git.add().addFilepattern(".").setUpdate(true).call()
+    git.commit()
+        .setMessage(name)
+        .setAuthor(vanillaIdent)
+        .setSign(false)
+        .setAllowEmpty(true)
+        .call()
+    git.tagDelete().setTags(name).call()
+    git.tag().setName(name).setTagger(vanillaIdent).setSigned(false).call()
 }
