@@ -55,6 +55,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.ProjectLayout
@@ -148,7 +149,7 @@ fun commentRegex(): Regex {
 }
 
 val ProviderFactory.isBaseExecution: Provider<Boolean>
-    get() = gradleProperty(PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY)
+    get() = gradleProperty(UPSTREAM_WORK_DIR_PROPERTY)
         .orElse(provider { "false" })
         .map { it == "false" }
 
@@ -449,4 +450,19 @@ inline fun <reified T> ObjectFactory.providerSet(
         }
     }
     return current!!
+}
+
+/**
+ * The directory upstreams should be checked out in. Paperweight will use the directory specified in the
+ * following order, whichever is set first:
+ *
+ *  1. The value of the Gradle property `paperweightUpstreamWorkDir`.
+ *  2. The default location of <project_root>/.gradle/caches/paperweight/upstreams
+ *
+ * This means a project which is several upstreams deep will all use the upstreams directory defined by the root project.
+ */
+fun Project.upstreamsDirectory(): Provider<Directory> {
+    val workDirProp = providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY)
+    val workDirFromProp = layout.dir(workDirProp.map { File(it) })
+    return workDirFromProp.orElse(rootProject.layout.cacheDir(UPSTREAMS))
 }

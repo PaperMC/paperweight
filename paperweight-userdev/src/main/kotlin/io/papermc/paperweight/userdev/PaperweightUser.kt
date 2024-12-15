@@ -101,7 +101,9 @@ abstract class PaperweightUser : Plugin<Project> {
             attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
         }
 
-        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {}
+        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {
+            group = "paperweight"
+        }
 
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
         val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
