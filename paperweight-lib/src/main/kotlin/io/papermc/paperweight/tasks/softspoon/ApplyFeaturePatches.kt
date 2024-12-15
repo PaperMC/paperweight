@@ -68,6 +68,7 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
                 git,
                 base,
                 "file",
+                branchName = "main",
                 ref = true,
             )
         }
