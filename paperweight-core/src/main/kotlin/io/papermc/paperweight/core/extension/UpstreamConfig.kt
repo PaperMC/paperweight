@@ -26,6 +26,7 @@ import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.Named
+import org.gradle.api.PolymorphicDomainObjectContainer
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
@@ -42,9 +43,17 @@ abstract class UpstreamConfig @Inject constructor(
     val singleFilePatches: Boolean,
 ) : Named {
     val paper: Property<Boolean> = objects.property<Boolean>().convention(false)
+
     abstract val repo: Property<String>
     abstract val ref: Property<String>
-    abstract val patchSets: ListProperty<PatchSet>
+
+    abstract val singleFilePatchSets: ListProperty<SingleFilePatchSet>
+    val directoryPatchSets: PolymorphicDomainObjectContainer<DirectoryPatchSet> = objects.polymorphicDomainObjectContainer(
+        DirectoryPatchSet::class
+    ).also {
+        it.registerFactory(DirectoryPatchSet::class.java) { name -> objects.newInstance(name) }
+        it.registerFactory(RepoPatchSet::class.java) { name -> objects.newInstance(name) }
+    }
 
     fun github(owner: String, repo: String): String = "https://github.com/$owner/$repo.git"
 
@@ -58,28 +67,18 @@ abstract class UpstreamConfig @Inject constructor(
         }
         val patchSet = objects.newInstance<SingleFilePatchSet>()
         op.execute(patchSet)
-        patchSets.add(patchSet)
+        singleFilePatchSets.add(patchSet)
     }
 
-    fun patchDir(op: Action<DirectoryPatchSet>) {
-        val patchSet = objects.newInstance<DirectoryPatchSet>()
-        op.execute(patchSet)
-        patchSets.add(patchSet)
+    fun patchDir(name: String, op: Action<DirectoryPatchSet>) {
+        directoryPatchSets.register(name, DirectoryPatchSet::class, op)
     }
 
-    fun patchRepo(op: Action<RepoPatchSet>) {
-        val patchSet = objects.newInstance<RepoPatchSet>()
-        op.execute(patchSet)
-        patchSets.add(patchSet)
+    fun patchRepo(name: String, op: Action<RepoPatchSet>) {
+        directoryPatchSets.register(name, RepoPatchSet::class, op)
     }
 
-    fun patchedRepo(name: String): Provider<DirectoryPatchSet> = patchSets.map {
-        it.filterIsInstance<DirectoryPatchSet>().single { s -> s.name.get() == name }
-    }
-
-    interface PatchSet
-
-    abstract class SingleFilePatchSet : PatchSet {
+    abstract class SingleFilePatchSet {
         abstract val path: Property<String>
         abstract val outputFile: RegularFileProperty
         abstract val patchFile: RegularFileProperty
@@ -87,8 +86,10 @@ abstract class UpstreamConfig @Inject constructor(
 
     abstract class DirectoryPatchSet @Inject constructor(
         objects: ObjectFactory,
-    ) : PatchSet {
-        abstract val name: Property<String>
+        private val setName: String,
+    ) : Named {
+        override fun getName(): String = setName
+
         abstract val upstreamPath: Property<String>
         abstract val excludes: SetProperty<String>
 
@@ -102,9 +103,11 @@ abstract class UpstreamConfig @Inject constructor(
 
     abstract class RepoPatchSet @Inject constructor(
         objects: ObjectFactory,
-    ) : DirectoryPatchSet(objects) {
+        name: String,
+    ) : DirectoryPatchSet(objects, name) {
         abstract val upstreamRepo: Property<DirectoryPatchSet>
 
-        fun Provider<ForkConfig>.patchedRepo(name: String): Provider<DirectoryPatchSet> = flatMap { patchedRepo(name) }
+        fun Provider<ForkConfig>.patchedRepo(name: String): Provider<DirectoryPatchSet> =
+            flatMap { it.upstream.directoryPatchSets.named(name) }
     }
 }
