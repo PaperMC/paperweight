@@ -46,6 +46,8 @@ abstract class UpstreamConfig @Inject constructor(
     abstract val ref: Property<String>
     abstract val patchSets: ListProperty<PatchSet>
 
+    fun github(owner: String, repo: String): String = "https://github.com/$owner/$repo.git"
+
     override fun getName(): String {
         return configName
     }
@@ -61,6 +63,12 @@ abstract class UpstreamConfig @Inject constructor(
 
     fun patchDir(op: Action<DirectoryPatchSet>) {
         val patchSet = objects.newInstance<DirectoryPatchSet>()
+        op.execute(patchSet)
+        patchSets.add(patchSet)
+    }
+
+    fun patchRepo(op: Action<RepoPatchSet>) {
+        val patchSet = objects.newInstance<RepoPatchSet>()
         op.execute(patchSet)
         patchSets.add(patchSet)
     }
@@ -83,7 +91,6 @@ abstract class UpstreamConfig @Inject constructor(
         abstract val upstreamPath: Property<String>
         abstract val upstreamDir: Property<DirectoryPatchSet>
         abstract val excludes: SetProperty<String>
-        val repo: Property<Boolean> = objects.property<Boolean>().convention(false)
 
         abstract val outputDir: DirectoryProperty
 
@@ -92,4 +99,8 @@ abstract class UpstreamConfig @Inject constructor(
         val filePatchDir: DirectoryProperty = objects.dirFrom(patchesDir, "files")
         val featurePatchDir: DirectoryProperty = objects.dirFrom(patchesDir, "features")
     }
+
+    abstract class RepoPatchSet @Inject constructor(
+        objects: ObjectFactory,
+    ) : DirectoryPatchSet(objects)
 }

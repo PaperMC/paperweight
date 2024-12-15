@@ -118,7 +118,7 @@ class UpstreamConfigTasks(
         .associateWith { cfg -> makePatchingTasks(cfg) }
 
     private fun makePatchingTasks(cfg: UpstreamConfig.DirectoryPatchSet): PatchingTasks {
-        val base = if (cfg.repo.get()) {
+        val base = if (cfg is UpstreamConfig.RepoPatchSet) {
             createBaseFromRepo(cfg)
         } else {
             createBaseFromDirectoryInRepo(cfg)
