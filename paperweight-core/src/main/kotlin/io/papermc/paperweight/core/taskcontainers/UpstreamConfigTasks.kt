@@ -55,8 +55,8 @@ class UpstreamConfigTasks(
     private fun ApplySingleFilePatches.configureApplySingleFilePatches() {
         group = taskGroup
         upstream.set(upstreamDir)
-        val patches = upstreamCfg.patchSets.map {
-            it.filterIsInstance<UpstreamConfig.SingleFilePatchSet>().map { cfg ->
+        val patches = upstreamCfg.singleFilePatchSets.map {
+            it.map { cfg ->
                 ApplySingleFilePatches.Patch.patch(target.objects, upstream) {
                     path = cfg.path
                     patchFile = layout.file(
@@ -95,8 +95,8 @@ class UpstreamConfigTasks(
         target.tasks.register<RebuildSingleFilePatches>("rebuild${upstreamCfg.name.capitalized()}SingleFilePatches") {
             group = taskGroup
             upstream.set(upstreamDir)
-            val patches = upstreamCfg.patchSets.map {
-                it.filterIsInstance<UpstreamConfig.SingleFilePatchSet>().map { cfg ->
+            val patches = upstreamCfg.singleFilePatchSets.map {
+                it.map { cfg ->
                     val p = objects.newInstance<RebuildSingleFilePatches.Patch>()
                     p.path = cfg.path
                     p.patchFile = cfg.patchFile
@@ -113,8 +113,7 @@ class UpstreamConfigTasks(
         null
     }
 
-    val patchingTasks: Map<UpstreamConfig.DirectoryPatchSet, PatchingTasks> = upstreamCfg.patchSets.get()
-        .filterIsInstance<UpstreamConfig.DirectoryPatchSet>()
+    val patchingTasks: Map<UpstreamConfig.DirectoryPatchSet, PatchingTasks> = upstreamCfg.directoryPatchSets
         .associateWith { cfg -> makePatchingTasks(cfg) }
 
     private fun makePatchingTasks(cfg: UpstreamConfig.DirectoryPatchSet): PatchingTasks {
@@ -126,7 +125,7 @@ class UpstreamConfigTasks(
 
         return PatchingTasks(
             target,
-            cfg.name.get(),
+            cfg.name,
             taskGroup,
             readOnly,
             cfg.filePatchDir,
@@ -143,7 +142,7 @@ class UpstreamConfigTasks(
 
     private fun createBaseFromRepo(cfg: UpstreamConfig.DirectoryPatchSet): Provider<Directory> {
         val task = target.tasks.register<CopyAndTag>(
-            "checkout${cfg.name.get().capitalized()}From${upstreamCfg.name.capitalized()}"
+            "checkout${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
             group = taskGroup
             if (cfg is UpstreamConfig.RepoPatchSet && cfg.upstreamRepo.isPresent) {
@@ -164,7 +163,7 @@ class UpstreamConfigTasks(
 
     private fun createBaseFromDirectoryInRepo(cfg: UpstreamConfig.DirectoryPatchSet): Provider<Directory> {
         val task = target.tasks.register<FilterRepo>(
-            "filter${cfg.name.get().capitalized()}From${upstreamCfg.name.capitalized()}"
+            "filter${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
             group = taskGroup
             inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
