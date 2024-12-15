@@ -146,10 +146,10 @@ class UpstreamConfigTasks(
             "checkout${cfg.name.get().capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
             group = taskGroup
-            if (cfg.upstreamDir.isPresent) {
+            if (cfg is UpstreamConfig.RepoPatchSet && cfg.upstreamRepo.isPresent) {
                 val upstreamTasks = requireNotNull(upstreamTasks) { "Upstream tasks not present when expected" }
-                val patchingTasksForDir = requireNotNull(upstreamTasks.patchingTasks[cfg.upstreamDir.get()]) {
-                    "Patching tasks not present upstream for ${cfg.upstreamDir.get().name}"
+                val patchingTasksForDir = requireNotNull(upstreamTasks.patchingTasks[cfg.upstreamRepo.get()]) {
+                    "Patching tasks not present upstream for ${cfg.upstreamRepo.get().name}"
                 }
                 val input = patchingTasksForDir.applyFeaturePatches.flatMap { it.repo }
                 inputDir.set(input)
