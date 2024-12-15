@@ -22,12 +22,12 @@
 
 package io.papermc.paperweight.restamp
 
-import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.*
 import io.papermc.restamp.Restamp
 import io.papermc.restamp.RestampContextConfiguration
 import io.papermc.restamp.RestampInput
 import java.nio.file.Path
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 import org.cadixdev.at.io.AccessTransformFormats
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -54,7 +54,7 @@ abstract class SetupVanillaRestampWorker : WorkAction<SetupVanillaRestampWorker.
         val configuration = RestampContextConfiguration.builder()
             .accessTransformers(ats.path, AccessTransformFormats.FML)
             .sourceRoot(outputPath)
-            .sourceFilesFromAccessTransformers(false)
+            .sourceFiles(outputPath.filesMatchingRecursive("*.java"))
             .classpath(classPath)
             .executionContext(InMemoryExecutionContext { it.printStackTrace() })
             .failWithNotApplicableAccessTransformers()
