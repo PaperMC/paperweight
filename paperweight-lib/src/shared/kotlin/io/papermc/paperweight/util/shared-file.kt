@@ -28,8 +28,10 @@ import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
+import kotlin.io.path.*
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.provider.Provider
 
@@ -59,4 +61,13 @@ fun Path.writeZip(): FileSystem {
 fun FileSystem.walk(): Stream<Path> {
     return StreamSupport.stream(rootDirectories.spliterator(), false)
         .flatMap { Files.walk(it) }
+}
+
+fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
+    val matcher = fileSystem.getPathMatcher("glob:$glob")
+    return Files.walk(this).use { stream ->
+        stream.filter {
+            it.isRegularFile() && matcher.matches(it.fileName)
+        }.collect(Collectors.toList())
+    }
 }

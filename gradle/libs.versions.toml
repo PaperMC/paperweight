@@ -4,7 +4,7 @@ lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.5.1"
 feather = "1.1.0"
-restamp = "1.1.0"
+restamp = "1.2.0"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }

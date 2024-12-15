@@ -31,7 +31,6 @@ import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
 import java.nio.file.attribute.FileAttribute
 import java.util.Arrays
-import java.util.stream.Collectors
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -117,15 +116,6 @@ fun Path.copyRecursivelyTo(target: Path) {
                 f.copyTo(targetPath)
             }
         }
-    }
-}
-
-fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
-    val matcher = fileSystem.getPathMatcher("glob:$glob")
-    return Files.walk(this).use { stream ->
-        stream.filter {
-            it.isRegularFile() && matcher.matches(it.fileName)
-        }.collect(Collectors.toList())
     }
 }
 
