@@ -24,7 +24,9 @@ package io.papermc.paperweight.patcher.extension
 
 import io.papermc.paperweight.core.extension.UpstreamConfig
 import javax.inject.Inject
+import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.model.ObjectFactory
 import org.gradle.kotlin.dsl.*
 
@@ -33,5 +35,14 @@ abstract class PaperweightPatcherExtension @Inject constructor(private val objec
 
     val upstreams: NamedDomainObjectContainer<UpstreamConfig> = objects.domainObjectContainer(UpstreamConfig::class) {
         objects.newInstance(it, true)
+    }
+
+    fun NamedDomainObjectContainer<UpstreamConfig>.paper(
+        op: Action<UpstreamConfig>
+    ): NamedDomainObjectProvider<UpstreamConfig> = register("paper") {
+        repo.convention(github("PaperMC", "Paper"))
+        paper.set(true)
+        paper.finalizeValue()
+        op.execute(this)
     }
 }
