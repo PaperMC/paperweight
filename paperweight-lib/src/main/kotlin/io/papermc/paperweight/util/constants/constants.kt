@@ -75,8 +75,6 @@ fun applyPatchesLock(targetDir: Path): String = APPLY_PATCHES_LOCK_DIR + '/' +
 
 const val UPSTREAMS = "$PAPER_PATH/upstreams"
 const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"
-const val PAPERWEIGHT_PREPARE_DOWNSTREAM = "prepareForDownstream"
-const val PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY = "paperweightDownstreamDataFile"
 
 private const val JARS_PATH = "$PAPER_PATH/jars"
 const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
@@ -120,10 +118,6 @@ private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_CODEBOOK_JAR = "$TASK_CACHE/codebook-minecraft.jar"
 const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
-
-const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
-
-const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 

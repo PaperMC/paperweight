@@ -23,7 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.core.ext
+import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
@@ -41,7 +41,7 @@ open class AllTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-    extension: PaperweightCoreExtension = project.ext,
+    extension: PaperweightCoreExtension = project.coreExt,
     downloadService: Provider<DownloadService> = project.download
 ) : SpigotTasks(project) {
 
@@ -56,8 +56,11 @@ open class AllTasks(
 
     val downloadPaperLibrariesSources by tasks.registering<DownloadPaperLibraries> {
         paperDependencies.set(
-            project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).flatMap { configuration ->
-                configuration.incoming.artifacts.resolvedArtifacts
+            project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).map { configuration ->
+                val view = configuration.incoming.artifactView {
+                    componentFilter { it is ModuleComponentIdentifier }
+                }
+                view.artifacts
             }.map { artifacts ->
                 artifacts.mapNotNull {
                     val id = it.id.componentIdentifier as? ModuleComponentIdentifier ?: return@mapNotNull null

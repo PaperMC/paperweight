@@ -20,9 +20,9 @@
  * USA
  */
 
-package io.papermc.paperweight.taskcontainers
+package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
+import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -31,6 +31,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
@@ -51,7 +52,7 @@ class DevBundleTasks(
     }
 
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
-        group = "paperweight"
+        group = "bundling"
 
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
     }
@@ -85,9 +86,12 @@ class DevBundleTasks(
         }
 
         generateDevelopmentBundle {
-            mainJavaDir.set(project.layout.projectDirectory.dir("src/main/java"))
+            sourceDirectories.from(
+                project.extensions.getByType(JavaPluginExtension::class).sourceSets
+                    .getByName("main")
+                    .allJava
+            )
             vanillaJavaDir.set(vanillaJava)
-            patchedJavaDir.set(project.layout.projectDirectory.dir("src/vanilla/java"))
 
             minecraftVersion.set(minecraftVer)
             mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })

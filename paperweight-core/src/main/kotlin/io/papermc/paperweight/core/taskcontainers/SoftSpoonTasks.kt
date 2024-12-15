@@ -22,24 +22,19 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.ext
+import io.papermc.paperweight.core.coreExt
+import io.papermc.paperweight.core.extension.ForkConfig
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
 import io.papermc.paperweight.tasks.mache.SetupVanilla
-import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
-import io.papermc.paperweight.tasks.softspoon.ApplyFilePatches
-import io.papermc.paperweight.tasks.softspoon.ApplyFilePatchesFuzzy
-import io.papermc.paperweight.tasks.softspoon.FixupFilePatches
 import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
-import io.papermc.paperweight.tasks.softspoon.RebuildFilePatches
 import io.papermc.paperweight.tasks.softspoon.SetupPaperScript
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
@@ -47,7 +42,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
-open class SoftSpoonTasks(
+class SoftSpoonTasks(
     val project: Project,
     val allTasks: AllTasks,
     tasks: TaskContainer = project.tasks
@@ -106,20 +101,20 @@ open class SoftSpoonTasks(
         outputJar.set(layout.cache.resolve(FINAL_DECOMPILE_JAR))
     }
 
-    val collectAccessTransform by tasks.registering(CollectATsFromPatches::class) {
+    val collectPaperATsFromPatches by tasks.registering(CollectATsFromPatches::class) {
         group = "mache"
 
-        patchDir.set(project.ext.paper.featurePatchDir.fileExists(project))
+        patchDir.set(project.coreExt.paper.featurePatchDir.fileExists(project))
     }
 
-    val mergeCollectedAts by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(project.ext.paper.additionalAts.fileExists(project))
-        secondFile.set(collectAccessTransform.flatMap { it.outputFile })
+    val mergePaperATs by tasks.registering<MergeAccessTransforms> {
+        firstFile.set(project.coreExt.paper.additionalAts.fileExists(project))
+        secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
 
     val importLibraryFiles = tasks.register<ImportLibraryFiles>("importLibraryFiles") {
-        paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
-        devImports.set(project.ext.paper.devImports.fileExists(project))
+        paperPatches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
+        devImports.set(project.coreExt.paper.devImports.fileExists(project))
         libraries.from(
             allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
             allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
@@ -130,7 +125,7 @@ open class SoftSpoonTasks(
         group = "mache"
 
         mache.from(project.configurations.named(MACHE_CONFIG))
-        macheOld.set(project.ext.macheOldPath)
+        macheOld.set(project.coreExt.macheOldPath)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
@@ -141,7 +136,7 @@ open class SoftSpoonTasks(
         libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
 
-        atFile.set(mergeCollectedAts.flatMap { it.outputFile })
+        atFile.set(mergePaperATs.flatMap { it.outputFile })
         ats.jstClasspath.from(macheMinecraftLibraries)
         ats.jst.from(jstConfig)
     }
@@ -161,118 +156,6 @@ open class SoftSpoonTasks(
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
 
-    val applySourcePatches by tasks.registering(ApplyFilePatches::class) {
-        group = "softspoon"
-        description = "Applies patches to the vanilla sources"
-
-        input.set(setupMacheSources.flatMap { it.outputDir })
-        output.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.sourcePatchDir.fileExists(project))
-        rejects.set(project.ext.paper.rejectsDir)
-        gitFilePatches.set(project.ext.gitFilePatches)
-    }
-
-    val applySourcePatchesFuzzy by tasks.registering(ApplyFilePatchesFuzzy::class) {
-        group = "softspoon"
-        description = "Applies patches to the vanilla sources"
-
-        input.set(setupMacheSources.flatMap { it.outputDir })
-        output.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.sourcePatchDir.fileExists(project))
-        rejects.set(project.ext.paper.rejectsDir)
-        gitFilePatches.set(project.ext.gitFilePatches)
-    }
-
-    val applyResourcePatches by tasks.registering(ApplyFilePatches::class) {
-        group = "softspoon"
-        description = "Applies patches to the vanilla resources"
-
-        input.set(setupMacheResources.flatMap { it.outputDir })
-        output.set(layout.projectDirectory.dir("src/vanilla/resources"))
-        patches.set(project.ext.paper.resourcePatchDir.fileExists(project))
-    }
-
-    val applyFilePatches by tasks.registering(Task::class) {
-        group = "softspoon"
-        description = "Applies all file patches"
-        dependsOn(applySourcePatches, applyResourcePatches)
-    }
-
-    val applyFeaturePatches by tasks.registering(ApplyFeaturePatches::class) {
-        group = "softspoon"
-        description = "Applies all feature patches"
-        dependsOn(applyFilePatches)
-
-        repo.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.featurePatchDir)
-    }
-
-    val applyPatches by tasks.registering(Task::class) {
-        group = "softspoon"
-        description = "Applies all patches"
-        dependsOn(applyFilePatches, applyFeaturePatches)
-    }
-
-    val rebuildSourcePatches by tasks.registering(RebuildFilePatches::class) {
-        group = "softspoon"
-        description = "Rebuilds patches to the vanilla sources"
-
-        base.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
-        input.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patches.set(project.ext.paper.sourcePatchDir)
-        gitFilePatches.set(project.ext.gitFilePatches)
-
-        ats.jstClasspath.from(macheMinecraft)
-        ats.jst.from(jstConfig)
-        atFile.set(project.ext.paper.additionalAts.fileExists(project))
-        atFileOut.set(project.ext.paper.additionalAts.fileExists(project))
-    }
-
-    val rebuildResourcePatches by tasks.registering(RebuildFilePatches::class) {
-        group = "softspoon"
-        description = "Rebuilds patches to the vanilla resources"
-
-        base.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
-        input.set(layout.projectDirectory.dir("src/vanilla/resources"))
-        patches.set(project.ext.paper.resourcePatchDir)
-    }
-
-    val rebuildFilePatches by tasks.registering(Task::class) {
-        group = "softspoon"
-        description = "Rebuilds all file patches"
-        dependsOn(rebuildSourcePatches, rebuildResourcePatches)
-    }
-
-    val rebuildFeaturePatches by tasks.registering(RebuildGitPatches::class) {
-        group = "softspoon"
-        description = "Rebuilds all feature patches"
-        dependsOn(rebuildFilePatches)
-
-        inputDir.set(layout.projectDirectory.dir("src/vanilla/java"))
-        patchDir.set(project.ext.paper.featurePatchDir)
-        baseRef.set("file")
-    }
-
-    val rebuildPatches by tasks.registering(Task::class) {
-        group = "softspoon"
-        description = "Rebuilds all file patches"
-        dependsOn(rebuildFilePatches, rebuildFeaturePatches)
-    }
-
-    val fixupSourcePatches by tasks.registering(FixupFilePatches::class) {
-        group = "softspoon"
-        description = "Puts the currently tracked source changes into the file patches commit"
-
-        repo.set(layout.projectDirectory.dir("src/vanilla/java"))
-    }
-
-    val fixupResourcePatches by tasks.registering(FixupFilePatches::class) {
-        group = "softspoon"
-        description = "Puts the currently tracked resource changes into the file patches commit"
-
-        repo.set(layout.projectDirectory.dir("src/vanilla/resources"))
-    }
-
     val setupPaperScript by tasks.registering(SetupPaperScript::class) {
         group = "softspoon"
         description = "Creates a util script and installs it into path"
@@ -284,6 +167,8 @@ open class SoftSpoonTasks(
         // load mache
         mache.set(project.configurations.resolveMacheMeta())
         val mache = mache.get()
+
+        setupPatchingTasks()
 
         mappedJarOutgoing {
             outgoing.artifact(macheRemapJar)
@@ -324,5 +209,159 @@ open class SoftSpoonTasks(
                 srcDirs(project.projectDir.resolve("src/vanilla/resources"))
             }
         }
+    }
+
+    private fun setupPatchingTasks() {
+        val hasFork = project.coreExt.forks.isNotEmpty()
+
+        // Setup Paper's vanilla patching tasks
+        val paperOutputRoot = if (hasFork) {
+            project.upstreamsDirectory().get().path.resolve("server-work/paper")
+        } else {
+            project.layout.projectDirectory.path
+        }
+        val paperPatchingTasks = ServerPatchingTasks(
+            project,
+            "paper",
+            this,
+            hasFork,
+            project.coreExt.paper.sourcePatchDir,
+            project.coreExt.paper.rejectsDir,
+            project.coreExt.paper.resourcePatchDir,
+            project.coreExt.paper.featurePatchDir,
+            project.coreExt.paper.additionalAts,
+            setupMacheSources.flatMap { it.outputDir },
+            setupMacheResources.flatMap { it.outputDir },
+            project.coreExt.gitFilePatches,
+            paperOutputRoot,
+        )
+
+        // For forks, setup aggregate vanilla & upstream -server patching tasks
+        val applyAllServerFilePatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("applyAllServerFilePatches") {
+                group = "patching"
+            }
+        }
+        val applyAllServerFeaturePatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("applyAllServerFeaturePatches") {
+                group = "patching"
+            }
+        }
+        val applyAllServerPatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("applyAllServerPatches") {
+                group = "patching"
+            }
+        }
+        val rebuildAllServerFilePatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("rebuildAllServerFilePatches") {
+                group = "patching"
+            }
+        }
+        val rebuildAllServerFeaturePatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("rebuildAllServerFeaturePatches") {
+                group = "patching"
+            }
+        }
+        val rebuildAllServerPatches = if (!hasFork) {
+            null
+        } else {
+            project.tasks.register("rebuildAllServerPatches") {
+                group = "patching"
+            }
+        }
+
+        // Setup patching tasks for forks
+        val patchingTasks: MutableMap<String, Pair<ServerPatchingTasks, UpstreamConfigTasks>> = mutableMapOf()
+        fun makePatchingTasks(cfg: ForkConfig): Pair<ServerPatchingTasks, UpstreamConfigTasks> {
+            val upstreamTasks = if (cfg.forksPaper.get()) {
+                paperPatchingTasks to null
+            } else {
+                patchingTasks[cfg.forks.get().name]
+                    ?: makePatchingTasks(cfg).also { patchingTasks[cfg.forks.get().name] = it }
+            }
+
+            val activeFork = project.coreExt.activeFork.get().name == cfg.name
+
+            val outputRoot = if (activeFork) {
+                project.layout.projectDirectory.path
+            } else {
+                project.upstreamsDirectory().path.resolve("server-work/${cfg.name}")
+            }
+
+            val serverTasks = ServerPatchingTasks(
+                project,
+                cfg.name,
+                this,
+                !activeFork,
+                cfg.sourcePatchDir,
+                cfg.rejectsDir,
+                cfg.resourcePatchDir,
+                cfg.featurePatchDir,
+                cfg.additionalAts,
+                upstreamTasks.first.applyFeaturePatches.flatMap { it.repo },
+                upstreamTasks.first.applyResourcePatches.flatMap { it.output },
+                project.coreExt.gitFilePatches,
+                outputRoot,
+            )
+
+            serverTasks.setupAts(cfg)
+
+            val upstreamConfigTasks = UpstreamConfigTasks(
+                project,
+                cfg.upstream,
+                if (cfg.forksPaper.get()) {
+                    project.coreExt.paper.paperServerDir.dir("../")
+                } else {
+                    cfg.forks.get().rootDirectory
+                },
+                cfg.additionalAts,
+                macheMinecraft.get(),
+                jstConfig.get(),
+                !activeFork,
+                if (activeFork) {
+                    "server patching"
+                } else {
+                    "upstream server patching"
+                },
+                project.coreExt.gitFilePatches,
+                null,
+                upstreamTasks.second,
+            )
+
+            if (activeFork) {
+                upstreamConfigTasks.setupAggregateTasks("Server")
+                applyAllServerFilePatches?.configure { dependsOn("applyServerFilePatches") }
+                applyAllServerFeaturePatches?.configure { dependsOn("applyServerFeaturePatches") }
+                applyAllServerPatches?.configure { dependsOn("applyServerPatches") }
+                rebuildAllServerFilePatches?.configure { dependsOn("rebuildServerFilePatches") }
+                rebuildAllServerFeaturePatches?.configure { dependsOn("rebuildServerFeaturePatches") }
+                rebuildAllServerPatches?.configure { dependsOn("rebuildServerPatches") }
+            }
+
+            return serverTasks to upstreamConfigTasks
+        }
+
+        project.coreExt.forks.forEach { config ->
+            if (config.name !in patchingTasks) {
+                patchingTasks[config.name] = makePatchingTasks(config)
+            }
+        }
+
+        applyAllServerFilePatches?.configure { dependsOn("applyVanillaFilePatches") }
+        applyAllServerFeaturePatches?.configure { dependsOn("applyVanillaFeaturePatches") }
+        applyAllServerPatches?.configure { dependsOn("applyVanillaPatches") }
+        rebuildAllServerFilePatches?.configure { dependsOn("rebuildVanillaFilePatches") }
+        rebuildAllServerFeaturePatches?.configure { dependsOn("rebuildVanillaFeaturePatches") }
+        rebuildAllServerPatches?.configure { dependsOn("rebuildVanillaPatches") }
     }
 }

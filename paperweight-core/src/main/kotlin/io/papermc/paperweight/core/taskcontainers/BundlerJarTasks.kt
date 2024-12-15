@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.taskcontainers
+package io.papermc.paperweight.core.taskcontainers
 
 import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
@@ -92,7 +92,7 @@ class BundlerJarTasks(
         val paperclipTaskName = "create${classifier.capitalized()}PaperclipJar"
 
         val bundlerJarTask = tasks.register<CreateBundlerJar>(bundlerTaskName) {
-            group = "paperweight"
+            group = "bundling"
             description = "Build a runnable bundler jar"
 
             paperclip.from(configurations.named(PAPERCLIP_CONFIG))
@@ -102,7 +102,7 @@ class BundlerJarTasks(
             outputZip.set(layout.buildDirectory.file("libs/${rootProject.jarName("bundler", classifier)}"))
         }
         val paperclipJarTask = tasks.register<CreatePaperclipJar>(paperclipTaskName) {
-            group = "paperweight"
+            group = "bundling"
             description = "Build a runnable paperclip jar"
 
             libraryChangesJson.set(bundlerJarTask.flatMap { it.libraryChangesJson })
