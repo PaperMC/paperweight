@@ -19,7 +19,7 @@ tasks.withType(JavaCompile::class).configureEach {
 
 kotlin {
     jvmToolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
