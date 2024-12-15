@@ -12,7 +12,7 @@ dependencies {
 }
 
 gradlePlugin {
-    plugins.all {
+    setupPlugin("userdev") {
         description = "Gradle plugin for developing Paper plugins using server internals"
         implementationClass = "io.papermc.paperweight.userdev.PaperweightUser"
     }

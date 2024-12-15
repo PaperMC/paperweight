@@ -24,6 +24,7 @@ package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Action
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
@@ -62,4 +63,8 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
     fun paper(action: Action<in PaperExtension>) {
         action.execute(paper)
     }
+
+    val forks: NamedDomainObjectContainer<ForkConfig> = objects.domainObjectContainer(ForkConfig::class)
+
+    val activeFork: Property<ForkConfig> = objects.property()
 }

@@ -40,7 +40,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
 
-@UntrackedTask(because = "Always apply patches")
 abstract class ApplyFilePatches : BaseTask() {
 
     @get:Input
@@ -62,13 +61,16 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Optional
     abstract val patches: DirectoryProperty
 
-    @get:Optional
-    @get:OutputDirectory
+    @get:Internal
     abstract val rejects: DirectoryProperty
 
     @get:Optional
     @get:Input
     abstract val gitFilePatches: Property<Boolean>
+
+    @get:Optional
+    @get:Input
+    abstract val baseRef: Property<String>
 
     init {
         run {
@@ -81,10 +83,17 @@ abstract class ApplyFilePatches : BaseTask() {
     open fun run() {
         io.papermc.paperweight.util.Git.checkForGit()
 
-        val outputPath = output.convertToPath()
+        val outputPath = output.path
         recreateCloneDirectory(outputPath)
 
-        checkoutRepoFromUpstream(Git(outputPath), input.convertToPath(), "main", "mache", "main")
+        checkoutRepoFromUpstream(
+            Git(outputPath),
+            input.path,
+            baseRef.getOrElse("main"),
+            "upstream",
+            "main",
+            baseRef.isPresent,
+        )
 
         setupGitHook(outputPath)
 
@@ -104,7 +113,7 @@ abstract class ApplyFilePatches : BaseTask() {
 
     private fun applyWithGit(outputPath: Path): Int {
         val git = Git(outputPath)
-        val patches = patches.convertToPath().filesMatchingRecursive("*.patch")
+        val patches = patches.path.filesMatchingRecursive("*.patch")
         val patchStrings = patches.map { outputPath.relativize(it).pathString }
         patchStrings.chunked(12).forEach {
             git("apply", "--3way", *it.toTypedArray()).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
@@ -119,9 +128,9 @@ abstract class ApplyFilePatches : BaseTask() {
         val printStream = PrintStream(LoggingOutputStream(logger, LogLevel.LIFECYCLE))
         val builder = PatchOperation.builder()
             .logTo(printStream)
-            .basePath(output.convertToPath())
-            .patchesPath(patches.convertToPath())
-            .outputPath(output.convertToPath())
+            .basePath(output.path)
+            .patchesPath(patches.path)
+            .outputPath(output.path)
             .level(if (verbose.get()) codechicken.diffpatch.util.LogLevel.ALL else codechicken.diffpatch.util.LogLevel.INFO)
             .mode(mode())
             .minFuzz(minFuzz())
@@ -129,7 +138,7 @@ abstract class ApplyFilePatches : BaseTask() {
             .lineEnding("\n")
             .ignorePrefix(".git")
         if (rejects.isPresent) {
-            builder.rejectsPath(rejects.convertToPath())
+            builder.rejectsPath(rejects.path)
         }
 
         val result = builder.build().operate()
@@ -154,7 +163,7 @@ abstract class ApplyFilePatches : BaseTask() {
 
     private fun commit() {
         val ident = PersonIdent(PersonIdent("File", "noreply+automated@papermc.io"), Instant.parse("1997-04-20T13:37:42.69Z"))
-        val git = Git.open(output.convertToPath().toFile())
+        val git = Git.open(output.path.toFile())
         git.add().addFilepattern(".").call()
         git.commit()
             .setMessage("File Patches")

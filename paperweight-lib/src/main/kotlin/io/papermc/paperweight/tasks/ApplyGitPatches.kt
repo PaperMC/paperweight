@@ -189,7 +189,14 @@ fun Git.disableAutoGpgSigningInRepo() {
     invoke("config", "tag.gpgSign", "false").executeSilently(silenceErr = true)
 }
 
-fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String, upstreamName: String = "upstream", branchName: String = "master") {
+fun checkoutRepoFromUpstream(
+    git: Git,
+    upstream: Path,
+    upstreamBranch: String,
+    upstreamName: String = "upstream",
+    branchName: String = "master",
+    ref: Boolean = false,
+) {
     git("init", "--quiet").executeSilently(silenceErr = true)
     git.disableAutoGpgSigningInRepo()
     git("remote", "remove", upstreamName).runSilently(silenceErr = true)
@@ -198,7 +205,8 @@ fun checkoutRepoFromUpstream(git: Git, upstream: Path, upstreamBranch: String, u
     if (git("checkout", branchName).runSilently(silenceErr = true) != 0) {
         git("checkout", "-b", branchName).runSilently(silenceErr = true)
     }
-    git("reset", "--hard", "$upstreamName/$upstreamBranch").executeSilently(silenceErr = true)
+    git("reset", "--hard", if (ref) upstreamBranch else "$upstreamName/$upstreamBranch")
+        .executeSilently(silenceErr = true)
     git("gc").runSilently(silenceErr = true)
 }
 

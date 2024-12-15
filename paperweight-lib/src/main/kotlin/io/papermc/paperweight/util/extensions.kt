@@ -26,6 +26,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
 
 fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): DirectoryProperty =
     directoryProperty().convention(layout.projectDirectory.dir(path))
@@ -33,3 +34,7 @@ fun ObjectFactory.dirWithDefault(layout: ProjectLayout, path: String): Directory
 fun ObjectFactory.dirFrom(base: DirectoryProperty, name: String): DirectoryProperty = directoryProperty().convention(base.dir(name))
 
 fun ObjectFactory.fileFrom(base: DirectoryProperty, name: String): RegularFileProperty = fileProperty().convention(base.file(name))
+
+fun ObjectFactory.dirFrom(base: DirectoryProperty, name: Provider<String>): DirectoryProperty = directoryProperty().convention(base.dir(name))
+
+fun ObjectFactory.fileFrom(base: DirectoryProperty, name: Provider<String>): RegularFileProperty = fileProperty().convention(base.file(name))

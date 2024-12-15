@@ -20,20 +20,18 @@
  * USA
  */
 
-package io.papermc.paperweight.patcher.upstream
+package io.papermc.paperweight.patcher.extension
 
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
-import org.gradle.api.Named
+import io.papermc.paperweight.core.extension.UpstreamConfig
+import javax.inject.Inject
 import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.model.ObjectFactory
+import org.gradle.kotlin.dsl.*
 
-interface PatcherUpstream : Named {
+@Suppress("unused", "MemberVisibilityCanBePrivate")
+abstract class PaperweightPatcherExtension @Inject constructor(private val objects: ObjectFactory) {
 
-    val upstreamDataTaskName: String
-    val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
-
-    val useForUpstreamData: Property<Boolean>
-
-    val patchTasks: NamedDomainObjectContainer<PatchTaskConfig>
+    val upstreams: NamedDomainObjectContainer<UpstreamConfig> = objects.domainObjectContainer(UpstreamConfig::class) {
+        objects.newInstance(it, true)
+    }
 }

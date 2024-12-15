@@ -20,26 +20,31 @@
  * USA
  */
 
-package io.papermc.paperweight.patcher.tasks
+package io.papermc.paperweight.core.tasks
 
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.tasks.BaseTask
+import io.papermc.paperweight.util.constants.PAPERWEIGHT_DEBUG
+import io.papermc.paperweight.util.constants.UPSTREAM_WORK_DIR_PROPERTY
+import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.upstreamsDirectory
 import kotlin.collections.set
-import kotlin.io.path.*
+import kotlin.io.path.absolutePathString
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.StartParameterInternal
+import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.build.NestedRootBuildRunner
 import org.gradle.internal.service.ServiceRegistry
 
 @UntrackedTask(because = "Nested build does it's own up-to-date checking")
-abstract class PaperweightPatcherUpstreamData : BaseTask() {
+abstract class RunNestedBuild : BaseTask() {
+
+    @get:Input
+    abstract val tasks: SetProperty<String>
 
     @get:InputDirectory
     abstract val projectDir: DirectoryProperty
@@ -47,21 +52,19 @@ abstract class PaperweightPatcherUpstreamData : BaseTask() {
     @get:Internal
     abstract val workDir: DirectoryProperty
 
-    @get:OutputFile
-    abstract val dataFile: RegularFileProperty
+    override fun init() {
+        super.init()
+        workDir.convention(project.upstreamsDirectory())
+    }
 
     @TaskAction
     fun run() {
         val params = NestedRootBuildRunner.createStartParameterForNewBuild(services)
         params.projectDir = projectDir.get().asFile
 
-        val upstreamDataFile = dataFile.path
-        upstreamDataFile.deleteForcefully() // We won't be the ones to create this file
-
-        params.setTaskNames(listOf(PAPERWEIGHT_PREPARE_DOWNSTREAM))
+        params.setTaskNames(tasks.get())
 
         params.projectProperties[UPSTREAM_WORK_DIR_PROPERTY] = workDir.path.absolutePathString()
-        params.projectProperties[PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY] = upstreamDataFile.absolutePathString()
 
         params.systemPropertiesArgs[PAPERWEIGHT_DEBUG] = System.getProperty(PAPERWEIGHT_DEBUG, "false")
 
