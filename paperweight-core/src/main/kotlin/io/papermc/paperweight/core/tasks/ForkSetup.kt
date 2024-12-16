@@ -64,7 +64,7 @@ abstract class ForkSetup : JavaLauncherTask() {
 
         val git = Git.open(outputDir.path.toFile())
 
-        if (atFile.isPresent) {
+        if (atFile.isPresent && atFile.path.readText().isNotBlank()) {
             // TODO - No way to tell JST to ignore the .git dir
             val gitTmp = inputDir.path.resolveSibling(inputDir.path.name + "_.git_tmp")
             inputDir.path.resolve(".git").moveTo(gitTmp)
