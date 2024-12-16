@@ -97,7 +97,7 @@ fun macheRemapJar(
     serverJar: Path,
     minecraftClasspath: List<Path>,
 ) {
-    val out = outputJar.ensureClean()
+    val out = outputJar.cleanFile()
 
     val logFile = out.resolveSibling("${out.name}.log")
 

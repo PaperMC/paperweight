@@ -59,7 +59,7 @@ abstract class ForkSetup : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val out = outputDir.path.ensureClean().createDirectories()
+        val out = outputDir.path.cleanDir()
         inputDir.path.copyRecursivelyTo(out)
 
         val git = Git.open(outputDir.path.toFile())
