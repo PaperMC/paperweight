@@ -26,7 +26,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.commitAndTag
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
@@ -56,7 +55,7 @@ abstract class CopyAndTag : BaseTask() {
 
     @TaskAction
     fun run() {
-        outputDir.path.ensureClean().createDirectories()
+        outputDir.path.cleanDir()
         inputDir.path.resolve(pathInInput.get()).copyRecursivelyTo(outputDir.path)
 
         val git = Git.open(outputDir.path.toFile())
