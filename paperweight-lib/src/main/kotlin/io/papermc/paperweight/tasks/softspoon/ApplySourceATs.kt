@@ -77,6 +77,7 @@ abstract class ApplySourceATs {
             "--out-format=$format",
             "--enable-accesstransformers",
             "--access-transformer=$atFile",
+            "--access-transformer-inherit-method=true",
             // "--access-transformer-validation=ERROR",
             *jstClasspath.files.map { "--classpath=${it.absolutePath}" }.toTypedArray(),
             inputDir.absolutePathString(),
