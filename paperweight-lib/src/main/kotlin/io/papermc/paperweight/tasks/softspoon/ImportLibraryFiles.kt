@@ -43,7 +43,7 @@ abstract class ImportLibraryFiles : BaseTask() {
 
     @get:Optional
     @get:InputFiles
-    abstract val paperPatches: ConfigurableFileCollection
+    abstract val patches: ConfigurableFileCollection
 
     @get:Optional
     @get:InputFile
@@ -61,10 +61,10 @@ abstract class ImportLibraryFiles : BaseTask() {
     fun run() {
         outputDir.path.deleteRecursive()
         outputDir.path.createDirectories()
-        if (!libraries.isEmpty && !paperPatches.isEmpty) {
-            val patches = paperPatches.files.flatMap { it.toPath().walk().filter { path -> path.toString().endsWith(".patch") }.toList() }
+        if (!libraries.isEmpty && !patches.isEmpty) {
+            val patchFiles = patches.files.flatMap { it.toPath().walk().filter { path -> path.toString().endsWith(".patch") }.toList() }
             McDev.importMcDev(
-                patches,
+                patchFiles,
                 null,
                 devImports.pathOrNull,
                 outputDir.path,

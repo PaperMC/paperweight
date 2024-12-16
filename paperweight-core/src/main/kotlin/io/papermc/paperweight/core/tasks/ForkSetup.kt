@@ -28,12 +28,10 @@ import io.papermc.paperweight.tasks.softspoon.ApplySourceATs
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
@@ -56,16 +54,8 @@ abstract class ForkSetup : JavaLauncherTask() {
     abstract val atFile: RegularFileProperty
 
     @get:Optional
-    @get:InputFiles
-    abstract val patches: ConfigurableFileCollection
-
-    @get:Optional
-    @get:InputFile
-    abstract val devImports: RegularFileProperty
-
-    @get:Optional
-    @get:InputFiles
-    abstract val libraries: ConfigurableFileCollection
+    @get:InputDirectory
+    abstract val libraryImports: DirectoryProperty
 
     @TaskAction
     fun run() {
@@ -92,9 +82,8 @@ abstract class ForkSetup : JavaLauncherTask() {
             commitAndTag(git, "ATs")
         }
 
-        if (!libraries.isEmpty && !patches.isEmpty) {
-            val patches = patches.files.flatMap { it.toPath().walk().filter { path -> path.toString().endsWith(".patch") }.toList() }
-            McDev.importMcDev(patches, null, devImports.pathOrNull, outputDir.path, null, libraries.files.map { it.toPath() }, true, "")
+        if (libraryImports.isPresent) {
+            libraryImports.path.copyRecursivelyTo(out)
 
             commitAndTag(git, "Imports")
         }
