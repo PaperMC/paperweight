@@ -199,15 +199,24 @@ class DelegatingOutputStream(vararg delegates: OutputStream) : OutputStream() {
     }
 }
 
-fun Path.ensureClean(): Path {
-    try {
-        deleteRecursively()
-    } catch (e: Exception) {
-        println("Failed to delete $this: ${e.javaClass.name}: ${e.message}")
-        e.suppressedExceptions.forEach { println("Suppressed exception: $it") }
-        throw PaperweightException("Failed to delete $this", e)
-    }
-    parent.createDirectories()
+/**
+ * Deletes this path recursively if it exists, and ensures it's parent directory exists.
+ *
+ * @return this path
+ */
+fun Path.cleanFile(): Path {
+    deleteRecursive()
+    return createParentDirectories()
+}
+
+/**
+ * Deletes this path recursively if it exists, then creates a directory at this path.
+ *
+ * @return this path
+ */
+fun Path.cleanDir(): Path {
+    deleteRecursive()
+    createDirectories()
     return this
 }
 

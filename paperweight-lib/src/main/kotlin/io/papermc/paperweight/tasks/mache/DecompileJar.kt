@@ -86,7 +86,7 @@ fun macheDecompileJar(
     workDir: Path,
     memory: String = "4G"
 ) {
-    val out = outputJar.ensureClean()
+    val out = outputJar.cleanFile()
 
     val cfgFile = out.resolveSibling("${out.name}.cfg")
     val cfgText = buildString {
