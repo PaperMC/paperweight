@@ -96,6 +96,8 @@ abstract class ApplySingleFilePatches : BaseTask() {
     fun run() {
         val tmpWork = temporaryDir.resolve("work").toPath()
         val tmpPatch = temporaryDir.resolve("patch").toPath()
+        val tmpRej = temporaryDir.resolve("rejects").toPath()
+        tmpRej.deleteRecursive()
         val log = temporaryDir.resolve("log.txt").toPath()
 
         ensureDeleted(log)
@@ -119,10 +121,11 @@ abstract class ApplySingleFilePatches : BaseTask() {
                         .basePath(tmpWork)
                         .patchesPath(tmpPatch)
                         .outputPath(tmpWork)
+                        .rejectsPath(tmpRej)
                         .build()
 
                     if (op.operate().exit != 0) {
-                        return@use "Patch failed on ${patch.patchFile.path}"
+                        return@use "Patch failed on ${patch.patchFile.path}, see log above. Rejects at $tmpRej"
                     }
 
                     workFile.copyTo(patch.outputFile.path.createParentDirectories(), true)
