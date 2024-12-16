@@ -29,6 +29,7 @@ import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.tasks.softspoon.FixupFilePatches
+import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
 import io.papermc.paperweight.tasks.softspoon.RebuildFilePatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -143,15 +144,20 @@ class ServerPatchingTasks(
             secondFile.set(collectAccessTransform.flatMap { it.outputFile })
         }
 
+        val importLibFiles = tasks.register<ImportLibraryFiles>("import${namePart()}LibraryFiles") {
+            patches.from(config.featurePatchDir, config.sourcePatchDir)
+            devImports.set(config.devImports.fileExists(project))
+            libraries.from(softspoon.importLibraryFiles.map { it.libraries })
+        }
+
         val setup = tasks.register<ForkSetup>("run${namePart()}VanillaSetup") {
             group()
             description = "Applies $configName ATs and library imports to vanilla sources"
 
             inputDir.set(baseSources)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
-            patches.from(config.featurePatchDir, config.sourcePatchDir)
-            devImports.set(config.devImports.fileExists(project))
-            libraries.from(softspoon.importLibraryFiles.map { it.libraries })
+
+            libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(softspoon.jstConfig)
             ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
