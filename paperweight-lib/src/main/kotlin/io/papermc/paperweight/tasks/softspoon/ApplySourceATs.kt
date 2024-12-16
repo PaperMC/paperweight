@@ -80,7 +80,10 @@ abstract class ApplySourceATs {
             "--access-transformer-inherit-method=true",
             "--hidden-prefix=.git",
             // "--access-transformer-validation=ERROR",
-            *jstClasspath.files.map { "--classpath=${it.absolutePath}" }.toTypedArray(),
+            *jstClasspath.files
+                .filter { it.extension == "jar" } // TODO: JST cannot handle classes dir from -api
+                .map { "--classpath=${it.absolutePath}" }
+                .toTypedArray(),
             inputDir.absolutePathString(),
             outputDir.absolutePathString(),
         )
