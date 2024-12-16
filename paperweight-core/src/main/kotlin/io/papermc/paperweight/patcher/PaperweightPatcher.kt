@@ -76,9 +76,6 @@ abstract class PaperweightPatcher : Plugin<Project> {
                 project,
                 upstream,
                 checkoutTask.flatMap { it.outputDir },
-                objects.fileProperty(),
-                objects.fileCollection(),
-                objects.fileCollection(),
                 !isBaseExecution,
                 "patching",
                 provider { false }, // TODO
