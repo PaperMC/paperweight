@@ -240,6 +240,7 @@ class ServerPatchingTasks(
             description = "Puts the currently tracked source changes into the $configName vanilla sources file patches commit"
 
             repo.set(outputSrc)
+            upstream.set("upstream/main")
         }
 
         val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart()}VanillaResourcePatches") {
@@ -247,6 +248,7 @@ class ServerPatchingTasks(
             description = "Puts the currently tracked resource changes into the $configName vanilla resources file patches commit"
 
             repo.set(outputResources)
+            upstream.set("upstream/main")
         }
     }
 }
