@@ -282,7 +282,6 @@ open class SoftSpoonTasks(
         // load mache
         mache.set(project.configurations.resolveMacheMeta())
         val mache = mache.get()
-        println("Loaded mache ${mache.macheVersion} for minecraft ${mache.minecraftVersion}")
 
         mappedJarOutgoing {
             outgoing.artifact(macheRemapJar)
