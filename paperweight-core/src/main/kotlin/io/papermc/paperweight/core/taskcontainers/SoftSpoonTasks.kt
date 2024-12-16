@@ -324,9 +324,6 @@ class SoftSpoonTasks(
                 } else {
                     cfg.forks.get().rootDirectory
                 },
-                cfg.additionalAts,
-                macheMinecraft.get(),
-                jstConfig.get(),
                 !activeFork,
                 if (activeFork) {
                     "server patching"

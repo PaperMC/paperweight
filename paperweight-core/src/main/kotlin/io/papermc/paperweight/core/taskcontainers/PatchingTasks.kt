@@ -35,8 +35,6 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -52,9 +50,6 @@ class PatchingTasks(
     private val baseDir: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
     private val outputDir: Path,
-    private val ats: RegularFileProperty,
-    private val jstClasspath: FileCollection,
-    private val jstConfig: FileCollection,
     private val tasks: TaskContainer = project.tasks,
 ) {
     private fun ApplyFilePatches.configureApplyFilePatches() {
@@ -124,11 +119,6 @@ class PatchingTasks(
         val rebuildFilePatches = tasks.register<RebuildFilePatches>(rebuildFilePatchesName) {
             group = taskGroup
             description = "Rebuilds $configName file patches"
-
-            ats.jstClasspath.from(this@PatchingTasks.jstClasspath)
-            ats.jst.from(jstConfig)
-            atFile.set(this@PatchingTasks.ats.fileExists(project))
-            atFileOut.set(this@PatchingTasks.ats.fileExists(project))
 
             base.set(baseDir)
             input.set(outputDir)
