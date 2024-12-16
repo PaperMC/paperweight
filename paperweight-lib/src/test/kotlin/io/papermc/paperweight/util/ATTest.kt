@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.restamp.atFromString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.cadixdev.at.AccessChange
