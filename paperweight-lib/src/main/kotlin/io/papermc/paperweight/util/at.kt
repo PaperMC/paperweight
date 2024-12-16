@@ -32,7 +32,6 @@ import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
 
-// This is copy-pasted into restamp-utils.kt, make sure to update it
 fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
     val stringWriter = StringWriter()
     val writer = BufferedWriter(stringWriter)
