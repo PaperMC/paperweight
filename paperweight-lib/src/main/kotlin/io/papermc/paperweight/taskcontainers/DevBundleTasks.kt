@@ -54,8 +54,6 @@ class DevBundleTasks(
         group = "paperweight"
 
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
-
-        ignoreUnsupportedEnvironment.set(project.providers.gradleProperty(GenerateDevBundle.unsupportedEnvironmentPropName).map { it.toBoolean() })
     }
 
     fun configure(

@@ -22,15 +22,13 @@
 
 package io.papermc.paperweight.tasks
 
-import io.papermc.paperweight.PaperweightException
+import codechicken.diffpatch.cli.DiffOperation
+import codechicken.diffpatch.util.LogLevel
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
@@ -42,7 +40,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -87,48 +84,41 @@ abstract class GenerateDevBundle : DefaultTask() {
     @get:Inject
     abstract val layout: ProjectLayout
 
-    @get:Input
-    @get:Optional
-    abstract val ignoreUnsupportedEnvironment: Property<Boolean>
-
     @TaskAction
     fun run() {
-        checkEnvironment()
-
+        temporaryDir.toPath().deleteRecursive()
+        temporaryDir.toPath().createDirectories()
         val devBundle = devBundleFile.path
         devBundle.deleteForcefully()
-        devBundle.parent.createDirectories()
+        devBundle.createParentDirectories()
 
-        val tempPatchDir = createTempDirectory("devBundlePatches")
-        try {
-            generatePatches(tempPatchDir)
+        val tempPatchDir = temporaryDir.toPath().resolve("patches")
+        generatePatches(tempPatchDir)
 
-            val dataDir = "data"
-            val patchesDir = "patches"
-            val config = createBundleConfig(dataDir, patchesDir)
+        val dataDir = "data"
+        val patchesDir = "patches"
+        val config = createBundleConfig(dataDir, patchesDir)
 
-            devBundle.writeZip().use { zip ->
-                zip.getPath("config.json").bufferedWriter(Charsets.UTF_8).use { writer ->
-                    gson.toJson(config, writer)
-                }
-                zip.getPath("data-version.txt").writeText(currentDataVersion.toString())
-
-                val dataZip = zip.getPath(dataDir)
-                dataZip.createDirectories()
-                reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
-                mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
-
-                val patchesZip = zip.getPath(patchesDir)
-                tempPatchDir.copyRecursivelyTo(patchesZip)
+        devBundle.writeZip().use { zip ->
+            zip.getPath("config.json").bufferedWriter(Charsets.UTF_8).use { writer ->
+                gson.toJson(config, writer)
             }
-        } finally {
-            tempPatchDir.deleteRecursive()
+            zip.getPath("data-version.txt").writeText(currentDataVersion.toString())
+
+            val dataZip = zip.getPath(dataDir)
+            dataZip.createDirectories()
+            reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
+            mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
+
+            val patchesZip = zip.getPath(patchesDir)
+            tempPatchDir.copyRecursivelyTo(patchesZip)
         }
+
+        temporaryDir.toPath().deleteRecursive()
     }
 
     private fun generatePatches(output: Path) {
-        val workingDir = layout.cache.resolve(paperTaskOutput("tmpdir"))
-        workingDir.deleteRecursive()
+        val workingDir = temporaryDir.toPath().resolve("work")
         workingDir.createDirectories()
         mainJavaDir.path.copyRecursivelyTo(workingDir)
         patchedJavaDir.path.copyRecursivelyTo(workingDir)
@@ -145,77 +135,49 @@ abstract class GenerateDevBundle : DefaultTask() {
                 val decompFile = oldSrc.resolve(relativeFilePath)
 
                 if (decompFile.exists()) {
-                    val diffText = diffFiles(relativeFilePath, decompFile, file)
                     val patchName = relativeFile.name + ".patch"
                     val outputFile = output.resolve(relativeFilePath).resolveSibling(patchName)
-                    if (diffText.isNotBlank()) {
-                        outputFile.parent.createDirectories()
-                        outputFile.writeText(diffText)
-                    }
+                    diffFiles(relativeFilePath, decompFile, file)
+                        ?.copyTo(outputFile.createParentDirectories())
                 } else {
                     val outputFile = output.resolve(relativeFilePath)
-                    outputFile.parent.createDirectories()
-                    file.copyTo(outputFile)
+                    file.copyTo(outputFile.createParentDirectories())
                 }
             }
         }
-
-        workingDir.deleteRecursive()
     }
 
-    private fun diffFiles(fileName: String, original: Path, patched: Path): String {
-        val dir = createTempDirectory("diff")
-        try {
-            val oldFile = dir.resolve("old.java")
-            val newFile = dir.resolve("new.java")
-            original.copyTo(oldFile)
-            patched.copyTo(newFile)
+    private fun diffFiles(fileName: String, original: Path, patched: Path): Path? {
+        val dir = temporaryDir.toPath().resolve("diff-work")
+        dir.deleteRecursive()
+        dir.createDirectories()
+        val a = dir.resolve("a")
+        val oldFile = a.resolve(fileName).createParentDirectories()
+        val b = dir.resolve("b")
+        val newFile = b.resolve(fileName).createParentDirectories()
+        val patchOut = dir.resolve("out")
+        original.copyTo(oldFile)
+        patched.copyTo(newFile)
 
-            val args = listOf(
-                "--color=never",
-                "-ud",
-                "--label",
-                "a/$fileName",
-                oldFile.absolutePathString(),
-                "--label",
-                "b/$fileName",
-                newFile.absolutePathString(),
-            )
-
-            return runDiff(dir, args)
-        } finally {
-            dir.deleteRecursive()
+        val logFile = temporaryDir.toPath().resolve("diff-log/${fileName.replace("/", "_")}.txt")
+            .createParentDirectories()
+        PrintStream(logFile.toFile(), Charsets.UTF_8).use { logOut ->
+            DiffOperation.builder()
+                .logTo(logOut)
+                .aPath(a)
+                .bPath(b)
+                .outputPath(patchOut, null)
+                .autoHeader(true)
+                .level(LogLevel.ALL)
+                .lineEnding("\n")
+                .context(3)
+                .summary(true)
+                .build()
+                .operate()
         }
+
+        return patchOut.resolve("$fileName.patch").takeIf { it.isRegularFile() }
     }
-
-    private fun runDiff(dir: Path?, args: List<String>): String {
-        val cmd = listOf("diff") + args
-        val process = ProcessBuilder(cmd)
-            .directory(dir)
-            .start()
-
-        val errBytes = ByteArrayOutputStream()
-        val errFuture = redirect(process.errorStream, errBytes)
-        val outBytes = ByteArrayOutputStream()
-        val outFuture = redirect(process.inputStream, outBytes)
-
-        if (!process.waitFor(10L, TimeUnit.SECONDS)) {
-            process.destroyForcibly()
-            throw PaperweightException("Command '${cmd.joinToString(" ")}' did not finish after 10 seconds, killed process")
-        }
-        errFuture.get(500L, TimeUnit.MILLISECONDS)
-        outFuture.get(500L, TimeUnit.MILLISECONDS)
-        val err = asString(errBytes)
-        val exit = process.exitValue()
-        if (exit != 0 && exit != 1 || err.isNotBlank()) {
-            throw PaperweightException("Error (exit code $exit) executing '${cmd.joinToString(" ")}':\n$err")
-        }
-
-        return asString(outBytes)
-    }
-
-    private fun asString(out: ByteArrayOutputStream) = String(out.toByteArray(), Charset.defaultCharset())
-        .replace(System.lineSeparator(), "\n")
 
     @Suppress("SameParameterValue")
     private fun createBundleConfig(dataTargetDir: String, patchTargetDir: String): DevBundleConfig {
@@ -249,32 +211,10 @@ abstract class GenerateDevBundle : DefaultTask() {
     )
 
     companion object {
-        const val unsupportedEnvironmentPropName: String = "paperweight.generateDevBundle.ignoreUnsupportedEnvironment"
-
         const val reobfMappingsFileName = "$DEOBF_NAMESPACE-$SPIGOT_NAMESPACE-reobf.tiny"
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
         const val currentDataVersion = 6
-    }
-
-    private fun checkEnvironment() {
-        val diffVersion = runDiff(null, listOf("--version")) + " " // add whitespace so pattern still works even with eol
-        val matcher = Pattern.compile("diff \\(GNU diffutils\\) (.*?)\\s").matcher(diffVersion)
-        if (matcher.find()) {
-            logger.lifecycle("Using 'diff (GNU diffutils) {}'.", matcher.group(1))
-            return
-        }
-
-        logger.warn("Non-GNU diffutils diff detected, '--version' returned:\n{}", diffVersion)
-        if (this.ignoreUnsupportedEnvironment.getOrElse(false)) {
-            logger.warn("Ignoring unsupported environment as per user configuration.")
-        } else {
-            throw PaperweightException(
-                "Dev bundle generation is running in an unsupported environment (see above log messages).\n" +
-                    "You can ignore this and attempt to generate a dev bundle anyways by setting the '$unsupportedEnvironmentPropName' Gradle " +
-                    "property to 'true'."
-            )
-        }
     }
 }
