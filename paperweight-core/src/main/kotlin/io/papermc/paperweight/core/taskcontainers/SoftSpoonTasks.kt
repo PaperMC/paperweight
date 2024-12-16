@@ -112,8 +112,8 @@ class SoftSpoonTasks(
         secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
 
-    val importLibraryFiles = tasks.register<ImportLibraryFiles>("importLibraryFiles") {
-        paperPatches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
+    val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
+        patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
         devImports.set(project.coreExt.paper.devImports.fileExists(project))
         libraries.from(
             allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
