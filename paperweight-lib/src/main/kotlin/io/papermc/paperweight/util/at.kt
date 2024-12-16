@@ -32,15 +32,21 @@ import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
 
-fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String = "") {
+fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: String? = null) {
     val stringWriter = StringWriter()
     val writer = BufferedWriter(stringWriter)
     write(writer, at)
     writer.close()
-    // unify line endings
-    val lines = stringWriter.toString().replace("\r\n", "\n").split("\n")
-    // remove last empty line, sort, then add it back
-    path.writeText(lines.subList(0, lines.size - 1).sorted().joinToString("\n", header, "\n"), Charsets.UTF_8)
+    val lines = header?.let { mutableListOf(it) } ?: mutableListOf()
+    lines += stringWriter.toString()
+        // unify line endings
+        .replace("\r\n", "\n")
+        .split("\n")
+        // skip blank lines
+        .filter { it.isNotBlank() }
+        // sort
+        .sorted()
+    path.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
 }
 
 fun atFromString(input: String): AccessTransform {
