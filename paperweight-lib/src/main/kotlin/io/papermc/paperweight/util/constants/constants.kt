@@ -126,7 +126,6 @@ const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 
 private const val MACHE_PATH = "$PAPER_PATH/mache"
-const val PATCHES_FOLDER = "$MACHE_PATH/patches"
 const val BASE_PROJECT = "$MACHE_PATH/base"
 
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"

@@ -58,9 +58,6 @@ abstract class SetupVanilla : JavaLauncherTask() {
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
-    @get:Internal
-    abstract val machePatches: DirectoryProperty
-
     @get:Optional
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -153,7 +150,7 @@ abstract class SetupVanilla : JavaLauncherTask() {
             commitAndTag(git, "Vanilla")
         }
 
-        if (machePatches.isPresent) {
+        if (!mache.isEmpty) {
             println("Applying mache patches...")
 
             val result = PatchOperation.builder()

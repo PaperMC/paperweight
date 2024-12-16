@@ -121,7 +121,6 @@ open class SoftSpoonTasks(
 
         mache.from(project.configurations.named(MACHE_CONFIG))
         macheOld.set(project.ext.macheOldPath)
-        machePatches.set(layout.cache.resolve(PATCHES_FOLDER))
         minecraftClasspath.from(macheMinecraftLibraries)
 
         paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
