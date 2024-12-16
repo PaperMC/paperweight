@@ -66,7 +66,7 @@ abstract class PaperweightPatcher : Plugin<Project> {
                 workDir.set(workDirFromProp)
             }
 
-            val upstreamApply = tasks.register<RunNestedBuild>("applyUpstreamRootPatches") {
+            val applyUpstream = tasks.register<RunNestedBuild>("applyUpstream") {
                 group = "patching"
                 projectDir.set(checkoutTask.flatMap { it.outputDir })
                 tasks.add("applyForDownstream")
@@ -82,7 +82,7 @@ abstract class PaperweightPatcher : Plugin<Project> {
                 !isBaseExecution,
                 "patching",
                 provider { false }, // TODO
-                upstreamApply,
+                applyUpstream,
                 null,
             )
 
