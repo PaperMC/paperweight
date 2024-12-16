@@ -45,7 +45,7 @@ class FunctionalTest {
     @Disabled
     @Test
     fun setupCleanTestRepo() {
-        val projectDir = Path.of("F:\\Projects\\paperweight\\test").ensureClean().createDirectories()
+        val projectDir = Path.of("F:\\Projects\\paperweight\\test").cleanFile().createDirectories()
 
         setupMache("fake_mache", projectDir.resolve("mache.zip"))
         setupMojang("fake_mojang", projectDir.resolve("fake_mojang"))

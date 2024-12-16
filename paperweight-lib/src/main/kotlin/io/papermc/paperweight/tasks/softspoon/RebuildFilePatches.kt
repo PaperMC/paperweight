@@ -88,8 +88,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        val patchDir = patches.convertToPath().ensureClean()
-        patchDir.createDirectory()
+        val patchDir = patches.path.cleanDir()
         val inputDir = input.convertToPath()
         val baseDir = base.convertToPath()
 

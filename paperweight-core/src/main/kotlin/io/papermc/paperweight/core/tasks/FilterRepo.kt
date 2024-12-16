@@ -65,7 +65,7 @@ abstract class FilterRepo : BaseTask() {
 
     @TaskAction
     fun run() {
-        outputDir.path.ensureClean()
+        outputDir.path.deleteRecursive()
         if (!inputDir.path.resolve(upstreamPath.get()).exists()) {
             outputDir.path.createDirectories()
             Git.init()
