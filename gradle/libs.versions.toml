@@ -4,7 +4,7 @@ lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.5.1"
 feather = "1.1.0"
-restamp = "1.2.0"
+jst = "1.0.68-inheritance-SNAPSHOT"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -40,7 +40,8 @@ diffpatch = "codechicken:DiffPatch:1.5.0.30"
 serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
 serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
 
-restamp = {module = "io.papermc.restamp:restamp", version.ref = "restamp" }
+jst = { module = "io.papermc.jst:jst-cli-bundle", version.ref = "jst" }
+# jst = { module = "net.neoforged.jst:jst-cli-bundle", version.ref = "jst" }
 
 # test
 mockk = "io.mockk:mockk:1.13.8"

@@ -3,15 +3,9 @@ plugins {
     `config-publish`
 }
 
-val restamp: Configuration by configurations.creating
-configurations.implementation {
-    extendsFrom(restamp)
-}
-
 dependencies {
     shade(projects.paperweightLib)
     shade(project(projects.paperweightLib.path, "sharedRuntime"))
-    restamp(project(projects.paperweightLib.path, "restampRuntime"))
 
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
@@ -27,9 +21,6 @@ gradlePlugin {
 val finalJar = tasks.register("finalJar", Zip::class) {
     archiveExtension.set("jar")
     from(zipTree(tasks.shadowJar.flatMap { it.archiveFile }))
-    from(zipTree(restamp.elements.map { it.single() })) {
-        exclude("META-INF/MANIFEST.MF")
-    }
 }
 tasks.assemble {
     dependsOn(finalJar)

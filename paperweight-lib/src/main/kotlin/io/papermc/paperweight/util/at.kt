@@ -26,7 +26,10 @@ import java.io.BufferedWriter
 import java.io.StringWriter
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.cadixdev.at.AccessChange
+import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
+import org.cadixdev.at.ModifierChange
 import org.cadixdev.at.io.AccessTransformFormat
 
 // This is copy-pasted into restamp-utils.kt, make sure to update it
@@ -39,4 +42,23 @@ fun AccessTransformFormat.writeLF(path: Path, at: AccessTransformSet, header: St
     val lines = stringWriter.toString().replace("\r\n", "\n").split("\n")
     // remove last empty line, sort, then add it back
     path.writeText(lines.subList(0, lines.size - 1).sorted().joinToString("\n", header, "\n"), Charsets.UTF_8)
+}
+
+fun atFromString(input: String): AccessTransform {
+    var last = input.length - 1
+
+    val final = if (input[last] == 'f') {
+        if (input[--last] == '-') ModifierChange.REMOVE else ModifierChange.ADD
+    } else {
+        ModifierChange.NONE
+    }
+
+    val access = when (input.split("+", "-").first()) {
+        "public" -> AccessChange.PUBLIC
+        "protected" -> AccessChange.PROTECTED
+        "private" -> AccessChange.PRIVATE
+        else -> AccessChange.NONE
+    }
+
+    return AccessTransform.of(access, final)
 }

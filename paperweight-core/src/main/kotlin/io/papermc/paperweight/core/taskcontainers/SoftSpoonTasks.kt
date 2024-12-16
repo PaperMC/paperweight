@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.ext
-import io.papermc.paperweight.restamp.RestampVersion
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
@@ -74,9 +73,10 @@ open class SoftSpoonTasks(
     val macheMinecraftLibraries by project.configurations.registering
     val mappedJarOutgoing = project.configurations.consumable("mappedJarOutgoing") // For source generator modules
     val macheMinecraft by project.configurations.registering
-    val restampConfig = project.configurations.register(RESTAMP_CONFIG) {
+    val jstConfig = project.configurations.register(JST_CONFIG) {
         defaultDependencies {
-            add(project.dependencies.create("io.papermc.restamp:restamp:${RestampVersion.VERSION}"))
+            // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
+            add(project.dependencies.create("io.papermc.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
         }
     }
 
@@ -131,7 +131,6 @@ open class SoftSpoonTasks(
 
         mache.from(project.configurations.named(MACHE_CONFIG))
         macheOld.set(project.ext.macheOldPath)
-        minecraftClasspath.from(macheMinecraftLibraries)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
@@ -140,9 +139,11 @@ open class SoftSpoonTasks(
         description = "Setup vanilla source dir (applying mache patches and paper ATs)."
         configureSetupMacheSources()
         libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
-        ats.set(mergeCollectedAts.flatMap { it.outputFile })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
-        restamp.from(restampConfig)
+
+        atFile.set(mergeCollectedAts.flatMap { it.outputFile })
+        ats.jstClasspath.from(macheMinecraftLibraries)
+        ats.jst.from(jstConfig)
     }
 
     val setupMacheSourcesForDevBundle by tasks.registering(SetupVanilla::class) {
@@ -216,16 +217,15 @@ open class SoftSpoonTasks(
         group = "softspoon"
         description = "Rebuilds patches to the vanilla sources"
 
-        minecraftClasspath.from(macheMinecraft)
-        atFile.set(project.ext.paper.additionalAts.fileExists(project))
-        atFileOut.set(project.ext.paper.additionalAts.fileExists(project))
-
         base.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
         input.set(layout.projectDirectory.dir("src/vanilla/java"))
         patches.set(project.ext.paper.sourcePatchDir)
         gitFilePatches.set(project.ext.gitFilePatches)
 
-        restamp.from(restampConfig)
+        ats.jstClasspath.from(macheMinecraft)
+        ats.jst.from(jstConfig)
+        atFile.set(project.ext.paper.additionalAts.fileExists(project))
+        atFileOut.set(project.ext.paper.additionalAts.fileExists(project))
     }
 
     val rebuildResourcePatches by tasks.registering(RebuildFilePatches::class) {
