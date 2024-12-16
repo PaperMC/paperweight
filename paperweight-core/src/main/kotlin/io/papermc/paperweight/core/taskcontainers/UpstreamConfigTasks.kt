@@ -33,8 +33,6 @@ import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
-import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
@@ -43,9 +41,6 @@ class UpstreamConfigTasks(
     private val target: Project,
     private val upstreamCfg: UpstreamConfig,
     private val upstreamDir: Provider<Directory>,
-    private val ats: RegularFileProperty,
-    private val jstClasspath: FileCollection,
-    private val jstConfig: FileCollection,
     private val readOnly: Boolean,
     private val taskGroup: String,
     private val gitFilePatches: Provider<Boolean>,
@@ -134,9 +129,6 @@ class UpstreamConfigTasks(
             base,
             gitFilePatches,
             cfg.outputDir.path,
-            ats,
-            jstClasspath,
-            jstConfig,
         )
     }
 
