@@ -64,16 +64,8 @@ abstract class SetupVanilla : JavaLauncherTask() {
     abstract val ats: RegularFileProperty
 
     @get:Optional
-    @get:InputFiles
-    abstract val libraries: ConfigurableFileCollection
-
-    @get:Optional
-    @get:InputFiles
-    abstract val paperPatches: ConfigurableFileCollection
-
-    @get:Optional
-    @get:InputFile
-    abstract val devImports: RegularFileProperty
+    @get:InputDirectory
+    abstract val libraryImports: DirectoryProperty
 
     @get:Optional
     @get:CompileClasspath
@@ -197,9 +189,8 @@ abstract class SetupVanilla : JavaLauncherTask() {
             commitAndTag(git, "ATs")
         }
 
-        if (!libraries.isEmpty && !paperPatches.isEmpty) {
-            val patches = paperPatches.files.flatMap { it.toPath().walk().filter { path -> path.toString().endsWith(".patch") }.toList() }
-            McDev.importMcDev(patches, null, devImports.pathOrNull, outputPath, null, libraries.files.map { it.toPath() }, true, "")
+        if (libraryImports.isPresent) {
+            libraryImports.path.copyRecursivelyTo(outputPath)
 
             commitAndTag(git, "Imports")
         }

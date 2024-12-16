@@ -32,6 +32,7 @@ import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatches
 import io.papermc.paperweight.tasks.softspoon.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.tasks.softspoon.FixupFilePatches
+import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
 import io.papermc.paperweight.tasks.softspoon.RebuildFilePatches
 import io.papermc.paperweight.tasks.softspoon.SetupPaperScript
 import io.papermc.paperweight.util.*
@@ -116,16 +117,21 @@ open class SoftSpoonTasks(
         secondFile.set(collectAccessTransform.flatMap { it.outputFile })
     }
 
+    val importLibraryFiles = tasks.register<ImportLibraryFiles>("importLibraryFiles") {
+        paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
+        devImports.set(project.ext.paper.devImports.fileExists(project))
+        libraries.from(
+            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
+            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
+        )
+    }
+
     private fun SetupVanilla.configureSetupMacheSources() {
         group = "mache"
 
         mache.from(project.configurations.named(MACHE_CONFIG))
         macheOld.set(project.ext.macheOldPath)
         minecraftClasspath.from(macheMinecraftLibraries)
-
-        paperPatches.from(project.ext.paper.sourcePatchDir, project.ext.paper.featurePatchDir)
-        devImports.set(project.ext.paper.devImports.fileExists(project))
-
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
@@ -133,10 +139,7 @@ open class SoftSpoonTasks(
     val setupMacheSources by tasks.registering(SetupVanilla::class) {
         description = "Setup vanilla source dir (applying mache patches and paper ATs)."
         configureSetupMacheSources()
-        libraries.from(
-            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
-            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
-        )
+        libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
         ats.set(mergeCollectedAts.flatMap { it.outputFile })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
         restamp.from(restampConfig)
