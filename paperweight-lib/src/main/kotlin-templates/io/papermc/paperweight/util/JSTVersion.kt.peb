@@ -20,8 +20,8 @@
  * USA
  */
 
-package io.papermc.paperweight.restamp
+package io.papermc.paperweight.util
 
-object RestampVersion {
-    const val VERSION: String = "{{ restamp_version }}"
+object JSTVersion {
+    const val VERSION: String = "{{ jst_version }}"
 }

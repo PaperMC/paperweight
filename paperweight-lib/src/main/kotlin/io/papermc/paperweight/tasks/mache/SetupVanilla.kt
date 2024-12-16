@@ -25,9 +25,8 @@ package io.papermc.paperweight.tasks.mache
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.archiver.ArchiveFormat
-import io.papermc.paperweight.restamp.SetupVanillaRestampWorker
-import io.papermc.paperweight.restamp.setSnappyTempDir
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.tasks.softspoon.ApplySourceATs
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import java.util.function.Predicate
@@ -59,17 +58,8 @@ abstract class SetupVanilla : JavaLauncherTask() {
     abstract val outputDir: DirectoryProperty
 
     @get:Optional
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val ats: RegularFileProperty
-
-    @get:Optional
     @get:InputDirectory
     abstract val libraryImports: DirectoryProperty
-
-    @get:Optional
-    @get:CompileClasspath
-    abstract val minecraftClasspath: ConfigurableFileCollection
 
     @get:Optional
     @get:Classpath
@@ -82,8 +72,12 @@ abstract class SetupVanilla : JavaLauncherTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
-    @get:CompileClasspath
-    abstract val restamp: ConfigurableFileCollection
+    @get:Nested
+    val ats: ApplySourceATs = objects.newInstance()
+
+    @get:InputFile
+    @get:Optional
+    abstract val atFile: RegularFileProperty
 
     @TaskAction
     fun run() {
@@ -165,27 +159,22 @@ abstract class SetupVanilla : JavaLauncherTask() {
             logger.lifecycle("Applied ${result.summary.changedFiles} mache patches")
         }
 
-        if (ats.isPresent) {
-            val classPath = minecraftClasspath.files.map { it.toPath() }.toMutableList()
-            classPath.add(outputPath)
-
+        if (atFile.isPresent) {
             println("Applying access transformers...")
-
-            val queue = workerExecutor.processIsolation {
-                forkOptions {
-                    maxHeapSize = "2G"
-                    executable(launcher.get().executablePath.path.absolutePathString())
-                    classpath.from(restamp)
-                    setSnappyTempDir(temporaryDir)
-                }
+            // TODO - No way to tell JST to ignore the .git dir
+            val gitTmp = outputPath.resolveSibling(outputPath.name + "_.git_tmp")
+            outputPath.resolve(".git").moveTo(gitTmp)
+            try {
+                ats.run(
+                    launcher.get(),
+                    outputPath,
+                    outputPath,
+                    atFile.path,
+                    temporaryDir.toPath(),
+                )
+            } finally {
+                gitTmp.moveTo(outputPath.resolve(".git"))
             }
-            queue.submit(SetupVanillaRestampWorker::class) {
-                this.ats.set(this@SetupVanilla.ats.pathOrNull)
-                this.outputPath.set(outputPath)
-                this.classpath.from(classPath)
-            }
-            queue.await()
-
             commitAndTag(git, "ATs")
         }
 

@@ -15,22 +15,15 @@ val sharedJar by tasks.creating(Jar::class) {
 tasks.jar {
     from(shared.output)
 }
-val restamp = sourceSets.create("restamp") {
+sourceSets.main {
     blossom {
         kotlinSources {
-            properties.put("restamp_version", libs.versions.restamp)
+            properties.put("jst_version", libs.versions.jst)
         }
     }
 }
-val restampJar by tasks.creating(Jar::class) {
-    archiveClassifier = "restamp"
-    from(restamp.output)
-}
 
 configurations {
-    consumable("restampRuntime") {
-        outgoing.artifact(restampJar)
-    }
     consumable("sharedRuntime") {
         outgoing.artifact(sharedJar)
     }
@@ -41,14 +34,6 @@ dependencies {
     shared.compileOnlyConfigurationName(gradleKotlinDsl())
     compileOnly(shared.output)
     testImplementation(shared.output)
-
-    restamp.implementationConfigurationName(libs.restamp)
-    restamp.implementationConfigurationName(shared.output)
-    restamp.compileOnlyConfigurationName(gradleApi())
-    restamp.compileOnlyConfigurationName(gradleKotlinDsl())
-    compileOnly(restamp.output)
-    testImplementation(restamp.output)
-    testImplementation(libs.restamp)
 
     implementation(libs.httpclient)
     implementation(libs.bundles.kotson)
