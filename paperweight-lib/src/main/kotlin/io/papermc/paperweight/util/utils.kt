@@ -220,6 +220,16 @@ fun Any.convertToFileProvider(layout: ProjectLayout, providers: ProviderFactory)
     }
 }
 
+fun Any.convertToPath(): Path {
+    return when (this) {
+        is Path -> this
+        is File -> this.toPath()
+        is FileSystemLocation -> this.path
+        is Provider<*> -> this.get().convertToPath()
+        else -> throw PaperweightException("Unknown type representing a file: ${this.javaClass.name}")
+    }
+}
+
 fun Any?.convertToPathOrNull(): Path? {
     if (this == null) {
         return null
