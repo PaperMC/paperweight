@@ -7,14 +7,6 @@ repositories {
     gradlePluginPortal()
 }
 
-val shared = sourceSets.create("shared")
-val sharedJar by tasks.creating(Jar::class) {
-    archiveClassifier = "shared"
-    from(shared.output)
-}
-tasks.jar {
-    from(shared.output)
-}
 sourceSets.main {
     blossom {
         kotlinSources {
@@ -23,18 +15,7 @@ sourceSets.main {
     }
 }
 
-configurations {
-    consumable("sharedRuntime") {
-        outgoing.artifact(sharedJar)
-    }
-}
-
 dependencies {
-    shared.compileOnlyConfigurationName(gradleApi())
-    shared.compileOnlyConfigurationName(gradleKotlinDsl())
-    compileOnly(shared.output)
-    testImplementation(shared.output)
-
     implementation(libs.httpclient)
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)

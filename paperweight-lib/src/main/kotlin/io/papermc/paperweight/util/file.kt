@@ -24,13 +24,20 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.InputStream
+import java.net.URI
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystem
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.attribute.DosFileAttributeView
 import java.nio.file.attribute.FileAttribute
 import java.util.Arrays
+import java.util.stream.Collectors
+import java.util.stream.Stream
+import java.util.stream.StreamSupport
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -38,6 +45,7 @@ import kotlin.io.path.*
 import kotlin.streams.asSequence
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.FileSystemLocationProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logging
@@ -255,5 +263,42 @@ fun Path.createParentDirectories(vararg attributes: FileAttribute<*>): Path = al
         } catch (e: FileAlreadyExistsException) {
             if (!parent.isDirectory()) throw e
         }
+    }
+}
+
+val FileSystemLocation.path: Path
+    get() = asFile.toPath()
+val Provider<out FileSystemLocation>.path: Path
+    get() = get().path
+val Provider<out FileSystemLocation>.pathOrNull: Path?
+    get() = orNull?.path
+
+private fun Path.jarUri(): URI {
+    return URI.create("jar:${toUri()}")
+}
+
+fun Path.openZip(): FileSystem {
+    return try {
+        FileSystems.getFileSystem(jarUri())
+    } catch (e: FileSystemNotFoundException) {
+        FileSystems.newFileSystem(jarUri(), emptyMap<String, Any>())
+    }
+}
+
+fun Path.writeZip(): FileSystem {
+    return FileSystems.newFileSystem(jarUri(), mapOf("create" to "true"))
+}
+
+fun FileSystem.walk(): Stream<Path> {
+    return StreamSupport.stream(rootDirectories.spliterator(), false)
+        .flatMap { Files.walk(it) }
+}
+
+fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
+    val matcher = fileSystem.getPathMatcher("glob:$glob")
+    return Files.walk(this).use { stream ->
+        stream.filter {
+            it.isRegularFile() && matcher.matches(it.fileName)
+        }.collect(Collectors.toList())
     }
 }
