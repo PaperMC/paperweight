@@ -235,7 +235,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
             AccessTransformFormats.FML.writeLF(
                 atFileOut.path,
                 oldAts,
-                "# This file is auto generated, any changes may be overridden!\n# See CONTRIBUTING.md on how to add access transformers.\n"
+                "# This file is auto generated, any changes may be overridden!\n# See CONTRIBUTING.md on how to add access transformers."
             )
         }
 
