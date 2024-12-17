@@ -76,17 +76,19 @@ open class TaskTest {
     }
 
     fun compareZip(actualOutput: Path, expectedOutput: Path) {
-        val actualZip = actualOutput.openZip()
-        val actualFiles = actualZip.walk().filter { Files.isRegularFile(it) }.toList()
-        val expectedZip = expectedOutput.openZip()
-        val expectedFiles = expectedZip.walk().filter { Files.isRegularFile(it) }.toList()
+        actualOutput.openZip().use { actualZip ->
+            val actualFiles = actualZip.walkSequence().toList()
+            expectedOutput.openZip().use { expectedZip ->
+                val expectedFiles = expectedZip.walkSequence().toList()
 
-        assertEquals(expectedFiles.size, actualFiles.size, "Expected $expectedFiles files, got $actualFiles")
+                assertEquals(expectedFiles.size, actualFiles.size, "Expected $expectedFiles files, got $actualFiles")
 
-        expectedFiles.forEach { expectedFile ->
-            val actualFile = actualZip.getPath(expectedFile.toString())
+                expectedFiles.forEach { expectedFile ->
+                    val actualFile = actualZip.getPath(expectedFile.toString())
 
-            compareFile(actualFile, expectedFile)
+                    compareFile(actualFile, expectedFile)
+                }
+            }
         }
     }
 

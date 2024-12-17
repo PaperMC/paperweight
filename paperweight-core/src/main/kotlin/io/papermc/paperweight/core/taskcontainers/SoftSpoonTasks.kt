@@ -29,6 +29,7 @@ import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
 import io.papermc.paperweight.tasks.mache.SetupVanilla
 import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
+import io.papermc.paperweight.tasks.softspoon.IndexLibraryFiles
 import io.papermc.paperweight.tasks.softspoon.SetupPaperScript
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -112,13 +113,18 @@ class SoftSpoonTasks(
         secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
 
-    val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
-        patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
-        devImports.set(project.coreExt.paper.devImports.fileExists(project))
+    val indexLibraryFiles = tasks.register<IndexLibraryFiles>("indexLibraryFiles") {
         libraries.from(
             allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
             allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
         )
+    }
+
+    val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
+        patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
+        devImports.set(project.coreExt.paper.devImports.fileExists(project))
+        libraryFileIndex.set(indexLibraryFiles.flatMap { it.outputFile })
+        libraries.from(indexLibraryFiles.map { it.libraries })
     }
 
     private fun SetupVanilla.configureSetupMacheSources() {
