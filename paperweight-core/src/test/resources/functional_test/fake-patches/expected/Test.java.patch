@@ -3,12 +3,12 @@
 @@ -7,10 +_,10 @@
      }
  
-     public final String getTest() {
+     public String getTest() {
 -        return this.test;
 +        return this.test; // WOOOO
      }
  
-     private final String getTest2() {
+     public String getTest2() {
 -        return this.test + "2";
 +        return this.test + "2"; // Woo
      }

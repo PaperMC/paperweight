@@ -9,7 +9,7 @@ index 418548ec7dd11e57f0838d1dae048b99a2669ea3..95266c0cad0b100367ca840d286b7a00
 --- a/Test.java
 +++ b/Test.java
 @@ -13,4 +13,8 @@ public class Test {
-     public String getTest2() {
+     public final String getTest2() {
          return this.test + "2";
      }
 +

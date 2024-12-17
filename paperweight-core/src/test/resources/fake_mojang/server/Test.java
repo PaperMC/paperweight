@@ -7,11 +7,11 @@ public class Test {
         this.test = test;
     }
 
-    public String getTest() {
+    public final String getTest() {
         return test;
     }
 
-    public String getTest2() {
+    public final String getTest2() {
         return test + "2";
     }
 }
