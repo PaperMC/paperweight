@@ -3,7 +3,7 @@
 @@ -8,6 +_,6 @@
      }
  
-     private final String getTest() {
+     public String getTest() {
 -        return test;
 +        return test + "Test"; // Test
      }

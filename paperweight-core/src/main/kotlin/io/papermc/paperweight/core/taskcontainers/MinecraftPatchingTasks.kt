@@ -29,6 +29,7 @@ import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
+import io.papermc.paperweight.core.tasks.patching.ProcessNewSourceATs
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
@@ -206,11 +207,6 @@ class MinecraftPatchingTasks(
             input.set(outputSrc)
             patches.set(sourcePatchDir)
             gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
-
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
-            ats.jst.from(project.configurations.named(JST_CONFIG))
-            atFile.set(additionalAts.fileExists(project))
-            atFileOut.set(additionalAts.fileExists(project))
         }
 
         val rebuildResourcePatches = tasks.register<RebuildFilePatches>(rebuildResourcePatchesName) {
@@ -259,6 +255,16 @@ class MinecraftPatchingTasks(
 
             repo.set(outputResources)
             upstream.set("upstream/main")
+        }
+
+        val processNewSourceATs by project.tasks.registering(ProcessNewSourceATs::class) {
+            description = "Processes new source ATs"
+
+            base.set(baseSources)
+            input.set(outputSrc)
+            atFile.set(additionalAts)
+            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
+            ats.jst.from(project.configurations.named(JST_CONFIG))
         }
     }
 }

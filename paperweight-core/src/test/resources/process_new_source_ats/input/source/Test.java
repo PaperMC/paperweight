@@ -1,13 +1,13 @@
 public class Test {
 
     public int dum;
-    public String test;
+    private final String test;
 
     public Test(String test) {
         this.test = test;
     }
 
-    private final String getTest() {
+    public String getTest() {// Paper-AT: public-f getTest()Ljava/lang/String;
         return test;
     }
 }

@@ -28,6 +28,7 @@ import codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import java.util.function.Predicate
 import kotlin.io.path.*
@@ -81,7 +82,7 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         val git: Git
         if (outputPath.resolve(".git/HEAD").isRegularFile()) {
             git = Git.open(outputPath.toFile())
-            git.reset().setRef("ROOT").setMode(ResetCommand.ResetType.HARD).call()
+            git.reset().setRef(MACHE_TAG_ROOT).setMode(ResetCommand.ResetType.HARD).call()
         } else {
             outputPath.createDirectories()
 
@@ -90,10 +91,10 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 .setInitialBranch("main")
                 .call()
 
-            val rootIdent = PersonIdent("ROOT", "noreply+automated@papermc.io")
-            git.commit().setMessage("ROOT").setAllowEmpty(true).setAuthor(rootIdent).setSign(false).call()
-            git.tagDelete().setTags("ROOT").call()
-            git.tag().setName("ROOT").setTagger(rootIdent).setSigned(false).call()
+            val rootIdent = PersonIdent(MACHE_TAG_ROOT, "noreply+automated@papermc.io")
+            git.commit().setMessage(MACHE_TAG_ROOT).setAllowEmpty(true).setAuthor(rootIdent).setSign(false).call()
+            git.tagDelete().setTags(MACHE_TAG_ROOT).call()
+            git.tag().setName(MACHE_TAG_ROOT).setTagger(rootIdent).setSigned(false).call()
         }
 
         if (macheOld.isPresent) {
@@ -130,7 +131,7 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         println("Setup git repo...")
         if (!macheOld.isPresent) {
             // skip this if we are diffing against old, since it would be a commit without mache patches
-            commitAndTag(git, "Vanilla")
+            commitAndTag(git, MACHE_TAG_VANILLA)
         }
 
         if (!mache.isEmpty) {
@@ -147,7 +148,7 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 .build()
                 .operate()
 
-            commitAndTag(git, "Mache")
+            commitAndTag(git, MACHE_TAG_PATCHES)
 
             if (result.exit != 0) {
                 throw Exception("Failed to apply ${result.summary.failedMatches} mache patches")
@@ -165,13 +166,13 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs", "paper ATs")
+            commitAndTag(git, MACHE_TAG_ATS, "paper ATs")
         }
 
         if (libraryImports.isPresent) {
             libraryImports.path.copyRecursivelyTo(outputPath)
 
-            commitAndTag(git, "Imports", "paper Imports")
+            commitAndTag(git, MACHE_TAG_IMPORTS, "paper Imports")
         }
 
         git.close()

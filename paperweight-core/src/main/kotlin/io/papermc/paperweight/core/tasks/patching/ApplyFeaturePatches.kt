@@ -25,8 +25,10 @@ package io.papermc.paperweight.core.tasks.patching
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.io.path.createDirectories
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -86,7 +88,7 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
         if (git("checkout", "main").runSilently(silenceErr = true) != 0) {
             git("checkout", "-b", "main").runSilently(silenceErr = true)
         }
-        git("reset", "--hard", "file").executeSilently(silenceErr = true)
+        git("reset", "--hard", MACHE_TAG_FILE).executeSilently(silenceErr = true)
         git("gc").runSilently(silenceErr = true)
 
         applyGitPatches(git, "server repo", repoPath, patches.path, printOutput.get(), verbose.get())

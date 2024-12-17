@@ -1,7 +1,7 @@
 public class Test {
 
-    public final int dum;
-    public String test;
+    public int dum;
+    private final String test;
 
     public Test(String test) {
         this.test = test;

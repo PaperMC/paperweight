@@ -117,6 +117,14 @@ const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 private const val MACHE_PATH = "$PAPER_PATH/mache"
 const val BASE_PROJECT = "$MACHE_PATH/base"
 
+// when changing these, also change it in the post-rewrite.sh!
+const val MACHE_TAG_ROOT = "ROOT"
+const val MACHE_TAG_VANILLA = "Vanilla"
+const val MACHE_TAG_PATCHES = "Mache"
+const val MACHE_TAG_ATS = "ATs"
+const val MACHE_TAG_IMPORTS = "Imports"
+const val MACHE_TAG_FILE = "file"
+
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")
 

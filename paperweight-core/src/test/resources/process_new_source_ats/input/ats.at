@@ -1,5 +1,3 @@
 # This file is auto generated, any changes may be overridden!
 # See CONTRIBUTING.md on how to add access transformers.
-public-f Test test
-public+f Test dum
-private+f Test getTest()Ljava/lang/String;
+
