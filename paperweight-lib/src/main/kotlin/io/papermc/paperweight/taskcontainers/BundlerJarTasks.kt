@@ -136,7 +136,7 @@ class BundlerJarTasks(
         libraryArtifacts.set(
             artifacts.map { a ->
                 a.map {
-                    val obj = objects.newInstance(CreateBundlerJar.Artifact::class)
+                    val obj = objects.newInstance(CreateBundlerJar.LibraryArtifact::class)
                     obj.id.set(it.id)
                     obj.path.set(it.file)
                     obj.variant.set(it.variant)

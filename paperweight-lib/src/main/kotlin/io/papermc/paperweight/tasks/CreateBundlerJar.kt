@@ -65,14 +65,13 @@ abstract class CreateBundlerJar : ZippedTask() {
 
     @get:Nested
     @get:Optional
-    abstract val libraryArtifacts: ListProperty<Artifact>
+    abstract val libraryArtifacts: ListProperty<LibraryArtifact>
 
     // Gradle wants us to split the file inputs from the metadata inputs, but then we would lose association.
-    // So we include the file input (not properly tracked as produced by the configuration) in Artifact, but also
+    // So we include the file input (not properly tracked as produced by the configuration) in LibraryArtifact, but also
     // depend on the configuration normally without meta to ensure the file's dependencies run.
-    @get:InputFiles
+    @get:Classpath
     @get:Optional
-    @get:PathSensitive(PathSensitivity.NONE)
     abstract val libraryArtifactsFiles: ConfigurableFileCollection
 
     @get:PathSensitive(PathSensitivity.NONE)
@@ -200,9 +199,8 @@ abstract class CreateBundlerJar : ZippedTask() {
         }
     }
 
-    abstract class Artifact {
-        @get:InputFile
-        @get:PathSensitive(PathSensitivity.NONE)
+    abstract class LibraryArtifact {
+        @get:Internal
         abstract val path: RegularFileProperty
 
         @get:Input
