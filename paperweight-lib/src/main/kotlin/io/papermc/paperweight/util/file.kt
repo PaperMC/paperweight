@@ -289,12 +289,21 @@ fun Path.writeZip(): FileSystem {
     return FileSystems.newFileSystem(jarUri(), mapOf("create" to "true"))
 }
 
+fun FileSystem.walkSequence(vararg options: PathWalkOption): Sequence<Path> {
+    return StreamSupport.stream(rootDirectories.spliterator(), false)
+        .asSequence()
+        .flatMap { it.walk(*options) }
+}
+
 fun FileSystem.walk(): Stream<Path> {
     return StreamSupport.stream(rootDirectories.spliterator(), false)
         .flatMap { Files.walk(it) }
 }
 
 fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
+    if (!exists()) {
+        return emptyList()
+    }
     val matcher = fileSystem.getPathMatcher("glob:$glob")
     return Files.walk(this).use { stream ->
         stream.filter {

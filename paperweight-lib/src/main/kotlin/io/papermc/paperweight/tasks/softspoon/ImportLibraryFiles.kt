@@ -22,24 +22,79 @@
 
 package io.papermc.paperweight.tasks.softspoon
 
+import com.github.salomonbrys.kotson.typeToken
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+
+private data class LibraryImport(val libraryFileName: String, val importFilePath: String)
+
+abstract class IndexLibraryFiles : BaseTask() {
+
+    @get:InputFiles
+    abstract val libraries: ConfigurableFileCollection
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    override fun init() {
+        super.init()
+        outputFile.set(layout.cache.resolve(paperTaskOutput("json")))
+    }
+
+    @TaskAction
+    fun run() {
+        val possible = findPossibleLibraryImports(libraries.sourcesJars())
+        outputFile.path.cleanFile().bufferedWriter().use { writer ->
+            gson.toJson(possible, writer)
+        }
+    }
+
+    private fun findPossibleLibraryImports(libFiles: List<Path>): Collection<LibraryImport> = runBlocking {
+        val found = ConcurrentHashMap.newKeySet<LibraryImport>()
+        val suffix = ".java"
+        libFiles.forEach { libFile ->
+            launch(Dispatchers.IO) {
+                libFile.openZipSafe().use { zipFile ->
+                    zipFile.walkSequence()
+                        .filter { it.isRegularFile() && it.name.endsWith(suffix) }
+                        .map { sourceFile ->
+                            LibraryImport(libFile.name, sourceFile.toString().substring(1))
+                        }
+                        .forEach(found::add)
+                }
+            }
+        }
+        return@runBlocking found
+    }
+}
 
 abstract class ImportLibraryFiles : BaseTask() {
 
-    @get:Optional
     @get:InputFiles
     abstract val libraries: ConfigurableFileCollection
+
+    @get:InputFile
+    abstract val libraryFileIndex: RegularFileProperty
 
     @get:Optional
     @get:InputFiles
@@ -62,17 +117,115 @@ abstract class ImportLibraryFiles : BaseTask() {
         outputDir.path.deleteRecursive()
         outputDir.path.createDirectories()
         if (!libraries.isEmpty && !patches.isEmpty) {
-            val patchFiles = patches.files.flatMap { it.toPath().walk().filter { path -> path.toString().endsWith(".patch") }.toList() }
-            McDev.importMcDev(
+            val index = libraryFileIndex.path.bufferedReader().use { reader ->
+                gson.fromJson<Set<LibraryImport>>(reader, typeToken<Set<LibraryImport>>())
+            }
+            val patchFiles = patches.files.flatMap { it.toPath().filesMatchingRecursive("*.patch") }
+            importLibraryFiles(
                 patchFiles,
-                null,
                 devImports.pathOrNull,
                 outputDir.path,
-                null,
-                libraries.files.map { it.toPath() },
-                true,
-                ""
+                libraries.sourcesJars(),
+                index,
+                true
             )
         }
     }
+
+    private fun importLibraryFiles(
+        patches: Iterable<Path>,
+        importsFile: Path?,
+        targetDir: Path,
+        libFiles: List<Path>,
+        index: Set<LibraryImport>,
+        printOutput: Boolean,
+    ) = runBlocking {
+        // Import library classes
+        val allImports = findLibraryImports(importsFile, libFiles, index, patches)
+        val importsByLib = allImports.groupBy { it.libraryFileName }
+        logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", allImports.size)
+
+        for ((libraryFileName, imports) in importsByLib) {
+            val libFile = libFiles.firstOrNull { it.name == libraryFileName }
+                ?: throw PaperweightException("Failed to find library: $libraryFileName for classes ${imports.map { it.importFilePath }}")
+            launch(Dispatchers.IO) {
+                libFile.openZipSafe().use { zipFile ->
+                    for (import in imports) {
+                        val outputFile = targetDir.resolve(import.importFilePath)
+                        if (outputFile.exists()) {
+                            continue
+                        }
+                        outputFile.parent.createDirectories()
+
+                        val libEntry = zipFile.getPath(import.importFilePath)
+                        libEntry.copyTo(outputFile)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun usePatchLines(patches: Iterable<Path>, consumer: (String) -> Unit) = coroutineScope {
+        for (patch in patches) {
+            launch(Dispatchers.IO) {
+                patch.useLines { lines ->
+                    lines.forEach { consumer(it) }
+                }
+            }
+        }
+    }
+
+    private suspend fun findLibraryImports(
+        libraryImports: Path?,
+        libFiles: List<Path>,
+        index: Set<LibraryImport>,
+        patchFiles: Iterable<Path>
+    ): Set<LibraryImport> {
+        val result = hashSetOf<LibraryImport>()
+
+        // Imports from library-imports.txt
+        libraryImports?.useLines { lines ->
+            lines.filterNot { it.startsWith('#') }
+                .map { it.split(' ') }
+                .filter { it.size == 2 }
+                .mapTo(result) { parts ->
+                    val libFileName = libFiles.firstOrNull { it.name.startsWith(parts[0]) }?.name
+                        ?: throw PaperweightException("Failed to read library line '${parts[0]} ${parts[1]}', no library file was found.")
+                    LibraryImport(libFileName, parts[1].removeSuffix(".java").replace('.', '/') + ".java")
+                }
+        }
+
+        // Scan patches for necessary imports
+        result += findNeededLibraryImports(patchFiles, index)
+
+        return result
+    }
+
+    private suspend fun findNeededLibraryImports(
+        patchFiles: Iterable<Path>,
+        index: Set<LibraryImport>,
+    ): Set<LibraryImport> {
+        val knownImportMap = index.associateBy { it.importFilePath }
+        val prefix = "+++ b/"
+        val needed = ConcurrentHashMap.newKeySet<LibraryImport>()
+        usePatchLines(patchFiles) { line ->
+            if (!line.startsWith(prefix)) {
+                return@usePatchLines
+            }
+            val key = line.substring(prefix.length)
+            val value = knownImportMap[key]
+            if (value != null) {
+                needed += value
+            }
+        }
+        return needed
+    }
+}
+
+private fun FileCollection.sourcesJars(): List<Path> {
+    val libFiles = files.map { it.toPath() }.flatMap { it.filesMatchingRecursive("*-sources.jar") }
+    if (libFiles.isEmpty()) {
+        throw PaperweightException("No library files found")
+    }
+    return libFiles
 }

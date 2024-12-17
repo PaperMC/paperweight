@@ -147,7 +147,8 @@ class ServerPatchingTasks(
         val importLibFiles = tasks.register<ImportLibraryFiles>("import${namePart()}LibraryFiles") {
             patches.from(config.featurePatchDir, config.sourcePatchDir)
             devImports.set(config.devImports.fileExists(project))
-            libraries.from(softspoon.importLibraryFiles.map { it.libraries })
+            libraryFileIndex.set(softspoon.indexLibraryFiles.flatMap { it.outputFile })
+            libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
         }
 
         val setup = tasks.register<ForkSetup>("run${namePart()}VanillaSetup") {
