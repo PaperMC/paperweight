@@ -26,7 +26,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.commitAndTag
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
@@ -43,9 +42,6 @@ abstract class FilterRepo : BaseTask() {
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
-
-    @get:Input
-    abstract val upstreamPath: Property<String>
 
     @get:InputDirectory
     @get:Optional
@@ -66,42 +62,8 @@ abstract class FilterRepo : BaseTask() {
     @TaskAction
     fun run() {
         outputDir.path.deleteRecursive()
-        if (!inputDir.path.resolve(upstreamPath.get()).exists()) {
-            outputDir.path.createDirectories()
-            Git.init()
-                .setDirectory(outputDir.path.toFile())
-                .setInitialBranch("main")
-                .call()
-            val git = Git.open(outputDir.path.toFile())
-            commitAndTag(git, tag.get())
-            git.close()
-            return
-        }
         inputDir.path.copyRecursivelyTo(outputDir.path)
-
-        if (upstreamPath.get() != "./") {
-            val keep = outputDir.path.resolve(upstreamPath.get())
-
-            outputDir.path.walk(PathWalkOption.INCLUDE_DIRECTORIES)
-                .sortedWith(Comparator.reverseOrder())
-                .filterNot {
-                    val relIt = it.relativeTo(outputDir.path)
-                    val relKeep = keep.relativeTo(outputDir.path)
-                    relKeep.startsWith(relIt) || relIt.startsWith(relKeep) || relIt.startsWith(".git")
-                }
-                .filterNot { it.toAbsolutePath() == outputDir.path.toAbsolutePath() }
-                .forEach { it.deleteIfExists() }
-
-            keep.listDirectoryEntries().forEach {
-                it.moveTo(outputDir.path.resolve(it.name))
-            }
-
-            outputDir.path.resolve(
-                keep.relativeTo(outputDir.path).getName(0).name
-            ).deleteRecursive()
-        } else {
-            gitDir.path.copyRecursivelyTo(outputDir.path.resolve(".git"))
-        }
+        gitDir.pathOrNull?.copyRecursivelyTo(outputDir.path.resolve(".git"))
 
         excludes.get().forEach { exclude ->
             outputDir.path.resolve(exclude).deleteRecursive()
