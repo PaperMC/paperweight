@@ -31,6 +31,7 @@ import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
+import io.papermc.paperweight.tasks.softspoon.ProcessNewSourceAT
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
@@ -122,6 +123,16 @@ class CoreTasks(
         inputFile.set(extractFromBundler.flatMap { it.serverJar })
         predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") }
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
+    }
+
+    val processNewSourceAT by tasks.registering(ProcessNewSourceAT::class) {
+        description = "Processes new source ATs"
+
+        base.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+        input.set(layout.projectDirectory.dir("src/vanilla/java"))
+        atFile.set(project.coreExt.paper.additionalAts.fileExists(project))
+        ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
+        ats.jst.from(project.configurations.named(JST_CONFIG))
     }
 
     fun afterEvaluate() {

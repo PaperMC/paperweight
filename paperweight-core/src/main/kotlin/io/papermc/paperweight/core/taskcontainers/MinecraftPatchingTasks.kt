@@ -206,11 +206,6 @@ class MinecraftPatchingTasks(
             input.set(outputSrc)
             patches.set(sourcePatchDir)
             gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
-
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
-            ats.jst.from(project.configurations.named(JST_CONFIG))
-            atFile.set(additionalAts.fileExists(project))
-            atFileOut.set(additionalAts.fileExists(project))
         }
 
         val rebuildResourcePatches = tasks.register<RebuildFilePatches>(rebuildResourcePatchesName) {
