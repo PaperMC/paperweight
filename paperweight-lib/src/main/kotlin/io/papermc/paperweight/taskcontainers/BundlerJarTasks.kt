@@ -28,6 +28,8 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
@@ -122,7 +124,25 @@ class BundlerJarTasks(
         vanillaJar: Provider<RegularFile>,
         serverJar: Provider<RegularFile>,
     ) = this {
-        libraryArtifacts.set(project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME))
+        val runtimeClasspath = project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+        val artifacts = runtimeClasspath.flatMap { config ->
+            config.incoming.artifacts.resolvedArtifacts.map { a ->
+                a.filterTo(HashSet()) {
+                    val id = it.id.componentIdentifier
+                    id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
+                }
+            }
+        }
+        libraryArtifacts.set(artifacts.map { a ->
+            a.map {
+                val obj = objects.newInstance(CreateBundlerJar.Artifact::class)
+                obj.id.set(it.id)
+                obj.path.set(it.file)
+                obj.variant.set(it.variant)
+                obj
+            }
+        })
+        libraryArtifactsFiles.from(runtimeClasspath)
         serverLibrariesList.set(serverLibrariesListFile)
         vanillaBundlerJar.set(vanillaJar)
 

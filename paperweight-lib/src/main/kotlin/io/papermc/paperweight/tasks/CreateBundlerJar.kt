@@ -28,12 +28,13 @@ import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
-import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
@@ -62,9 +63,17 @@ abstract class CreateBundlerJar : ZippedTask() {
     @get:Nested
     val versionArtifacts: NamedDomainObjectContainer<VersionArtifact> = createVersionArtifactContainer()
 
-    @get:Classpath
+    @get:Nested
     @get:Optional
-    abstract val libraryArtifacts: Property<Configuration>
+    abstract val libraryArtifacts: ListProperty<Artifact>
+
+    // Gradle wants us to split the file inputs from the metadata inputs, but then we would lose association.
+    // So we include the file input (not properly tracked as produced by the configuration) in Artifact, but also
+    // depend on the configuration normally without meta to ensure the file's dependencies run.
+    @get:InputFiles
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val libraryArtifactsFiles: ConfigurableFileCollection
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -133,8 +142,7 @@ abstract class CreateBundlerJar : ZippedTask() {
 
         val outputDir = rootDir.resolve("META-INF/libraries")
 
-        val dependencies = collectDependencies()
-        for (dep in dependencies) {
+        for (dep in libraryArtifacts.get()) {
             val serverLibrary = serverLibraryEntries.firstOrNull {
                 it.id.group == dep.module.group &&
                     it.id.name == dep.module.name &&
@@ -192,35 +200,40 @@ abstract class CreateBundlerJar : ZippedTask() {
         }
     }
 
-    private fun collectDependencies(): Set<ResolvedArtifactResult> {
-        return libraryArtifacts.map { config ->
-            config.incoming.artifacts.artifacts.filterTo(HashSet()) {
-                val id = it.id.componentIdentifier
-                id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
-            }
-        }.getOrElse(hashSetOf<ResolvedArtifactResult>())
-    }
+    abstract class Artifact {
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
+        abstract val path: RegularFileProperty
 
-    private fun ResolvedArtifactResult.copyTo(path: Path): Path {
-        ensureParentExists(path)
-        return file.toPath().copyTo(path, overwrite = true)
-    }
+        @get:Input
+        abstract val id: Property<ComponentArtifactIdentifier>
 
-    private val ResolvedArtifactResult.module: ModuleId
-        get() {
-            return when (val ident = id.componentIdentifier) {
-                is ModuleComponentIdentifier -> ModuleId.fromIdentifier(id)
-                is ProjectComponentIdentifier -> {
-                    val mainCap = variant.attributes.getAttribute(mainCapabilityAttribute)
-                    if (mainCap != null) {
-                        ModuleId.parse(mainCap)
-                    } else {
-                        val capability = variant.capabilities.first()
-                        val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
-                        ModuleId(capability.group, capability.name, version)
-                    }
-                }
-                else -> throw PaperweightException("Unknown artifact result type: ${ident::class.java.name}")
-            }
+        @get:Input
+        abstract val variant: Property<ResolvedVariantResult>
+
+        fun copyTo(path: Path): Path {
+            ensureParentExists(path)
+            return this.path.path.copyTo(path, overwrite = true)
         }
+
+        @get:Internal
+        val module: ModuleId
+            get() {
+                return when (val ident = id.get().componentIdentifier) {
+                    is ModuleComponentIdentifier -> ModuleId.fromIdentifier(id.get())
+                    is ProjectComponentIdentifier -> {
+                        val mainCap = variant.get().attributes.getAttribute(mainCapabilityAttribute)
+                        if (mainCap != null) {
+                            ModuleId.parse(mainCap)
+                        } else {
+                            val capability = variant.get().capabilities.first()
+                            val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
+                            ModuleId(capability.group, capability.name, version)
+                        }
+                    }
+
+                    else -> throw PaperweightException("Unknown artifact result type: ${ident::class.java.name}")
+                }
+            }
+    }
 }
