@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.URI
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -38,6 +39,8 @@ import java.util.Arrays
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -126,6 +129,10 @@ fun Path.copyRecursivelyTo(target: Path) {
         }
     }
 }
+
+fun InputStream.gzip(): GZIPInputStream = GZIPInputStream(this)
+
+fun OutputStream.gzip(): GZIPOutputStream = GZIPOutputStream(this)
 
 inline fun Path.writeZipStream(func: (ZipOutputStream) -> Unit) {
     ZipOutputStream(this.outputStream().buffered()).use(func)
