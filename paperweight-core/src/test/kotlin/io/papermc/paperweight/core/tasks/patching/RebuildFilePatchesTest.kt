@@ -23,11 +23,11 @@
 package io.papermc.paperweight.core.tasks.patching
 
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import org.gradle.kotlin.dsl.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 
@@ -41,8 +41,6 @@ class RebuildFilePatchesTest : TaskTest() {
         task = project.tasks.register("rebuildPatches", RebuildFilePatches::class).get()
     }
 
-    // TODO
-    @Disabled("worker api not available here")
     @Test
     fun `should rebuild patches`(@TempDir(cleanup = CleanupMode.ON_SUCCESS) tempDir: Path) {
         println("running in $tempDir")
@@ -50,19 +48,15 @@ class RebuildFilePatchesTest : TaskTest() {
         val testInput = testResource.resolve("input")
 
         val source = setupDir(tempDir, testInput, "source").toFile()
-        setupGitRepo(source, "main", "file")
+        setupGitRepo(source, "main", MACHE_TAG_FILE)
         setupGitRepo(tempDir.toFile(), "main", "dum")
         setupGitHook(source)
         val base = setupDir(tempDir, testInput, "base").toFile()
         val patches = tempDir.resolve("patches").toFile()
-        val atFile = testInput.resolve("ats.at").toFile()
-        val atFileOut = tempDir.resolve("ats.at").toFile()
 
         task.input.set(source)
         task.base.set(base)
         task.patches.set(patches)
-        task.atFile.set(atFile)
-        task.atFileOut.set(atFileOut)
         task.verbose.set(true)
 
         task.run()
@@ -71,6 +65,5 @@ class RebuildFilePatchesTest : TaskTest() {
         compareDir(tempDir, testOutput, "base")
         compareDir(tempDir, testOutput, "source")
         compareDir(tempDir, testOutput, "patches")
-        compareFile(tempDir, testOutput, "ats.at")
     }
 }

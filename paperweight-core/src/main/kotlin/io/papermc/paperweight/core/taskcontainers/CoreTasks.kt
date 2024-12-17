@@ -28,6 +28,7 @@ import io.papermc.paperweight.core.tasks.ImportLibraryFiles
 import io.papermc.paperweight.core.tasks.IndexLibraryFiles
 import io.papermc.paperweight.core.tasks.SetupMinecraftSources
 import io.papermc.paperweight.core.tasks.SetupPaperScript
+import io.papermc.paperweight.core.tasks.patching.ProcessNewSourceATs
 import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
@@ -40,6 +41,8 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.provideDelegate
+import org.gradle.kotlin.dsl.registering
 
 class CoreTasks(
     val project: Project,
@@ -152,6 +155,16 @@ class CoreTasks(
                 description = "Creates a util script and installs it into path"
 
                 root.set(project.rootProject.layout.projectDirectory)
+            }
+
+            val processNewSourceATs by project.tasks.registering(ProcessNewSourceATs::class) {
+                description = "Processes new source ATs"
+
+                base.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+                input.set(layout.projectDirectory.dir("src/minecraft/java"))
+                atFile.set(project.coreExt.paper.additionalAts.fileExists(project))
+                ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
+                ats.jst.from(project.configurations.named(JST_CONFIG))
             }
         }
 
