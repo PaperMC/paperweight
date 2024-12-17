@@ -1,0 +1,11 @@
+--- a/net/minecraft/core/Rotations.java
++++ b/net/minecraft/core/Rotations.java
+@@ -21,7 +_,7 @@
+         }
+     };
+     protected final float x;
+-    public final float y;
++    public final float y; // Test
+     protected final float z;
+ 
+     public Rotations(float x, float y, float z) {
