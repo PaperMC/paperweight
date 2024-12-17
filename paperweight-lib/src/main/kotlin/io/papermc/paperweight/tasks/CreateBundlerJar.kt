@@ -227,7 +227,8 @@ abstract class CreateBundlerJar : ZippedTask() {
                             ModuleId.parse(mainCap)
                         } else {
                             val capability = variant.get().capabilities.first()
-                            val version = capability.version ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
+                            val version = capability.version
+                                ?: throw PaperweightException("Unknown version for ${capability.group}:${capability.name}")
                             ModuleId(capability.group, capability.name, version)
                         }
                     }
