@@ -3,9 +3,9 @@
 @@ -7,7 +_,7 @@
      }
  
-     public final String getTest() {
+     public String getTest() {
 -        return this.test;
 +        return this.test; // WOOOO
      }
  
-     public String getTest2() {
+     public final String getTest2() {

@@ -96,7 +96,7 @@ class FunctionalTest {
             it.replace(
                 "\"2\";",
                 "\"2\"; // Woo"
-            ).replace("public String getTest2() {", "private final String getTest2() {// Paper-AT: private+f getTest2()Ljava/lang/String;")
+            ).replace("public final String getTest2() {", "public String getTest2() {// Paper-AT: public-f getTest2()Ljava/lang/String;")
         }
 
         Git(tempDir.resolve("test-server/src/vanilla/java")).let { git ->
