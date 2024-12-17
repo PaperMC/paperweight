@@ -24,7 +24,6 @@ package io.papermc.paperweight.core.taskcontainers
 
 import codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.core.extension.UpstreamConfig
-import io.papermc.paperweight.core.tasks.CopyAndTag
 import io.papermc.paperweight.core.tasks.FilterRepo
 import io.papermc.paperweight.core.tasks.RunNestedBuild
 import io.papermc.paperweight.core.tasks.patching.ApplySingleFilePatches
@@ -133,7 +132,7 @@ class UpstreamConfigTasks(
     }
 
     private fun createBaseFromRepo(cfg: UpstreamConfig.DirectoryPatchSet): Provider<Directory> {
-        val task = target.tasks.register<CopyAndTag>(
+        val task = target.tasks.register<FilterRepo>(
             "checkout${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
             group = taskGroup
@@ -147,7 +146,7 @@ class UpstreamConfigTasks(
             } else {
                 inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
             }
-            pathInInput.set("./")
+            excludes.set(cfg.excludes)
             setupUpstream?.let { dependsOn(it) }
         }
         return task.flatMap { it.outputDir }
@@ -159,7 +158,6 @@ class UpstreamConfigTasks(
         ) {
             group = taskGroup
             inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
-            upstreamPath.set("./")
             gitDir.set(upstreamDir.map { it.dir(".git") })
             excludes.set(cfg.excludes)
         }
