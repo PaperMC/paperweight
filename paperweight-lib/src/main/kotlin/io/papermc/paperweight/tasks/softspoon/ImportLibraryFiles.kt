@@ -58,13 +58,17 @@ abstract class IndexLibraryFiles : BaseTask() {
 
     override fun init() {
         super.init()
-        outputFile.set(layout.cache.resolve(paperTaskOutput("json")))
+        outputFile.set(layout.cache.resolve(paperTaskOutput("json.gz")))
     }
 
     @TaskAction
     fun run() {
         val possible = findPossibleLibraryImports(libraries.sourcesJars())
-        outputFile.path.cleanFile().bufferedWriter().use { writer ->
+            .groupBy { it.libraryFileName }
+            .mapValues {
+                it.value.map { v -> v.importFilePath }
+            }
+        outputFile.path.cleanFile().outputStream().gzip().bufferedWriter().use { writer ->
             gson.toJson(possible, writer)
         }
     }
@@ -117,9 +121,9 @@ abstract class ImportLibraryFiles : BaseTask() {
         outputDir.path.deleteRecursive()
         outputDir.path.createDirectories()
         if (!libraries.isEmpty && !patches.isEmpty) {
-            val index = libraryFileIndex.path.bufferedReader().use { reader ->
-                gson.fromJson<Set<LibraryImport>>(reader, typeToken<Set<LibraryImport>>())
-            }
+            val index = libraryFileIndex.path.inputStream().gzip().bufferedReader().use { reader ->
+                gson.fromJson<Map<String, List<String>>>(reader, typeToken<Map<String, List<String>>>())
+            }.flatMap { entry -> entry.value.map { LibraryImport(entry.key, it) } }.toSet()
             val patchFiles = patches.files.flatMap { it.toPath().filesMatchingRecursive("*.patch") }
             importLibraryFiles(
                 patchFiles,
