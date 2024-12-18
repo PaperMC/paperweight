@@ -60,7 +60,17 @@ class PaperweightCore : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.configurations.create(REMAPPER_CONFIG)
+        target.configurations.create(REMAPPER_CONFIG) {
+            defaultDependencies {
+                add(
+                    target.dependencies.create(
+                        "${listOf("net", "fabricmc").joinToString(".")}:tiny-remapper:${LibraryVersions.TINY_REMAPPER}:fat"
+                    ) {
+                        isTransitive = false
+                    }
+                )
+            }
+        }
         target.configurations.create(PAPERCLIP_CONFIG)
         target.configurations.create(MACHE_CONFIG) {
             attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
@@ -141,10 +151,6 @@ class PaperweightCore : Plugin<Project> {
 
         target.afterEvaluate {
             target.repositories {
-                maven(ext.remapRepo) {
-                    name = REMAPPER_REPO_NAME
-                    content { onlyForConfigurations(REMAPPER_CONFIG) }
-                }
                 maven(ext.macheRepo) {
                     name = MACHE_REPO_NAME
                     content { onlyForConfigurations(MACHE_CONFIG) }

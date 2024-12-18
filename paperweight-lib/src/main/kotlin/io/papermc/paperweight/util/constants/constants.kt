@@ -59,6 +59,7 @@ const val REOBF_CONFIG = "reobf"
 const val PARAM_MAPPINGS_REPO_NAME = "paperweightParamMappingsRepository"
 const val DECOMPILER_REPO_NAME = "paperweightDecompilerRepository"
 const val REMAPPER_REPO_NAME = "paperweightRemapperRepository"
+const val PLUGIN_REMAPPER_REPO_NAME = "paperweightPluginRemapperRepository"
 const val MACHE_REPO_NAME = "paperweightMacheRepository"
 
 const val CACHE_PATH = "caches"

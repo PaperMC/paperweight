@@ -109,7 +109,7 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     override val decompiler: MavenDep?
         get() = setup.decompiler
 
-    override val remapper: MavenDep
+    override val remapper: MavenDep?
         get() = setup.remapper
 
     override val mache: MavenDep?

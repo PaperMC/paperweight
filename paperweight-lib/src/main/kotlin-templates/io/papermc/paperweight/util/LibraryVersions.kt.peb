@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.util
 
-object JSTVersion {
-    const val VERSION: String = "{{ jst_version }}"
+object LibraryVersions {
+    const val JST: String = "{{ jst_version }}"
+    const val TINY_REMAPPER: String = "{{ tinyRemapper_version }}"
 }

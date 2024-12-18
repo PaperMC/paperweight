@@ -65,7 +65,7 @@ interface SetupHandler {
 
     val decompiler: MavenDep?
 
-    val remapper: MavenDep
+    val remapper: MavenDep?
 
     val mache: MavenDep?
 

@@ -64,12 +64,6 @@ abstract class GenerateDevBundle : DefaultTask() {
     abstract val libraryRepositories: ListProperty<String>
 
     @get:Input
-    abstract val pluginRemapperUrl: Property<String>
-
-    @get:Input
-    abstract val pluginRemapperDep: ListProperty<String>
-
-    @get:Input
     abstract val macheUrl: Property<String>
 
     @get:Input
@@ -184,7 +178,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         return DevBundleConfig(
             minecraftVersion = minecraftVersion.get(),
             mache = createMacheDep(),
-            pluginRemapper = createRemapDep(),
             patchDir = patchTargetDir,
             reobfMappingsFile = "$dataTargetDir/$reobfMappingsFileName",
             mojangMappedPaperclipFile = "$dataTargetDir/$mojangMappedPaperclipFileName",
@@ -193,16 +186,12 @@ abstract class GenerateDevBundle : DefaultTask() {
         )
     }
 
-    private fun createRemapDep(): MavenDep =
-        pluginRemapperUrl.zip(pluginRemapperDep) { url, dep -> MavenDep(url, dep) }.get()
-
     private fun createMacheDep(): MavenDep =
         macheUrl.zip(macheDep) { url, dep -> MavenDep(url, listOf(dep)) }.get()
 
     data class DevBundleConfig(
         val minecraftVersion: String,
         val mache: MavenDep,
-        val pluginRemapper: MavenDep,
         val patchDir: String,
         val reobfMappingsFile: String,
         val mojangMappedPaperclipFile: String,

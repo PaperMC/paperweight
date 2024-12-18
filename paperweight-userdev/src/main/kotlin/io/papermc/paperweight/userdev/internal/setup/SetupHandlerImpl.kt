@@ -226,8 +226,8 @@ class SetupHandlerImpl(
     override val decompiler: MavenDep?
         get() = null
 
-    override val remapper: MavenDep
-        get() = bundle.config.pluginRemapper
+    override val remapper: MavenDep?
+        get() = null
 
     override val mache: MavenDep
         get() = bundle.config.mache

@@ -39,7 +39,6 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
     val mainClass: Property<String> = objects.property<String>().convention("org.bukkit.craftbukkit.Main")
     val bundlerJarName: Property<String> = objects.property<String>().convention("paper")
 
-    val remapRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
     val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
     val macheOldPath: DirectoryProperty = objects.directoryProperty()

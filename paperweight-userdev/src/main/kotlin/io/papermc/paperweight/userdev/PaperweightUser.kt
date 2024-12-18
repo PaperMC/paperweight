@@ -233,9 +233,15 @@ abstract class PaperweightUser : Plugin<Project> {
                 content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
             }
         }
-        maven(userdevSetup.remapper.url) {
-            name = REMAPPER_REPO_NAME
-            content { onlyForConfigurations(REMAPPER_CONFIG) }
+        userdevSetup.remapper?.url?.let {
+            maven(it) {
+                name = REMAPPER_REPO_NAME
+                content { onlyForConfigurations(REMAPPER_CONFIG) }
+            }
+        }
+        maven(PAPER_MAVEN_REPO_URL) {
+            name = PLUGIN_REMAPPER_REPO_NAME
+            content { onlyForConfigurations(PLUGIN_REMAPPER_CONFIG) }
         }
         userdevSetup.decompiler?.url?.let {
             maven(it) {
@@ -292,16 +298,21 @@ abstract class PaperweightUser : Plugin<Project> {
             dependenciesFrom { userdevSetup.get().paramMappings }
         }
 
-        fun makeRemapperConfig(name: String) {
-            target.configurations.register(name) {
-                // when using a fat jar for tiny-remapper we don't need its transitive deps
-                dependenciesFrom({ !it.contains(":tiny-remapper:") || !it.endsWith(":fat") }) {
-                    userdevSetup.get().remapper
-                }
+        target.configurations.register(REMAPPER_CONFIG) {
+            // when using a fat jar for tiny-remapper we don't need its transitive deps
+            dependenciesFrom({ !it.contains(":tiny-remapper:") || !it.endsWith(":fat") }) {
+                userdevSetup.get().remapper
             }
         }
-        makeRemapperConfig(REMAPPER_CONFIG)
-        makeRemapperConfig(PLUGIN_REMAPPER_CONFIG)
+        target.configurations.register(PLUGIN_REMAPPER_CONFIG) {
+            // when using a fat jar for tiny-remapper we don't need its transitive deps
+            dependenciesFrom({ !it.contains(":tiny-remapper:") || !it.endsWith(":fat") }) {
+                MavenDep(
+                    PAPER_MAVEN_REPO_URL,
+                    listOf("${listOf("net", "fabricmc").joinToString(".")}:tiny-remapper:${LibraryVersions.TINY_REMAPPER}:fat")
+                )
+            }
+        }
 
         target.configurations.register(MOJANG_MAPPED_SERVER_CONFIG) {
             defaultDependencies {

@@ -98,10 +98,8 @@ class DevBundleTasks(
 
     fun configureAfterEvaluate() {
         generateDevelopmentBundle {
-            pluginRemapperUrl.set(project.repositories.named<MavenArtifactRepository>(REMAPPER_REPO_NAME).map { it.url.toString() })
             macheUrl.set(project.repositories.named<MavenArtifactRepository>(MACHE_REPO_NAME).map { it.url.toString() })
             macheDep.set(determineArtifactCoordinates(project.configurations.getByName(MACHE_CONFIG)).single())
-            pluginRemapperDep.set(determineArtifactCoordinates(project.configurations.getByName(REMAPPER_CONFIG)))
         }
     }
 }

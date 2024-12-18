@@ -76,7 +76,7 @@ open class SoftSpoonTasks(
     val jstConfig = project.configurations.register(JST_CONFIG) {
         defaultDependencies {
             // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
-            add(project.dependencies.create("io.papermc.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
+            add(project.dependencies.create("io.papermc.jst:jst-cli-bundle:${LibraryVersions.JST}"))
         }
     }
 
