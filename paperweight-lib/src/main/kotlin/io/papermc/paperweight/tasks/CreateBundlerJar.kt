@@ -40,7 +40,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
-@CacheableTask
 abstract class CreateBundlerJar : ZippedTask() {
 
     interface VersionArtifact {
