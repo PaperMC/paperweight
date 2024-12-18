@@ -41,9 +41,6 @@ import java.util.stream.Stream
 import java.util.stream.StreamSupport
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 import kotlin.streams.asSequence
 import org.gradle.api.Project
@@ -133,30 +130,6 @@ fun Path.copyRecursivelyTo(target: Path) {
 fun InputStream.gzip(): GZIPInputStream = GZIPInputStream(this)
 
 fun OutputStream.gzip(): GZIPOutputStream = GZIPOutputStream(this)
-
-inline fun Path.writeZipStream(func: (ZipOutputStream) -> Unit) {
-    ZipOutputStream(this.outputStream().buffered()).use(func)
-}
-
-inline fun Path.readZipStream(func: (ZipInputStream, ZipEntry) -> Unit) {
-    ZipInputStream(this.inputStream().buffered()).use { zis ->
-        var entry = zis.nextEntry
-        while (entry != null) {
-            func(zis, entry)
-            entry = zis.nextEntry
-        }
-    }
-}
-
-fun copyEntry(input: InputStream, output: ZipOutputStream, entry: ZipEntry) {
-    val newEntry = ZipEntry(entry)
-    output.putNextEntry(newEntry)
-    try {
-        input.copyTo(output)
-    } finally {
-        output.closeEntry()
-    }
-}
 
 fun ProcessBuilder.directory(path: Path?): ProcessBuilder = directory(path?.toFile())
 
