@@ -65,20 +65,14 @@ abstract class ForkSetup : JavaLauncherTask() {
         val git = Git.open(outputDir.path.toFile())
 
         if (atFile.isPresent && atFile.path.readText().isNotBlank()) {
-            // TODO - No way to tell JST to ignore the .git dir
-            val gitTmp = inputDir.path.resolveSibling(inputDir.path.name + "_.git_tmp")
-            inputDir.path.resolve(".git").moveTo(gitTmp)
-            try {
-                ats.run(
-                    launcher.get(),
-                    inputDir.path,
-                    outputDir.path,
-                    atFile.path,
-                    temporaryDir.toPath(),
-                )
-            } finally {
-                gitTmp.moveTo(inputDir.path.resolve(".git"))
-            }
+            println("Applying access transformers...")
+            ats.run(
+                launcher.get(),
+                inputDir.path,
+                outputDir.path,
+                atFile.path,
+                temporaryDir.toPath(),
+            )
             commitAndTag(git, "ATs")
         }
 
