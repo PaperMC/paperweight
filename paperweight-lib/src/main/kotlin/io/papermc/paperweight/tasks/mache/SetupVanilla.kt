@@ -170,26 +170,26 @@ abstract class SetupVanilla : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs")
+            commitAndTag(git, "ATs", "Paper ATs")
         }
 
         if (libraryImports.isPresent) {
             libraryImports.path.copyRecursivelyTo(outputPath)
 
-            commitAndTag(git, "Imports")
+            commitAndTag(git, "Imports", "Paper Imports")
         }
 
         git.close()
     }
 }
 
-fun commitAndTag(git: Git, name: String) {
+fun commitAndTag(git: Git, name: String, message: String = name) {
     val vanillaIdent = PersonIdent(name, "noreply+automated@papermc.io")
 
     git.add().addFilepattern(".").call()
     git.add().addFilepattern(".").setUpdate(true).call()
     git.commit()
-        .setMessage(name)
+        .setMessage(message)
         .setAuthor(vanillaIdent)
         .setSign(false)
         .setAllowEmpty(true)

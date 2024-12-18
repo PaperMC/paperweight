@@ -68,7 +68,7 @@ class ServerPatchingTasks(
         group = taskGroup
     }
 
-    private fun namePart() = if (readOnly) configName.capitalized() else ""
+    private val namePart = if (readOnly) configName.capitalized() else ""
 
     private fun ApplyFilePatches.configureApplyFilePatches() {
         group()
@@ -83,17 +83,18 @@ class ServerPatchingTasks(
         patches.set(sourcePatchDir.fileExists(project))
         rejects.set(rejectsDir)
         gitFilePatches.set(this@ServerPatchingTasks.gitFilePatches)
+        identifier = configName
     }
 
-    val applySourcePatches = tasks.register<ApplyFilePatches>("apply${namePart()}VanillaSourcePatches") {
+    val applySourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}VanillaSourcePatches") {
         configureApplyFilePatches()
     }
 
-    val applySourcePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart()}VanillaSourcePatchesFuzzy") {
+    val applySourcePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}VanillaSourcePatchesFuzzy") {
         configureApplyFilePatches()
     }
 
-    val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart()}VanillaResourcePatches") {
+    val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}VanillaResourcePatches") {
         group()
         description = "Applies $configName file patches to the vanilla resources"
 
@@ -102,15 +103,16 @@ class ServerPatchingTasks(
         patches.set(resourcePatchDir.fileExists(project))
         // TODO rejects?
         gitFilePatches.set(this@ServerPatchingTasks.gitFilePatches)
+        identifier = configName
     }
 
-    val applyFilePatches = tasks.register<Task>("apply${namePart()}VanillaFilePatches") {
+    val applyFilePatches = tasks.register<Task>("apply${namePart}VanillaFilePatches") {
         group()
         description = "Applies all $configName vanilla file patches"
         dependsOn(applySourcePatches, applyResourcePatches)
     }
 
-    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart()}VanillaFeaturePatches") {
+    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}VanillaFeaturePatches") {
         group()
         description = "Applies all $configName vanilla feature patches"
         dependsOn(applyFilePatches)
@@ -122,11 +124,17 @@ class ServerPatchingTasks(
         patches.set(featurePatchDir.fileExists(project))
     }
 
-    val applyPatches = tasks.register<Task>("apply${namePart()}VanillaPatches") {
+    val applyPatches = tasks.register<Task>("apply${namePart}VanillaPatches") {
         group()
         description = "Applies all $configName vanilla patches"
         dependsOn(applyFilePatches, applyFeaturePatches)
     }
+
+    val rebuildSourcePatchesName = "rebuild${namePart}VanillaSourcePatches"
+    val rebuildResourcePatchesName = "rebuild${namePart}VanillaResourcePatches"
+    val rebuildFilePatchesName = "rebuild${namePart}VanillaFilePatches"
+    val rebuildFeaturePatchesName = "rebuild${namePart}VanillaFeaturePatches"
+    val rebuildPatchesName = "rebuild${namePart}VanillaPatches"
 
     init {
         if (!readOnly) {
@@ -134,29 +142,29 @@ class ServerPatchingTasks(
         }
     }
 
-    fun setupAts(config: ForkConfig) {
-        val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart()}ATsFromPatches") {
+    fun setupFork(config: ForkConfig) {
+        val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart}ATsFromPatches") {
             patchDir.set(featurePatchDir.fileExists(project))
         }
 
-        val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart()}ATs") {
+        val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart}ATs") {
             firstFile.set(additionalAts.fileExists(project))
             secondFile.set(collectAccessTransform.flatMap { it.outputFile })
         }
 
-        val importLibFiles = tasks.register<ImportLibraryFiles>("import${namePart()}LibraryFiles") {
+        val importLibFiles = tasks.register<ImportLibraryFiles>("import${namePart}LibraryFiles") {
             patches.from(config.featurePatchDir, config.sourcePatchDir)
             devImports.set(config.devImports.fileExists(project))
             libraryFileIndex.set(softspoon.indexLibraryFiles.flatMap { it.outputFile })
             libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
         }
 
-        val setup = tasks.register<ForkSetup>("run${namePart()}VanillaSetup") {
-            group()
+        val setup = tasks.register<ForkSetup>("run${namePart}VanillaSetup") {
             description = "Applies $configName ATs and library imports to vanilla sources"
 
             inputDir.set(baseSources)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
+            identifier.set(configName.capitalized())
 
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
@@ -170,7 +178,7 @@ class ServerPatchingTasks(
         applySourcePatchesFuzzy.configure {
             input.set(setup.flatMap { it.outputDir })
         }
-        val name = "rebuild${namePart()}VanillaSourcePatches"
+        val name = "rebuild${namePart}VanillaSourcePatches"
         if (name in tasks.names) {
             tasks.named<RebuildFilePatches>(name) {
                 base.set(setup.flatMap { it.outputDir })
@@ -190,7 +198,7 @@ class ServerPatchingTasks(
             }
         }
 
-        val rebuildSourcePatches = tasks.register<RebuildFilePatches>("rebuild${namePart()}VanillaSourcePatches") {
+        val rebuildSourcePatches = tasks.register<RebuildFilePatches>(rebuildSourcePatchesName) {
             group()
             description = "Rebuilds $configName file patches to the vanilla sources"
 
@@ -205,7 +213,7 @@ class ServerPatchingTasks(
             atFileOut.set(additionalAts.fileExists(project))
         }
 
-        val rebuildResourcePatches = tasks.register<RebuildFilePatches>("rebuild${namePart()}VanillaResourcePatches") {
+        val rebuildResourcePatches = tasks.register<RebuildFilePatches>(rebuildResourcePatchesName) {
             group()
             description = "Rebuilds $configName file patches to the vanilla resources"
 
@@ -214,13 +222,13 @@ class ServerPatchingTasks(
             patches.set(resourcePatchDir)
         }
 
-        val rebuildFilePatches = tasks.register<Task>("rebuild${namePart()}VanillaFilePatches") {
+        val rebuildFilePatches = tasks.register<Task>(rebuildFilePatchesName) {
             group()
             description = "Rebuilds all $configName file patches to vanilla"
             dependsOn(rebuildSourcePatches, rebuildResourcePatches)
         }
 
-        val rebuildFeaturePatches = tasks.register<RebuildGitPatches>("rebuild${namePart()}VanillaFeaturePatches") {
+        val rebuildFeaturePatches = tasks.register<RebuildGitPatches>(rebuildFeaturePatchesName) {
             group()
             description = "Rebuilds all $configName feature patches to the vanilla sources"
             dependsOn(rebuildFilePatches)
@@ -230,13 +238,13 @@ class ServerPatchingTasks(
             baseRef.set("file")
         }
 
-        val rebuildPatches = tasks.register<Task>("rebuild${namePart()}VanillaPatches") {
+        val rebuildPatches = tasks.register<Task>(rebuildPatchesName) {
             group()
             description = "Rebuilds all $configName patches to vanilla"
             dependsOn(rebuildFilePatches, rebuildFeaturePatches)
         }
 
-        val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart()}VanillaSourcePatches") {
+        val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}VanillaSourcePatches") {
             group()
             description = "Puts the currently tracked source changes into the $configName vanilla sources file patches commit"
 
@@ -244,7 +252,7 @@ class ServerPatchingTasks(
             upstream.set("upstream/main")
         }
 
-        val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart()}VanillaResourcePatches") {
+        val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}VanillaResourcePatches") {
             group()
             description = "Puts the currently tracked resource changes into the $configName vanilla resources file patches commit"
 
