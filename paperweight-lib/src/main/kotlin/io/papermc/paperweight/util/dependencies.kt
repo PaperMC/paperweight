@@ -25,13 +25,8 @@ package io.papermc.paperweight.util
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
-import org.gradle.api.provider.Provider
 
 data class MavenDep(val url: String, val coordinates: List<String>)
-
-fun determineMavenDep(url: Provider<String>, configuration: Provider<Configuration>): MavenDep {
-    return MavenDep(url.get(), determineArtifactCoordinates(configuration.get()))
-}
 
 fun determineArtifactCoordinates(configuration: Configuration): List<String> {
     return configuration.dependencies.filterIsInstance<ModuleDependency>().map { dep ->
