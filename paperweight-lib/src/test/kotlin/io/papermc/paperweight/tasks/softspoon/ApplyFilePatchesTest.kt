@@ -53,6 +53,7 @@ class ApplyFilePatchesTest : TaskTest() {
         task.output.set(output)
         task.patches.set(patches)
         task.verbose.set(true)
+        task.identifier.set("test")
 
         task.run()
 
