@@ -72,6 +72,10 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Input
     abstract val baseRef: Property<String>
 
+    @get:Input
+    @get:Optional
+    abstract val identifier: Property<String>
+
     init {
         run {
             verbose.convention(false)
@@ -166,7 +170,7 @@ abstract class ApplyFilePatches : BaseTask() {
         val git = Git.open(output.path.toFile())
         git.add().addFilepattern(".").call()
         git.commit()
-            .setMessage("File Patches")
+            .setMessage("${identifier.get()} File Patches")
             .setAuthor(ident)
             .setAllowEmpty(true)
             .setSign(false)
