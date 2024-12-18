@@ -78,6 +78,7 @@ abstract class ApplySourceATs {
             "--enable-accesstransformers",
             "--access-transformer=$atFile",
             "--access-transformer-inherit-method=true",
+            "--hidden-prefix=.git",
             // "--access-transformer-validation=ERROR",
             *jstClasspath.files.map { "--classpath=${it.absolutePath}" }.toTypedArray(),
             inputDir.absolutePathString(),

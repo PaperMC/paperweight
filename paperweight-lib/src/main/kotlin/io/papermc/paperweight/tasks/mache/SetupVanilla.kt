@@ -161,20 +161,13 @@ abstract class SetupVanilla : JavaLauncherTask() {
 
         if (atFile.isPresent) {
             println("Applying access transformers...")
-            // TODO - No way to tell JST to ignore the .git dir
-            val gitTmp = outputPath.resolveSibling(outputPath.name + "_.git_tmp")
-            outputPath.resolve(".git").moveTo(gitTmp)
-            try {
-                ats.run(
-                    launcher.get(),
-                    outputPath,
-                    outputPath,
-                    atFile.path,
-                    temporaryDir.toPath(),
-                )
-            } finally {
-                gitTmp.moveTo(outputPath.resolve(".git"))
-            }
+            ats.run(
+                launcher.get(),
+                outputPath,
+                outputPath,
+                atFile.path,
+                temporaryDir.toPath(),
+            )
             commitAndTag(git, "ATs")
         }
 

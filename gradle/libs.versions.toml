@@ -4,7 +4,7 @@ lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.5.1"
 feather = "1.1.0"
-jst = "1.0.68-inheritance-SNAPSHOT"
+jst = "1.0.68+paper.1-SNAPSHOT"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
