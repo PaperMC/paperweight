@@ -47,7 +47,6 @@ import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 
-@CacheableTask
 abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
 
     @get:Classpath
