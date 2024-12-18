@@ -299,6 +299,9 @@ class SoftSpoonTasks(
             )
 
             if (activeFork) {
+                // setup output name conventions
+                project.coreExt.bundlerJarName.convention(cfg.name)
+
                 // setup aggregate -server patching tasks
                 upstreamConfigTasks.setupAggregateTasks(
                     "Server",
