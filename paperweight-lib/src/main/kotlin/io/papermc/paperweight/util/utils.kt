@@ -63,7 +63,6 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
-import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
@@ -72,13 +71,10 @@ import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
-
-val whitespace = Regex("\\s+")
 
 val gson: Gson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().registerTypeHierarchyAdapter(Path::class.java, PathJsonConverter()).create()
 
@@ -102,42 +98,10 @@ val ProjectLayout.cache: Path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 
-fun ProjectLayout.maybeInitSubmodules(offline: Boolean, logger: Logger) {
-    if (offline) {
-        Git.checkForGit()
-        logger.lifecycle("Offline mode enabled, not initializing submodules. This may cause problems if submodules are not already initialized.")
-    } else {
-        initSubmodules()
-    }
-}
-
-fun ProjectLayout.initSubmodules() {
-    Git.checkForGit()
-    if (Git.checkForGitRepo(projectDirectory.path)) {
-        Git(projectDirectory.path)("submodule", "update", "--init").executeOut()
-    }
-}
-
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
 
 fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T?> {
     return flatMap { project.provider { it.takeIf { f -> f.path.exists() } } }
-}
-
-inline fun <reified T : Task> TaskContainer.providerFor(name: String): TaskProvider<T> {
-    return if (names.contains(name)) {
-        named<T>(name)
-    } else {
-        register<T>(name)
-    }
-}
-
-inline fun <reified T : Task> TaskContainer.configureTask(name: String, noinline configure: T.() -> Unit): TaskProvider<T> {
-    return if (names.contains(name)) {
-        named(name, configure)
-    } else {
-        register(name, configure)
-    }
 }
 
 @Suppress("UNCHECKED_CAST")
