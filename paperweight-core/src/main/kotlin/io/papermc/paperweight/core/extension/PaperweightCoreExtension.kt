@@ -48,6 +48,8 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
     )
 
+    val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
+
     val spigot = SpigotExtension(objects)
     val paper = PaperExtension(objects, layout)
 

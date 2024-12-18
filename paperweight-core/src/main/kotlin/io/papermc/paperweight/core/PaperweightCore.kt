@@ -99,7 +99,7 @@ class PaperweightCore : Plugin<Project> {
         }
         val (includeMappings, reobfJar) = target.createBuildTasks(
             ext.spigot.packageVersion,
-            ext.paper.reobfPackagesToFix,
+            ext.reobfPackagesToFix,
             tasks.generateRelocatedReobfMappings
         )
         val bundlerJarTasks = BundlerJarTasks(

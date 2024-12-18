@@ -27,8 +27,6 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.ListProperty
-import org.gradle.kotlin.dsl.*
 
 open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
@@ -44,6 +42,4 @@ open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
     val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
-
-    val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 }
