@@ -30,6 +30,8 @@ import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
@@ -57,6 +59,9 @@ abstract class ForkSetup : JavaLauncherTask() {
     @get:InputDirectory
     abstract val libraryImports: DirectoryProperty
 
+    @get:Input
+    abstract val identifier: Property<String>
+
     @TaskAction
     fun run() {
         val out = outputDir.path.cleanDir()
@@ -73,13 +78,13 @@ abstract class ForkSetup : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs")
+            commitAndTag(git, "ATs", "${identifier.get()} ATs")
         }
 
         if (libraryImports.isPresent) {
             libraryImports.path.copyRecursivelyTo(out)
 
-            commitAndTag(git, "Imports")
+            commitAndTag(git, "Imports", "${identifier.get()} Imports")
         }
 
         git.close()

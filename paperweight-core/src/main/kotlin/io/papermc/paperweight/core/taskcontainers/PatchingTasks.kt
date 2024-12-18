@@ -41,7 +41,8 @@ import org.gradle.kotlin.dsl.*
 
 class PatchingTasks(
     private val project: Project,
-    private val configName: String,
+    private val forkName: String,
+    private val patchSetName: String,
     private val taskGroup: String,
     private val readOnly: Boolean,
     private val filePatchDir: DirectoryProperty,
@@ -52,9 +53,11 @@ class PatchingTasks(
     private val outputDir: Path,
     private val tasks: TaskContainer = project.tasks,
 ) {
+    private val namePart: String = if (readOnly) "${forkName.capitalized()}${patchSetName.capitalized()}" else patchSetName.capitalized()
+
     private fun ApplyFilePatches.configureApplyFilePatches() {
         group = taskGroup
-        description = "Applies $configName file patches"
+        description = "Applies $patchSetName file patches"
 
         input.set(baseDir)
         if (readOnly) {
@@ -66,19 +69,20 @@ class PatchingTasks(
         rejects.set(rejectsDir)
         gitFilePatches.set(this@PatchingTasks.gitFilePatches)
         baseRef.set("base")
+        identifier = "$forkName $patchSetName"
     }
 
-    val applyFilePatches = tasks.register<ApplyFilePatches>("apply${configName.capitalized()}FilePatches") {
+    val applyFilePatches = tasks.register<ApplyFilePatches>("apply${namePart}FilePatches") {
         configureApplyFilePatches()
     }
 
-    val applyFilePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${configName.capitalized()}FilePatchesFuzzy") {
+    val applyFilePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}FilePatchesFuzzy") {
         configureApplyFilePatches()
     }
 
-    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${configName.capitalized()}FeaturePatches") {
+    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}FeaturePatches") {
         group = taskGroup
-        description = "Applies $configName feature patches"
+        description = "Applies $patchSetName feature patches"
         dependsOn(applyFilePatches)
 
         repo.set(outputDir)
@@ -88,16 +92,16 @@ class PatchingTasks(
         patches.set(featurePatchDir.fileExists(project))
     }
 
-    val applyPatches = tasks.register<Task>("apply${configName.capitalized()}Patches") {
+    val applyPatches = tasks.register<Task>("apply${namePart}Patches") {
         group = taskGroup
-        description = "Applies all $configName patches"
+        description = "Applies all $patchSetName patches"
         dependsOn(applyFilePatches, applyFeaturePatches)
     }
 
-    val rebuildFilePatchesName = "rebuild${configName.capitalized()}FilePatches"
-    val fixupFilePatchesName = "fixup${configName.capitalized()}FilePatches"
-    val rebuildFeaturePatchesName = "rebuild${configName.capitalized()}FeaturePatches"
-    val rebuildPatchesName = "rebuild${configName.capitalized()}Patches"
+    val rebuildFilePatchesName = "rebuild${namePart}FilePatches"
+    val fixupFilePatchesName = "fixup${namePart}FilePatches"
+    val rebuildFeaturePatchesName = "rebuild${namePart}FeaturePatches"
+    val rebuildPatchesName = "rebuild${namePart}Patches"
 
     init {
         if (!readOnly) {
@@ -118,7 +122,7 @@ class PatchingTasks(
 
         val rebuildFilePatches = tasks.register<RebuildFilePatches>(rebuildFilePatchesName) {
             group = taskGroup
-            description = "Rebuilds $configName file patches"
+            description = "Rebuilds $patchSetName file patches"
 
             base.set(baseDir)
             input.set(outputDir)
@@ -128,7 +132,7 @@ class PatchingTasks(
 
         val fixupFilePatches = tasks.register<FixupFilePatches>(fixupFilePatchesName) {
             group = taskGroup
-            description = "Puts the currently tracked source changes into the file patches commit"
+            description = "Puts the currently tracked source changes into the $patchSetName file patches commit"
 
             repo.set(outputDir)
             upstream.set("base")
@@ -136,7 +140,7 @@ class PatchingTasks(
 
         val rebuildFeaturePatches = tasks.register<RebuildGitPatches>(rebuildFeaturePatchesName) {
             group = taskGroup
-            description = "Rebuilds $configName feature patches"
+            description = "Rebuilds $patchSetName feature patches"
             dependsOn(rebuildFilePatches)
 
             inputDir.set(outputDir)
@@ -146,7 +150,7 @@ class PatchingTasks(
 
         val rebuildPatches = tasks.register<Task>(rebuildPatchesName) {
             group = taskGroup
-            description = "Rebuilds all $configName patches"
+            description = "Rebuilds all $patchSetName patches"
             dependsOn(rebuildFilePatches, rebuildFeaturePatches)
         }
     }

@@ -38,6 +38,7 @@ import org.gradle.kotlin.dsl.*
 
 class UpstreamConfigTasks(
     private val target: Project,
+    private val forkName: String,
     private val upstreamCfg: UpstreamConfig,
     private val upstreamDir: Provider<Directory>,
     private val readOnly: Boolean,
@@ -48,6 +49,7 @@ class UpstreamConfigTasks(
 ) {
     private fun ApplySingleFilePatches.configureApplySingleFilePatches() {
         group = taskGroup
+        description = "Applies all ${upstreamCfg.name} single-file patches"
         upstream.set(upstreamDir)
         val patches = upstreamCfg.singleFilePatchSets.map {
             it.map { cfg ->
@@ -88,6 +90,7 @@ class UpstreamConfigTasks(
     val rebuildSingleFilePatches = if (upstreamCfg.singleFilePatches) {
         target.tasks.register<RebuildSingleFilePatches>("rebuild${upstreamCfg.name.capitalized()}SingleFilePatches") {
             group = taskGroup
+            description = "Rebuilds all ${upstreamCfg.name} single-file patches"
             upstream.set(upstreamDir)
             val patches = upstreamCfg.singleFilePatchSets.map {
                 it.map { cfg ->
@@ -119,6 +122,7 @@ class UpstreamConfigTasks(
 
         return PatchingTasks(
             target,
+            forkName,
             cfg.name,
             taskGroup,
             readOnly,
@@ -131,12 +135,11 @@ class UpstreamConfigTasks(
         )
     }
 
-    private fun createBaseFromRepo(cfg: UpstreamConfig.DirectoryPatchSet): Provider<Directory> {
+    private fun createBaseFromRepo(cfg: UpstreamConfig.RepoPatchSet): Provider<Directory> {
         val task = target.tasks.register<FilterRepo>(
             "checkout${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
-            group = taskGroup
-            if (cfg is UpstreamConfig.RepoPatchSet && cfg.upstreamRepo.isPresent) {
+            if (cfg.upstreamRepo.isPresent) {
                 val upstreamTasks = requireNotNull(upstreamTasks) { "Upstream tasks not present when expected" }
                 val patchingTasksForDir = requireNotNull(upstreamTasks.patchingTasks[cfg.upstreamRepo.get()]) {
                     "Patching tasks not present upstream for ${cfg.upstreamRepo.get().name}"
@@ -156,7 +159,6 @@ class UpstreamConfigTasks(
         val task = target.tasks.register<FilterRepo>(
             "filter${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
-            group = taskGroup
             inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
             gitDir.set(upstreamDir.map { it.dir(".git") })
             excludes.set(cfg.excludes)
@@ -164,41 +166,47 @@ class UpstreamConfigTasks(
         return task.flatMap { it.outputDir }
     }
 
-    fun setupAggregateTasks(namePart: String) {
+    fun setupAggregateTasks(namePart: String, desc: String, descSingleFile: String = desc) {
         val applyFile = target.tasks.register("apply${namePart}FilePatches") {
             group = taskGroup
+            description = "Applies $desc file patches"
             patchingTasks.values.forEach { t ->
                 dependsOn(t.applyFilePatches)
             }
         }
         val applyFeature = target.tasks.register("apply${namePart}FeaturePatches") {
             group = taskGroup
+            description = "Applies $desc feature patches"
             patchingTasks.values.forEach { t ->
                 dependsOn(t.applyFeaturePatches)
             }
         }
         val rebuildFile = target.tasks.register("rebuild${namePart}FilePatches") {
             group = taskGroup
+            description = "Rebuilds $desc file patches"
             patchingTasks.values.forEach { t ->
                 dependsOn(t.rebuildFilePatchesName)
             }
         }
         val rebuildFeature = target.tasks.register("rebuild${namePart}FeaturePatches") {
             group = taskGroup
+            description = "Applies $desc feature patches"
             patchingTasks.values.forEach { t ->
                 dependsOn(t.rebuildFeaturePatchesName)
             }
         }
         val apply = target.tasks.register("apply${namePart}Patches") {
             group = taskGroup
+            description = "Applies all $descSingleFile patches"
             applySingleFilePatches?.let { t -> dependsOn(t) }
             patchingTasks.values.forEach { t ->
                 dependsOn(t.applyPatches)
             }
         }
         val rebuild = target.tasks.register("rebuild${namePart}Patches") {
-            rebuildSingleFilePatches?.let { t -> dependsOn(t) }
             group = taskGroup
+            description = "Rebuilds all $descSingleFile patches"
+            rebuildSingleFilePatches?.let { t -> dependsOn(t) }
             patchingTasks.values.forEach { t ->
                 dependsOn(t.rebuildPatchesName)
             }

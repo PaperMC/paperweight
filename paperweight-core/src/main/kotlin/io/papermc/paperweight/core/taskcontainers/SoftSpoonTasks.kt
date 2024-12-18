@@ -242,50 +242,6 @@ class SoftSpoonTasks(
             paperOutputRoot,
         )
 
-        // For forks, setup aggregate vanilla & upstream -server patching tasks
-        val applyAllServerFilePatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("applyAllServerFilePatches") {
-                group = "patching"
-            }
-        }
-        val applyAllServerFeaturePatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("applyAllServerFeaturePatches") {
-                group = "patching"
-            }
-        }
-        val applyAllServerPatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("applyAllServerPatches") {
-                group = "patching"
-            }
-        }
-        val rebuildAllServerFilePatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("rebuildAllServerFilePatches") {
-                group = "patching"
-            }
-        }
-        val rebuildAllServerFeaturePatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("rebuildAllServerFeaturePatches") {
-                group = "patching"
-            }
-        }
-        val rebuildAllServerPatches = if (!hasFork) {
-            null
-        } else {
-            project.tasks.register("rebuildAllServerPatches") {
-                group = "patching"
-            }
-        }
-
         // Setup patching tasks for forks
         val patchingTasks: MutableMap<String, Pair<ServerPatchingTasks, UpstreamConfigTasks>> = mutableMapOf()
         fun makePatchingTasks(cfg: ForkConfig): Pair<ServerPatchingTasks, UpstreamConfigTasks> {
@@ -320,10 +276,11 @@ class SoftSpoonTasks(
                 outputRoot,
             )
 
-            serverTasks.setupAts(cfg)
+            serverTasks.setupFork(cfg)
 
             val upstreamConfigTasks = UpstreamConfigTasks(
                 project,
+                cfg.name,
                 cfg.upstream,
                 if (cfg.forksPaper.get()) {
                     project.coreExt.paper.paperServerDir.dir("../")
@@ -342,13 +299,55 @@ class SoftSpoonTasks(
             )
 
             if (activeFork) {
-                upstreamConfigTasks.setupAggregateTasks("Server")
-                applyAllServerFilePatches?.configure { dependsOn("applyServerFilePatches") }
-                applyAllServerFeaturePatches?.configure { dependsOn("applyServerFeaturePatches") }
-                applyAllServerPatches?.configure { dependsOn("applyServerPatches") }
-                rebuildAllServerFilePatches?.configure { dependsOn("rebuildServerFilePatches") }
-                rebuildAllServerFeaturePatches?.configure { dependsOn("rebuildServerFeaturePatches") }
-                rebuildAllServerPatches?.configure { dependsOn("rebuildServerPatches") }
+                // setup aggregate -server patching tasks
+                upstreamConfigTasks.setupAggregateTasks(
+                    "Server",
+                    cfg.upstream.directoryPatchSets.names.joinToString(", ")
+                )
+
+                // setup aggregate vanilla & upstream -server patching tasks
+                val applyAllServerFilePatches = project.tasks.register("applyAllServerFilePatches") {
+                    group = "patching"
+                    description = "Applies all vanilla and upstream server file patches " +
+                        "(equivalent to '${serverTasks.applyFilePatches.name} applyServerFilePatches')"
+                    dependsOn(serverTasks.applyFilePatches)
+                    dependsOn("applyServerFilePatches")
+                }
+                val applyAllServerFeaturePatches = project.tasks.register("applyAllServerFeaturePatches") {
+                    group = "patching"
+                    description = "Applies all vanilla and upstream server feature patches " +
+                        "(equivalent to '${serverTasks.applyFeaturePatches.name} applyServerFeaturePatches')"
+                    dependsOn(serverTasks.applyFeaturePatches)
+                    dependsOn("applyServerFeaturePatches")
+                }
+                val applyAllServerPatches = project.tasks.register("applyAllServerPatches") {
+                    group = "patching"
+                    description = "Applies all vanilla and upstream server patches " +
+                        "(equivalent to '${serverTasks.applyPatches.name} applyServerPatches')"
+                    dependsOn(serverTasks.applyPatches)
+                    dependsOn("applyServerPatches")
+                }
+                val rebuildAllServerFilePatches = project.tasks.register("rebuildAllServerFilePatches") {
+                    group = "patching"
+                    description = "Rebuilds all vanilla and upstream server file patches " +
+                        "(equivalent to '${serverTasks.rebuildFilePatchesName} rebuildServerFilePatches')"
+                    dependsOn(serverTasks.rebuildFilePatchesName)
+                    dependsOn("rebuildServerFilePatches")
+                }
+                val rebuildAllServerFeaturePatches = project.tasks.register("rebuildAllServerFeaturePatches") {
+                    group = "patching"
+                    description = "Rebuilds all vanilla and upstream server feature patches " +
+                        "(equivalent to '${serverTasks.rebuildFeaturePatchesName} rebuildServerFeaturePatches')"
+                    dependsOn(serverTasks.rebuildFeaturePatchesName)
+                    dependsOn("rebuildServerFeaturePatches")
+                }
+                val rebuildAllServerPatches = project.tasks.register("rebuildAllServerPatches") {
+                    group = "patching"
+                    description = "Rebuilds all vanilla and upstream server patches " +
+                        "(equivalent to '${serverTasks.rebuildPatchesName} rebuildServerPatches')"
+                    dependsOn(serverTasks.rebuildPatchesName)
+                    dependsOn("rebuildServerPatches")
+                }
             }
 
             return serverTasks to upstreamConfigTasks
@@ -359,12 +358,5 @@ class SoftSpoonTasks(
                 patchingTasks[config.name] = makePatchingTasks(config)
             }
         }
-
-        applyAllServerFilePatches?.configure { dependsOn("applyVanillaFilePatches") }
-        applyAllServerFeaturePatches?.configure { dependsOn("applyVanillaFeaturePatches") }
-        applyAllServerPatches?.configure { dependsOn("applyVanillaPatches") }
-        rebuildAllServerFilePatches?.configure { dependsOn("rebuildVanillaFilePatches") }
-        rebuildAllServerFeaturePatches?.configure { dependsOn("rebuildVanillaFeaturePatches") }
-        rebuildAllServerPatches?.configure { dependsOn("rebuildVanillaPatches") }
     }
 }
