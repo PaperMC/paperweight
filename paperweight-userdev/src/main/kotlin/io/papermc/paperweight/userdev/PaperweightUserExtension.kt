@@ -31,6 +31,7 @@ import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 
 /**
@@ -78,4 +79,9 @@ abstract class PaperweightUserExtension(
     val minecraftVersion: Provider<String> = objects.property<String>().value(
         setup.map { it.minecraftVersion }
     ).withDisallowChanges()
+
+    /**
+     * The [JavaLauncher] used for the userdev setup pipeline.
+     */
+    val javaLauncher: Property<JavaLauncher> = objects.property<JavaLauncher>()
 }
