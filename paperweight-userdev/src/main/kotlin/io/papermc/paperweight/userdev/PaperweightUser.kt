@@ -59,18 +59,10 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.internal.DefaultTaskExecutionRequest
-import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
-import org.gradle.workers.WorkerExecutor
 
 abstract class PaperweightUser : Plugin<Project> {
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    @get:Inject
-    abstract val javaToolchainService: JavaToolchainService
 
     @get:Inject
     abstract val dependencyFactory: DependencyFactory

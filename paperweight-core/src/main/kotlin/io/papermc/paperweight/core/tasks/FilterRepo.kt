@@ -70,7 +70,7 @@ abstract class FilterRepo : BaseTask() {
         }
 
         val git = Git.open(outputDir.path.toFile())
-        commitAndTag(git, tag.get())
+        commitAndTag(git, tag.get(), "Import repo from upstream")
         git.close()
     }
 }

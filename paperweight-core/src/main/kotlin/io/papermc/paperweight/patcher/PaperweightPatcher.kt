@@ -53,13 +53,10 @@ abstract class PaperweightPatcher : Plugin<Project> {
     private fun Project.afterEvaluate(patcher: PaperweightPatcherExtension) {
         val workDirFromProp = upstreamsDirectory()
 
-        val applyForDownstream = tasks.register("applyForDownstream") {
-            group = "patching"
-        }
+        val applyForDownstream = tasks.register("applyForDownstream")
 
         patcher.upstreams.forEach { upstream ->
             val checkoutTask = tasks.register<CheckoutRepo>("checkout${upstream.name.capitalized()}Repo") {
-                group = "patching"
                 repoName.set(upstream.name)
                 url.set(upstream.repo)
                 ref.set(upstream.ref)
@@ -67,13 +64,13 @@ abstract class PaperweightPatcher : Plugin<Project> {
             }
 
             val applyUpstream = tasks.register<RunNestedBuild>("applyUpstream") {
-                group = "patching"
                 projectDir.set(checkoutTask.flatMap { it.outputDir })
                 tasks.add("applyForDownstream")
             }
 
             val upstreamConfigTasks = UpstreamConfigTasks(
                 project,
+                project.name,
                 upstream,
                 checkoutTask.flatMap { it.outputDir },
                 !isBaseExecution,
@@ -83,13 +80,20 @@ abstract class PaperweightPatcher : Plugin<Project> {
                 null,
             )
 
-            upstreamConfigTasks.setupAggregateTasks(upstream.name.capitalized())
+            upstreamConfigTasks.setupAggregateTasks(
+                upstream.name.capitalized(),
+                upstream.directoryPatchSets.names.joinToString(", "),
+                upstream.directoryPatchSets.names.joinToString(", ") + ", ${upstream.name} single file"
+            )
             applyForDownstream { dependsOn("apply${upstream.name.capitalized()}Patches") }
             tasks.register<RunNestedBuild>("applyAllPatches") {
                 group = "patching"
-                projectDir.set(layout.projectDirectory)
+                val depend = "apply${upstream.name.capitalized()}Patches"
                 tasks.addAll("applyAllServerPatches")
-                dependsOn("apply${upstream.name.capitalized()}Patches")
+                description = "Applies all patches defined in the paperweight-patcher project and the server project. " +
+                    "(equivalent to running '$depend' and then '${tasks.get().single()}' in a second Gradle invocation)"
+                projectDir.set(layout.projectDirectory)
+                dependsOn(depend)
             }
         }
     }
