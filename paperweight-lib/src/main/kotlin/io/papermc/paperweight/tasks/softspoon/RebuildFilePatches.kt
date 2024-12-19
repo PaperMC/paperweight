@@ -34,13 +34,16 @@ import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.bombe.type.signature.MethodSignature
+import org.eclipse.jgit.api.RebaseCommand
+import org.eclipse.jgit.api.RebaseResult
+import org.eclipse.jgit.lib.RebaseTodoLine
+import org.eclipse.jgit.merge.MergeStrategy
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.*
-import org.intellij.lang.annotations.Language
 
 @UntrackedTask(because = "Always rebuild patches")
 abstract class RebuildFilePatches : JavaLauncherTask() {
@@ -109,11 +112,11 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
         }
 
         if (filesWithNewAts.isNotEmpty()) {
-            git("status").executeOut()
-            git("diff").executeOut()
+            git("status").executeSilently()
+            git("diff").executeSilently()
             // we removed the comment, we need to commit this
-            git("add", ".").executeOut()
-            git("commit", "--amend", "--no-edit").executeOut()
+            git("add", ".").executeSilently()
+            git("commit", "--amend", "--no-edit").executeSilently()
         }
 
         // rebuild patches
@@ -127,20 +130,45 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
         if (filesWithNewAts.isNotEmpty()) {
             try {
                 // we need to rebase, so that the new file commit is part of the tree again.
-                // for that we use GIT_SEQUENCE_EDITOR to drop the first commit
-                // and then execs for all the files that remove the papter
-                // todo detect if sed is not present (windows) and switch out sed for something else
-                @Language("Shell Script")
-                val sequenceEditor = "sed -i -e 0,/pick/{s/pick/drop/}"
-                val execs = filesWithNewAts
-                    .map { "sed -i -e 's|// Paper-AT:.*||g' $it && ((git add $it && git commit --amend --no-edit) || true)" }
-                    .flatMap { listOf("--exec", it) }.toTypedArray()
-                git.withEnv(
-                    mapOf("GIT_SEQUENCE_EDITOR" to sequenceEditor)
-                )("rebase", "-i", "file", "--strategy-option=theirs", *execs).executeSilently()
+                // for that we drop the first commit and then remove the paper-at comment at every rebase step
+                org.eclipse.jgit.api.Git.open(inputDir.toFile()).use { jgit ->
+                    var rebase = jgit.rebase()
+                        .setUpstream("file")
+                        .setStrategy(MergeStrategy.THEIRS)
+                        .runInteractively(object : RebaseCommand.InteractiveHandler {
+                            override fun prepareSteps(steps: MutableList<RebaseTodoLine>) {
+                                // drop the first commit
+                                steps.removeAt(0)
+                                // set all others to edit, so that we can remove the Paper-AT comment
+                                steps.forEach { it.action = RebaseTodoLine.Action.EDIT }
+                            }
+
+                            override fun modifyCommitMessage(message: String): String {
+                                return message
+                            }
+                        })
+                        .call()
+                    // step thru all (feature) commits, replacing AT comments if needed
+                    val atRegex = Regex("\\s?// Paper-AT:.*$", RegexOption.MULTILINE)
+                    while (rebase.status == RebaseResult.Status.EDIT) {
+                        var foundOne = false
+                        filesWithNewAts.forEach { file ->
+                            val path = inputDir.resolve(file)
+                            val content = path.readText()
+                            if (content.contains(atRegex)) {
+                                foundOne = true
+                                val newContent = content.replace(atRegex, "")
+                                path.writeText(newContent)
+                            }
+                        }
+                        if (foundOne) {
+                            jgit.commit().setAll(true).setAmend(true).setMessage(rebase.currentCommit.fullMessage).call()
+                        }
+                        rebase = jgit.rebase().setOperation(RebaseCommand.Operation.CONTINUE).call()
+                    }
+                }
             } catch (e: Exception) {
-                // TODO better message to inform the user on what to do
-                throw RuntimeException("Encountered conflicts while rebuilding file patches.", e)
+                throw RuntimeException("Encountered an error while trying to rebase the new ATs", e)
             }
         }
         git("stash", "pop").runSilently(silenceErr = true)
@@ -250,7 +278,6 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
 
         val at = temporaryDir.toPath().resolve("ats.cfg").createParentDirectories()
         AccessTransformFormats.FML.writeLF(at, newAts)
-        println("OLD: " + decomp.readText())
         ats.run(
             launcher.get(),
             decomp,
@@ -259,7 +286,6 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
             temporaryDir.toPath().resolve("jst_work"),
             singleFile = true,
         )
-        println("NEW: " + decomp.readText())
     }
 
     private fun handleATInSource(source: Path, newAts: AccessTransformSet, className: String): Boolean {
@@ -292,7 +318,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
                 throw PaperweightException("Found invalid AT '$at' in class $className")
             }
 
-            fixedLines.add(split[0])
+            fixedLines.add(split[0].trimEnd())
         }
 
         if (foundNew) {
