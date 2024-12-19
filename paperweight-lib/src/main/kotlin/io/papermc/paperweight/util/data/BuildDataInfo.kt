@@ -20,20 +20,16 @@
  * USA
  */
 
-package io.papermc.paperweight.patcher.upstream
+package io.papermc.paperweight.util.data
 
-import io.papermc.paperweight.patcher.tasks.PaperweightPatcherUpstreamData
-import org.gradle.api.Named
-import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.TaskProvider
-
-interface PatcherUpstream : Named {
-
-    val upstreamDataTaskName: String
-    val upstreamDataTask: TaskProvider<PaperweightPatcherUpstreamData>
-
-    val useForUpstreamData: Property<Boolean>
-
-    val patchTasks: NamedDomainObjectContainer<PatchTaskConfig>
-}
+data class BuildDataInfo(
+    val minecraftVersion: String,
+    val serverUrl: String,
+    val accessTransforms: String,
+    val classMappings: String,
+    val memberMappings: String,
+    val classMapCommand: String,
+    val memberMapCommand: String,
+    val finalMapCommand: String,
+    val decompileCommand: String
+)

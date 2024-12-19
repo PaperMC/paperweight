@@ -23,24 +23,55 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
+import javax.inject.Inject
+import org.gradle.api.Action
+import org.gradle.api.Named
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.kotlin.dsl.*
 
-open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
+abstract class ForkConfig @Inject constructor(
+    private val configName: String,
+    providers: ProviderFactory,
+    objects: ObjectFactory,
+    layout: ProjectLayout,
+) : Named {
+    override fun getName(): String {
+        return configName
+    }
 
-    val paperServerDir: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory)
-    val serverPatchesDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches")
+    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory.dir("../"))
+    val serverDirectory: DirectoryProperty = objects.dirFrom(rootDirectory, providers.provider { "$name-server" })
+    val serverPatchesDir: DirectoryProperty = objects.dirFrom(serverDirectory, "vanilla-patches")
     val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")
     val sourcePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "sources")
     val resourcePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "resources")
     val featurePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "features")
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataDir: DirectoryProperty = objects.dirFrom(paperServerDir, "../build-data")
+    val buildDataDir: DirectoryProperty = objects.dirFrom(rootDirectory, "build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
-    val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
+    val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, providers.provider { "$name.at" })
     val reobfMappingsPatch: RegularFileProperty = objects.fileFrom(buildDataDir, "reobf-mappings-patch.tiny")
-    val mappingsPatch: RegularFileProperty = objects.fileProperty()
+
+    val forks: Property<ForkConfig> = objects.property()
+    val forksPaper: Property<Boolean> = objects.property<Boolean>().convention(forks.map { false }.orElse(true))
+
+    private val upstreamProvider: Provider<UpstreamConfig> = forks.map<UpstreamConfig> {
+        objects.newInstance(it.name, false)
+    }.orElse(
+        providers.provider { objects.newInstance("paper", false) }
+    )
+
+    val upstream: UpstreamConfig by lazy {
+        upstreamProvider.get()
+    }
+
+    fun upstream(op: Action<UpstreamConfig>) {
+        op.execute(upstream)
+    }
 }

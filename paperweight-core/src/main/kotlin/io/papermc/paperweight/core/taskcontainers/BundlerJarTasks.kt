@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.taskcontainers
+package io.papermc.paperweight.core.taskcontainers
 
 import com.google.gson.JsonObject
 import io.papermc.paperweight.tasks.*
@@ -90,32 +90,34 @@ class BundlerJarTasks(
         val paperclipTaskName = "create${classifier.capitalized()}PaperclipJar"
 
         val bundlerJarTask = tasks.register<CreateBundlerJar>(bundlerTaskName) {
-            group = "paperweight"
+            group = "bundling"
             description = "Build a runnable bundler jar"
 
             paperclip.from(configurations.named(PAPERCLIP_CONFIG))
             mainClass.set(mainClassString)
             extraManifestMainAttributes.convention(mapOf("Enable-Native-Access" to "ALL-UNNAMED"))
 
-            outputZip.set(layout.buildDirectory.file("libs/${rootProject.jarName("bundler", classifier)}"))
+            outputZip.set(layout.buildDirectory.file(jarName("bundler", classifier).map { "libs/$it" }))
         }
         val paperclipJarTask = tasks.register<CreatePaperclipJar>(paperclipTaskName) {
-            group = "paperweight"
+            group = "bundling"
             description = "Build a runnable paperclip jar"
 
             libraryChangesJson.set(bundlerJarTask.flatMap { it.libraryChangesJson })
-            outputZip.set(layout.buildDirectory.file("libs/${rootProject.jarName("paperclip", classifier)}"))
+            outputZip.set(layout.buildDirectory.file(jarName("paperclip", classifier).map { "libs/$it" }))
         }
         return bundlerJarTask to paperclipJarTask
     }
 
-    private fun Project.jarName(kind: String, classifier: String): String {
-        return listOfNotNull(
-            project.name,
-            kind,
-            project.version,
-            classifier.takeIf { it.isNotBlank() },
-        ).joinToString("-") + ".jar"
+    private fun Project.jarName(kind: String, classifier: String): Provider<String> {
+        return bundlerJarName.map {
+            listOfNotNull(
+                it,
+                kind,
+                project.version,
+                classifier.takeIf { c -> c.isNotBlank() },
+            ).joinToString("-") + ".jar"
+        }
     }
 
     private fun TaskProvider<CreateBundlerJar>.configureWith(

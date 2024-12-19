@@ -29,7 +29,7 @@ import io.papermc.paperweight.tasks.mache.macheDecompileJar
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
 import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.util.ensureClean
+import io.papermc.paperweight.util.cleanFile
 import java.nio.file.Path
 import kotlin.io.path.name
 import org.gradle.api.file.FileCollection
@@ -62,7 +62,7 @@ class MinecraftSourcesMache(
         )
 
         // Apply mache patches
-        outputJar.ensureClean()
+        outputJar.cleanFile()
         val result = PatchOperation.builder()
             .logTo(LoggingOutputStream(context.logger, LogLevel.LIFECYCLE))
             .basePath(tempOut, ArchiveFormat.ZIP)
@@ -72,7 +72,7 @@ class MinecraftSourcesMache(
             .level(codechicken.diffpatch.util.LogLevel.INFO)
             .build()
             .operate()
-        tempOut.ensureClean()
+        tempOut.cleanFile()
 
         if (result.exit != 0) {
             throw Exception("Failed to apply ${result.summary.failedMatches} mache patches")

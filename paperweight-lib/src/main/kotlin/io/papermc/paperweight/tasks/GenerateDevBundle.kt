@@ -32,6 +32,7 @@ import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -40,19 +41,17 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class GenerateDevBundle : DefaultTask() {
 
-    @get:InputDirectory
-    abstract val mainJavaDir: DirectoryProperty
+    @get:InputFiles
+    abstract val sourceDirectories: ConfigurableFileCollection
 
     @get:InputDirectory
     abstract val vanillaJavaDir: DirectoryProperty
-
-    @get:InputDirectory
-    abstract val patchedJavaDir: DirectoryProperty
 
     @get:Input
     abstract val minecraftVersion: Property<String>
@@ -114,8 +113,16 @@ abstract class GenerateDevBundle : DefaultTask() {
     private fun generatePatches(output: Path) {
         val workingDir = temporaryDir.toPath().resolve("work")
         workingDir.createDirectories()
-        mainJavaDir.path.copyRecursivelyTo(workingDir)
-        patchedJavaDir.path.copyRecursivelyTo(workingDir)
+        sourceDirectories.asFileTree.visit {
+            if (file.toPath().absolute().normalize().startsWith(vanillaJavaDir.path.absolute().normalize())) {
+                return@visit
+            }
+            if (file.isDirectory()) {
+                workingDir.resolve(path).createDirectories()
+            } else {
+                file.toPath().copyTo(workingDir.resolve(path))
+            }
+        }
         workingDir.resolve(".git").deleteRecursive()
 
         Files.walk(workingDir).use { stream ->

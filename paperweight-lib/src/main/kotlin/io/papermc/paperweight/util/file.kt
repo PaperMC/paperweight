@@ -24,6 +24,7 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.URI
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -38,9 +39,8 @@ import java.util.Arrays
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 import kotlin.io.path.*
 import kotlin.streams.asSequence
 import org.gradle.api.Project
@@ -127,29 +127,9 @@ fun Path.copyRecursivelyTo(target: Path) {
     }
 }
 
-inline fun Path.writeZipStream(func: (ZipOutputStream) -> Unit) {
-    ZipOutputStream(this.outputStream().buffered()).use(func)
-}
+fun InputStream.gzip(): GZIPInputStream = GZIPInputStream(this)
 
-inline fun Path.readZipStream(func: (ZipInputStream, ZipEntry) -> Unit) {
-    ZipInputStream(this.inputStream().buffered()).use { zis ->
-        var entry = zis.nextEntry
-        while (entry != null) {
-            func(zis, entry)
-            entry = zis.nextEntry
-        }
-    }
-}
-
-fun copyEntry(input: InputStream, output: ZipOutputStream, entry: ZipEntry) {
-    val newEntry = ZipEntry(entry)
-    output.putNextEntry(newEntry)
-    try {
-        input.copyTo(output)
-    } finally {
-        output.closeEntry()
-    }
-}
+fun OutputStream.gzip(): GZIPOutputStream = GZIPOutputStream(this)
 
 fun ProcessBuilder.directory(path: Path?): ProcessBuilder = directory(path?.toFile())
 
@@ -289,12 +269,21 @@ fun Path.writeZip(): FileSystem {
     return FileSystems.newFileSystem(jarUri(), mapOf("create" to "true"))
 }
 
+fun FileSystem.walkSequence(vararg options: PathWalkOption): Sequence<Path> {
+    return StreamSupport.stream(rootDirectories.spliterator(), false)
+        .asSequence()
+        .flatMap { it.walk(*options) }
+}
+
 fun FileSystem.walk(): Stream<Path> {
     return StreamSupport.stream(rootDirectories.spliterator(), false)
         .flatMap { Files.walk(it) }
 }
 
 fun Path.filesMatchingRecursive(glob: String = "*"): List<Path> {
+    if (!exists()) {
+        return emptyList()
+    }
     val matcher = fileSystem.getPathMatcher("glob:$glob")
     return Files.walk(this).use { stream ->
         stream.filter {
