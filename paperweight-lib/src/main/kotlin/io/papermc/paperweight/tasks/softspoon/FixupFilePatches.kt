@@ -38,7 +38,7 @@ abstract class FixupFilePatches : BaseTask() {
     @TaskAction
     fun run() {
         val git = Git(repo)
-        git("commit", "add", ".").executeOut()
+        git("add", ".").executeOut()
         git("commit", "--fixup", "file").executeOut()
         git("-c", "sequence.editor=:", "rebase", "-i", "--autosquash", "mache/main").executeOut()
     }
