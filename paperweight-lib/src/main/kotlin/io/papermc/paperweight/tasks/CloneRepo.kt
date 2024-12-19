@@ -45,19 +45,19 @@ abstract class CloneRepo : ZippedTask() {
         shallowClone.convention(true)
     }
 
-    override fun run(dir: Path) {
+    override fun run(rootDir: Path) {
         Git.checkForGit()
 
         val urlText = url.get().trim()
 
-        if (dir.resolve(".git").notExists()) {
-            dir.deleteRecursive()
-            dir.createDirectories()
+        if (rootDir.resolve(".git").notExists()) {
+            rootDir.deleteRecursive()
+            rootDir.createDirectories()
 
-            Git(dir)("init", "--quiet").executeSilently()
+            Git(rootDir)("init", "--quiet").executeSilently()
         }
 
-        val git = Git(dir)
+        val git = Git(rootDir)
         git("remote", "add", "origin", urlText).executeSilently(silenceErr = true)
         git.fetch()
 

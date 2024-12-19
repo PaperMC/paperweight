@@ -112,23 +112,25 @@ abstract class SetupVanilla : JavaLauncherTask() {
         }
 
         println("Copy initial sources...")
-        inputFile.convertToPath().openZip().walk()
-            .filter(predicate.get())
-            .forEach {
-                val target = outputPath.resolve(it.toString().substring(1))
-                target.parent.createDirectories()
-                if (it.toString().endsWith(".nbt")) {
-                    // nbt files are binary, so we can just copy them
-                    it.copyTo(target)
-                } else {
-                    // for text files we make sure we have a trailing newline
-                    var content = it.readText()
-                    if (!content.endsWith("\n")) {
-                        content += "\n"
+        inputFile.path.openZip().use { inputFileFs ->
+            inputFileFs.walkSequence()
+                .filter(predicate.get()::test)
+                .forEach {
+                    val target = outputPath.resolve(it.toString().substring(1))
+                    target.parent.createDirectories()
+                    if (it.toString().endsWith(".nbt")) {
+                        // nbt files are binary, so we can just copy them
+                        it.copyTo(target)
+                    } else {
+                        // for text files we make sure we have a trailing newline
+                        var content = it.readText()
+                        if (!content.endsWith("\n")) {
+                            content += "\n"
+                        }
+                        target.writeText(content)
                     }
-                    target.writeText(content)
                 }
-            }
+        }
 
         println("Setup git repo...")
         if (!macheOld.isPresent) {
@@ -168,28 +170,30 @@ abstract class SetupVanilla : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs")
+            commitAndTag(git, "ATs", "Paper ATs")
         }
 
         if (libraryImports.isPresent) {
             libraryImports.path.copyRecursivelyTo(outputPath)
 
-            commitAndTag(git, "Imports")
+            commitAndTag(git, "Imports", "Paper Imports")
         }
 
         git.close()
     }
+}
 
-    private fun commitAndTag(git: Git, name: String) {
-        val vanillaIdent = PersonIdent(name, "noreply+automated@papermc.io")
+fun commitAndTag(git: Git, name: String, message: String = name) {
+    val vanillaIdent = PersonIdent(name, "noreply+automated@papermc.io")
 
-        git.add().addFilepattern(".").call()
-        git.commit()
-            .setMessage(name)
-            .setAuthor(vanillaIdent)
-            .setSign(false)
-            .call()
-        git.tagDelete().setTags(name).call()
-        git.tag().setName(name).setTagger(vanillaIdent).setSigned(false).call()
-    }
+    git.add().addFilepattern(".").call()
+    git.add().addFilepattern(".").setUpdate(true).call()
+    git.commit()
+        .setMessage(message)
+        .setAuthor(vanillaIdent)
+        .setSign(false)
+        .setAllowEmpty(true)
+        .call()
+    git.tagDelete().setTags(name).call()
+    git.tag().setName(name).setTagger(vanillaIdent).setSigned(false).call()
 }

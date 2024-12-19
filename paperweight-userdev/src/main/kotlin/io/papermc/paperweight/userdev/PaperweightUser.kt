@@ -62,21 +62,17 @@ import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
-import org.gradle.workers.WorkerExecutor
 
 abstract class PaperweightUser : Plugin<Project> {
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    @get:Inject
-    abstract val javaToolchainService: JavaToolchainService
 
     @get:Inject
     abstract val dependencyFactory: DependencyFactory
 
     @get:Inject
     abstract val buildEventsListenerRegistry: BuildEventsListenerRegistry
+
+    @get:Inject
+    abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
@@ -101,8 +97,6 @@ abstract class PaperweightUser : Plugin<Project> {
             attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
         }
 
-        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {}
-
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
         val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
         val userdevSetup by lazy { userdevSetupProvider.get() }
@@ -114,6 +108,11 @@ abstract class PaperweightUser : Plugin<Project> {
             target.objects,
             target,
         )
+
+        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {
+            group = "paperweight"
+            launcher.set(userdev.javaLauncher)
+        }
 
         target.dependencies.extensions.create(
             PAPERWEIGHT_EXTENSION,
@@ -171,6 +170,8 @@ abstract class PaperweightUser : Plugin<Project> {
                 startParameter.setTaskRequests(taskRequests)
             }
 
+            userdev.javaLauncher.convention(javaToolchainService.defaultJavaLauncher(this))
+
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
 
@@ -195,7 +196,7 @@ abstract class PaperweightUser : Plugin<Project> {
             userdevSetup.afterEvaluate(this)
 
             userdev.addServerDependencyTo.get().forEach {
-                it.extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+                it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
             }
 
             cleanSharedCaches(this, sharedCacheRoot)

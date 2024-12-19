@@ -25,6 +25,8 @@ package io.papermc.paperweight.tasks.softspoon
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
@@ -35,11 +37,14 @@ abstract class FixupFilePatches : BaseTask() {
     @get:InputDirectory
     abstract val repo: DirectoryProperty
 
+    @get:Input
+    abstract val upstream: Property<String>
+
     @TaskAction
     fun run() {
         val git = Git(repo)
         git("add", ".").executeOut()
         git("commit", "--fixup", "file").executeOut()
-        git("-c", "sequence.editor=:", "rebase", "-i", "--autosquash", "mache/main").executeOut()
+        git("-c", "sequence.editor=:", "rebase", "-i", "--autosquash", upstream.get()).executeOut()
     }
 }

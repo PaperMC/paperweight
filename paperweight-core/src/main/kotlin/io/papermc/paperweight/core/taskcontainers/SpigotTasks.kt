@@ -22,11 +22,12 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.ext
+import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -38,12 +39,12 @@ open class SpigotTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
-    extension: PaperweightCoreExtension = project.ext,
-) : GeneralTasks(project) {
+    extension: PaperweightCoreExtension = project.coreExt,
+) : InitialTasks(project) {
 
     val cloneSpigotBuildData by tasks.registering<CloneRepo> {
         url.set("https://hub.spigotmc.org/stash/scm/spigot/builddata.git")
-        ref.set(project.ext.spigot.buildDataRef)
+        ref.set(project.coreExt.spigot.buildDataRef)
     }
 
     val unpackSpigotBuildData by tasks.registering<UnpackSpigotBuildData> {

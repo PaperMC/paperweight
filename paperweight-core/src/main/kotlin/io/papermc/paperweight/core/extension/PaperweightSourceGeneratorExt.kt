@@ -20,15 +20,17 @@
  * USA
  */
 
-package io.papermc.paperweight.patcher.upstream
+package io.papermc.paperweight.core.extension
 
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 
-interface MinimalPatcherConfig {
+@Suppress("LeakingThis")
+abstract class PaperweightSourceGeneratorExt {
+    abstract val atFile: RegularFileProperty
+    abstract val addVanillaServerToImplementation: Property<Boolean>
 
-    val apiPatchDir: DirectoryProperty
-    val apiOutputDir: DirectoryProperty
-
-    val serverPatchDir: DirectoryProperty
-    val serverOutputDir: DirectoryProperty
+    init {
+        addVanillaServerToImplementation.convention(true)
+    }
 }
