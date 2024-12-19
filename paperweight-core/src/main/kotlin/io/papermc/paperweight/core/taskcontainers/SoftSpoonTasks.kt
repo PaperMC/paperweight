@@ -162,13 +162,6 @@ class SoftSpoonTasks(
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
 
-    val setupPaperScript by tasks.registering(SetupPaperScript::class) {
-        group = "softspoon"
-        description = "Creates a util script and installs it into path"
-
-        root.set(project.projectDir)
-    }
-
     fun afterEvaluate() {
         // load mache
         mache.set(project.configurations.resolveMacheMeta())
@@ -219,6 +212,15 @@ class SoftSpoonTasks(
 
     private fun setupPatchingTasks() {
         val hasFork = project.coreExt.forks.isNotEmpty()
+
+        if (!hasFork) {
+            val setupPaperScript by project.tasks.registering(SetupPaperScript::class) {
+                group = "paperweight"
+                description = "Creates a util script and installs it into path"
+
+                root.set(project.rootProject.layout.projectDirectory)
+            }
+        }
 
         // Setup Paper's vanilla patching tasks
         val paperOutputRoot = if (hasFork) {
