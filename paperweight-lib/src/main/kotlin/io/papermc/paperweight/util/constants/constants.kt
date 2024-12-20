@@ -29,6 +29,7 @@ import org.gradle.api.Task
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
 const val PAPERWEIGHT_DEBUG = "paperweight.debug"
+fun paperweightDebug(): Boolean = System.getProperty(PAPERWEIGHT_DEBUG, "false") == "true"
 const val PAPERWEIGHT_VERBOSE_APPLY_PATCHES = "paperweight.verboseApplyPatches"
 
 const val MC_LIBRARY_URL = "https://libraries.minecraft.net/"

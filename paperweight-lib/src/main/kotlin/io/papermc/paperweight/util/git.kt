@@ -153,7 +153,7 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
     private var errStream: OutputStream = UselessOutputStream
 
     fun run(): Int {
-        if (System.getProperty(PAPERWEIGHT_DEBUG, "false") == "true") {
+        if (paperweightDebug()) {
             // Override all settings for debug
             setup(DelegatingOutputStream(outStream, System.out), DelegatingOutputStream(errStream, System.err))
             println()

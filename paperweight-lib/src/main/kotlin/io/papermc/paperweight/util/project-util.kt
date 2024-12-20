@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.util
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -63,6 +65,8 @@ fun Project.createBuildTasks(
         group = "paperweight"
         description = "Re-obfuscate the built jar to obf mappings"
 
+        reobfRequiresDebug()
+
         inputJar.set(relocateConstants.flatMap { it.outputJar })
 
         mappingsFile.set(relocatedReobfMappings.flatMap { it.outputMappings })
@@ -77,6 +81,18 @@ fun Project.createBuildTasks(
     }
 
     return ServerTasks(includeMappings, reobfJar)
+}
+
+fun Task.reobfRequiresDebug() {
+    doFirst {
+        if (!paperweightDebug()) {
+            throw PaperweightException(
+                "Reobfuscated server jars are no longer supported and only exist for debugging purposes.\n" +
+                    "If you are attempting to build a paperclip or bundler jar, use the 'mojmap' variant instead of 'reobf'.\n" +
+                    "Enable paperweight debug mode to bypass this error.\n"
+            )
+        }
+    }
 }
 
 data class ServerTasks(

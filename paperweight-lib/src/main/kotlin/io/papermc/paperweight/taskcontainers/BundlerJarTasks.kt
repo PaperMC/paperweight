@@ -55,7 +55,9 @@ class BundlerJarTasks(
         this.createPaperclipJar = createPaperclipJar
 
         this.createReobfBundlerJar = createReobfBundlerJar
+        createReobfBundlerJar { reobfRequiresDebug() }
         this.createReobfPaperclipJar = createReobfPaperclipJar
+        createReobfPaperclipJar { reobfRequiresDebug() }
     }
 
     fun configureBundlerTasks(
