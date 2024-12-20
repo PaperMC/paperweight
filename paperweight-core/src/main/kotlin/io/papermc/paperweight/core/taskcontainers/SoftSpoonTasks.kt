@@ -231,6 +231,7 @@ class SoftSpoonTasks(
         val paperPatchingTasks = ServerPatchingTasks(
             project,
             "paper",
+            true,
             this,
             hasFork,
             project.coreExt.paper.sourcePatchDir,
@@ -265,6 +266,7 @@ class SoftSpoonTasks(
             val serverTasks = ServerPatchingTasks(
                 project,
                 cfg.name,
+                false,
                 this,
                 !activeFork,
                 cfg.sourcePatchDir,

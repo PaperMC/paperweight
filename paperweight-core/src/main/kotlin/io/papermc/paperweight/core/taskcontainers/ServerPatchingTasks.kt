@@ -47,6 +47,7 @@ import org.gradle.kotlin.dsl.*
 class ServerPatchingTasks(
     private val project: Project,
     private val configName: String,
+    paper: Boolean,
     private val softspoon: SoftSpoonTasks,
     private val readOnly: Boolean,
     private val sourcePatchDir: DirectoryProperty,
@@ -68,7 +69,7 @@ class ServerPatchingTasks(
         group = taskGroup
     }
 
-    private val namePart = if (readOnly) configName.capitalized() else ""
+    private val namePart = if (readOnly) "${configName.capitalized()}Vanilla" else if (paper) "" else "Vanilla"
 
     private fun ApplyFilePatches.configureApplyFilePatches() {
         group()
@@ -86,15 +87,15 @@ class ServerPatchingTasks(
         identifier = configName
     }
 
-    val applySourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}VanillaSourcePatches") {
+    val applySourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}SourcePatches") {
         configureApplyFilePatches()
     }
 
-    val applySourcePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}VanillaSourcePatchesFuzzy") {
+    val applySourcePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}SourcePatchesFuzzy") {
         configureApplyFilePatches()
     }
 
-    val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}VanillaResourcePatches") {
+    val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}ResourcePatches") {
         group()
         description = "Applies $configName file patches to the vanilla resources"
 
@@ -106,13 +107,13 @@ class ServerPatchingTasks(
         identifier = configName
     }
 
-    val applyFilePatches = tasks.register<Task>("apply${namePart}VanillaFilePatches") {
+    val applyFilePatches = tasks.register<Task>("apply${namePart}FilePatches") {
         group()
         description = "Applies all $configName vanilla file patches"
         dependsOn(applySourcePatches, applyResourcePatches)
     }
 
-    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}VanillaFeaturePatches") {
+    val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}FeaturePatches") {
         group()
         description = "Applies all $configName vanilla feature patches"
         dependsOn(applyFilePatches)
@@ -124,17 +125,17 @@ class ServerPatchingTasks(
         patches.set(featurePatchDir.fileExists(project))
     }
 
-    val applyPatches = tasks.register<Task>("apply${namePart}VanillaPatches") {
+    val applyPatches = tasks.register<Task>("apply${namePart}Patches") {
         group()
         description = "Applies all $configName vanilla patches"
         dependsOn(applyFilePatches, applyFeaturePatches)
     }
 
-    val rebuildSourcePatchesName = "rebuild${namePart}VanillaSourcePatches"
-    val rebuildResourcePatchesName = "rebuild${namePart}VanillaResourcePatches"
-    val rebuildFilePatchesName = "rebuild${namePart}VanillaFilePatches"
-    val rebuildFeaturePatchesName = "rebuild${namePart}VanillaFeaturePatches"
-    val rebuildPatchesName = "rebuild${namePart}VanillaPatches"
+    val rebuildSourcePatchesName = "rebuild${namePart}SourcePatches"
+    val rebuildResourcePatchesName = "rebuild${namePart}ResourcePatches"
+    val rebuildFilePatchesName = "rebuild${namePart}FilePatches"
+    val rebuildFeaturePatchesName = "rebuild${namePart}FeaturePatches"
+    val rebuildPatchesName = "rebuild${namePart}Patches"
 
     init {
         if (!readOnly) {
@@ -159,7 +160,7 @@ class ServerPatchingTasks(
             libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
         }
 
-        val setup = tasks.register<ForkSetup>("run${namePart}VanillaSetup") {
+        val setup = tasks.register<ForkSetup>("run${namePart}Setup") {
             description = "Applies $configName ATs and library imports to vanilla sources"
 
             inputDir.set(baseSources)
@@ -178,7 +179,7 @@ class ServerPatchingTasks(
         applySourcePatchesFuzzy.configure {
             input.set(setup.flatMap { it.outputDir })
         }
-        val name = "rebuild${namePart}VanillaSourcePatches"
+        val name = "rebuild${namePart}SourcePatches"
         if (name in tasks.names) {
             tasks.named<RebuildFilePatches>(name) {
                 base.set(setup.flatMap { it.outputDir })
@@ -244,7 +245,7 @@ class ServerPatchingTasks(
             dependsOn(rebuildFilePatches, rebuildFeaturePatches)
         }
 
-        val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}VanillaSourcePatches") {
+        val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}SourcePatches") {
             group()
             description = "Puts the currently tracked source changes into the $configName vanilla sources file patches commit"
 
@@ -252,7 +253,7 @@ class ServerPatchingTasks(
             upstream.set("upstream/main")
         }
 
-        val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}VanillaResourcePatches") {
+        val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}ResourcePatches") {
             group()
             description = "Puts the currently tracked resource changes into the $configName vanilla resources file patches commit"
 
