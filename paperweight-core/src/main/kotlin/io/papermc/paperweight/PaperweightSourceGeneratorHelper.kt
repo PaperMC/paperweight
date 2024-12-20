@@ -25,13 +25,14 @@ package io.papermc.paperweight
 import io.papermc.paperweight.core.extension.PaperweightSourceGeneratorExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.*
 
 abstract class PaperweightSourceGeneratorHelper : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
-        val ext = extensions.create("paperweight", PaperweightSourceGeneratorExt::class)
+        val ext = extensions.create(PAPERWEIGHT_EXTENSION, PaperweightSourceGeneratorExt::class)
 
         val minecraftJar by configurations.registering
 

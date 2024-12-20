@@ -22,9 +22,9 @@
 
 package io.papermc.paperweight.core.tasks
 
+import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -35,7 +35,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 
 @UntrackedTask(because = "Git tracks the state")
-abstract class CheckoutRepo : DefaultTask() {
+abstract class CheckoutRepo : BaseTask() {
 
     @get:Input
     @get:Optional

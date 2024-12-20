@@ -50,7 +50,7 @@ abstract class PaperweightCore : Plugin<Project> {
         }
 
         target.tasks.register<Delete>("cleanCache") {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
