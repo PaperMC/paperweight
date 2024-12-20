@@ -31,15 +31,16 @@ import org.gradle.api.model.ObjectFactory
 open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
 
     val paperServerDir: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory)
-    val rejectsDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/rejected")
-    val sourcePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/sources")
-    val resourcePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/resources")
-    val featurePatchDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches/features")
+    val serverPatchesDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches")
+    val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")
+    val sourcePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "sources")
+    val resourcePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "resources")
+    val featurePatchDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "features")
 
     @Suppress("MemberVisibilityCanBePrivate")
-    val buildDataDir: DirectoryProperty = objects.dirWithDefault(layout, "../build-data")
+    val buildDataDir: DirectoryProperty = objects.dirFrom(paperServerDir, "../build-data")
     val devImports: RegularFileProperty = objects.fileFrom(buildDataDir, "dev-imports.txt")
     val additionalAts: RegularFileProperty = objects.fileFrom(buildDataDir, "paper.at")
-    val reobfMappingsPatch: RegularFileProperty = objects.fileProperty()
+    val reobfMappingsPatch: RegularFileProperty = objects.fileFrom(buildDataDir, "reobf-mappings-patch.tiny")
     val mappingsPatch: RegularFileProperty = objects.fileProperty()
 }

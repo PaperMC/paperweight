@@ -8,11 +8,21 @@ dependencies {
 
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
+    implementation(variantOf(libs.diffpatch) { classifier("all") }) {
+        isTransitive = false
+    }
+    shade(libs.jgit)
+
+    testImplementation(project(":paperweight-lib", "testClassesJar"))
 }
 
 gradlePlugin {
-    plugins.all {
-        description = "Gradle plugin for developing Paper"
+    setupPlugin("core") {
+        description = "Gradle plugin for developing Paper Server and derivatives"
         implementationClass = "io.papermc.paperweight.core.PaperweightCore"
+    }
+    setupPlugin("patcher") {
+        description = "Gradle plugin for developing Paper derivatives"
+        implementationClass = "io.papermc.paperweight.patcher.PaperweightPatcher"
     }
 }

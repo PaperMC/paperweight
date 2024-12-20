@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.tasks
 
+import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ArchiveOperations
@@ -46,6 +47,7 @@ abstract class BaseTask : DefaultTask() {
     open fun init() {}
 
     init {
+        group = INTERNAL_TASK_GROUP
         this.init()
     }
 }

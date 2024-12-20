@@ -22,9 +22,6 @@
 
 package io.papermc.paperweight.util.constants
 
-import io.papermc.paperweight.util.*
-import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.Task
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
@@ -68,15 +65,9 @@ private const val PAPER_PATH = "paperweight"
 
 const val LOCK_DIR = "$PAPER_PATH/lock"
 const val USERDEV_SETUP_LOCK = "$LOCK_DIR/userdev/setup.lock"
-const val APPLY_PATCHES_LOCK_DIR = "$LOCK_DIR/apply-patches"
-
-fun applyPatchesLock(targetDir: Path): String = APPLY_PATCHES_LOCK_DIR + '/' +
-    targetDir.absolutePathString().hash(HashingAlgorithm.SHA256).asHexString() + ".lock"
 
 const val UPSTREAMS = "$PAPER_PATH/upstreams"
 const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"
-const val PAPERWEIGHT_PREPARE_DOWNSTREAM = "prepareForDownstream"
-const val PAPERWEIGHT_DOWNSTREAM_FILE_PROPERTY = "paperweightDownstreamDataFile"
 
 private const val JARS_PATH = "$PAPER_PATH/jars"
 const val MINECRAFT_JARS_PATH = "$JARS_PATH/minecraft"
@@ -121,10 +112,6 @@ private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 const val FINAL_REMAPPED_CODEBOOK_JAR = "$TASK_CACHE/codebook-minecraft.jar"
 const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 
-const val MC_DEV_SOURCES_DIR = "$PAPER_PATH/mc-dev-sources"
-
-const val IVY_REPOSITORY = "$PAPER_PATH/ivyRepository"
-
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 
 private const val MACHE_PATH = "$PAPER_PATH/mache"
@@ -133,3 +120,6 @@ const val BASE_PROJECT = "$MACHE_PATH/base"
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")
+
+const val GENERAL_TASK_GROUP = "paperweight"
+const val INTERNAL_TASK_GROUP = "paperweight internal"

@@ -45,7 +45,7 @@ class FunctionalTest {
     @Disabled
     @Test
     fun setupCleanTestRepo() {
-        val projectDir = Path.of("F:\\Projects\\paperweight\\test").ensureClean().createDirectories()
+        val projectDir = Path.of("F:\\Projects\\paperweight\\test").cleanFile().createDirectories()
 
         setupMache("fake_mache", projectDir.resolve("mache.zip"))
         setupMojang("fake_mojang", projectDir.resolve("fake_mojang"))
@@ -92,17 +92,17 @@ class FunctionalTest {
 
         // add AT to source -> patch and AT file is updated
         println("adding at to source")
-        modifyFile(tempDir.resolve("test-server/src/vanilla/java/Test.java")) {
+        modifyFile(tempDir.resolve("test-server/src/minecraft/java/Test.java")) {
             it.replace(
                 "\"2\";",
                 "\"2\"; // Woo"
             ).replace("public final String getTest2() {", "public String getTest2() {// Paper-AT: public-f getTest2()Ljava/lang/String;")
         }
 
-        Git(tempDir.resolve("test-server/src/vanilla/java")).let { git ->
+        Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
             git("add", ".").executeSilently()
             git("commit", "--fixup", "file").executeSilently()
-            git("rebase", "--autosquash", "mache/main").executeSilently()
+            git("rebase", "--autosquash", "upstream/main").executeSilently()
         }
 
         println("\nrunning rebuildPatches again\n")
@@ -120,11 +120,11 @@ class FunctionalTest {
 
         // feature patch
         println("\nmodifying feature patch\n")
-        modifyFile(tempDir.resolve("test-server/src/vanilla/java/Test.java")) {
+        modifyFile(tempDir.resolve("test-server/src/minecraft/java/Test.java")) {
             it.replace("wonderful feature", "amazing feature")
         }
 
-        Git(tempDir.resolve("test-server/src/vanilla/java")).let { git ->
+        Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
             git("add", ".").executeSilently()
             git("commit", "--amend", "--no-edit").executeSilently()
         }
@@ -163,9 +163,9 @@ class FunctionalTest {
             .build()
 
         assertEquals(appP2.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
-        assertContains(tempDir.resolve("test-server/src/vanilla/java/oshi/PlatformEnum.java").readText(), "Windows CE")
-        assertFalse(tempDir.resolve("test-server/src/vanilla/java/oshi/SystemInfo.java").readText().contains("MACOS"))
-        assertContains(tempDir.resolve("test-server/src/vanilla/java/org/alcibiade/asciiart/widget/PictureWidget.java").readText(), "Trollface")
+        assertContains(tempDir.resolve("test-server/src/minecraft/java/oshi/PlatformEnum.java").readText(), "Windows CE")
+        assertFalse(tempDir.resolve("test-server/src/minecraft/java/oshi/SystemInfo.java").readText().contains("MACOS"))
+        assertContains(tempDir.resolve("test-server/src/minecraft/java/org/alcibiade/asciiart/widget/PictureWidget.java").readText(), "Trollface")
     }
 
     @Test

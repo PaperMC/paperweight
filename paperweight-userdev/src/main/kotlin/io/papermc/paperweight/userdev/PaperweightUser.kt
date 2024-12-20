@@ -62,21 +62,17 @@ import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
 import org.gradle.util.internal.NameMatcher
-import org.gradle.workers.WorkerExecutor
 
 abstract class PaperweightUser : Plugin<Project> {
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    @get:Inject
-    abstract val javaToolchainService: JavaToolchainService
 
     @get:Inject
     abstract val dependencyFactory: DependencyFactory
 
     @get:Inject
     abstract val buildEventsListenerRegistry: BuildEventsListenerRegistry
+
+    @get:Inject
+    abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
@@ -86,13 +82,13 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project-local & all shared paperweight-userdev setup caches."
             delete(target.layout.cache)
             delete(sharedCacheRoot)
         }
         val cleanCache by target.tasks.registering<Delete> {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project-local paperweight-userdev setup cache."
             delete(target.layout.cache)
         }
@@ -100,8 +96,6 @@ abstract class PaperweightUser : Plugin<Project> {
         target.configurations.register(DEV_BUNDLE_CONFIG) {
             attributes.attribute(DevBundleOutput.ATTRIBUTE, target.objects.named(DevBundleOutput.ZIP))
         }
-
-        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {}
 
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
         val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
@@ -115,6 +109,11 @@ abstract class PaperweightUser : Plugin<Project> {
             target,
         )
 
+        val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {
+            group = GENERAL_TASK_GROUP
+            launcher.set(userdev.javaLauncher)
+        }
+
         target.dependencies.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserDependenciesExtension::class,
@@ -124,7 +123,7 @@ abstract class PaperweightUser : Plugin<Project> {
         createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
         val reobfJar by target.tasks.registering<RemapJar> {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
             mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })
@@ -171,6 +170,8 @@ abstract class PaperweightUser : Plugin<Project> {
                 startParameter.setTaskRequests(taskRequests)
             }
 
+            userdev.javaLauncher.convention(javaToolchainService.defaultJavaLauncher(this))
+
             userdev.reobfArtifactConfiguration.get()
                 .configure(this, reobfJar)
 
@@ -195,7 +196,7 @@ abstract class PaperweightUser : Plugin<Project> {
             userdevSetup.afterEvaluate(this)
 
             userdev.addServerDependencyTo.get().forEach {
-                it.extendsFrom(target.configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+                it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
             }
 
             cleanSharedCaches(this, sharedCacheRoot)

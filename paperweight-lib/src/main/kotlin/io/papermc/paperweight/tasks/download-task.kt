@@ -28,7 +28,6 @@ import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -42,7 +41,7 @@ import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 
 // Not cached since these are Mojang's files
-abstract class DownloadTask : DefaultTask() {
+abstract class DownloadTask : BaseTask() {
 
     @get:Input
     abstract val url: Property<String>

@@ -67,6 +67,7 @@ abstract class ScanJar : JavaLauncherTask() {
 
     override fun init() {
         super.init()
+        group = "verification"
 
         jvmArgs.convention(listOf("-Xmx768m"))
         log.set(layout.cache.resolve(paperTaskOutput("txt")))

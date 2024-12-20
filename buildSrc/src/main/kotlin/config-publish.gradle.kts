@@ -48,16 +48,9 @@ val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
     }
 }
 
-val prefix = project.name.substringAfter("paperweight-")
-
 gradlePlugin {
     website.set("https://github.com/PaperMC/paperweight")
     vcsUrl.set("https://github.com/PaperMC/paperweight")
-    plugins.create("paperweight-$prefix") {
-        id = "io.papermc.paperweight." + prefix
-        displayName = "paperweight $prefix"
-        tags.set(listOf("paper", "minecraft"))
-    }
 }
 
 val shadowJar by tasks.existing(ShadowJar::class) {
@@ -87,12 +80,6 @@ val shadowJar by tasks.existing(ShadowJar::class) {
         /* -> */ "org.apache.commons",
         "org.cadixdev",
         /* -> */ "me.jamiemansfield",
-        "org.parchmentmc.feather",
-        /* -> */ "com.google.common",
-        /* ----> */ "com.google.j2objc",
-        /* ----> */ "com.google.thirdparty",
-        /* ----> */ "org.checkerframework",
-        /* ----> */ "javax.annotation",
         "org.eclipse.jgit",
         /* -> */ "com.googlecode.javaewah",
         /* -> */ "com.googlecode.javaewah32",
