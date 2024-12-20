@@ -127,10 +127,10 @@ class BundlerJarTasks(
         val runtimeClasspath = project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
         val artifacts = runtimeClasspath.flatMap { config ->
             config.incoming.artifacts.resolvedArtifacts.map { a ->
-                a.filterTo(HashSet()) {
+                a.filter {
                     val id = it.id.componentIdentifier
                     id is ModuleComponentIdentifier || id is ProjectComponentIdentifier
-                }
+                }.sortedBy { it.id.displayName }
             }
         }
         libraryArtifacts.set(
