@@ -124,11 +124,13 @@ abstract class ApplySingleFilePatches : BaseTask() {
                         .rejectsPath(tmpRej)
                         .build()
 
-                    if (op.operate().exit != 0) {
-                        return@use "Patch failed on ${patch.patchFile.path}, see log above. Rejects at $tmpRej"
-                    }
+                    val result = op.operate()
 
                     workFile.copyTo(patch.outputFile.path.createParentDirectories(), true)
+
+                    if (result.exit != 0) {
+                        return@use "Patch failed on ${patch.patchFile.path}, see log above. Rejects at $tmpRej"
+                    }
                 } else {
                     upstream.path.resolve(patch.path.get())
                         .copyTo(patch.outputFile.path.createParentDirectories(), true)
