@@ -98,10 +98,4 @@ open class SpigotTasks(
 
         outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
     }
-
-    val remapSpigotAt by tasks.registering<RemapSpigotAt> {
-        inputJar.set(spigotRemapJar.flatMap { it.outputJar })
-        mapping.set(patchMappings.flatMap { it.outputMappings })
-        spigotAt.set(unpackSpigotBuildData.flatMap { it.atFile })
-    }
 }
