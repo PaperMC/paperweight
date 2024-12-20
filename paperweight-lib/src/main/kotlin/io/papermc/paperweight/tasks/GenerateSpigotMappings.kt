@@ -37,7 +37,6 @@ import org.cadixdev.lorenz.model.FieldMapping
 import org.cadixdev.lorenz.model.InnerClassMapping
 import org.cadixdev.lorenz.model.MethodMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.InputFile
@@ -47,7 +46,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class GenerateSpigotMappings : DefaultTask() {
+abstract class GenerateSpigotMappings : BaseTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)

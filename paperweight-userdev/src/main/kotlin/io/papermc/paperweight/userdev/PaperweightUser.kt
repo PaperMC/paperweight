@@ -82,13 +82,13 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project-local & all shared paperweight-userdev setup caches."
             delete(target.layout.cache)
             delete(sharedCacheRoot)
         }
         val cleanCache by target.tasks.registering<Delete> {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project-local paperweight-userdev setup cache."
             delete(target.layout.cache)
         }
@@ -110,7 +110,7 @@ abstract class PaperweightUser : Plugin<Project> {
         )
 
         val setupTask = target.tasks.register("paperweightUserdevSetup", UserdevSetupTask::class) {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             launcher.set(userdev.javaLauncher)
         }
 
@@ -123,7 +123,7 @@ abstract class PaperweightUser : Plugin<Project> {
         createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
         val reobfJar by target.tasks.registering<RemapJar> {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
             mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })

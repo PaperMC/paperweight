@@ -77,7 +77,6 @@ class SoftSpoonTasks(
     }
 
     val macheRemapJar by tasks.registering(RemapJar::class) {
-        group = "mache"
         serverJar.set(allTasks.extractFromBundler.flatMap { it.serverJar })
         serverMappings.set(allTasks.downloadMappings.flatMap { it.outputFile })
 
@@ -92,7 +91,6 @@ class SoftSpoonTasks(
     }
 
     val macheDecompileJar by tasks.registering(DecompileJar::class) {
-        group = "mache"
         inputJar.set(macheRemapJar.flatMap { it.outputJar })
         decompilerArgs.set(mache.map { it.decompilerArgs })
 
@@ -103,8 +101,6 @@ class SoftSpoonTasks(
     }
 
     val collectPaperATsFromPatches by tasks.registering(CollectATsFromPatches::class) {
-        group = "mache"
-
         patchDir.set(project.coreExt.paper.featurePatchDir.fileExists(project))
     }
 
@@ -128,8 +124,6 @@ class SoftSpoonTasks(
     }
 
     private fun SetupMinecraftSources.configureSetupMacheSources() {
-        group = "mache"
-
         mache.from(project.configurations.named(MACHE_CONFIG))
         macheOld.set(project.coreExt.macheOldPath)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
@@ -154,7 +148,6 @@ class SoftSpoonTasks(
     }
 
     val setupMacheResources by tasks.registering(SetupMinecraftSources::class) {
-        group = "mache"
         description = "Setup Minecraft resources dir"
 
         inputFile.set(allTasks.extractFromBundler.flatMap { it.serverJar })
@@ -215,7 +208,7 @@ class SoftSpoonTasks(
 
         if (!hasFork) {
             val setupPaperScript by project.tasks.registering(SetupPaperScript::class) {
-                group = "paperweight"
+                group = GENERAL_TASK_GROUP
                 description = "Creates a util script and installs it into path"
 
                 root.set(project.rootProject.layout.projectDirectory)

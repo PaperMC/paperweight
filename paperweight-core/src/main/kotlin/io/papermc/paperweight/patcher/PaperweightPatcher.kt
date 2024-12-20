@@ -42,7 +42,7 @@ abstract class PaperweightPatcher : Plugin<Project> {
         val patcher = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightPatcherExtension::class)
 
         target.tasks.register<Delete>("cleanCache") {
-            group = "paperweight"
+            group = GENERAL_TASK_GROUP
             description = "Delete the project setup cache and task outputs."
             delete(target.layout.cache)
         }
@@ -53,7 +53,9 @@ abstract class PaperweightPatcher : Plugin<Project> {
     private fun Project.afterEvaluate(patcher: PaperweightPatcherExtension) {
         val workDirFromProp = upstreamsDirectory()
 
-        val applyForDownstream = tasks.register("applyForDownstream")
+        val applyForDownstream = tasks.register("applyForDownstream") {
+            group = INTERNAL_TASK_GROUP
+        }
 
         patcher.upstreams.forEach { upstream ->
             val checkoutTask = tasks.register<CheckoutRepo>("checkout${upstream.name.capitalized()}Repo") {

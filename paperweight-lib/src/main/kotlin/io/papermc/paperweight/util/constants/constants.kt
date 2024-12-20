@@ -22,9 +22,6 @@
 
 package io.papermc.paperweight.util.constants
 
-import io.papermc.paperweight.util.*
-import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.Task
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
@@ -68,10 +65,6 @@ private const val PAPER_PATH = "paperweight"
 
 const val LOCK_DIR = "$PAPER_PATH/lock"
 const val USERDEV_SETUP_LOCK = "$LOCK_DIR/userdev/setup.lock"
-const val APPLY_PATCHES_LOCK_DIR = "$LOCK_DIR/apply-patches"
-
-fun applyPatchesLock(targetDir: Path): String = APPLY_PATCHES_LOCK_DIR + '/' +
-    targetDir.absolutePathString().hash(HashingAlgorithm.SHA256).asHexString() + ".lock"
 
 const val UPSTREAMS = "$PAPER_PATH/upstreams"
 const val UPSTREAM_WORK_DIR_PROPERTY = "paperweightUpstreamWorkDir"
@@ -127,3 +120,6 @@ const val BASE_PROJECT = "$MACHE_PATH/base"
 fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")
+
+const val GENERAL_TASK_GROUP = "paperweight"
+const val INTERNAL_TASK_GROUP = "paperweight internal"

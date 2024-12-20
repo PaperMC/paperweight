@@ -165,7 +165,7 @@ class ServerPatchingTasks(
 
             inputDir.set(baseSources)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
-            identifier.set(configName.capitalized())
+            identifier.set(configName)
 
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
