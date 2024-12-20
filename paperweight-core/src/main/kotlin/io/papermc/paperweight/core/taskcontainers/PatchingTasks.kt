@@ -22,10 +22,10 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
+import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
-import io.papermc.paperweight.tasks.softspoon.ApplyFilePatches
-import io.papermc.paperweight.tasks.softspoon.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.tasks.softspoon.FixupFilePatches
 import io.papermc.paperweight.tasks.softspoon.RebuildFilePatches
 import io.papermc.paperweight.util.*

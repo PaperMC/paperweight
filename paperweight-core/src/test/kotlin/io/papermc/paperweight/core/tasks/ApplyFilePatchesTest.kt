@@ -20,8 +20,9 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.tasks
 
+import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.tasks.*
 import java.nio.file.Path
 import kotlin.test.BeforeTest

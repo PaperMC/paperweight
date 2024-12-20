@@ -40,13 +40,6 @@ repositories {
             includeGroupAndSubgroups("io.papermc")
         }
     }
-    maven("https://maven.parchmentmc.org") {
-        name = "ParchmentMC"
-        mavenContent {
-            releasesOnly()
-            includeGroupAndSubgroups("org.parchmentmc")
-        }
-    }
     maven("https://maven.neoforged.net/releases") {
         name = "NeoForged"
         mavenContent {

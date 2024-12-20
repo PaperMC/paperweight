@@ -20,7 +20,6 @@ dependencies {
     implementation(libs.httpclient)
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
-    implementation(libs.jgit)
 
     // ASM for inspection
     implementation(libs.bundles.asm)
@@ -30,14 +29,25 @@ dependencies {
 
     implementation(libs.lorenzTiny)
 
-    implementation(libs.feather.core)
-    implementation(libs.feather.gson)
-
     implementation(libs.jbsdiff)
 
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
 
+    testImplementation(libs.jgit)
     testImplementation(libs.mockk)
+}
+
+val testClassesJar = tasks.register<Jar>("testClassesJar") {
+    archiveClassifier.set("test-classes")
+    from(sourceSets.test.get().output.classesDirs)
+    dependsOn(sourceSets.test.get().classesTaskName)
+}
+configurations.consumable("testClassesJar") {
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+    }
+    outgoing.artifact(testClassesJar)
 }
