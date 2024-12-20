@@ -64,14 +64,24 @@ abstract class SetupPaperScript : BaseTask() {
             Command("root", listOf(), "Jumps to the root directory (%root%)", listOf("cd %root%")),
             Command("api", listOf("a"), "Jumps to the api directory", listOf("cd %root%/paper-api")),
             Command("server", listOf("s"), "Jumps to the server directory", listOf("cd %root%/paper-server")),
-            Command("vanilla", listOf("v"), "Jumps to the vanilla directory", listOf("cd %root%/paper-server/src/vanilla/java")),
-            Command("resources", listOf("r"), "Jumps to the resources directory", listOf("cd %root%/paper-server/src/vanilla/resources")),
+            Command(
+                "minecraft",
+                listOf("m"),
+                "Jumps to the Minecraft sources directory",
+                listOf("cd %root%/paper-server/src/minecraft/java")
+            ),
+            Command(
+                "resources",
+                listOf("r"),
+                "Jumps to the Minecraft resources directory",
+                listOf("cd %root%/paper-server/src/minecraft/resources")
+            ),
             Command(
                 "fixupSourcePatches",
                 listOf("fs"),
                 "Puts the current source changes into the file patches commit",
                 listOf(
-                    "cd %root%/paper-server/src/vanilla/java",
+                    "cd %root%/paper-server/src/minecraft/java",
                     "git add .",
                     "git commit --fixup file",
                     "git -c sequence.editor=: rebase -i --autosquash mache/main"
@@ -82,7 +92,7 @@ abstract class SetupPaperScript : BaseTask() {
                 listOf("fr"),
                 "Puts the current resource changes into the file patches commit",
                 listOf(
-                    "cd %root%/paper-server/src/vanilla/resources",
+                    "cd %root%/paper-server/src/minecraft/resources",
                     "git add .",
                     "git commit --fixup file",
                     "git -c sequence.editor=: rebase -i --autosquash mache/main"

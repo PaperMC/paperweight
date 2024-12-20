@@ -39,7 +39,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
 
-abstract class ForkSetup : JavaLauncherTask() {
+abstract class SetupForkMinecraftSources : JavaLauncherTask() {
 
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty

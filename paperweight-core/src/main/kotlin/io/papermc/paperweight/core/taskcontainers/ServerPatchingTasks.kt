@@ -23,7 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.extension.ForkConfig
-import io.papermc.paperweight.core.tasks.ForkSetup
+import io.papermc.paperweight.core.tasks.SetupForkMinecraftSources
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.tasks.*
@@ -59,21 +59,21 @@ class ServerPatchingTasks(
     private val baseResources: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
     outputRoot: Path,
-    private val outputSrc: Path = outputRoot.resolve("src/vanilla/java"),
-    private val outputResources: Path = outputRoot.resolve("src/vanilla/resources"),
-    private val outputSrcFile: Path = outputRoot.resolve("file/src/vanilla/java"),
+    private val outputSrc: Path = outputRoot.resolve("src/minecraft/java"),
+    private val outputResources: Path = outputRoot.resolve("src/minecraft/resources"),
+    private val outputSrcFile: Path = outputRoot.resolve("file/src/minecraft/java"),
     private val tasks: TaskContainer = project.tasks
 ) {
-    private val taskGroup = if (readOnly) "upstream vanilla server patching" else "vanilla server patching"
+    private val taskGroup = if (readOnly) "upstream minecraft patching" else "minecraft patching"
     private fun Task.group() {
         group = taskGroup
     }
 
-    private val namePart = if (readOnly) "${configName.capitalized()}Vanilla" else if (paper) "" else "Vanilla"
+    private val namePart = if (readOnly) "${configName.capitalized()}Minecraft" else if (paper) "" else "Minecraft"
 
     private fun ApplyFilePatches.configureApplyFilePatches() {
         group()
-        description = "Applies $configName file patches to the vanilla sources"
+        description = "Applies $configName file patches to the Minecraft sources"
 
         input.set(baseSources)
         if (readOnly) {
@@ -97,7 +97,7 @@ class ServerPatchingTasks(
 
     val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}ResourcePatches") {
         group()
-        description = "Applies $configName file patches to the vanilla resources"
+        description = "Applies $configName file patches to the Minecraft resources"
 
         input.set(baseResources)
         output.set(outputResources)
@@ -109,13 +109,13 @@ class ServerPatchingTasks(
 
     val applyFilePatches = tasks.register<Task>("apply${namePart}FilePatches") {
         group()
-        description = "Applies all $configName vanilla file patches"
+        description = "Applies all $configName Minecraft file patches"
         dependsOn(applySourcePatches, applyResourcePatches)
     }
 
     val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}FeaturePatches") {
         group()
-        description = "Applies all $configName vanilla feature patches"
+        description = "Applies all $configName Minecraft feature patches"
         dependsOn(applyFilePatches)
 
         if (readOnly) {
@@ -127,7 +127,7 @@ class ServerPatchingTasks(
 
     val applyPatches = tasks.register<Task>("apply${namePart}Patches") {
         group()
-        description = "Applies all $configName vanilla patches"
+        description = "Applies all $configName Minecraft patches"
         dependsOn(applyFilePatches, applyFeaturePatches)
     }
 
@@ -160,8 +160,8 @@ class ServerPatchingTasks(
             libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
         }
 
-        val setup = tasks.register<ForkSetup>("run${namePart}Setup") {
-            description = "Applies $configName ATs and library imports to vanilla sources"
+        val setup = tasks.register<SetupForkMinecraftSources>("run${namePart}Setup") {
+            description = "Applies $configName ATs and library imports to Minecraft sources"
 
             inputDir.set(baseSources)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
@@ -201,7 +201,7 @@ class ServerPatchingTasks(
 
         val rebuildSourcePatches = tasks.register<RebuildFilePatches>(rebuildSourcePatchesName) {
             group()
-            description = "Rebuilds $configName file patches to the vanilla sources"
+            description = "Rebuilds $configName file patches to the Minecraft sources"
 
             base.set(baseSources)
             input.set(outputSrc)
@@ -216,7 +216,7 @@ class ServerPatchingTasks(
 
         val rebuildResourcePatches = tasks.register<RebuildFilePatches>(rebuildResourcePatchesName) {
             group()
-            description = "Rebuilds $configName file patches to the vanilla resources"
+            description = "Rebuilds $configName file patches to the Minecraft resources"
 
             base.set(baseResources)
             input.set(outputResources)
@@ -225,13 +225,13 @@ class ServerPatchingTasks(
 
         val rebuildFilePatches = tasks.register<Task>(rebuildFilePatchesName) {
             group()
-            description = "Rebuilds all $configName file patches to vanilla"
+            description = "Rebuilds all $configName file patches to Minecraft"
             dependsOn(rebuildSourcePatches, rebuildResourcePatches)
         }
 
         val rebuildFeaturePatches = tasks.register<RebuildGitPatches>(rebuildFeaturePatchesName) {
             group()
-            description = "Rebuilds all $configName feature patches to the vanilla sources"
+            description = "Rebuilds all $configName feature patches to the Minecraft sources"
             dependsOn(rebuildFilePatches)
 
             inputDir.set(outputSrc)
@@ -241,13 +241,13 @@ class ServerPatchingTasks(
 
         val rebuildPatches = tasks.register<Task>(rebuildPatchesName) {
             group()
-            description = "Rebuilds all $configName patches to vanilla"
+            description = "Rebuilds all $configName patches to Minecraft"
             dependsOn(rebuildFilePatches, rebuildFeaturePatches)
         }
 
         val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}SourcePatches") {
             group()
-            description = "Puts the currently tracked source changes into the $configName vanilla sources file patches commit"
+            description = "Puts the currently tracked source changes into the $configName Minecraft sources file patches commit"
 
             repo.set(outputSrc)
             upstream.set("upstream/main")
@@ -255,7 +255,7 @@ class ServerPatchingTasks(
 
         val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}ResourcePatches") {
             group()
-            description = "Puts the currently tracked resource changes into the $configName vanilla resources file patches commit"
+            description = "Puts the currently tracked resource changes into the $configName Minecraft resources file patches commit"
 
             repo.set(outputResources)
             upstream.set("upstream/main")

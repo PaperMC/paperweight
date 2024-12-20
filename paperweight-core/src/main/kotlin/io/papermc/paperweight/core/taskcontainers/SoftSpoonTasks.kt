@@ -24,7 +24,7 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.ForkConfig
-import io.papermc.paperweight.core.tasks.SetupVanilla
+import io.papermc.paperweight.core.tasks.SetupMinecraftSources
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
@@ -127,7 +127,7 @@ class SoftSpoonTasks(
         libraries.from(indexLibraryFiles.map { it.libraries })
     }
 
-    private fun SetupVanilla.configureSetupMacheSources() {
+    private fun SetupMinecraftSources.configureSetupMacheSources() {
         group = "mache"
 
         mache.from(project.configurations.named(MACHE_CONFIG))
@@ -136,8 +136,8 @@ class SoftSpoonTasks(
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
 
-    val setupMacheSources by tasks.registering(SetupVanilla::class) {
-        description = "Setup vanilla source dir (applying mache patches and paper ATs)."
+    val setupMacheSources by tasks.registering(SetupMinecraftSources::class) {
+        description = "Setup Minecraft source dir (applying mache patches and paper ATs)."
         configureSetupMacheSources()
         libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
@@ -147,15 +147,15 @@ class SoftSpoonTasks(
         ats.jst.from(jstConfig)
     }
 
-    val setupMacheSourcesForDevBundle by tasks.registering(SetupVanilla::class) {
-        description = "Setup vanilla source dir (applying mache patches)."
+    val setupMacheSourcesForDevBundle by tasks.registering(SetupMinecraftSources::class) {
+        description = "Setup Minecraft source dir (applying mache patches)."
         configureSetupMacheSources()
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle"))
     }
 
-    val setupMacheResources by tasks.registering(SetupVanilla::class) {
+    val setupMacheResources by tasks.registering(SetupMinecraftSources::class) {
         group = "mache"
-        description = "Setup vanilla resources dir"
+        description = "Setup Minecraft resources dir"
 
         inputFile.set(allTasks.extractFromBundler.flatMap { it.serverJar })
         predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") }
@@ -199,13 +199,13 @@ class SoftSpoonTasks(
             extendsFrom(macheMinecraftLibraries.get())
         }
 
-        // add vanilla source set
+        // add Minecraft source dir
         project.the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
             java {
-                srcDirs(project.projectDir.resolve("src/vanilla/java"))
+                srcDirs(project.projectDir.resolve("src/minecraft/java"))
             }
             resources {
-                srcDirs(project.projectDir.resolve("src/vanilla/resources"))
+                srcDirs(project.projectDir.resolve("src/minecraft/resources"))
             }
         }
     }
@@ -222,7 +222,7 @@ class SoftSpoonTasks(
             }
         }
 
-        // Setup Paper's vanilla patching tasks
+        // Setup Paper's Minecraft patching tasks
         val paperOutputRoot = if (hasFork) {
             project.upstreamsDirectory().get().path.resolve("server-work/paper")
         } else {
@@ -312,45 +312,45 @@ class SoftSpoonTasks(
                     cfg.upstream.directoryPatchSets.names.joinToString(", ")
                 )
 
-                // setup aggregate vanilla & upstream -server patching tasks
+                // setup aggregate Minecraft & upstream -server patching tasks
                 val applyAllServerFilePatches = project.tasks.register("applyAllServerFilePatches") {
                     group = "patching"
-                    description = "Applies all vanilla and upstream server file patches " +
+                    description = "Applies all Minecraft and upstream server file patches " +
                         "(equivalent to '${serverTasks.applyFilePatches.name} applyServerFilePatches')"
                     dependsOn(serverTasks.applyFilePatches)
                     dependsOn("applyServerFilePatches")
                 }
                 val applyAllServerFeaturePatches = project.tasks.register("applyAllServerFeaturePatches") {
                     group = "patching"
-                    description = "Applies all vanilla and upstream server feature patches " +
+                    description = "Applies all Minecraft and upstream server feature patches " +
                         "(equivalent to '${serverTasks.applyFeaturePatches.name} applyServerFeaturePatches')"
                     dependsOn(serverTasks.applyFeaturePatches)
                     dependsOn("applyServerFeaturePatches")
                 }
                 val applyAllServerPatches = project.tasks.register("applyAllServerPatches") {
                     group = "patching"
-                    description = "Applies all vanilla and upstream server patches " +
+                    description = "Applies all Minecraft and upstream server patches " +
                         "(equivalent to '${serverTasks.applyPatches.name} applyServerPatches')"
                     dependsOn(serverTasks.applyPatches)
                     dependsOn("applyServerPatches")
                 }
                 val rebuildAllServerFilePatches = project.tasks.register("rebuildAllServerFilePatches") {
                     group = "patching"
-                    description = "Rebuilds all vanilla and upstream server file patches " +
+                    description = "Rebuilds all Minecraft and upstream server file patches " +
                         "(equivalent to '${serverTasks.rebuildFilePatchesName} rebuildServerFilePatches')"
                     dependsOn(serverTasks.rebuildFilePatchesName)
                     dependsOn("rebuildServerFilePatches")
                 }
                 val rebuildAllServerFeaturePatches = project.tasks.register("rebuildAllServerFeaturePatches") {
                     group = "patching"
-                    description = "Rebuilds all vanilla and upstream server feature patches " +
+                    description = "Rebuilds all Minecraft and upstream server feature patches " +
                         "(equivalent to '${serverTasks.rebuildFeaturePatchesName} rebuildServerFeaturePatches')"
                     dependsOn(serverTasks.rebuildFeaturePatchesName)
                     dependsOn("rebuildServerFeaturePatches")
                 }
                 val rebuildAllServerPatches = project.tasks.register("rebuildAllServerPatches") {
                     group = "patching"
-                    description = "Rebuilds all vanilla and upstream server patches " +
+                    description = "Rebuilds all Minecraft and upstream server patches " +
                         "(equivalent to '${serverTasks.rebuildPatchesName} rebuildServerPatches')"
                     dependsOn(serverTasks.rebuildPatchesName)
                     dependsOn("rebuildServerPatches")

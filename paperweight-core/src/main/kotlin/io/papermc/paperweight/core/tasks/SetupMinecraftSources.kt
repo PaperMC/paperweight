@@ -43,7 +43,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
-abstract class SetupVanilla : JavaLauncherTask() {
+abstract class SetupMinecraftSources : JavaLauncherTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
