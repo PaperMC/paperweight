@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
-    id("com.github.johnrengelman.shadow")
+    id("com.gradleup.shadow")
     id("com.gradle.plugin-publish")
 }
 

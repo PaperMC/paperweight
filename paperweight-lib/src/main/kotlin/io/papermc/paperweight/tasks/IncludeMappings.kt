@@ -50,7 +50,7 @@ abstract class IncludeMappings : BaseTask() {
     }
 
     @TaskAction
-    private fun addMappings() {
+    fun addMappings() {
         outputJar.path.parent.createDirectories()
         inputJar.path.copyTo(outputJar.path, overwrite = true)
         outputJar.path.openZip().use { fs ->
