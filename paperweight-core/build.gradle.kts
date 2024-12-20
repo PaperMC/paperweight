@@ -11,7 +11,9 @@ dependencies {
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
-    implementation(libs.jgit)
+    shade(libs.jgit)
+
+    testImplementation(project(":paperweight-lib", "testClassesJar"))
 }
 
 gradlePlugin {

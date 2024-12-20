@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.mache
+package io.papermc.paperweight.core.tasks
 
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
@@ -30,7 +30,6 @@ import io.papermc.paperweight.tasks.softspoon.ApplySourceATs
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import java.util.function.Predicate
-import javax.inject.Inject
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand
@@ -43,7 +42,6 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
-import org.gradle.workers.WorkerExecutor
 
 abstract class SetupVanilla : JavaLauncherTask() {
 
@@ -68,9 +66,6 @@ abstract class SetupVanilla : JavaLauncherTask() {
     @get:Optional
     @get:InputDirectory
     abstract val macheOld: DirectoryProperty
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
 
     @get:Nested
     val ats: ApplySourceATs = objects.newInstance()

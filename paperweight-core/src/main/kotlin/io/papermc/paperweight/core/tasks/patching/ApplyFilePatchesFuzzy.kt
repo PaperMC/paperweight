@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.tasks.patching
 import codechicken.diffpatch.util.PatchMode
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input

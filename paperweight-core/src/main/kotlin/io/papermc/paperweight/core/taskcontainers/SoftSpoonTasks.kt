@@ -24,10 +24,10 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.ForkConfig
+import io.papermc.paperweight.core.tasks.SetupVanilla
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
-import io.papermc.paperweight.tasks.mache.SetupVanilla
 import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
 import io.papermc.paperweight.tasks.softspoon.IndexLibraryFiles
 import io.papermc.paperweight.tasks.softspoon.SetupPaperScript

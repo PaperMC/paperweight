@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.tasks
 
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.mache.commitAndTag
 import io.papermc.paperweight.tasks.softspoon.ApplySourceATs
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
