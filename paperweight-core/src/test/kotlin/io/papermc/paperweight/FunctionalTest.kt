@@ -71,20 +71,20 @@ class FunctionalTest {
         // appP -> works
         println("\nrunning applyPatches dependencies\n")
         val appP = gradleRunner
-            .withArguments("applyVanillaPatches", "dependencies", ":test-server:dependencies", "--stacktrace", "-Dfake=true")
+            .withArguments("applyPatches", "dependencies", ":test-server:dependencies", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
 
-        assertEquals(appP.task(":test-server:applyVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(appP.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
 
         // clean rebuild rebP -> changes nothing
         println("\nrunning rebuildPatches\n")
         val rebP = gradleRunner
-            .withArguments("rebuildVanillaPatches", "--stacktrace", "-Dfake=true")
+            .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP.task(":test-server:rebuildVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/sources/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -107,11 +107,11 @@ class FunctionalTest {
 
         println("\nrunning rebuildPatches again\n")
         val rebP2 = gradleRunner
-            .withArguments("rebuildVanillaPatches", "--stacktrace", "-Dfake=true")
+            .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP2.task(":test-server:rebuildVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP2.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/expected/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -131,10 +131,10 @@ class FunctionalTest {
 
         println("\nrebuilding feature patch\n")
         val rebP3 = gradleRunner
-            .withArguments("rebuildVanillaPatches", "--stacktrace", "-Dfake=true")
+            .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
-        assertEquals(rebP3.task(":test-server:rebuildVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(rebP3.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
         assertEquals(
             testResource.resolve("fake-patches/expected/0001-Feature.patch").readText(),
             tempDir.resolve("fake-patches/features/0001-Feature.patch").readText()
@@ -158,11 +158,11 @@ class FunctionalTest {
         }
 
         val appP2 = gradleRunner
-            .withArguments("applyVanillaPatches", "--stacktrace", "-Dfake=true")
+            .withArguments("applyPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
 
-        assertEquals(appP2.task(":test-server:applyVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(appP2.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
         assertContains(tempDir.resolve("test-server/src/vanilla/java/oshi/PlatformEnum.java").readText(), "Windows CE")
         assertFalse(tempDir.resolve("test-server/src/vanilla/java/oshi/SystemInfo.java").readText().contains("MACOS"))
         assertContains(tempDir.resolve("test-server/src/vanilla/java/org/alcibiade/asciiart/widget/PictureWidget.java").readText(), "Trollface")
@@ -174,11 +174,11 @@ class FunctionalTest {
         val gradleRunner = tempDir.copyProject("functional_test").gradleRunner()
 
         val result = gradleRunner
-            .withArguments("applyVanillaPatches", ":test-server:dependencies", "--stacktrace", "-Dfake=false")
+            .withArguments("applyPatches", ":test-server:dependencies", "--stacktrace", "-Dfake=false")
             .withDebug(debug)
             .build()
 
-        assertEquals(result.task(":test-server:applyVanillaPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(result.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
     }
 
     fun setupMache(macheName: String, target: Path) {
