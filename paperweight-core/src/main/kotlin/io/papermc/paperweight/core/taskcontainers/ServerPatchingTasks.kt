@@ -39,7 +39,6 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -170,7 +169,7 @@ class ServerPatchingTasks(
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(softspoon.jstConfig)
-            ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+            ats.jstClasspath.from(softspoon.macheMinecraftLibraries)
         }
 
         applySourcePatches.configure {
