@@ -101,6 +101,8 @@ abstract class ApplyFilePatches : BaseTask() {
 
         setupGitHook(outputPath)
 
+        tagBase()
+
         val result = if (!patches.isPresent) {
             commit()
             0
@@ -113,6 +115,14 @@ abstract class ApplyFilePatches : BaseTask() {
         if (!verbose.get()) {
             logger.lifecycle("Applied $result patches")
         }
+    }
+
+    private fun tagBase() {
+        val git = Git.open(output.path.toFile())
+        val ident = PersonIdent("base", "noreply+automated@papermc.io")
+        git.tagDelete().setTags("base").call()
+        git.tag().setName("base").setTagger(ident).setSigned(false).call()
+        git.close()
     }
 
     private fun applyWithGit(outputPath: Path): Int {
