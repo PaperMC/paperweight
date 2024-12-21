@@ -1,7 +1,7 @@
 name: Deploy Snapshot
 on:
   push:
-    branches: [ 'main', 'softspoon-v2' ]
+    branches: [ 'main' ]
     paths-ignore:
       - 'license/*'
       - 'readme.md'
