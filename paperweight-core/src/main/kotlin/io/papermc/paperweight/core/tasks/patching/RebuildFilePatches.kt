@@ -20,12 +20,13 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.tasks.patching
 
 import codechicken.diffpatch.cli.DiffOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.LoggingOutputStream
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream

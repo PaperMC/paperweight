@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.util
 
 import io.papermc.paperweight.util.*
 import java.nio.file.Path

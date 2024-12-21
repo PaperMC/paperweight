@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.core
+package io.papermc.paperweight.core.util
 
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.util.constants.*

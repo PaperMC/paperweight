@@ -25,8 +25,8 @@ package io.papermc.paperweight.core.tasks
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.softspoon.ApplySourceATs
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import java.util.function.Predicate

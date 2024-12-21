@@ -20,11 +20,11 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.util
 
 import io.papermc.paperweight.tasks.*
 
-class ApplySourceATTest : TaskTest() {
+class ApplySourceATsTest : TaskTest() {
     /* TODO: re-add a test for this
     private lateinit var task: ApplySourceAT
 
