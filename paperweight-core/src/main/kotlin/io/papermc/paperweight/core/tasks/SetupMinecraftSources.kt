@@ -165,13 +165,13 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs", "Paper ATs")
+            commitAndTag(git, "ATs", "paper ATs")
         }
 
         if (libraryImports.isPresent) {
             libraryImports.path.copyRecursivelyTo(outputPath)
 
-            commitAndTag(git, "Imports", "Paper Imports")
+            commitAndTag(git, "Imports", "paper Imports")
         }
 
         git.close()
