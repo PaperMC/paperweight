@@ -144,23 +144,23 @@ class ServerPatchingTasks(
     }
 
     fun setupFork(config: ForkConfig) {
-        val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart}ATsFromPatches") {
+        val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${configName.capitalized()}ATsFromPatches") {
             patchDir.set(featurePatchDir.fileExists(project))
         }
 
-        val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart}ATs") {
+        val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${configName.capitalized()}ATs") {
             firstFile.set(additionalAts.fileExists(project))
             secondFile.set(collectAccessTransform.flatMap { it.outputFile })
         }
 
-        val importLibFiles = tasks.register<ImportLibraryFiles>("import${namePart}LibraryFiles") {
+        val importLibFiles = tasks.register<ImportLibraryFiles>("import${configName.capitalized()}LibraryFiles") {
             patches.from(config.featurePatchDir, config.sourcePatchDir)
             devImports.set(config.devImports.fileExists(project))
             libraryFileIndex.set(softspoon.indexLibraryFiles.flatMap { it.outputFile })
             libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
         }
 
-        val setup = tasks.register<SetupForkMinecraftSources>("run${namePart}Setup") {
+        val setup = tasks.register<SetupForkMinecraftSources>("run${configName.capitalized()}Setup") {
             description = "Applies $configName ATs and library imports to Minecraft sources"
 
             inputDir.set(baseSources)
