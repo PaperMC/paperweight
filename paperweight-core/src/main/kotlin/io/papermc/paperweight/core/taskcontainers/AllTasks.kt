@@ -54,7 +54,7 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
-    val downloadPaperLibrariesSources by tasks.registering<DownloadPaperLibraries> {
+    val downloadRuntimeClasspathSources by tasks.registering<DownloadPaperLibraries> {
         paperDependencies.set(
             project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).map { configuration ->
                 val view = configuration.incoming.artifactView {

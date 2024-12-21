@@ -43,11 +43,11 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
-class ServerPatchingTasks(
+class MinecraftPatchingTasks(
     private val project: Project,
     private val configName: String,
     paper: Boolean,
-    private val softspoon: SoftSpoonTasks,
+    private val coreTasks: CoreTasks,
     private val readOnly: Boolean,
     private val sourcePatchDir: DirectoryProperty,
     private val rejectsDir: DirectoryProperty,
@@ -82,7 +82,7 @@ class ServerPatchingTasks(
         }
         patches.set(sourcePatchDir.fileExists(project))
         rejects.set(rejectsDir)
-        gitFilePatches.set(this@ServerPatchingTasks.gitFilePatches)
+        gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
         identifier = configName
     }
 
@@ -102,7 +102,7 @@ class ServerPatchingTasks(
         output.set(outputResources)
         patches.set(resourcePatchDir.fileExists(project))
         // TODO rejects?
-        gitFilePatches.set(this@ServerPatchingTasks.gitFilePatches)
+        gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
         identifier = configName
     }
 
@@ -155,8 +155,8 @@ class ServerPatchingTasks(
         val importLibFiles = tasks.register<ImportLibraryFiles>("import${configName.capitalized()}LibraryFiles") {
             patches.from(config.featurePatchDir, config.sourcePatchDir)
             devImports.set(config.devImports.fileExists(project))
-            libraryFileIndex.set(softspoon.indexLibraryFiles.flatMap { it.outputFile })
-            libraries.from(softspoon.indexLibraryFiles.map { it.libraries })
+            libraryFileIndex.set(coreTasks.indexLibraryFiles.flatMap { it.outputFile })
+            libraries.from(coreTasks.indexLibraryFiles.map { it.libraries })
         }
 
         val setup = tasks.register<SetupForkMinecraftSources>("run${configName.capitalized()}Setup") {
@@ -168,8 +168,8 @@ class ServerPatchingTasks(
 
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
-            ats.jst.from(softspoon.jstConfig)
-            ats.jstClasspath.from(softspoon.macheMinecraftLibraries)
+            ats.jst.from(project.configurations.named(JST_CONFIG))
+            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
         }
 
         applySourcePatches.configure {
@@ -205,10 +205,10 @@ class ServerPatchingTasks(
             base.set(baseSources)
             input.set(outputSrc)
             patches.set(sourcePatchDir)
-            gitFilePatches.set(this@ServerPatchingTasks.gitFilePatches)
+            gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
 
-            ats.jstClasspath.from(softspoon.macheMinecraft)
-            ats.jst.from(softspoon.jstConfig)
+            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
+            ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists(project))
             atFileOut.set(additionalAts.fileExists(project))
         }

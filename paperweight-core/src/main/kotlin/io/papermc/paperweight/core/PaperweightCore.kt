@@ -25,15 +25,16 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
-import io.papermc.paperweight.core.taskcontainers.AllTasks
 import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks
+import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
-import io.papermc.paperweight.core.taskcontainers.SoftSpoonTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.data.mache.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
@@ -70,6 +71,20 @@ abstract class PaperweightCore : Plugin<Project> {
         target.configurations.create(MACHE_CONFIG) {
             attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
         }
+        target.configurations.register(MACHE_CODEBOOK_CONFIG) { isTransitive = false }
+        target.configurations.register(MACHE_REMAPPER_CONFIG) { isTransitive = false }
+        target.configurations.register(MACHE_DECOMPILER_CONFIG) { isTransitive = false }
+        target.configurations.register(MACHE_PARAM_MAPPINGS_CONFIG) { isTransitive = false }
+        target.configurations.register(MACHE_CONSTANTS_CONFIG) { isTransitive = false }
+        target.configurations.register(MACHE_MINECRAFT_LIBRARIES_CONFIG)
+        target.configurations.consumable(MAPPED_JAR_OUTGOING_CONFIG) // For source generator modules
+        target.configurations.register(MACHE_MINECRAFT_CONFIG)
+        target.configurations.register(JST_CONFIG) {
+            defaultDependencies {
+                // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
+                add(target.dependencies.create("io.papermc.jst:jst-cli-bundle:${LibraryVersions.JST}"))
+            }
+        }
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
             target.tasks.register<CreateDiffOutput>("diff") {
@@ -81,9 +96,9 @@ abstract class PaperweightCore : Plugin<Project> {
             }
         }
 
-        val tasks = AllTasks(target)
+        val mache: Property<MacheMeta> = target.objects.property()
+        val tasks = CoreTasks(target, mache)
         val devBundleTasks = DevBundleTasks(target)
-        val softSpoonTasks = SoftSpoonTasks(target, tasks)
 
         val jar = target.tasks.named("jar", AbstractArchiveTask::class)
         tasks.generateReobfMappings {
@@ -119,13 +134,16 @@ abstract class PaperweightCore : Plugin<Project> {
                 }
             }
 
-            softSpoonTasks.afterEvaluate()
+            // load mache
+            mache.set(project.configurations.resolveMacheMeta())
+
+            tasks.afterEvaluate()
 
             devBundleTasks.configure(
                 ext.bundlerJarName.get(),
                 ext.mainClass,
                 ext.minecraftVersion,
-                softSpoonTasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
+                tasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
                 tasks.extractFromBundler.map { it.serverLibrariesList.path },
                 tasks.downloadServerJar.map { it.outputJar.path },
                 tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)

@@ -43,49 +43,21 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
-class SoftSpoonTasks(
+class CoreTasks(
     val project: Project,
-    val allTasks: AllTasks,
+    val mache: Property<MacheMeta>,
     tasks: TaskContainer = project.tasks
-) {
-
-    private val mache: Property<MacheMeta> = project.objects.property()
-
-    val macheCodebook = project.configurations.register(MACHE_CODEBOOK_CONFIG) {
-        isTransitive = false
-    }
-    val macheRemapper = project.configurations.register(MACHE_REMAPPER_CONFIG) {
-        isTransitive = false
-    }
-    val macheDecompiler = project.configurations.register(MACHE_DECOMPILER_CONFIG) {
-        isTransitive = false
-    }
-    val macheParamMappings = project.configurations.register(MACHE_PARAM_MAPPINGS_CONFIG) {
-        isTransitive = false
-    }
-    val macheConstants = project.configurations.register(MACHE_CONSTANTS_CONFIG) {
-        isTransitive = false
-    }
-    val macheMinecraftLibraries by project.configurations.registering
-    val mappedJarOutgoing = project.configurations.consumable("mappedJarOutgoing") // For source generator modules
-    val macheMinecraft by project.configurations.registering
-    val jstConfig = project.configurations.register(JST_CONFIG) {
-        defaultDependencies {
-            // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
-            add(project.dependencies.create("io.papermc.jst:jst-cli-bundle:${LibraryVersions.JST}"))
-        }
-    }
-
+) : AllTasks(project) {
     val macheRemapJar by tasks.registering(RemapJar::class) {
-        serverJar.set(allTasks.extractFromBundler.flatMap { it.serverJar })
-        serverMappings.set(allTasks.downloadMappings.flatMap { it.outputFile })
+        serverJar.set(extractFromBundler.flatMap { it.serverJar })
+        serverMappings.set(downloadMappings.flatMap { it.outputFile })
 
         remapperArgs.set(mache.map { it.remapperArgs })
-        codebookClasspath.from(macheCodebook)
-        minecraftClasspath.from(macheMinecraftLibraries)
-        remapperClasspath.from(macheRemapper)
-        paramMappings.from(macheParamMappings)
-        constants.from(macheConstants)
+        codebookClasspath.from(project.configurations.named(MACHE_CODEBOOK_CONFIG))
+        minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        remapperClasspath.from(project.configurations.named(MACHE_REMAPPER_CONFIG))
+        paramMappings.from(project.configurations.named(MACHE_PARAM_MAPPINGS_CONFIG))
+        constants.from(project.configurations.named(MACHE_CONSTANTS_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))
     }
@@ -94,8 +66,8 @@ class SoftSpoonTasks(
         inputJar.set(macheRemapJar.flatMap { it.outputJar })
         decompilerArgs.set(mache.map { it.decompilerArgs })
 
-        minecraftClasspath.from(macheMinecraftLibraries)
-        decompiler.from(macheDecompiler)
+        minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        decompiler.from(project.configurations.named(MACHE_DECOMPILER_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_DECOMPILE_JAR))
     }
@@ -111,8 +83,8 @@ class SoftSpoonTasks(
 
     val indexLibraryFiles = tasks.register<IndexLibraryFiles>("indexLibraryFiles") {
         libraries.from(
-            allTasks.downloadPaperLibrariesSources.flatMap { it.outputDir },
-            allTasks.downloadMcLibrariesSources.flatMap { it.outputDir }
+            downloadRuntimeClasspathSources.flatMap { it.outputDir },
+            downloadMcLibrariesSources.flatMap { it.outputDir }
         )
     }
 
@@ -137,8 +109,8 @@ class SoftSpoonTasks(
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
 
         atFile.set(mergePaperATs.flatMap { it.outputFile })
-        ats.jstClasspath.from(macheMinecraftLibraries)
-        ats.jst.from(jstConfig)
+        ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        ats.jst.from(project.configurations.named(JST_CONFIG))
     }
 
     val setupMacheSourcesForDevBundle by tasks.registering(SetupMinecraftSources::class) {
@@ -150,19 +122,17 @@ class SoftSpoonTasks(
     val setupMacheResources by tasks.registering(SetupMinecraftSources::class) {
         description = "Setup Minecraft resources dir"
 
-        inputFile.set(allTasks.extractFromBundler.flatMap { it.serverJar })
+        inputFile.set(extractFromBundler.flatMap { it.serverJar })
         predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") }
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
 
     fun afterEvaluate() {
-        // load mache
-        mache.set(project.configurations.resolveMacheMeta())
         val mache = mache.get()
 
         setupPatchingTasks()
 
-        mappedJarOutgoing {
+        project.configurations.named(MAPPED_JAR_OUTGOING_CONFIG) {
             outgoing.artifact(macheRemapJar)
         }
 
@@ -170,11 +140,11 @@ class SoftSpoonTasks(
         mache.addRepositories(project)
 
         // setup mc deps
-        macheMinecraftLibraries {
+        project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG) {
             extendsFrom(project.configurations.getByName(MACHE_CONFIG))
         }
-        macheMinecraft {
-            extendsFrom(macheMinecraftLibraries.get())
+        project.configurations.named(MACHE_MINECRAFT_CONFIG) {
+            extendsFrom(project.configurations.getByName(MACHE_MINECRAFT_LIBRARIES_CONFIG))
             withDependencies {
                 add(
                     project.dependencies.create(
@@ -189,7 +159,7 @@ class SoftSpoonTasks(
 
         // impl extends minecraft
         project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
-            extendsFrom(macheMinecraftLibraries.get())
+            extendsFrom(project.configurations.getByName(MACHE_MINECRAFT_LIBRARIES_CONFIG))
         }
 
         // add Minecraft source dir
@@ -221,7 +191,7 @@ class SoftSpoonTasks(
         } else {
             project.layout.projectDirectory.path
         }
-        val paperPatchingTasks = ServerPatchingTasks(
+        val paperPatchingTasks = MinecraftPatchingTasks(
             project,
             "paper",
             true,
@@ -239,8 +209,8 @@ class SoftSpoonTasks(
         )
 
         // Setup patching tasks for forks
-        val patchingTasks: MutableMap<String, Pair<ServerPatchingTasks, UpstreamConfigTasks>> = mutableMapOf()
-        fun makePatchingTasks(cfg: ForkConfig): Pair<ServerPatchingTasks, UpstreamConfigTasks> {
+        val patchingTasks: MutableMap<String, Pair<MinecraftPatchingTasks, UpstreamConfigTasks>> = mutableMapOf()
+        fun makePatchingTasks(cfg: ForkConfig): Pair<MinecraftPatchingTasks, UpstreamConfigTasks> {
             val upstreamTasks = if (cfg.forksPaper.get()) {
                 paperPatchingTasks to null
             } else {
@@ -256,7 +226,7 @@ class SoftSpoonTasks(
                 project.upstreamsDirectory().path.resolve("server-work/${cfg.name}")
             }
 
-            val serverTasks = ServerPatchingTasks(
+            val serverTasks = MinecraftPatchingTasks(
                 project,
                 cfg.name,
                 false,
