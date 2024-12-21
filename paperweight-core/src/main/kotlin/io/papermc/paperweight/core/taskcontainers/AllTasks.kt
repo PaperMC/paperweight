@@ -23,8 +23,8 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
+import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*

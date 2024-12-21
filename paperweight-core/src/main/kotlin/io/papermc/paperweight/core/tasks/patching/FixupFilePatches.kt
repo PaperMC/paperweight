@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.tasks.patching
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*

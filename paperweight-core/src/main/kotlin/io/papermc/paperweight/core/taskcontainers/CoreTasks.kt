@@ -22,15 +22,15 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.coreExt
 import io.papermc.paperweight.core.extension.ForkConfig
+import io.papermc.paperweight.core.tasks.ImportLibraryFiles
+import io.papermc.paperweight.core.tasks.IndexLibraryFiles
 import io.papermc.paperweight.core.tasks.SetupMinecraftSources
+import io.papermc.paperweight.core.tasks.SetupPaperScript
+import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RemapJar
-import io.papermc.paperweight.tasks.softspoon.ImportLibraryFiles
-import io.papermc.paperweight.tasks.softspoon.IndexLibraryFiles
-import io.papermc.paperweight.tasks.softspoon.SetupPaperScript
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*

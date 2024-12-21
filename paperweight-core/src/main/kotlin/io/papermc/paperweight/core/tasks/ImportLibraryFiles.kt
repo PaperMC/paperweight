@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks.softspoon
+package io.papermc.paperweight.core.tasks
 
 import com.github.salomonbrys.kotson.typeToken
 import io.papermc.paperweight.PaperweightException

@@ -22,12 +22,12 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
+import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
+import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.tasks.softspoon.ApplyFeaturePatches
-import io.papermc.paperweight.tasks.softspoon.FixupFilePatches
-import io.papermc.paperweight.tasks.softspoon.RebuildFilePatches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.paperTaskOutput
 import java.nio.file.Path
