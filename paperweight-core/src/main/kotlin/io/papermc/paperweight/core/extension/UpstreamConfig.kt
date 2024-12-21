@@ -24,10 +24,12 @@ package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.PolymorphicDomainObjectContainer
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
@@ -78,10 +80,15 @@ abstract class UpstreamConfig @Inject constructor(
         directoryPatchSets.register(name, RepoPatchSet::class, op)
     }
 
-    abstract class SingleFilePatchSet {
+    abstract class SingleFilePatchSet @Inject constructor(
+        objects: ObjectFactory,
+        layout: ProjectLayout,
+    ) {
         abstract val path: Property<String>
         abstract val outputFile: RegularFileProperty
         abstract val patchFile: RegularFileProperty
+        val rejectsFile: RegularFileProperty = objects.fileProperty()
+            .convention(layout.file(patchFile.map { it.path.resolveSibling(it.path.name + ".rej").toFile() }))
     }
 
     abstract class DirectoryPatchSet @Inject constructor(

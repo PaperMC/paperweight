@@ -61,6 +61,7 @@ class UpstreamConfigTasks(
                         }
                     )
                     outputFile = cfg.outputFile
+                    rejectsFile = cfg.rejectsFile
                 }
             }
         }

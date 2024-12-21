@@ -44,7 +44,7 @@ import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.newInstance
+import org.gradle.kotlin.dsl.*
 
 abstract class ApplySingleFilePatches : BaseTask() {
 
@@ -82,6 +82,9 @@ abstract class ApplySingleFilePatches : BaseTask() {
         @get:OutputFile
         abstract val outputFile: RegularFileProperty
 
+        @get:OutputFile
+        abstract val rejectsFile: RegularFileProperty
+
         @get:InputFile
         @get:Optional
         abstract val patchFile: RegularFileProperty
@@ -94,55 +97,57 @@ abstract class ApplySingleFilePatches : BaseTask() {
 
     @TaskAction
     fun run() {
-        val tmpWork = temporaryDir.resolve("work").toPath()
-        val tmpPatch = temporaryDir.resolve("patch").toPath()
-        val tmpRej = temporaryDir.resolve("rejects").toPath()
-        tmpRej.deleteRecursive()
-        val log = temporaryDir.resolve("log.txt").toPath()
+        temporaryDir.toPath().cleanDir()
+        var fail = false
+        for ((index, patch) in patches.get().withIndex()) {
+            val tmp = temporaryDir.toPath().resolve(index.toString()).cleanDir()
+            val tmpWork = tmp.resolve("work")
+            val tmpPatch = tmp.resolve("patch")
+            val tmpRej = tmp.resolve("rejects")
+            val log = tmp.resolve("log.txt")
 
-        ensureDeleted(log)
-        val error = PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
-            for (patch in patches.get()) {
-                tmpWork.deleteRecursive()
-                tmpPatch.deleteRecursive()
+            val workFile = tmpWork.resolve(patch.path.get()).createParentDirectories()
+            upstream.path.resolve(patch.path.get())
+                .copyTo(workFile, true)
 
-                val workFile = tmpWork.resolve(patch.path.get()).createParentDirectories()
-                upstream.path.resolve(patch.path.get())
-                    .copyTo(workFile, true)
+            if (patch.patchFile.isPresent) {
+                patch.patchFile.path.copyTo(tmpPatch.resolve(patch.path.get() + ".patch").createParentDirectories(), true)
 
-                if (patch.patchFile.isPresent) {
-                    patch.patchFile.path.copyTo(tmpPatch.resolve(patch.path.get() + ".patch").createParentDirectories(), true)
-
+                val result = PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
                     val op = PatchOperation.builder()
                         .logTo(logOut)
                         .level(LogLevel.ALL)
                         .mode(mode.get())
-                        .summary(true)
+                        .summary(false)
                         .basePath(tmpWork)
                         .patchesPath(tmpPatch)
                         .outputPath(tmpWork)
                         .rejectsPath(tmpRej)
                         .build()
 
-                    val result = op.operate()
-
-                    workFile.copyTo(patch.outputFile.path.createParentDirectories(), true)
-
-                    if (result.exit != 0) {
-                        return@use "Patch failed on ${patch.patchFile.path}, see log above. Rejects at $tmpRej"
-                    }
-                } else {
-                    upstream.path.resolve(patch.path.get())
-                        .copyTo(patch.outputFile.path.createParentDirectories(), true)
+                    op.operate()
                 }
+
+                workFile.copyTo(patch.outputFile.path.createParentDirectories(), true)
+
+                val rej = tmpRej.resolve(patch.path.get() + ".patch.rej")
+                if (rej.exists()) {
+                    rej.copyTo(patch.rejectsFile.path.createParentDirectories(), true)
+                } else {
+                    rej.deleteIfExists()
+                }
+
+                if (result.exit != 0) {
+                    fail = true
+                    logger.error("Patch ${patch.patchFile.path} failed:\n" + log.readText())
+                }
+            } else {
+                upstream.path.resolve(patch.path.get())
+                    .copyTo(patch.outputFile.path.createParentDirectories(), true)
             }
-
-            null
         }
-
-        if (error != null) {
-            logger.error(log.readText())
-            throw PaperweightException(error)
+        if (fail) {
+            throw PaperweightException("Patch apply failures, review the log above")
         }
     }
 }
