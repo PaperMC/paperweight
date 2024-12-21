@@ -97,7 +97,7 @@ abstract class CreateBundlerJar : ZippedTask() {
     }
 
     override fun run(rootDir: Path) {
-        paperclip.singleFile.toPath().openZip().use { zip ->
+        paperclip.singleFile.toPath().openZipSafe().use { zip ->
             zip.getPath("/").copyRecursivelyTo(rootDir)
         }
 
@@ -127,7 +127,7 @@ abstract class CreateBundlerJar : ZippedTask() {
         rootDir.resolve("META-INF/main-class").writeText(mainClass.get())
 
         // copy version.json file
-        vanillaBundlerJar.path.openZip().use { fs ->
+        vanillaBundlerJar.path.openZipSafe().use { fs ->
             fs.getPath("/").resolve(FileEntry.VERSION_JSON).copyTo(rootDir.resolve("version.json"))
         }
     }

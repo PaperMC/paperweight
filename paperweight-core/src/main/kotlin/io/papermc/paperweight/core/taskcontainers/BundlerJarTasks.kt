@@ -33,6 +33,7 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
@@ -41,6 +42,7 @@ class BundlerJarTasks(
     project: Project,
     private val bundlerJarName: Provider<String>,
     private val mainClassString: Provider<String>,
+    private val providers: ProviderFactory = project.providers,
 ) {
     val createBundlerJar: TaskProvider<CreateBundlerJar>
     val createPaperclipJar: TaskProvider<CreatePaperclipJar>
@@ -156,6 +158,7 @@ class BundlerJarTasks(
             registerVersionArtifact(
                 bundlerJarName.get(),
                 bundlerVersionJson,
+                providers,
                 serverJar
             )
         }
@@ -175,9 +178,10 @@ class BundlerJarTasks(
         fun NamedDomainObjectContainer<CreateBundlerJar.VersionArtifact>.registerVersionArtifact(
             name: String,
             versionJson: Provider<RegularFile>,
+            providers: ProviderFactory,
             serverJar: Provider<RegularFile>
         ) = register(name) {
-            id.set(versionJson.map { gson.fromJson<JsonObject>(it)["id"].asString })
+            id.set(providers.fileContents(versionJson).asText.map { gson.fromJson<JsonObject>(it)["id"].asString })
             file.set(serverJar)
         }
     }

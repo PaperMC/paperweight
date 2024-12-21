@@ -76,8 +76,8 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
     override fun run(rootDir: Path) {
         // Vanilla's URL uses a SHA1 hash of the vanilla server jar
         val patchEntries: List<PatchEntry>
-        bundlerJar.path.openZip().use { newBundlerFs ->
-            originalBundlerJar.path.openZip().use { originalBundlerFs ->
+        bundlerJar.path.openZipSafe().use { newBundlerFs ->
+            originalBundlerJar.path.openZipSafe().use { originalBundlerFs ->
                 val originalBundlerRoot = originalBundlerFs.getPath("/")
                 val newBundlerRoot = newBundlerFs.getPath("/")
 
