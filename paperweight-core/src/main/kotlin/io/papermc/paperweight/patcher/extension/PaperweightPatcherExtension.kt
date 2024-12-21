@@ -41,8 +41,7 @@ abstract class PaperweightPatcherExtension @Inject constructor(private val objec
         op: Action<UpstreamConfig>
     ): NamedDomainObjectProvider<UpstreamConfig> = register("paper") {
         repo.convention(github("PaperMC", "Paper"))
-        paper.set(true)
-        paper.finalizeValue()
+        applyUpstreamNested.convention(false)
         op.execute(this)
     }
 }

@@ -66,7 +66,7 @@ class UpstreamConfigTasks(
             }
         }
         this.patches.set(patches)
-        if (!upstreamCfg.paper.get()) {
+        if (upstreamCfg.applyUpstreamNested.get()) {
             setupUpstream?.let { dependsOn(it) }
         }
     }
@@ -103,7 +103,7 @@ class UpstreamConfigTasks(
                 }
             }
             this.patches.set(patches)
-            if (!upstreamCfg.paper.get()) {
+            if (upstreamCfg.applyUpstreamNested.get()) {
                 setupUpstream?.let { dependsOn(it) }
             }
         }
