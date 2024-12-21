@@ -44,7 +44,7 @@ abstract class UpstreamConfig @Inject constructor(
     // TODO: Support single file patches for -server (i.e. .editorconfig)
     val singleFilePatches: Boolean,
 ) : Named {
-    val paper: Property<Boolean> = objects.property<Boolean>().convention(false)
+    val applyUpstreamNested: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     abstract val repo: Property<String>
     abstract val ref: Property<String>
