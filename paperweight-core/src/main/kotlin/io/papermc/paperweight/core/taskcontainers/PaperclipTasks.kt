@@ -23,9 +23,11 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import com.google.gson.JsonObject
+import io.papermc.paperweight.core.util.reobfRequiresDebug
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -33,61 +35,37 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
-class BundlerJarTasks(
+class PaperclipTasks(
     project: Project,
     private val bundlerJarName: Provider<String>,
     private val mainClassString: Provider<String>,
-    private val providers: ProviderFactory = project.providers,
+    private val bundlerVersionJson: Provider<RegularFile>,
+    private val serverLibrariesList: Provider<RegularFile>,
+    private val vanillaJar: Provider<RegularFile>,
+    mojangJar: Provider<RegularFile>,
+    reobfJar: Provider<RegularFile>,
+    private val mcVersion: Provider<String>
 ) {
-    val createBundlerJar: TaskProvider<CreateBundlerJar>
-    val createPaperclipJar: TaskProvider<CreatePaperclipJar>
-
-    val createReobfBundlerJar: TaskProvider<CreateBundlerJar>
-    val createReobfPaperclipJar: TaskProvider<CreatePaperclipJar>
-
     init {
-        val (createBundlerJar, createPaperclipJar) = project.createBundlerJarTask("mojmap")
-        val (createReobfBundlerJar, createReobfPaperclipJar) = project.createBundlerJarTask("reobf")
-        this.createBundlerJar = createBundlerJar
-        this.createPaperclipJar = createPaperclipJar
+        val (createBundlerJar, createPaperclipJar) = project.createTasks("mojmap")
+        val (createReobfBundlerJar, createReobfPaperclipJar) = project.createTasks("reobf")
 
-        this.createReobfBundlerJar = createReobfBundlerJar
-        createReobfBundlerJar { reobfRequiresDebug() }
-        this.createReobfPaperclipJar = createReobfPaperclipJar
-        createReobfPaperclipJar { reobfRequiresDebug() }
+        createBundlerJar.serverJar(mojangJar)
+        createReobfBundlerJar.serverJar(reobfJar) {
+            reobfRequiresDebug()
+        }
+
+        createPaperclipJar.bundlerJar(createBundlerJar)
+        createReobfPaperclipJar.bundlerJar(createReobfBundlerJar) {
+            reobfRequiresDebug()
+        }
     }
 
-    fun configureBundlerTasks(
-        bundlerVersionJson: Provider<RegularFile>,
-        serverLibrariesList: Provider<RegularFile>,
-        vanillaJar: Provider<RegularFile>,
-        mojangJar: Provider<RegularFile>,
-        reobfJar: TaskProvider<RemapJar>,
-        mcVersion: Provider<String>
-    ) {
-        createBundlerJar.configureWith(
-            bundlerVersionJson,
-            serverLibrariesList,
-            vanillaJar,
-            mojangJar,
-        )
-        createReobfBundlerJar.configureWith(
-            bundlerVersionJson,
-            serverLibrariesList,
-            vanillaJar,
-            reobfJar.flatMap { it.outputJar },
-        )
-
-        createPaperclipJar.configureWith(vanillaJar, createBundlerJar, mcVersion)
-        createReobfPaperclipJar.configureWith(vanillaJar, createReobfBundlerJar, mcVersion)
-    }
-
-    private fun Project.createBundlerJarTask(
+    private fun Project.createTasks(
         classifier: String = "",
     ): Pair<TaskProvider<CreateBundlerJar>, TaskProvider<CreatePaperclipJar>> {
         val bundlerTaskName = "create${classifier.capitalized()}BundlerJar"
@@ -124,12 +102,10 @@ class BundlerJarTasks(
         }
     }
 
-    private fun TaskProvider<CreateBundlerJar>.configureWith(
-        bundlerVersionJson: Provider<RegularFile>,
-        serverLibrariesListFile: Provider<RegularFile>,
-        vanillaJar: Provider<RegularFile>,
+    private fun TaskProvider<CreateBundlerJar>.serverJar(
         serverJar: Provider<RegularFile>,
-    ) = this {
+        op: Action<CreateBundlerJar> = Action {},
+    ) = configure {
         val runtimeClasspath = project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
         val artifacts = runtimeClasspath.flatMap { config ->
             config.incoming.artifacts.resolvedArtifacts.map { a ->
@@ -151,37 +127,38 @@ class BundlerJarTasks(
             }
         )
         libraryArtifactsFiles.from(runtimeClasspath)
-        serverLibrariesList.set(serverLibrariesListFile)
+        serverLibrariesList.set(this@PaperclipTasks.serverLibrariesList)
         vanillaBundlerJar.set(vanillaJar)
 
         versionArtifacts {
             registerVersionArtifact(
                 bundlerJarName.get(),
                 bundlerVersionJson,
-                providers,
                 serverJar
             )
         }
+
+        op.execute(this)
     }
 
-    private fun TaskProvider<CreatePaperclipJar>.configureWith(
-        vanillaJar: Provider<RegularFile>,
+    private fun TaskProvider<CreatePaperclipJar>.bundlerJar(
         createBundlerJar: TaskProvider<CreateBundlerJar>,
-        mcVers: Provider<String>
-    ) = this {
+        op: Action<CreatePaperclipJar> = Action {},
+    ) = configure {
         originalBundlerJar.set(vanillaJar)
         bundlerJar.set(createBundlerJar.flatMap { it.outputZip })
-        mcVersion.set(mcVers)
+        mcVersion.set(this@PaperclipTasks.mcVersion)
+
+        op.execute(this)
     }
 
     companion object {
         fun NamedDomainObjectContainer<CreateBundlerJar.VersionArtifact>.registerVersionArtifact(
             name: String,
             versionJson: Provider<RegularFile>,
-            providers: ProviderFactory,
             serverJar: Provider<RegularFile>
         ) = register(name) {
-            id.set(providers.fileContents(versionJson).asText.map { gson.fromJson<JsonObject>(it)["id"].asString })
+            id.set(versionJson.map { gson.fromJson<JsonObject>(it)["id"].asString })
             file.set(serverJar)
         }
     }
