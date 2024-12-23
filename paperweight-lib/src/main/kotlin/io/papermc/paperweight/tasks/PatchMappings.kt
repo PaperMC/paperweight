@@ -31,7 +31,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 
-@CacheableTask
 abstract class PatchMappings : BaseTask() {
 
     @get:InputFile

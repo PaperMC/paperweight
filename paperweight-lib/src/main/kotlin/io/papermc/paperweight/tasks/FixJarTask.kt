@@ -30,7 +30,6 @@ import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
@@ -72,7 +71,6 @@ fun fixJar(
     return queue
 }
 
-@CacheableTask
 abstract class FixJarTask : JavaLauncherTask() {
 
     @get:Classpath

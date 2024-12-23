@@ -52,7 +52,6 @@ import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
 
-@CacheableTask
 abstract class GenerateReobfMappings : JavaLauncherTask() {
 
     @get:InputFile
