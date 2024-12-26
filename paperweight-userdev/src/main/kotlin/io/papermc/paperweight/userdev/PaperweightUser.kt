@@ -70,6 +70,8 @@ abstract class PaperweightUser : Plugin<Project> {
     abstract val javaToolchainService: JavaToolchainService
 
     override fun apply(target: Project) {
+        target.plugins.apply("java")
+
         val sharedCacheRoot = target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev")
 
         target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
