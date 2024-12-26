@@ -38,8 +38,9 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.logging.progress.ProgressLogger
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.jvm.toolchain.JavaLauncher
-import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
@@ -47,15 +48,12 @@ interface SetupHandler {
 
     fun populateRuntimeConfiguration(context: ConfigurationContext, dependencySet: DependencySet)
 
-    fun combinedOrClassesJar(context: ExecutionContext): Path
+    fun generateCombinedOrClassesJar(context: ExecutionContext, output: Path, legacyOutput: Path?)
+
+    fun extractReobfMappings(output: Path)
 
     fun afterEvaluate(project: Project) {
-        project.tasks.withType(UserdevSetupTask::class).configureEach {
-            devBundleCoordinates.set(determineArtifactCoordinates(project.configurations.getByName(DEV_BUNDLE_CONFIG)).single())
-        }
     }
-
-    val reobfMappings: Path
 
     val minecraftVersion: String
 
@@ -95,6 +93,7 @@ interface SetupHandler {
         val javaLauncher: JavaLauncher,
         val layout: ProjectLayout,
         val logger: Logger,
+        val progressLoggerFactory: ProgressLoggerFactory,
 
         val decompilerConfig: FileCollection,
         val paramMappingsConfig: FileCollection,
@@ -105,30 +104,44 @@ interface SetupHandler {
         val macheParamMappingsConfig: FileCollection,
         val macheConstantsConfig: FileCollection,
         val macheCodebookConfig: FileCollection,
-    )
+    ) {
+        fun withProgressLogger(
+            name: String = "execute",
+            description: String = "paperweight userdev setup",
+            action: (ProgressLogger) -> Unit
+        ) {
+            val progressLogger = progressLoggerFactory.newOperation(name)
+            progressLogger.start(name, description)
+            try {
+                action(progressLogger)
+            } finally {
+                progressLogger.completed()
+            }
+        }
+    }
 
     companion object {
         @Suppress("unchecked_cast")
         fun create(
             parameters: UserdevSetup.Parameters,
-            extractedBundle: ExtractedBundle<Any>
-        ): SetupHandler = when (extractedBundle.config) {
+            bundleInfo: BundleInfo<Any>
+        ): SetupHandler = when (bundleInfo.config) {
             is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
                 parameters,
-                extractedBundle as ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
+                bundleInfo as BundleInfo<GenerateDevBundle.DevBundleConfig>,
             )
 
             is DevBundleV5.Config -> SetupHandlerImplV5(
                 parameters,
-                extractedBundle as ExtractedBundle<DevBundleV5.Config>
+                bundleInfo as BundleInfo<DevBundleV5.Config>
             )
 
             is DevBundleV2.Config -> SetupHandlerImplV2(
                 parameters,
-                extractedBundle as ExtractedBundle<DevBundleV2.Config>
+                bundleInfo as BundleInfo<DevBundleV2.Config>
             )
 
-            else -> throw PaperweightException("Unknown dev bundle config type: ${extractedBundle.config::class.java.typeName}")
+            else -> throw PaperweightException("Unknown dev bundle config type: ${bundleInfo.config::class.java.typeName}")
         }
     }
 }

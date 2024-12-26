@@ -23,16 +23,12 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.userdev.internal.setup.util.*
+import io.papermc.paperweight.userdev.internal.action.CacheCleaner
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
@@ -41,32 +37,21 @@ import org.gradle.tooling.events.OperationCompletionListener
 
 abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandler, AutoCloseable, OperationCompletionListener {
 
-    companion object {
-        val LOGGER: Logger = Logging.getLogger(UserdevSetup::class.java)
-    }
-
     interface Parameters : BuildServiceParameters {
         val bundleZip: RegularFileProperty
         val bundleZipHash: Property<String>
         val cache: RegularFileProperty
         val downloadService: Property<DownloadService>
         val genSources: Property<Boolean>
+        val deleteUnusedAfter: Property<Long>
     }
 
-    private val extractDevBundle: ExtractedBundle<Any> = lockSetup(parameters.cache.path) {
-        val extract = extractDevBundle(
-            parameters.cache.path.resolve(paperSetupOutput("extractDevBundle", "dir")),
-            parameters.bundleZip.path,
-            parameters.bundleZipHash.get()
-        )
-        lastUsedFile(parameters.cache.path).writeText(System.currentTimeMillis().toString())
-        extract
-    }
+    private val bundleInfo: BundleInfo<Any> = readBundleInfo(parameters.bundleZip.path)
 
     private val setup = createSetup()
 
     private fun createSetup(): SetupHandler =
-        SetupHandler.create(parameters, extractDevBundle)
+        SetupHandler.create(parameters, bundleInfo)
 
     override fun onFinish(event: FinishEvent?) {
         // no-op, a workaround to keep the service alive for the entire build
@@ -74,7 +59,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     }
 
     override fun close() {
-        // see comments in onFinish
+        CacheCleaner(parameters.cache.path)
+            .cleanCache(parameters.deleteUnusedAfter.get())
     }
 
     // begin delegate to setup
@@ -86,16 +72,17 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         setup.populateRuntimeConfiguration(context, dependencySet)
     }
 
-    override fun combinedOrClassesJar(context: SetupHandler.ExecutionContext): Path {
-        return setup.combinedOrClassesJar(context)
+    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
+        setup.generateCombinedOrClassesJar(context, output, legacyOutput)
+    }
+
+    override fun extractReobfMappings(output: Path) {
+        setup.extractReobfMappings(output)
     }
 
     override fun afterEvaluate(project: Project) {
         setup.afterEvaluate(project)
     }
-
-    override val reobfMappings: Path
-        get() = setup.reobfMappings
 
     override val minecraftVersion: String
         get() = setup.minecraftVersion

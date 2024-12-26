@@ -30,7 +30,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.*
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -63,21 +63,24 @@ abstract class IndexLibraryFiles : BaseTask() {
 
     @TaskAction
     fun run() {
-        val possible = findPossibleLibraryImports(libraries.sourcesJars())
-            .groupBy { it.libraryFileName }
-            .mapValues {
-                it.value.map { v -> v.importFilePath }
-            }
+        val possible = ioDispatcher("IndexLibraryFiles").use { dispatcher ->
+            findPossibleLibraryImports(libraries.sourcesJars(), dispatcher)
+                .groupBy { it.libraryFileName }
+                .mapValues {
+                    it.value.map { v -> v.importFilePath }
+                }
+        }
+
         outputFile.path.cleanFile().outputStream().gzip().bufferedWriter().use { writer ->
             gson.toJson(possible, writer)
         }
     }
 
-    private fun findPossibleLibraryImports(libFiles: List<Path>): Collection<LibraryImport> = runBlocking {
+    private fun findPossibleLibraryImports(libFiles: List<Path>, dispatcher: CoroutineDispatcher): Collection<LibraryImport> = runBlocking {
         val found = ConcurrentHashMap.newKeySet<LibraryImport>()
         val suffix = ".java"
         libFiles.forEach { libFile ->
-            launch(Dispatchers.IO) {
+            launch(dispatcher) {
                 libFile.openZipSafe().use { zipFile ->
                     zipFile.walkSequence()
                         .filter { it.isRegularFile() && it.name.endsWith(suffix) }
@@ -125,14 +128,17 @@ abstract class ImportLibraryFiles : BaseTask() {
                 gson.fromJson<Map<String, List<String>>>(reader, typeToken<Map<String, List<String>>>())
             }.flatMap { entry -> entry.value.map { LibraryImport(entry.key, it) } }.toSet()
             val patchFiles = patches.files.flatMap { it.toPath().filesMatchingRecursive("*.patch") }
-            importLibraryFiles(
-                patchFiles,
-                devImports.pathOrNull,
-                outputDir.path,
-                libraries.sourcesJars(),
-                index,
-                true
-            )
+            ioDispatcher("ImportLibraryFiles").use { dispatcher ->
+                importLibraryFiles(
+                    patchFiles,
+                    devImports.pathOrNull,
+                    outputDir.path,
+                    libraries.sourcesJars(),
+                    index,
+                    true,
+                    dispatcher,
+                )
+            }
         }
     }
 
@@ -143,16 +149,17 @@ abstract class ImportLibraryFiles : BaseTask() {
         libFiles: List<Path>,
         index: Set<LibraryImport>,
         printOutput: Boolean,
+        dispatcher: CoroutineDispatcher,
     ) = runBlocking {
         // Import library classes
-        val allImports = findLibraryImports(importsFile, libFiles, index, patches)
+        val allImports = findLibraryImports(importsFile, libFiles, index, patches, dispatcher)
         val importsByLib = allImports.groupBy { it.libraryFileName }
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", allImports.size)
 
         for ((libraryFileName, imports) in importsByLib) {
             val libFile = libFiles.firstOrNull { it.name == libraryFileName }
                 ?: throw PaperweightException("Failed to find library: $libraryFileName for classes ${imports.map { it.importFilePath }}")
-            launch(Dispatchers.IO) {
+            launch(dispatcher) {
                 libFile.openZipSafe().use { zipFile ->
                     for (import in imports) {
                         val outputFile = targetDir.resolve(import.importFilePath)
@@ -169,9 +176,9 @@ abstract class ImportLibraryFiles : BaseTask() {
         }
     }
 
-    private suspend fun usePatchLines(patches: Iterable<Path>, consumer: (String) -> Unit) = coroutineScope {
+    private suspend fun usePatchLines(patches: Iterable<Path>, dispatcher: CoroutineDispatcher, consumer: (String) -> Unit) = coroutineScope {
         for (patch in patches) {
-            launch(Dispatchers.IO) {
+            launch(dispatcher) {
                 patch.useLines { lines ->
                     lines.forEach { consumer(it) }
                 }
@@ -183,7 +190,8 @@ abstract class ImportLibraryFiles : BaseTask() {
         libraryImports: Path?,
         libFiles: List<Path>,
         index: Set<LibraryImport>,
-        patchFiles: Iterable<Path>
+        patchFiles: Iterable<Path>,
+        dispatcher: CoroutineDispatcher,
     ): Set<LibraryImport> {
         val result = hashSetOf<LibraryImport>()
 
@@ -200,7 +208,7 @@ abstract class ImportLibraryFiles : BaseTask() {
         }
 
         // Scan patches for necessary imports
-        result += findNeededLibraryImports(patchFiles, index)
+        result += findNeededLibraryImports(patchFiles, index, dispatcher)
 
         return result
     }
@@ -208,11 +216,12 @@ abstract class ImportLibraryFiles : BaseTask() {
     private suspend fun findNeededLibraryImports(
         patchFiles: Iterable<Path>,
         index: Set<LibraryImport>,
+        dispatcher: CoroutineDispatcher,
     ): Set<LibraryImport> {
         val knownImportMap = index.associateBy { it.importFilePath }
         val prefix = "+++ b/"
         val needed = ConcurrentHashMap.newKeySet<LibraryImport>()
-        usePatchLines(patchFiles) { line ->
+        usePatchLines(patchFiles, dispatcher) { line ->
             if (!line.startsWith(prefix)) {
                 return@usePatchLines
             }

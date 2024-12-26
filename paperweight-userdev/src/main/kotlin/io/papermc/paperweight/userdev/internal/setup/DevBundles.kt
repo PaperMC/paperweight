@@ -38,45 +38,23 @@ private val supported = mapOf(
     6 to GenerateDevBundle.DevBundleConfig::class // Post-repo-restructure 1.21.4+
 )
 
-data class ExtractedBundle<C>(
-    val changed: Boolean,
-    val config: C,
-    val dataVersion: Int,
-    val dir: Path,
-) {
-    constructor(bundleChanged: Boolean, pair: Pair<C, Int>, dir: Path) :
-        this(bundleChanged, pair.first, pair.second, dir)
-}
-
-fun extractDevBundle(
-    destinationDirectory: Path,
-    devBundle: Path,
-    newDevBundleHash: String
-): ExtractedBundle<Any> {
-    val hashFile = destinationDirectory.resolve("current.sha256")
-
-    if (destinationDirectory.exists()) {
-        val currentDevBundleHash = if (hashFile.isRegularFile()) hashFile.readText(Charsets.UTF_8) else ""
-
-        if (currentDevBundleHash.isNotBlank() && newDevBundleHash == currentDevBundleHash) {
-            return ExtractedBundle(false, readDevBundle(destinationDirectory), destinationDirectory)
+fun readBundleInfo(bundleZip: Path): BundleInfo<Any> {
+    bundleZip.openZipSafe().use { fs ->
+        readDevBundle(fs.getPath("/")).let { (config, _) ->
+            return BundleInfo(config, bundleZip)
         }
-        destinationDirectory.deleteRecursive()
     }
-    destinationDirectory.createDirectories()
-
-    hashFile.writeText(newDevBundleHash, Charsets.UTF_8)
-    devBundle.openZip().use { fs ->
-        fs.getPath("/").copyRecursivelyTo(destinationDirectory)
-    }
-
-    return ExtractedBundle(true, readDevBundle(destinationDirectory), destinationDirectory)
 }
+
+data class BundleInfo<C>(
+    val config: C,
+    val zip: Path,
+)
 
 private fun readDevBundle(
-    extractedDevBundlePath: Path
+    devBundleRoot: Path
 ): Pair<Any, Int> {
-    val dataVersion = extractedDevBundlePath.resolve("data-version.txt").readText().trim().toInt()
+    val dataVersion = devBundleRoot.resolve("data-version.txt").readText().trim().toInt()
     if (dataVersion !in supported) {
         throw PaperweightException(
             "The paperweight development bundle you are attempting to use is of data version '$dataVersion', but" +
@@ -85,7 +63,7 @@ private fun readDevBundle(
     }
 
     val configClass = supported[dataVersion] ?: throw PaperweightException("Could not find config class for version $dataVersion?")
-    val configFile = extractedDevBundlePath.resolve("config.json")
+    val configFile = devBundleRoot.resolve("config.json")
     val config: Any = configFile.bufferedReader(Charsets.UTF_8).use { reader ->
         gson.fromJson(reader, configClass.java)
     }

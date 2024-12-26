@@ -88,7 +88,7 @@ fun macheDecompileJar(
 ) {
     val out = outputJar.cleanFile()
 
-    val cfgFile = out.resolveSibling("${out.name}.cfg")
+    val cfgFile = workDir.resolve("${out.name}.cfg")
     val cfgText = buildString {
         for (file in minecraftClasspath) {
             append("-e=")
@@ -98,7 +98,7 @@ fun macheDecompileJar(
     }
     cfgFile.writeText(cfgText)
 
-    val logs = out.resolveSibling("${out.name}.log")
+    val logs = workDir.resolve("${out.name}.log")
 
     val args = mutableListOf<String>()
 

@@ -45,11 +45,16 @@ import java.util.IdentityHashMap
 import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 import kotlin.io.path.*
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -63,6 +68,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
@@ -315,14 +321,45 @@ fun String.hash(algorithm: HashingAlgorithm): ByteArray = algorithm.threadLocalD
 }
 
 fun InputStream.hash(algorithm: HashingAlgorithm, bufferSize: Int = 8192): ByteArray {
+    return listOf(InputStreamProvider.wrap(this)).hash(algorithm, bufferSize)
+}
+
+interface InputStreamProvider {
+    fun <T> use(op: (InputStream) -> T): T
+
+    companion object {
+        fun file(path: Path): InputStreamProvider = object : InputStreamProvider {
+            override fun <T> use(op: (InputStream) -> T): T {
+                return path.inputStream().use(op)
+            }
+        }
+
+        fun dir(path: Path): List<InputStreamProvider> = path.walk()
+            .sortedBy { it.absolutePathString() }
+            .map { file -> file(file) }
+            .toList()
+
+        fun wrap(input: InputStream): InputStreamProvider = object : InputStreamProvider {
+            override fun <T> use(op: (InputStream) -> T): T {
+                return op(input)
+            }
+        }
+    }
+}
+
+fun Iterable<InputStreamProvider>.hash(algorithm: HashingAlgorithm, bufferSize: Int = 8192): ByteArray {
     val digest = algorithm.threadLocalDigest
     val buffer = ByteArray(bufferSize)
-    while (true) {
-        val count = read(buffer)
-        if (count == -1) {
-            break
+    for (provider in this) {
+        provider.use { input ->
+            while (true) {
+                val count = input.read(buffer)
+                if (count == -1) {
+                    break
+                }
+                digest.update(buffer, 0, count)
+            }
         }
-        digest.update(buffer, 0, count)
     }
     return digest.digest()
 }
@@ -401,7 +438,7 @@ val mainCapabilityAttribute: Attribute<String> = Attribute.of("io.papermc.paperw
 
 fun ConfigurationContainer.resolveMacheMeta() = getByName(MACHE_CONFIG).resolveMacheMeta()
 
-fun FileCollection.resolveMacheMeta() = singleFile.toPath().openZip().use { zip ->
+fun FileCollection.resolveMacheMeta() = singleFile.toPath().openZipSafe().use { zip ->
     gson.fromJson<MacheMeta>(zip.getPath("/mache.json").readText())
 }
 
@@ -439,3 +476,23 @@ fun Project.upstreamsDirectory(): Provider<Directory> {
     val workDirFromProp = layout.dir(workDirProp.map { File(it) })
     return workDirFromProp.orElse(rootProject.layout.cacheDir(UPSTREAMS))
 }
+
+private val ioDispatcherCount = AtomicInteger(0)
+
+fun ioDispatcher(name: String): ExecutorCoroutineDispatcher =
+    Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors(),
+        object : ThreadFactory {
+            val logger = Logging.getLogger("$name-ioDispatcher-${ioDispatcherCount.getAndIncrement()}")
+            val count = AtomicInteger(0)
+
+            override fun newThread(r: Runnable): Thread {
+                val thr = Thread(r, "$name-ioDispatcher-${ioDispatcherCount.getAndIncrement()}-Thread-${count.getAndIncrement()}")
+                thr.setUncaughtExceptionHandler { thread, ex ->
+                    logger.error("Uncaught exception in thread $thread", ex)
+                }
+                thr.isDaemon = true
+                return thr
+            }
+        }
+    ).asCoroutineDispatcher()

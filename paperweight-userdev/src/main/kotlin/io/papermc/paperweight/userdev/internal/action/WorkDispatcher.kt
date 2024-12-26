@@ -20,29 +20,32 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.step
+package io.papermc.paperweight.userdev.internal.action
 
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
 import java.nio.file.Path
 
-class AccessTransformMinecraft(
-    @Input private val at: Path,
-    @Input private val inputJar: Path,
-    @Output private val outputJar: Path,
-) : SetupStep {
-    override val name: String = "access transform minecraft server jar"
+interface WorkDispatcher {
+    fun outputFile(name: String): FileValue
 
-    override val hashFile: Path = outputJar.siblingHashesFile()
+    fun outputDir(name: String): DirectoryValue
 
-    override fun run(context: SetupHandler.ExecutionContext) {
-        applyAccessTransform(
-            inputJarPath = inputJar,
-            outputJarPath = outputJar,
-            atFilePath = at,
-            workerExecutor = context.workerExecutor,
-            launcher = context.javaLauncher
-        ).await()
+    fun provided(value: Value<*>)
+
+    fun provided(vararg values: Value<*>) = values.forEach { provided(it) }
+
+    fun <T : Action> register(name: String, workUnit: T): T
+
+    fun <T : Action> registered(name: String): T
+
+    fun overrideTerminalInputHash(hash: String)
+
+    fun dispatch(vararg targets: Value<*>, progressEventListener: (String) -> Unit = {})
+
+    interface Action {
+        fun execute()
+    }
+
+    companion object {
+        fun create(work: Path): WorkDispatcher = WorkDispatcherImpl(work)
     }
 }
