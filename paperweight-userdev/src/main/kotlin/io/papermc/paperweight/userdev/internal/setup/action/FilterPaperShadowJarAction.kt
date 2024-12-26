@@ -20,33 +20,25 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.step
+package io.papermc.paperweight.userdev.internal.setup.action
 
-import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
+import io.papermc.paperweight.userdev.internal.action.FileValue
+import io.papermc.paperweight.userdev.internal.action.Input
+import io.papermc.paperweight.userdev.internal.action.Output
+import io.papermc.paperweight.userdev.internal.action.Value
+import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
-class FilterPaperShadowJar(
-    @Input private val sourcesJar: Path,
-    @Input private val inputJar: Path,
-    @Output private val outputJar: Path,
-    private val relocations: List<Relocation>,
-) : SetupStep {
-    override val name: String = "filter and merge mojang mapped paper jar"
-
-    override val hashFile: Path = outputJar.siblingHashesFile()
-
-    override fun run(context: SetupHandler.ExecutionContext) {
-        filterPaperJar(sourcesJar, inputJar, outputJar, relocations)
-    }
-
-    override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-        builder.include(gson.toJson(relocations))
+class FilterPaperShadowJarAction(
+    @Input private val sourcesJar: FileValue,
+    @Input private val inputJar: FileValue,
+    @Output val outputJar: FileValue,
+    @Input val relocations: Value<List<Relocation>>,
+) : WorkDispatcher.Action {
+    override fun execute() {
+        filterPaperJar(sourcesJar.get(), inputJar.get(), outputJar.get(), relocations.get())
     }
 
     private fun filterPaperJar(

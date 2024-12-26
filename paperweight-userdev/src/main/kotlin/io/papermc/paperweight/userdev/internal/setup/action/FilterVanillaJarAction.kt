@@ -20,23 +20,21 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.step
+package io.papermc.paperweight.userdev.internal.setup.action
 
-import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
+import io.papermc.paperweight.userdev.internal.action.FileValue
+import io.papermc.paperweight.userdev.internal.action.Input
+import io.papermc.paperweight.userdev.internal.action.ListValue
+import io.papermc.paperweight.userdev.internal.action.Output
+import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
 import io.papermc.paperweight.util.*
-import java.nio.file.Path
 
-class FilterVanillaJar(
-    @Input private val vanillaJar: Path,
-    @Input private val includes: List<String>,
-    @Output private val outputJar: Path,
-) : SetupStep {
-    override val name: String = "filter vanilla server jar"
-
-    override val hashFile: Path = outputJar.siblingHashesFile()
-
-    override fun run(context: SetupHandler.ExecutionContext) {
-        filterJar(vanillaJar, outputJar, includes)
+class FilterVanillaJarAction(
+    @Input private val vanillaJar: FileValue,
+    @Input val includes: ListValue<String>,
+    @Output val outputJar: FileValue,
+) : WorkDispatcher.Action {
+    override fun execute() {
+        filterJar(vanillaJar.get(), outputJar.get(), includes.get())
     }
 }

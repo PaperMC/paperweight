@@ -23,6 +23,7 @@
 package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
+import java.io.File
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarFile
@@ -31,15 +32,18 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.jvm.toolchain.JavaLauncher
 
+private val Iterable<File>.asPath
+    get() = joinToString(File.pathSeparator) { it.absolutePath }
+
 fun JavaLauncher.runJar(
-    classpath: FileCollection,
+    classpath: Iterable<File>,
     workingDir: Any,
     logFile: Any?,
     jvmArgs: List<String> = listOf(),
     vararg args: String
 ) {
     var mainClass: String? = null
-    for (file in classpath.files) {
+    for (file in classpath) {
         mainClass = JarFile(file).use { jarFile ->
             jarFile.manifest.mainAttributes.getValue("Main-Class")
         } ?: continue

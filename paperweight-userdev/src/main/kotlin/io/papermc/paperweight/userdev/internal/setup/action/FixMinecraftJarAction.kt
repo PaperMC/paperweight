@@ -20,30 +20,32 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup.step
+package io.papermc.paperweight.userdev.internal.setup.action
 
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.SetupHandler
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import java.nio.file.Path
+import io.papermc.paperweight.userdev.internal.action.FileValue
+import io.papermc.paperweight.userdev.internal.action.Input
+import io.papermc.paperweight.userdev.internal.action.Output
+import io.papermc.paperweight.userdev.internal.action.Value
+import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.workers.WorkerExecutor
 
-class FixMinecraftJar(
-    @Input private val inputJar: Path,
-    @Output private val outputJar: Path,
-    @Input private val vanillaServerJar: Path,
+class FixMinecraftJarAction(
+    @Input private val javaLauncher: Value<JavaLauncher>,
+    private val workerExecutor: WorkerExecutor,
+    @Input private val inputJar: FileValue,
+    @Output val outputJar: FileValue,
+    @Input private val vanillaServerJar: FileValue,
     private val useLegacyParameterAnnotationFixer: Boolean = false,
-) : SetupStep {
-    override val name: String = "fix minecraft server jar"
-
-    override val hashFile: Path = outputJar.siblingHashesFile()
-
-    override fun run(context: SetupHandler.ExecutionContext) {
+) : WorkDispatcher.Action {
+    override fun execute() {
         fixJar(
-            workerExecutor = context.workerExecutor,
-            launcher = context.javaLauncher,
-            vanillaJarPath = vanillaServerJar,
-            inputJarPath = inputJar,
-            outputJarPath = outputJar,
+            workerExecutor = workerExecutor,
+            launcher = javaLauncher.get(),
+            vanillaJarPath = vanillaServerJar.get(),
+            inputJarPath = inputJar.get(),
+            outputJarPath = outputJar.get(),
             useLegacyParameterAnnotationFixer = useLegacyParameterAnnotationFixer
         ).await()
     }

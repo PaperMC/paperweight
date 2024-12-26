@@ -99,7 +99,7 @@ fun macheRemapJar(
 ) {
     val out = outputJar.cleanFile()
 
-    val logFile = out.resolveSibling("${out.name}.log")
+    val logFile = tempDir.resolve("${out.name}.log")
 
     val args = mutableListOf<String>()
 

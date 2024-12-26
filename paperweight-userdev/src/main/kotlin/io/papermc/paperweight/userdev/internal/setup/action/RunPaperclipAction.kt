@@ -20,41 +20,44 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup
+package io.papermc.paperweight.userdev.internal.setup.action
 
 import com.google.gson.JsonObject
-import io.papermc.paperweight.userdev.internal.setup.step.Input
-import io.papermc.paperweight.userdev.internal.setup.step.Output
-import io.papermc.paperweight.userdev.internal.setup.step.SetupStep
-import io.papermc.paperweight.userdev.internal.setup.util.HashFunctionBuilder
-import io.papermc.paperweight.userdev.internal.setup.util.siblingHashesFile
-import io.papermc.paperweight.userdev.internal.setup.util.siblingLogFile
+import io.papermc.paperweight.userdev.internal.action.FileValue
+import io.papermc.paperweight.userdev.internal.action.Input
+import io.papermc.paperweight.userdev.internal.action.Output
+import io.papermc.paperweight.userdev.internal.action.StringValue
+import io.papermc.paperweight.userdev.internal.action.Value
+import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import io.papermc.paperweight.userdev.internal.util.siblingLogFile
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.data.*
 import java.nio.file.Path
 import kotlin.io.path.*
+import org.gradle.jvm.toolchain.JavaLauncher
 
-class RunPaperclip(
-    @Input private val paperclip: Path,
-    @Output private val outputJar: Path,
-    @Input private val mojangJar: Path,
-    @Input private val minecraftVersion: String,
+class RunPaperclipAction(
+    @Input private val javaLauncher: Value<JavaLauncher>,
+    @Input val bundleZip: FileValue,
+    @Input val paperclipPath: StringValue,
+    @Output val outputJar: FileValue,
+    @Input val mojangJar: FileValue,
+    @Input val minecraftVersion: StringValue,
     private val bundler: Boolean = true,
-) : SetupStep {
-    override val name: String = "apply mojang mapped paperclip patch"
-
-    override val hashFile: Path = outputJar.siblingHashesFile()
-
-    override fun run(context: SetupHandler.ExecutionContext) {
-        patchPaperclip(context, paperclip, outputJar, mojangJar, minecraftVersion, bundler)
-    }
-
-    override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-        builder.includePaperweightHash = false
+) : WorkDispatcher.Action {
+    override fun execute() {
+        val paperclip = outputJar.get().resolveSibling("paperclip-tmp.jar").cleanFile()
+        bundleZip.get().openZipSafe().use { fs ->
+            fs.getPath(paperclipPath.get()).copyTo(paperclip)
+        }
+        try {
+            patchPaperclip(paperclip, outputJar.get(), mojangJar.get(), minecraftVersion.get(), bundler)
+        } finally {
+            paperclip.deleteIfExists()
+        }
     }
 
     private fun patchPaperclip(
-        context: SetupHandler.ExecutionContext,
         paperclip: Path,
         outputJar: Path,
         mojangJar: Path,
@@ -63,7 +66,7 @@ class RunPaperclip(
     ) {
         val logFile = outputJar.siblingLogFile()
 
-        val work = createTempDirectory()
+        val work = createTempDirectory(outputJar.parent.createDirectories(), "paperclip")
         ensureDeleted(logFile)
 
         // Copy in mojang jar, so we don't download it twice
@@ -71,8 +74,8 @@ class RunPaperclip(
         cache.createDirectories()
         mojangJar.copyTo(cache.resolve("mojang_$minecraftVersion.jar"))
 
-        context.javaLauncher.runJar(
-            classpath = context.layout.files(paperclip),
+        javaLauncher.get().runJar(
+            classpath = listOf(paperclip.toFile()),
             workingDir = work,
             logFile = logFile,
             jvmArgs = listOf("-Dpaperclip.patchonly=true"),
@@ -89,8 +92,8 @@ class RunPaperclip(
     }
 
     private fun handleBundler(paperclip: Path, work: Path, outputJar: Path) {
-        paperclip.openZip().use { fs ->
-            val root = fs.rootDirectories.single()
+        paperclip.openZipSafe().use { fs ->
+            val root = fs.getPath("/")
 
             val serverVersionJson = root.resolve(FileEntry.VERSION_JSON)
             val versionId = gson.fromJson<JsonObject>(serverVersionJson)["id"].asString

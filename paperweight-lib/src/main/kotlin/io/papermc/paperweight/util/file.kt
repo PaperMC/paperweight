@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.util
 
-import io.papermc.paperweight.PaperweightException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
@@ -48,7 +47,6 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.FileSystemLocationProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Provider
 
 // utils for dealing with java.nio.file.Path and java.io.File
@@ -68,7 +66,10 @@ fun Path.deleteForcefully() {
     deleteIfExists()
 }
 
-fun Path.deleteRecursive(excludes: Iterable<PathMatcher> = emptyList()) {
+fun Path.deleteRecursive(
+    excludes: Iterable<PathMatcher> = emptyList(),
+    preDelete: (Path) -> Unit = {}
+) {
     if (!exists()) {
         return
     }
@@ -76,6 +77,7 @@ fun Path.deleteRecursive(excludes: Iterable<PathMatcher> = emptyList()) {
         if (excludes.any { it.matches(this) }) {
             return
         }
+        preDelete(this)
         fixWindowsPermissionsForDeletion()
         deleteIfExists()
         return
@@ -87,6 +89,7 @@ fun Path.deleteRecursive(excludes: Iterable<PathMatcher> = emptyList()) {
 
     fileList.forEach { f -> f.fixWindowsPermissionsForDeletion() }
     fileList.asReversed().forEach { f ->
+        preDelete(f)
         // Don't try to delete directories where the excludes glob has caused files to not get deleted inside it
         if (f.isRegularFile()) {
             f.deleteIfExists()
@@ -171,51 +174,6 @@ fun Path.contentEquals(file: Path, bufferSizeBytes: Int = 8192): Boolean = file.
 }
 
 fun Path.withDifferentExtension(ext: String): Path = resolveSibling("$nameWithoutExtension.$ext")
-
-// Returns true if our process already owns the lock
-fun acquireProcessLockWaiting(
-    lockFile: Path,
-    timeoutMs: Long = 1000L * 60 * 60 // one hour
-): Boolean {
-    val logger = Logging.getLogger("paperweight lock file")
-    val currentPid = ProcessHandle.current().pid()
-
-    if (lockFile.exists()) {
-        val lockingProcessId = lockFile.readText().toLong()
-        if (lockingProcessId == currentPid) {
-            return true
-        }
-
-        logger.lifecycle("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
-        if (ProcessHandle.of(lockingProcessId).isEmpty) {
-            logger.lifecycle("Locking process does not exist, assuming abrupt termination and deleting lock file.")
-            lockFile.deleteIfExists()
-        } else {
-            logger.lifecycle("Waiting for lock to be released...")
-            var sleptMs: Long = 0
-            while (lockFile.exists()) {
-                Thread.sleep(100)
-                sleptMs += 100
-                if (sleptMs >= 1000 * 60 && sleptMs % (1000 * 60) == 0L) {
-                    logger.lifecycle(
-                        "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
-                            "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again.\n" +
-                            "If the problem persists, the lock file may need to be deleted manually."
-                    )
-                }
-                if (sleptMs >= timeoutMs) {
-                    throw PaperweightException("Have been waiting on lock file '$lockFile' for $sleptMs ms. Giving up as timeout is $timeoutMs ms.")
-                }
-            }
-        }
-    }
-
-    if (!lockFile.parent.exists()) {
-        lockFile.parent.createDirectories()
-    }
-    lockFile.writeText(currentPid.toString())
-    return false
-}
 
 fun relativeCopy(baseDir: Path, file: Path, outputDir: Path) {
     relativeCopyOrMove(baseDir, file, outputDir, false)

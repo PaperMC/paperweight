@@ -32,23 +32,18 @@ import io.papermc.paperweight.userdev.internal.JunitExclusionRule
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
-import io.papermc.paperweight.userdev.internal.setup.util.cleanSharedCaches
-import io.papermc.paperweight.userdev.internal.setup.util.genSources
-import io.papermc.paperweight.userdev.internal.setup.util.paperweightHash
-import io.papermc.paperweight.userdev.internal.setup.util.sharedCaches
+import io.papermc.paperweight.userdev.internal.util.cleanSharedCaches
+import io.papermc.paperweight.userdev.internal.util.deleteUnusedAfter
+import io.papermc.paperweight.userdev.internal.util.genSources
+import io.papermc.paperweight.userdev.internal.util.sharedCaches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import java.nio.file.Path
 import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.api.artifacts.ProjectDependency
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.dsl.DependencyFactory
-import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
@@ -81,16 +76,17 @@ abstract class PaperweightUser : Plugin<Project> {
             parameters.projectPath.set(target.projectDir)
         }
 
-        val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
-            group = GENERAL_TASK_GROUP
-            description = "Delete the project-local & all shared paperweight-userdev setup caches."
-            delete(target.layout.cache)
-            delete(sharedCacheRoot)
-        }
         val cleanCache by target.tasks.registering<Delete> {
             group = GENERAL_TASK_GROUP
             description = "Delete the project-local paperweight-userdev setup cache."
             delete(target.layout.cache)
+            delete(target.rootProject.layout.cache.resolve("paperweight-userdev"))
+        }
+        val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
+            group = GENERAL_TASK_GROUP
+            description = "Delete the project-local & all shared paperweight-userdev setup caches."
+            delete(sharedCacheRoot)
+            dependsOn(cleanCache)
         }
 
         target.configurations.register(DEV_BUNDLE_CONFIG) {
@@ -98,7 +94,7 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         // must not be initialized until afterEvaluate, as it resolves the dev bundle
-        val userdevSetupProvider by lazy { createSetup(target, sharedCacheRoot.resolve(paperweightHash)) }
+        val userdevSetupProvider by lazy { createSetup(target) }
         val userdevSetup by lazy { userdevSetupProvider.get() }
 
         val userdev = target.extensions.create(
@@ -126,7 +122,7 @@ abstract class PaperweightUser : Plugin<Project> {
             group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
-            mappingsFile.pathProvider(target.provider { userdevSetup.reobfMappings })
+            mappingsFile.set(setupTask.flatMap { it.reobfMappings })
             remapClasspath.from(setupTask.flatMap { it.mappedServerJar })
 
             fromNamespace.set(DEOBF_NAMESPACE)
@@ -150,26 +146,6 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         target.afterEvaluate {
-            // Manually check if cleanCache is a target, and skip setup.
-            // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
-            // but it does work and allows using the cleanCache task without setting up the workspace first
-            val cleaningCache = gradle.startParameter.taskRequests
-                .any { req ->
-                    req.args.any { arg ->
-                        NameMatcher().find(arg, tasks.names) in setOf(cleanCache.name, cleanAll.name)
-                    }
-                }
-            if (cleaningCache) {
-                return@afterEvaluate
-            }
-
-            if (isIDEASync()) {
-                val startParameter = gradle.startParameter
-                val taskRequests = startParameter.taskRequests.toMutableList()
-                taskRequests.add(DefaultTaskExecutionRequest(listOf(setupTask.name)))
-                startParameter.setTaskRequests(taskRequests)
-            }
-
             userdev.javaLauncher.convention(javaToolchainService.defaultJavaLauncher(this))
 
             userdev.reobfArtifactConfiguration.get()
@@ -187,6 +163,17 @@ abstract class PaperweightUser : Plugin<Project> {
                 applyJunitExclusionRule()
             }
 
+            if (cleaningCache(cleanCache, cleanAll)) {
+                return@afterEvaluate
+            }
+
+            if (isIDEASync()) {
+                val startParameter = gradle.startParameter
+                val taskRequests = startParameter.taskRequests.toMutableList()
+                taskRequests.add(DefaultTaskExecutionRequest(listOf(setupTask.name)))
+                startParameter.setTaskRequests(taskRequests)
+            }
+
             // Print a friendly error message if the dev bundle is missing before we call anything else that will try and resolve it
             checkForDevBundle()
 
@@ -199,8 +186,23 @@ abstract class PaperweightUser : Plugin<Project> {
                 it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
             }
 
+            // Clean v1 shared caches
             cleanSharedCaches(this, sharedCacheRoot)
         }
+    }
+
+    private fun Project.cleaningCache(vararg cleanTasks: TaskProvider<*>): Boolean {
+        val cleanTaskNames = cleanTasks.map { it.name }.toSet()
+
+        // Manually check if cleanCache is a target, and skip setup.
+        // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
+        // but it does work and allows using the cleanCache task without setting up the workspace first
+        return gradle.startParameter.taskRequests
+            .any { req ->
+                req.args.any { arg ->
+                    NameMatcher().find(arg, tasks.names) in cleanTaskNames
+                }
+            }
     }
 
     private fun Project.decorateJarManifests() {
@@ -333,37 +335,26 @@ abstract class PaperweightUser : Plugin<Project> {
     private fun createContext(project: Project, setupTask: TaskProvider<UserdevSetupTask>): SetupHandler.ConfigurationContext =
         SetupHandler.ConfigurationContext(project, dependencyFactory, setupTask)
 
-    private fun createSetup(target: Project, sharedCacheRoot: Path): Provider<UserdevSetup> {
+    private fun createSetup(target: Project): Provider<UserdevSetup> {
         val bundleConfig = target.configurations.named(DEV_BUNDLE_CONFIG)
         val devBundleZip = bundleConfig.map { it.singleFile }.convertToPath()
         val bundleHash = devBundleZip.sha256asHex()
         val cacheDir = if (!target.sharedCaches) {
-            target.layout.cache
+            target.rootProject.layout.cache.resolve("paperweight-userdev/v2/work")
         } else {
-            when (bundleConfig.get().dependencies.single()) {
-                is ProjectDependency -> target.layout.cache
-
-                is ModuleDependency -> {
-                    val resolved =
-                        bundleConfig.get().incoming.resolutionResult.rootComponent.get().dependencies.single() as ResolvedDependencyResult
-                    val resolvedId = resolved.selected.id as ModuleComponentIdentifier
-                    sharedCacheRoot.resolve("module/${resolvedId.group}/${resolvedId.module}/${resolvedId.version}")
-                }
-
-                else -> sharedCacheRoot.resolve("non-module/$bundleHash")
-            }
+            target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev/v2/work")
         }
 
         val serviceName = "paperweight-userdev:setupService:$bundleHash"
         val ret = target.gradle.sharedServices
             .registerIfAbsent(serviceName, UserdevSetup::class) {
-                maxParallelUsages = 1
                 parameters {
                     cache.set(cacheDir)
                     bundleZip.set(devBundleZip)
                     bundleZipHash.set(bundleHash)
                     downloadService.set(target.download)
                     genSources.set(target.genSources)
+                    deleteUnusedAfter.set(deleteUnusedAfter(target))
                 }
             }
         buildEventsListenerRegistry.onTaskCompletion(ret)

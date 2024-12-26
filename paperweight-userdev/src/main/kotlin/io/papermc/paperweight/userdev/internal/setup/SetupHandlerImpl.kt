@@ -23,12 +23,23 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.lockSetup
+import io.papermc.paperweight.userdev.internal.action.FileCollectionValue
+import io.papermc.paperweight.userdev.internal.action.StringValue
+import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import io.papermc.paperweight.userdev.internal.action.fileValue
+import io.papermc.paperweight.userdev.internal.action.javaLauncherValue
+import io.papermc.paperweight.userdev.internal.action.stringListValue
+import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
+import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
+import io.papermc.paperweight.userdev.internal.setup.action.RemapMinecraftMacheAction
+import io.papermc.paperweight.userdev.internal.setup.action.RunPaperclipAction
+import io.papermc.paperweight.userdev.internal.setup.action.SetupMacheSourcesAction
+import io.papermc.paperweight.userdev.internal.setup.action.VanillaServerDownloads
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.FileCollection
@@ -36,91 +47,109 @@ import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImpl(
     private val parameters: UserdevSetup.Parameters,
-    private val bundle: ExtractedBundle<GenerateDevBundle.DevBundleConfig>,
-    private val cache: Path = parameters.cache.path,
+    private val bundle: BundleInfo<GenerateDevBundle.DevBundleConfig>,
 ) : SetupHandler {
     private var macheMeta: MacheMeta? = null
-    private val vanillaSteps by lazy {
-        VanillaSteps(
-            bundle.config.minecraftVersion,
-            cache,
-            parameters.downloadService.get(),
-            bundle.changed,
-        )
-    }
-    private val vanillaServerJar: Path = cache.resolve(paperSetupOutput("vanillaServerJar", "jar"))
-    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
-    private val mappedServerJar: Path = cache.resolve(paperSetupOutput("remapServerJar", "jar"))
-    private val baseSources: Path = cache.resolve(paperSetupOutput("baseSources", "jar"))
-    private val patchedSourcesJar: Path = cache.resolve(paperSetupOutput("patchedSources", "jar"))
-    private val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("applyMojangMappedPaperclipPatch", "jar"))
 
-    private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.filesMatchingRecursive("*.jar")
+    private fun createDispatcher(context: SetupHandler.ExecutionContext): WorkDispatcher {
+        val dispatcher = WorkDispatcher.create(parameters.cache.path)
+        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get())
 
-    private fun generateSources(context: SetupHandler.ExecutionContext) {
-        setupMacheMeta(context.macheConfig) // If the config cache is reused then the mache config may not be populated
-        vanillaSteps.downloadVanillaServerJar()
-        vanillaSteps.downloadServerMappings()
-        applyMojangMappedPaperclipPatch(context)
-
-        val extractStep = createExtractFromBundlerStep()
-
-        val remapStep = RemapMinecraftMache.create(
-            context,
-            macheMeta().remapperArgs,
-            vanillaServerJar,
-            ::minecraftLibraryJars,
-            vanillaSteps.serverMappings,
-            mappedServerJar,
-            cache,
+        val javaLauncher = javaLauncherValue(context.javaLauncher)
+        val mcVer = StringValue(bundle.config.minecraftVersion)
+        val bundleZip = fileValue(bundle.zip)
+        dispatcher.provided(
+            javaLauncher,
+            mcVer,
+            bundleZip,
         )
 
-        val macheSourcesStep = MinecraftSourcesMache.create(
-            context,
-            mappedServerJar,
-            baseSources,
-            cache,
-            ::minecraftLibraryJars,
-            macheMeta().decompilerArgs,
-        )
-
-        val applyDevBundlePatchesStep = ApplyDevBundlePatches(
-            baseSources,
-            bundle.dir.resolve(bundle.config.patchDir),
-            patchedSourcesJar,
-            mojangMappedPaperJar
-        )
-
-        StepExecutor.executeSteps(
-            bundle.changed,
-            context,
-            extractStep,
-            remapStep,
-            macheSourcesStep,
-            applyDevBundlePatchesStep,
-        )
-    }
-
-    // This can be called when a user queries the server jar provider in
-    // PaperweightUserExtension, possibly by a task running in a separate
-    // thread to dependency resolution.
-    @Synchronized
-    private fun applyMojangMappedPaperclipPatch(context: SetupHandler.ExecutionContext) {
-        if (setupCompleted) {
-            return
-        }
-
-        lockSetup(cache, true) {
-            StepExecutor.executeStep(
-                context,
-                RunPaperclip(
-                    bundle.dir.resolve(bundle.config.mojangMappedPaperclipFile),
-                    mojangMappedPaperJar,
-                    vanillaSteps.mojangJar,
-                    minecraftVersion,
-                )
+        val vanillaDownloads = dispatcher.register(
+            "vanillaServerDownloads",
+            VanillaServerDownloads(
+                mcVer,
+                dispatcher.outputFile("vanillaServer.jar"),
+                dispatcher.outputFile("mojangServerMappings.txt"),
+                parameters.downloadService.get(),
             )
-        }
+        )
+
+        val applyPaperclip = dispatcher.register(
+            "applyPaperclipPatch",
+            RunPaperclipAction(
+                javaLauncher,
+                bundleZip,
+                StringValue(bundle.config.mojangMappedPaperclipFile),
+                dispatcher.outputFile("output.jar"),
+                vanillaDownloads.serverJar,
+                mcVer,
+            )
+        )
+        dispatcher.provided(applyPaperclip.paperclipPath)
+
+        val extract = dispatcher.register(
+            "extractFromBundler",
+            ExtractFromBundlerAction(
+                vanillaDownloads.serverJar,
+                dispatcher.outputFile("vanillaServer.jar"),
+                dispatcher.outputDir("minecraftLibraries"),
+            )
+        )
+
+        val remap = dispatcher.register(
+            "remapMinecraft",
+            RemapMinecraftMacheAction(
+                javaLauncher,
+                stringListValue(macheMeta().remapperArgs),
+                extract.vanillaServerJar,
+                extract.minecraftLibraryJars,
+                vanillaDownloads.serverMappings,
+                FileCollectionValue(context.macheParamMappingsConfig),
+                FileCollectionValue(context.macheConstantsConfig),
+                FileCollectionValue(context.macheCodebookConfig),
+                FileCollectionValue(context.macheRemapperConfig),
+                dispatcher.outputFile("output.jar"),
+            )
+        )
+        dispatcher.provided(
+            remap.minecraftRemapArgs,
+            remap.paramMappings,
+            remap.constants,
+            remap.codebook,
+            remap.remapper,
+        )
+
+        val macheSources = dispatcher.register(
+            "setupMacheSources",
+            SetupMacheSourcesAction(
+                javaLauncher,
+                remap.outputJar,
+                dispatcher.outputFile("output.zip"),
+                extract.minecraftLibraryJars,
+                stringListValue(macheMeta().decompilerArgs),
+                FileCollectionValue(context.macheDecompilerConfig),
+                FileCollectionValue(context.macheConfig),
+            )
+        )
+        dispatcher.provided(
+            macheSources.decompileArgs,
+            macheSources.decompiler,
+            macheSources.mache,
+        )
+
+        val applyPatches = dispatcher.register(
+            "applyDevBundlePatches",
+            ApplyDevBundlePatchesAction(
+                macheSources.outputJar,
+                bundleZip,
+                StringValue(bundle.config.patchDir),
+                dispatcher.outputFile("output.jar"),
+                applyPaperclip.outputJar,
+            )
+        )
+        dispatcher.provided(applyPatches.patchesPath)
+
+        return dispatcher
     }
 
     override fun populateCompileConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
@@ -132,33 +161,38 @@ class SetupHandlerImpl(
         populateCompileConfiguration(context, dependencySet)
     }
 
-    private var setupCompleted = false
+    @Volatile
+    private var completedOutput: Path? = null
 
     @Synchronized
-    override fun combinedOrClassesJar(context: SetupHandler.ExecutionContext): Path {
-        if (setupCompleted) {
-            return if (parameters.genSources.get()) {
-                patchedSourcesJar
-            } else {
-                mojangMappedPaperJar
-            }
+    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
+        if (completedOutput != null) {
+            requireNotNull(completedOutput).copyTo(output, true)
+            return
         }
 
-        val ret = lockSetup(cache) {
-            if (parameters.genSources.get()) {
-                generateSources(context)
-                patchedSourcesJar
-            } else {
-                vanillaSteps.downloadVanillaServerJar()
-                StepExecutor.executeStep(context, createExtractFromBundlerStep())
-                applyMojangMappedPaperclipPatch(context)
-                mojangMappedPaperJar
+        // If the config cache is reused then the mache config may not be populated
+        setupMacheMeta(context.macheConfig)
+
+        val dispatcher = createDispatcher(context)
+        val request = if (parameters.genSources.get()) {
+            dispatcher.registered<ApplyDevBundlePatchesAction>("applyDevBundlePatches").outputJar
+        } else {
+            dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
+        }
+        context.withProgressLogger { progressLogger ->
+            dispatcher.dispatch(request) {
+                progressLogger.progress(it)
             }
         }
+        request.get().copyTo(output, true)
+        completedOutput = request.get()
+    }
 
-        setupCompleted = true
-
-        return ret
+    override fun extractReobfMappings(output: Path) {
+        bundle.zip.openZipSafe().use { fs ->
+            fs.getPath(bundle.config.reobfMappingsFile).copyTo(output, true)
+        }
     }
 
     private fun macheMeta(): MacheMeta = requireNotNull(macheMeta) { "Mache meta is not setup yet" }
@@ -194,12 +228,6 @@ class SetupHandlerImpl(
         }
 
         project.tasks.withType(UserdevSetupTask::class).configureEach {
-            if (parameters.genSources.get()) {
-                mappedServerJar.set(patchedSourcesJar)
-            } else {
-                mappedServerJar.set(mojangMappedPaperJar)
-            }
-
             macheCodebookConfig.from(macheCodebook)
             macheRemapperConfig.from(macheRemapper)
             macheDecompilerConfig.from(macheDecompiler)
@@ -210,9 +238,6 @@ class SetupHandlerImpl(
         macheMeta().addDependencies(project)
         macheMeta().addRepositories(project)
     }
-
-    override val reobfMappings: Path
-        get() = bundle.dir.resolve(bundle.config.reobfMappingsFile)
 
     override val minecraftVersion: String
         get() = bundle.config.minecraftVersion
@@ -234,12 +259,4 @@ class SetupHandlerImpl(
 
     override val libraryRepositories: List<String>
         get() = bundle.config.libraryRepositories
-
-    private fun createExtractFromBundlerStep(): ExtractFromBundlerStep = ExtractFromBundlerStep(
-        cache,
-        vanillaSteps,
-        vanillaServerJar,
-        minecraftLibraryJars,
-        ::minecraftLibraryJars
-    )
 }

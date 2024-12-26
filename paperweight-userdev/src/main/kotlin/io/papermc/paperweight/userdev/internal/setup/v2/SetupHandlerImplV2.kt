@@ -23,13 +23,14 @@
 package io.papermc.paperweight.userdev.internal.setup.v2
 
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.setup.ExtractedBundle
-import io.papermc.paperweight.userdev.internal.setup.RunPaperclip
+import io.papermc.paperweight.userdev.internal.action.*
+import io.papermc.paperweight.userdev.internal.action.Input
+import io.papermc.paperweight.userdev.internal.action.Output
+import io.papermc.paperweight.userdev.internal.setup.BundleInfo
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
-import io.papermc.paperweight.userdev.internal.setup.step.*
-import io.papermc.paperweight.userdev.internal.setup.util.*
+import io.papermc.paperweight.userdev.internal.setup.action.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -40,154 +41,178 @@ import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImplV2(
     private val parameters: UserdevSetup.Parameters,
-    private val bundle: ExtractedBundle<DevBundleV2.Config>,
-    private val cache: Path = parameters.cache.path,
+    private val bundle: BundleInfo<DevBundleV2.Config>,
 ) : SetupHandler {
-    private val vanillaSteps by lazy {
-        VanillaSteps(
-            bundle.config.minecraftVersion,
-            cache,
-            parameters.downloadService.get(),
-            bundle.changed,
+    private fun createDispatcher(context: SetupHandler.ExecutionContext): WorkDispatcher {
+        val dispatcher = WorkDispatcher.create(parameters.cache.path)
+        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get())
+
+        val javaLauncher = javaLauncherValue(context.javaLauncher)
+        val mcVer = StringValue(bundle.config.minecraftVersion)
+        val bundleZip = fileValue(bundle.zip)
+        dispatcher.provided(
+            javaLauncher,
+            mcVer,
+            bundleZip,
         )
-    }
-    private val filteredVanillaServerJar: Path = cache.resolve(paperSetupOutput("filterJar", "jar"))
-    private val minecraftLibraryJars = cache.resolve(MINECRAFT_JARS_PATH)
-    private val mojangPlusYarnMappings: Path = cache.resolve(MOJANG_YARN_MAPPINGS)
-    private val mappedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("mappedMinecraftServerJar", "jar"))
-    private val fixedMinecraftServerJar: Path = cache.resolve(paperSetupOutput("fixedMinecraftServerJar", "jar"))
-    private val accessTransformedServerJar: Path = cache.resolve(paperSetupOutput("accessTransformedServerJar", "jar"))
-    private val decompiledMinecraftServerJar: Path = cache.resolve(paperSetupOutput("decompileMinecraftServerJar", "jar"))
-    private val patchedSourcesJar: Path = cache.resolve(paperSetupOutput("patchedSourcesJar", "jar"))
-    private val mojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("applyMojangMappedPaperclipPatch", "jar"))
 
-    private fun minecraftLibraryJars(): List<Path> = minecraftLibraryJars.listDirectoryEntries("*.jar")
+        val vanillaDownloads = dispatcher.register(
+            "vanillaServerDownloads",
+            VanillaServerDownloads(
+                mcVer,
+                dispatcher.outputFile("vanillaServer.jar"),
+                dispatcher.outputFile("mojangServerMappings.txt"),
+                parameters.downloadService.get(),
+            )
+        )
 
-    private fun generateSources(context: SetupHandler.ExecutionContext) {
-        vanillaSteps.downloadVanillaServerJar()
-
-        val downloadMcLibs = object : SetupStep {
-            override val name: String = "download minecraft libraries"
-
-            override val hashFile: Path = cache.resolve(paperSetupOutput("minecraftLibraries", "hashes"))
-
-            override fun run(context: SetupHandler.ExecutionContext) {
+        class DownloadMcLibs(
+            @Output
+            val minecraftLibraryJars: DirectoryValue,
+            @Input
+            val vanillaServerLibraries: ListValue<String>,
+        ) : WorkDispatcher.Action {
+            override fun execute() {
                 downloadLibraries(
                     download = parameters.downloadService,
                     workerExecutor = context.workerExecutor,
-                    targetDir = minecraftLibraryJars,
+                    targetDir = minecraftLibraryJars.get(),
                     repositories = listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL),
-                    libraries = bundle.config.buildData.vanillaServerLibraries,
+                    libraries = vanillaServerLibraries.get(),
                     sources = false
                 ).await()
             }
-
-            override fun touchHashFunctionBuilder(builder: HashFunctionBuilder) {
-                builder.include(MC_LIBRARY_URL)
-                builder.include(bundle.config.buildData.vanillaServerLibraries)
-                builder.include(minecraftLibraryJars())
-                builder.includePaperweightHash = false
-            }
         }
 
-        val filterVanillaJarStep = FilterVanillaJar(vanillaSteps.mojangJar, bundle.config.buildData.vanillaJarIncludes, filteredVanillaServerJar)
-
-        val genMappingsStep = GenerateMappingsStep.create(
-            context,
-            vanillaSteps,
-            filteredVanillaServerJar,
-            ::minecraftLibraryJars,
-            mojangPlusYarnMappings,
-        )
-
-        val remapMinecraftStep = RemapMinecraft.create(
-            context,
-            bundle.config.remap.args,
-            filteredVanillaServerJar,
-            ::minecraftLibraryJars,
-            mojangPlusYarnMappings,
-            mappedMinecraftServerJar,
-            cache,
-        )
-
-        val fixStep = FixMinecraftJar(
-            mappedMinecraftServerJar,
-            fixedMinecraftServerJar,
-            vanillaSteps.mojangJar,
-            true,
-        )
-
-        val atStep = AccessTransformMinecraft(
-            bundle.dir.resolve(bundle.config.buildData.accessTransformFile),
-            fixedMinecraftServerJar,
-            accessTransformedServerJar,
-        )
-
-        val decomp = DecompileMinecraft.create(
-            context,
-            accessTransformedServerJar,
-            decompiledMinecraftServerJar,
-            cache,
-            ::minecraftLibraryJars,
-            bundle.config.decompile.args,
-        )
-
-        val applyDevBundlePatchesStep = ApplyDevBundlePatches(
-            decompiledMinecraftServerJar,
-            bundle.dir.resolve(bundle.config.patchDir),
-            patchedSourcesJar
-        )
-
-        StepExecutor.executeSteps(
-            bundle.changed,
-            context,
-            downloadMcLibs,
-            filterVanillaJarStep,
-            genMappingsStep,
-            remapMinecraftStep,
-            fixStep,
-            atStep,
-            decomp,
-            applyDevBundlePatchesStep,
-        )
-
-        applyMojangMappedPaperclipPatch(context)
-
-        StepExecutor.executeStep(
-            context,
-            FilterPaperShadowJar(
-                patchedSourcesJar,
-                mojangMappedPaperJar,
-                filteredMojangMappedPaperJar,
-                bundle.config.buildData.relocations,
+        val downloadMcLibs = dispatcher.register(
+            "downloadMinecraftLibraries",
+            DownloadMcLibs(
+                dispatcher.outputDir("output"),
+                stringListValue(bundle.config.buildData.vanillaServerLibraries),
             )
         )
-    }
+        dispatcher.provided(downloadMcLibs.vanillaServerLibraries)
 
-    // This can be called when a user queries the server jar provider in
-    // PaperweightUserExtension, possibly by a task running in a separate
-    // thread to dependency resolution.
-    @Synchronized
-    private fun applyMojangMappedPaperclipPatch(context: SetupHandler.ExecutionContext) {
-        if (setupCompleted) {
-            return
-        }
-
-        lockSetup(cache, true) {
-            StepExecutor.executeStep(
-                context,
-                RunPaperclip(
-                    bundle.dir.resolve(bundle.config.buildData.mojangMappedPaperclipFile),
-                    mojangMappedPaperJar,
-                    vanillaSteps.mojangJar,
-                    minecraftVersion,
-                    false,
-                )
+        val filterVanillaJar = dispatcher.register(
+            "filterVanillaJar",
+            FilterVanillaJarAction(
+                vanillaDownloads.serverJar,
+                stringListValue(bundle.config.buildData.vanillaJarIncludes),
+                dispatcher.outputFile("output.jar"),
             )
-        }
-    }
+        )
+        dispatcher.provided(filterVanillaJar.includes)
 
-    private val filteredMojangMappedPaperJar: Path = cache.resolve(paperSetupOutput("filteredMojangMappedPaperJar", "jar"))
+        val generateMappings = dispatcher.register(
+            "generateMappings",
+            GenerateMappingsAction(
+                javaLauncher,
+                context.workerExecutor,
+                vanillaDownloads.serverMappings,
+                filterVanillaJar.outputJar,
+                FileCollectionValue(context.paramMappingsConfig),
+                downloadMcLibs.minecraftLibraryJars,
+                dispatcher.outputFile("output.tiny"),
+            )
+        )
+        dispatcher.provided(generateMappings.paramMappings)
+
+        val remap = dispatcher.register(
+            "remapMinecraft",
+            RemapMinecraftAction(
+                javaLauncher,
+                stringListValue(bundle.config.remap.args),
+                filterVanillaJar.outputJar,
+                downloadMcLibs.minecraftLibraryJars,
+                generateMappings.outputMappings,
+                FileCollectionValue(context.remapperConfig),
+                dispatcher.outputFile("output.jar"),
+            )
+        )
+        dispatcher.provided(remap.minecraftRemapArgs)
+        dispatcher.provided(remap.remapper)
+
+        val fix = dispatcher.register(
+            "fixMinecraftJar",
+            FixMinecraftJarAction(
+                javaLauncher,
+                context.workerExecutor,
+                remap.outputJar,
+                dispatcher.outputFile("output.jar"),
+                vanillaDownloads.serverJar,
+                true,
+            )
+        )
+
+        val at = dispatcher.register(
+            "accessTransformMinecraft",
+            AccessTransformMinecraftAction(
+                javaLauncher,
+                context.workerExecutor,
+                bundleZip,
+                StringValue(bundle.config.buildData.accessTransformFile),
+                fix.outputJar,
+                dispatcher.outputFile("output.jar"),
+            )
+        )
+        dispatcher.provided(at.atPath)
+
+        val decompile = dispatcher.register(
+            "decompileMinecraftServer",
+            DecompileMinecraftAction(
+                javaLauncher,
+                at.outputJar,
+                dispatcher.outputFile("output.jar"),
+                downloadMcLibs.minecraftLibraryJars,
+                stringListValue(bundle.config.decompile.args),
+                FileCollectionValue(context.decompilerConfig),
+            )
+        )
+        dispatcher.provided(
+            decompile.decompileArgs,
+            decompile.decompiler,
+        )
+
+        val applyPatches = dispatcher.register(
+            "applyDevBundlePatches",
+            ApplyDevBundlePatchesAction(
+                decompile.outputJar,
+                bundleZip,
+                StringValue(bundle.config.patchDir),
+                dispatcher.outputFile("output.jar"),
+            )
+        )
+        dispatcher.provided(applyPatches.patchesPath)
+
+        val applyPaperclip = dispatcher.register(
+            "applyPaperclipPatch",
+            RunPaperclipAction(
+                javaLauncher,
+                bundleZip,
+                StringValue(bundle.config.buildData.mojangMappedPaperclipFile),
+                dispatcher.outputFile("output.jar"),
+                vanillaDownloads.serverJar,
+                mcVer,
+                false,
+            )
+        )
+        dispatcher.provided(applyPaperclip.paperclipPath)
+
+        val filterPaperShadowJar = dispatcher.register(
+            "filterPaperShadowJar",
+            FilterPaperShadowJarAction(
+                applyPatches.outputJar,
+                applyPaperclip.outputJar,
+                dispatcher.outputFile("output.jar"),
+                value(bundle.config.buildData.relocations) {
+                    listOf(InputStreamProvider.wrap(gson.toJson(it).byteInputStream()))
+                },
+            )
+        )
+        dispatcher.provided(filterPaperShadowJar.relocations)
+
+        return dispatcher
+    }
 
     override fun populateCompileConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
         dependencySet.add(context.dependencyFactory.create(context.layout.files(context.setupTask.flatMap { it.mappedServerJar })))
@@ -206,33 +231,43 @@ class SetupHandlerImplV2(
         dependencySet.add(context.dependencyFactory.create(context.layout.files(context.setupTask.flatMap { it.legacyPaperclipResult })))
     }
 
-    private var setupCompleted = false
+    @Volatile
+    private var completedOutput: Pair<Path, Path>? = null
 
     @Synchronized
-    override fun combinedOrClassesJar(context: SetupHandler.ExecutionContext): Path {
-        if (setupCompleted) {
-            return filteredMojangMappedPaperJar
+    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
+        if (completedOutput != null) {
+            val (main, legacy) = requireNotNull(completedOutput)
+            main.copyTo(output, true)
+            legacy.copyTo(requireNotNull(legacyOutput), true)
+            return
         }
 
-        lockSetup(cache) {
-            generateSources(context)
+        val dispatcher = createDispatcher(context)
+        val filter = dispatcher.registered<FilterPaperShadowJarAction>("filterPaperShadowJar").outputJar
+        val paperclip = dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
+        context.withProgressLogger { progressLogger ->
+            dispatcher.dispatch(filter, paperclip) {
+                progressLogger.progress(it)
+            }
         }
+        filter.get().copyTo(output, true)
+        paperclip.get().copyTo(requireNotNull(legacyOutput), true)
+        completedOutput = filter.get() to paperclip.get()
+    }
 
-        setupCompleted = true
-
-        return filteredMojangMappedPaperJar
+    override fun extractReobfMappings(output: Path) {
+        bundle.zip.openZipSafe().use { fs ->
+            fs.getPath(bundle.config.buildData.reobfMappingsFile).copyTo(output, true)
+        }
     }
 
     override fun afterEvaluate(project: Project) {
         super.afterEvaluate(project)
         project.tasks.withType(UserdevSetupTask::class).configureEach {
-            mappedServerJar.set(filteredMojangMappedPaperJar)
-            legacyPaperclipResult.set(mojangMappedPaperJar)
+            legacyPaperclipResult.set(layout.cache.resolve(paperTaskOutput("legacyPaperclipResult", "jar")))
         }
     }
-
-    override val reobfMappings: Path
-        get() = bundle.dir.resolve(bundle.config.buildData.reobfMappingsFile)
 
     override val minecraftVersion: String
         get() = bundle.config.minecraftVersion

@@ -9,6 +9,7 @@ dependencies {
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }
+    implementation(libs.coroutines)
 }
 
 gradlePlugin {

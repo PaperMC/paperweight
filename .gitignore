@@ -45,7 +45,3 @@ ehthumbs_vista.db
 !gradle-wrapper.ja
 
 /.kotlin/
-
-# todo remove again
-/test/
-/testfork/

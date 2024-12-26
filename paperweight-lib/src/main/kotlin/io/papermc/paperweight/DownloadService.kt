@@ -32,8 +32,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import org.apache.http.HttpHost
 import org.apache.http.HttpStatus
 import org.apache.http.client.config.CookieSpecs
@@ -69,12 +67,6 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
         val url = source.convertToUrl()
         val file = target.convertToPath()
         download(url, file, hash)
-    }
-
-    suspend fun downloadAsync(source: Any, target: Any, hash: Hash? = null) = coroutineScope {
-        async {
-            download(source.convertToUrl(), target.convertToPath(), hash, false)
-        }
     }
 
     private fun download(source: URL, target: Path, hash: Hash?, retry: Boolean = false) {
