@@ -27,6 +27,7 @@ import io.papermc.paperweight.userdev.internal.util.formatNs
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
+import kotlin.io.path.*
 import kotlin.system.measureNanoTime
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -120,14 +121,17 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
             macheCodebookConfig,
         )
 
-        val took = measureNanoTime {
-            setupService.get().generateCombinedOrClassesJar(
-                context,
-                mappedServerJar.path.createParentDirectories(),
-                legacyPaperclipResult.pathOrNull?.createParentDirectories(),
-            )
+        val result: SetupHandler.ArtifactsResult
+        val generatedIn = measureNanoTime {
+            result = setupService.get().generateArtifacts(context)
+        }
+        logger.lifecycle("Completed setup in ${formatNs(generatedIn)}")
+
+        val copiedTime = measureNanoTime {
+            result.mainOutput.copyTo(mappedServerJar.path.createParentDirectories(), overwrite = true)
+            result.legacyOutput?.copyTo(legacyPaperclipResult.path.createParentDirectories(), overwrite = true)
             setupService.get().extractReobfMappings(reobfMappings.path.createParentDirectories())
         }
-        logger.lifecycle("Completed setup in ${formatNs(took)}")
+        logger.lifecycle("Copied artifacts to project cache in ${formatNs(copiedTime)}")
     }
 }

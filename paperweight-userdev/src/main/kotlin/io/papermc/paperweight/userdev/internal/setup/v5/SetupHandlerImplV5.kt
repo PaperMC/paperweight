@@ -213,13 +213,12 @@ class SetupHandlerImplV5(
     }
 
     @Volatile
-    private var completedOutput: Path? = null
+    private var completedOutput: SetupHandler.ArtifactsResult? = null
 
     @Synchronized
-    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
+    override fun generateArtifacts(context: SetupHandler.ExecutionContext): SetupHandler.ArtifactsResult {
         if (completedOutput != null) {
-            requireNotNull(completedOutput).copyTo(output, true)
-            return
+            return requireNotNull(completedOutput)
         }
 
         val dispatcher = createDispatcher(context)
@@ -233,8 +232,8 @@ class SetupHandlerImplV5(
                 progressLogger.progress(it)
             }
         }
-        request.get().copyTo(output, true)
-        completedOutput = request.get()
+        return SetupHandler.ArtifactsResult(request.get(), null)
+            .also { completedOutput = it }
     }
 
     override fun extractReobfMappings(output: Path) {

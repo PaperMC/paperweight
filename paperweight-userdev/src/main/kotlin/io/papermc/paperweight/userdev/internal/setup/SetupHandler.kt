@@ -48,7 +48,12 @@ interface SetupHandler {
 
     fun populateRuntimeConfiguration(context: ConfigurationContext, dependencySet: DependencySet)
 
-    fun generateCombinedOrClassesJar(context: ExecutionContext, output: Path, legacyOutput: Path?)
+    data class ArtifactsResult(
+        val mainOutput: Path,
+        val legacyOutput: Path?,
+    )
+
+    fun generateArtifacts(context: ExecutionContext): ArtifactsResult
 
     fun extractReobfMappings(output: Path)
 
