@@ -49,9 +49,9 @@ class WorkDispatcherImpl(private val work: Path) : WorkDispatcher {
         val outputs: List<Value<*>>,
     )
 
-    override fun outputFile(name: String): FileValue = LazyFileValue(name)
+    override fun outputFile(name: String): FileValue = FileOutputValue(name)
 
-    override fun outputDir(name: String): DirectoryValue = LazyDirectoryValue(name)
+    override fun outputDir(name: String): DirectoryValue = DirectoryOutputValue(name)
 
     override fun provided(value: Value<*>) {
         if (registrations.any { it.outputs.contains(value) }) {

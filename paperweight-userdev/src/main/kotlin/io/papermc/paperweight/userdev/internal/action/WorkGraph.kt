@@ -80,9 +80,8 @@ class WorkGraph(
             val node = nodeCache[producer] ?: Node(producer, buildGraph(producer.inputs, nodeCache)).also {
                 // This is only used as debug information
                 it.registration.outputs.forEach { output ->
-                    when (output) {
-                        is LazyFileValue -> output.owner = it.registration.name
-                        is LazyDirectoryValue -> output.owner = it.registration.name
+                    if (output is FileSystemLocationOutputValue) {
+                        output.owner = it.registration.name
                     }
                 }
             }
@@ -205,8 +204,7 @@ class WorkGraph(
     private fun realizeOutputPaths(node: Node, work: Path, inputHash: String) {
         for (out in node.registration.outputs) {
             when (out) {
-                is LazyFileValue -> out.path = work.resolve("${node.registration.name}_$inputHash/${out.name}")
-                is LazyDirectoryValue -> out.path = work.resolve("${node.registration.name}_$inputHash/${out.name}")
+                is FileSystemLocationOutputValue -> out.path = work.resolve("${node.registration.name}_$inputHash/${out.name}")
                 else -> throw PaperweightException("Unsupported output type ${out::class.java.name}")
             }
         }

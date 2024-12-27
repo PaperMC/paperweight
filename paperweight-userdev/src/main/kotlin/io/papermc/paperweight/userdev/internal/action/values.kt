@@ -121,32 +121,28 @@ fun fileListValue(files: List<Path>): ListValue<Path> {
 class FileValueImpl(private val path: Path) : FileValue {
     override fun get(): Path = path
 
-    override fun toString(): String = "FileValue('$path')"
+    override fun toString(): String = "FileValueImpl('$path')"
 }
 
 class DirectoryValueImpl(private val path: Path) : DirectoryValue {
     override fun get(): Path = path
 
-    override fun toString(): String = "DirectoryValue('$path')"
+    override fun toString(): String = "DirectoryValueImpl('$path')"
 }
 
-class LazyFileValue(val name: String) : FileValue {
-    var path: Path? = null
-    var owner: String? = null
+abstract class FileSystemLocationOutputValue(
+    val name: String,
+    var path: Path? = null,
+    var owner: String? = null,
+) : Value<Path> {
+    override fun toString(): String = "${javaClass.simpleName}(name='$name', owner='$owner')"
 
     override fun get(): Path = requireNotNull(path) { "Path is not yet populated" }
-
-    override fun toString(): String = "LazyFileValue(name='$name', owner='$owner')"
 }
 
-class LazyDirectoryValue(val name: String) : DirectoryValue {
-    var path: Path? = null
-    var owner: String? = null
+class FileOutputValue(name: String) : FileSystemLocationOutputValue(name), FileValue
 
-    override fun get(): Path = requireNotNull(path) { "Path is not yet populated" }
-
-    override fun toString(): String = "LazyDirectoryValue(name='$name', owner='$owner')"
-}
+class DirectoryOutputValue(name: String) : FileSystemLocationOutputValue(name), DirectoryValue
 
 fun javaLauncherValue(javaLauncher: JavaLauncher): Value<JavaLauncher> = object : Value<JavaLauncher> {
     override fun get(): JavaLauncher = javaLauncher
