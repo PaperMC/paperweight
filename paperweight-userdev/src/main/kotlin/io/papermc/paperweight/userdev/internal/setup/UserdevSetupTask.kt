@@ -27,7 +27,6 @@ import io.papermc.paperweight.userdev.internal.util.formatNs
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
-import kotlin.io.path.*
 import kotlin.system.measureNanoTime
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
