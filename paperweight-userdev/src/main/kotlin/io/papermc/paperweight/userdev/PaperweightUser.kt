@@ -56,7 +56,6 @@ import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.internal.DefaultTaskExecutionRequest
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
-import org.gradle.util.internal.NameMatcher
 
 abstract class PaperweightUser : Plugin<Project> {
 
@@ -165,10 +164,6 @@ abstract class PaperweightUser : Plugin<Project> {
                 applyJunitExclusionRule()
             }
 
-            if (cleaningCache(cleanCache, cleanAll)) {
-                return@afterEvaluate
-            }
-
             if (isIDEASync()) {
                 val startParameter = gradle.startParameter
                 val taskRequests = startParameter.taskRequests.toMutableList()
@@ -191,20 +186,6 @@ abstract class PaperweightUser : Plugin<Project> {
             // Clean v1 shared caches
             cleanSharedCaches(this, sharedCacheRoot)
         }
-    }
-
-    private fun Project.cleaningCache(vararg cleanTasks: TaskProvider<*>): Boolean {
-        val cleanTaskNames = cleanTasks.map { it.name }.toSet()
-
-        // Manually check if cleanCache is a target, and skip setup.
-        // Gradle moved NameMatcher to internal packages in 7.1, so this solution isn't ideal,
-        // but it does work and allows using the cleanCache task without setting up the workspace first
-        return gradle.startParameter.taskRequests
-            .any { req ->
-                req.args.any { arg ->
-                    NameMatcher().find(arg, tasks.names) in cleanTaskNames
-                }
-            }
     }
 
     private fun Project.decorateJarManifests() {
