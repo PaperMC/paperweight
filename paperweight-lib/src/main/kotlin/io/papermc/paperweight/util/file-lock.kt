@@ -24,13 +24,15 @@ package io.papermc.paperweight.util
 
 import io.papermc.paperweight.PaperweightException
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.io.path.*
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
-private val openCurrentJvm: MutableMap<Path, ReentrantLock> = mutableMapOf()
+private val openCurrentJvm: MutableMap<Path, ReentrantLock> = ConcurrentHashMap()
 
 fun <R> withLock(
     lockFile: Path,
@@ -45,9 +47,7 @@ fun <R> withLock(
     while (true) {
         val normalized = lockFile.normalize().absolute()
 
-        val lock = synchronized(openCurrentJvm) {
-            openCurrentJvm.computeIfAbsent(normalized) { ReentrantLock() }
-        }
+        val lock = openCurrentJvm.computeIfAbsent(normalized) { ReentrantLock() }
         if (!lock.tryLock()) {
             if (firstFailedAcquire) {
                 logger.lifecycle("Lock for '$lockFile' is currently held by another thread.")
@@ -67,15 +67,8 @@ fun <R> withLock(
                 )
             }
         }
-        val cont = synchronized(openCurrentJvm) {
-            if (openCurrentJvm[normalized] !== lock) {
-                lock.unlock()
-                true
-            } else {
-                false
-            }
-        }
-        if (cont) {
+        if (openCurrentJvm[normalized] !== lock) {
+            lock.unlock()
             continue
         }
 
@@ -87,57 +80,68 @@ fun <R> withLock(
                 lockFile.deleteForcefully()
             }
         } finally {
-            synchronized(openCurrentJvm) {
-                lock.unlock()
-                openCurrentJvm.remove(normalized)
-            }
+            openCurrentJvm.remove(normalized)
+            lock.unlock()
         }
     }
 }
 
-// TODO: Open an actual exclusive lock using FileChannel
 private fun acquireProcessLockWaiting(
     lockFile: Path,
     logger: Logger,
-    alreadyWaited: Long = 0,
+    alreadyWaited: Long,
     printInfoAfter: Long,
     timeoutMs: Long,
 ) {
-    val currentPid = ProcessHandle.current().pid()
-
-    if (lockFile.exists()) {
-        val lockingProcessId = lockFile.readText().toLong()
-        if (lockingProcessId == currentPid) {
-            throw IllegalStateException("Lock file '$lockFile' is currently held by this process.")
-        } else {
-            logger.lifecycle("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
-        }
-
-        if (ProcessHandle.of(lockingProcessId).isEmpty) {
-            logger.lifecycle("Locking process does not exist, assuming abrupt termination and deleting lock file.")
-            lockFile.deleteIfExists()
-        } else {
-            logger.lifecycle("Waiting for lock to be released...")
-            var sleptMs: Long = alreadyWaited
-            while (lockFile.exists()) {
-                Thread.sleep(100)
-                sleptMs += 100
-                if (sleptMs >= printInfoAfter && sleptMs % printInfoAfter == 0L) {
-                    logger.lifecycle(
-                        "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
-                            "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop' and then try again.\n" +
-                            "If the problem persists, the lock file may need to be deleted manually."
-                    )
-                }
-                if (sleptMs >= timeoutMs) {
-                    throw PaperweightException("Have been waiting on lock file '$lockFile' for $sleptMs ms. Giving up as timeout is $timeoutMs ms.")
-                }
-            }
-        }
-    }
-
     if (!lockFile.parent.exists()) {
         lockFile.parent.createDirectories()
     }
-    lockFile.writeText(currentPid.toString())
+
+    val currentPid = ProcessHandle.current().pid()
+    var sleptMs: Long = alreadyWaited
+
+    while (true) {
+        if (lockFile.exists()) {
+            val lockingProcessId = lockFile.readText().toLong()
+            if (lockingProcessId == currentPid) {
+                throw IllegalStateException("Lock file '$lockFile' is currently held by this process.")
+            } else {
+                logger.lifecycle("Lock file '$lockFile' is currently held by pid '$lockingProcessId'.")
+            }
+
+            if (ProcessHandle.of(lockingProcessId).isEmpty) {
+                logger.lifecycle("Locking process does not exist, assuming abrupt termination and deleting lock file.")
+                lockFile.deleteIfExists()
+            } else {
+                logger.lifecycle("Waiting for lock to be released...")
+                while (lockFile.exists()) {
+                    Thread.sleep(100)
+                    sleptMs += 100
+                    if (sleptMs >= printInfoAfter && sleptMs % printInfoAfter == 0L) {
+                        logger.lifecycle(
+                            "Have been waiting on lock file '$lockFile' held by pid '$lockingProcessId' for ${sleptMs / 1000 / 60} minute(s).\n" +
+                                "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop', and then" +
+                                " try again.\nIf the problem persists, the lock file may need to be deleted manually."
+                        )
+                    }
+                    if (sleptMs >= timeoutMs) {
+                        throw PaperweightException(
+                            "Have been waiting on lock file '$lockFile' for $sleptMs ms. Giving up as timeout is $timeoutMs ms."
+                        )
+                    }
+                }
+            }
+        }
+
+        try {
+            lockFile.writeText(
+                currentPid.toString(),
+                options = arrayOf(StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW, StandardOpenOption.SYNC)
+            )
+        } catch (e: FileAlreadyExistsException) {
+            continue
+        }
+
+        break
+    }
 }
