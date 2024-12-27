@@ -65,6 +65,6 @@ class CacheCleaner(private val work: Path) {
 
         val took = System.nanoTime() - start
         val level = if (deleted > 0) LogLevel.LIFECYCLE else LogLevel.INFO
-        logger.log(level, "paperweight-userdev: Cleaned $deleted files totaling ${deletedSize / 1024}KB in ${took / 1_000_000}ms")
+        logger.log(level, "paperweight-userdev: Deleted $deleted expired cache entries totaling ${deletedSize / 1024}KB in ${took / 1_000_000}ms")
     }
 }
