@@ -72,8 +72,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         setup.populateRuntimeConfiguration(context, dependencySet)
     }
 
-    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
-        setup.generateCombinedOrClassesJar(context, output, legacyOutput)
+    override fun generateArtifacts(context: SetupHandler.ExecutionContext): SetupHandler.ArtifactsResult {
+        return setup.generateArtifacts(context)
     }
 
     override fun extractReobfMappings(output: Path) {

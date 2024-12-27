@@ -232,15 +232,12 @@ class SetupHandlerImplV2(
     }
 
     @Volatile
-    private var completedOutput: Pair<Path, Path>? = null
+    private var completedOutput: SetupHandler.ArtifactsResult? = null
 
     @Synchronized
-    override fun generateCombinedOrClassesJar(context: SetupHandler.ExecutionContext, output: Path, legacyOutput: Path?) {
+    override fun generateArtifacts(context: SetupHandler.ExecutionContext): SetupHandler.ArtifactsResult {
         if (completedOutput != null) {
-            val (main, legacy) = requireNotNull(completedOutput)
-            main.copyTo(output, true)
-            legacy.copyTo(requireNotNull(legacyOutput), true)
-            return
+            return requireNotNull(completedOutput)
         }
 
         val dispatcher = createDispatcher(context)
@@ -251,9 +248,8 @@ class SetupHandlerImplV2(
                 progressLogger.progress(it)
             }
         }
-        filter.get().copyTo(output, true)
-        paperclip.get().copyTo(requireNotNull(legacyOutput), true)
-        completedOutput = filter.get() to paperclip.get()
+        return SetupHandler.ArtifactsResult(filter.get(), paperclip.get())
+            .also { completedOutput = it }
     }
 
     override fun extractReobfMappings(output: Path) {
