@@ -58,7 +58,7 @@ private fun readDevBundle(
     if (dataVersion !in supported) {
         throw PaperweightException(
             "The paperweight development bundle you are attempting to use is of data version '$dataVersion', but" +
-                " the currently running version of paperweight only supports data versions '$supported'."
+                " the currently running version of paperweight only supports data versions '${supported.keys}'."
         )
     }
 
