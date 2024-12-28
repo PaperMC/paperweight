@@ -63,28 +63,28 @@ class VanillaServerDownloads(
         )
         val versionManifest: MinecraftVersionManifest = gson.fromJson(versionManifestPath)
 
-        val dispatcher = ioDispatcher("VanillaServerDownloads")
-        runBlocking {
-            launch(dispatcher) {
-                val serverTmp = tmp.resolve("server.jar")
-                downloadService.downloadFile(
-                    versionManifest.serverDownload().url,
-                    serverTmp,
-                    expectedHash = versionManifest.serverDownload().hash()
-                )
-                serverTmp.copyTo(serverJar.get(), overwrite = true)
-            }
-            launch(dispatcher) {
-                val mappingsTmp = tmp.resolve("mappings.txt")
-                downloadService.downloadFile(
-                    versionManifest.serverMappingsDownload().url,
-                    mappingsTmp,
-                    expectedHash = versionManifest.serverMappingsDownload().hash()
-                )
-                mappingsTmp.copyTo(serverMappings.get(), overwrite = true)
+        ioDispatcher("VanillaServerDownloads").use { dispatcher ->
+            runBlocking {
+                launch(dispatcher) {
+                    val serverTmp = tmp.resolve("server.jar")
+                    downloadService.downloadFile(
+                        versionManifest.serverDownload().url,
+                        serverTmp,
+                        expectedHash = versionManifest.serverDownload().hash()
+                    )
+                    serverTmp.copyTo(serverJar.get(), overwrite = true)
+                }
+                launch(dispatcher) {
+                    val mappingsTmp = tmp.resolve("mappings.txt")
+                    downloadService.downloadFile(
+                        versionManifest.serverMappingsDownload().url,
+                        mappingsTmp,
+                        expectedHash = versionManifest.serverMappingsDownload().hash()
+                    )
+                    mappingsTmp.copyTo(serverMappings.get(), overwrite = true)
+                }
             }
         }
-        dispatcher.close()
 
         tmp.deleteRecursive()
     }

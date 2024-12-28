@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.action
 
+import io.papermc.paperweight.userdev.internal.util.formatNs
 import io.papermc.paperweight.util.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,13 +41,14 @@ class CacheCleaner(private val work: Path) {
         }
 
         val start = System.nanoTime()
-        var deleted = 0
-        var deletedSize = 0L
 
+        val delete = mutableListOf<Path>()
+        val keep = mutableListOf<Path>()
         work.listDirectoryEntries().forEach {
-            val lockFile = it.resolve("lock")
-            if (lockFile.exists()) {
-                return@forEach
+            if (it.resolve("lock").exists()) {
+                val took = System.nanoTime() - start
+                logger.info("paperweight-userdev: Aborted cache cleanup in ${formatNs(took)} due to locked cache entry (${it.name})")
+                return
             }
             val metadataFile = it.resolve("metadata.json")
             if (!metadataFile.isRegularFile()) {
@@ -54,6 +56,23 @@ class CacheCleaner(private val work: Path) {
             }
             val since = System.currentTimeMillis() - metadataFile.getLastModifiedTime().toMillis()
             if (since > deleteUnusedAfter) {
+                delete.add(it)
+            } else {
+                keep.add(it)
+            }
+        }
+
+        var deleted = 0
+        var deletedSize = 0L
+        if (delete.isNotEmpty()) {
+            keep.forEach { k ->
+                val metadataFile = k.resolve("metadata.json")
+                gson.fromJson<WorkGraph.Metadata>(metadataFile).skippedWhenUpToDate?.let {
+                    delete.removeIf { o -> o.name in it }
+                }
+            }
+
+            delete.forEach {
                 deleted++
                 it.deleteRecursive { toDelete ->
                     if (toDelete.isRegularFile()) {
@@ -65,6 +84,6 @@ class CacheCleaner(private val work: Path) {
 
         val took = System.nanoTime() - start
         val level = if (deleted > 0) LogLevel.LIFECYCLE else LogLevel.INFO
-        logger.log(level, "paperweight-userdev: Deleted $deleted expired cache entries totaling ${deletedSize / 1024}KB in ${took / 1_000_000}ms")
+        logger.log(level, "paperweight-userdev: Deleted $deleted expired cache entries totaling ${deletedSize / 1024}KB in ${formatNs(took)}")
     }
 }

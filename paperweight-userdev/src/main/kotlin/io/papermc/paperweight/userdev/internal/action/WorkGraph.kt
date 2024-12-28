@@ -45,6 +45,7 @@ class WorkGraph(
     class Node(
         val registration: WorkDispatcherImpl.Registration,
         val dependencies: List<Node>,
+        var inputHash: String? = null,
     )
 
     private val roots: List<Node> = buildGraph(requested.toList())
@@ -101,6 +102,7 @@ class WorkGraph(
 
     data class Metadata(
         val outputHashes: List<String>,
+        val skippedWhenUpToDate: Set<String>?,
         val lastUsed: Long = System.currentTimeMillis(),
     ) {
         fun updateLastUsed() = copy(lastUsed = System.currentTimeMillis())
@@ -143,18 +145,19 @@ class WorkGraph(
                 .hash(HashingAlgorithm.SHA256)
                 .asHexString()
         }
+        node.inputHash = inputHash
 
         realizeOutputPaths(node, work, inputHash)
 
         val lockFile = work.resolve("${node.registration.name}_$inputHash/lock")
 
-        val hashFile = work.resolve("${node.registration.name}_$inputHash/metadata.json")
+        val metadataFile = work.resolve("${node.registration.name}_$inputHash/metadata.json")
         val upToDate = withLock(lockFile) {
-            if (hashFile.exists()) {
-                val metadata = hashFile.bufferedReader().use { gson.fromJson(it, Metadata::class.java) }
+            if (metadataFile.exists()) {
+                val metadata = metadataFile.bufferedReader().use { gson.fromJson(it, Metadata::class.java) }
                 if (node.registration.outputs.hash(hashCache) == metadata.outputHashes) {
                     logger.lifecycle("Skipping ${node.registration.name} (up-to-date)")
-                    metadata.updateLastUsed().writeTo(hashFile)
+                    metadata.updateLastUsed().writeTo(metadataFile)
                     val took = System.nanoTime() - start
                     logger.info("Up-to-date check for ${node.registration.name} took ${formatNs(took)} (up-to-date)")
                     return@withLock true
@@ -175,8 +178,9 @@ class WorkGraph(
                     throw PaperweightException("Exception executing ${node.registration.name}", e)
                 }
 
-                val metadata = Metadata(node.registration.outputs.hash(hashCache))
-                metadata.writeTo(hashFile)
+                val deps = if (root && terminalInputHash != null) collectDependencies(node) else null
+                val metadata = Metadata(node.registration.outputs.hash(hashCache), deps?.takeIf { it.isNotEmpty() })
+                metadata.writeTo(metadataFile)
 
                 val tookExec = System.nanoTime() - startExec
                 logger.lifecycle("Finished ${node.registration.name} in ${formatNs(tookExec)}")
@@ -191,6 +195,22 @@ class WorkGraph(
         if (earlyUpToDateCheck) {
             executeNode(work, node, visited, hashCache, progressEventListener, true)
         }
+    }
+
+    private fun collectDependencies(node: Node): Set<String> {
+        val deps = mutableSetOf<String>()
+        val nodes = mutableListOf<Node>()
+        nodes.add(node)
+        while (nodes.isNotEmpty()) {
+            val n = nodes.removeAt(0)
+            for (dep in n.dependencies) {
+                nodes.add(dep)
+                if (dep != node) {
+                    deps += "${dep.registration.name}_${dep.inputHash}"
+                }
+            }
+        }
+        return deps
     }
 
     private fun List<Value<*>>.hash(cache: MutableMap<Value<*>, String>): List<String> {
