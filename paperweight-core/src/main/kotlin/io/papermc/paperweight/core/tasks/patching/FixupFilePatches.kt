@@ -24,6 +24,7 @@ package io.papermc.paperweight.core.tasks.patching
 
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -44,7 +45,7 @@ abstract class FixupFilePatches : BaseTask() {
     fun run() {
         val git = Git(repo)
         git("add", ".").executeOut()
-        git("commit", "--fixup", "file").executeOut()
+        git("commit", "--fixup", MACHE_TAG_FILE).executeOut()
         git("-c", "sequence.editor=:", "rebase", "-i", "--autosquash", upstream.get()).executeOut()
     }
 }

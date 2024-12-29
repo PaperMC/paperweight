@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.tasks.patching
 
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -50,7 +51,7 @@ class RebuildFilePatchesTest : TaskTest() {
         val testInput = testResource.resolve("input")
 
         val source = setupDir(tempDir, testInput, "source").toFile()
-        setupGitRepo(source, "main", "file")
+        setupGitRepo(source, "main", MACHE_TAG_FILE)
         setupGitRepo(tempDir.toFile(), "main", "dum")
         setupGitHook(source)
         val base = setupDir(tempDir, testInput, "base").toFile()

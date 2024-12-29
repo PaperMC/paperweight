@@ -23,6 +23,7 @@
 package io.papermc.paperweight
 
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -101,7 +102,7 @@ class FunctionalTest {
 
         Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
             git("add", ".").executeSilently()
-            git("commit", "--fixup", "file").executeSilently()
+            git("commit", "--fixup", MACHE_TAG_FILE).executeSilently()
             git("rebase", "--autosquash", "upstream/main").executeSilently()
         }
 
