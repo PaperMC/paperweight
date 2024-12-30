@@ -127,26 +127,26 @@ interface SetupHandler {
 
     companion object {
         @Suppress("unchecked_cast")
-        fun create(
-            parameters: UserdevSetup.Parameters,
-            bundleInfo: BundleInfo<Any>
-        ): SetupHandler = when (bundleInfo.config) {
-            is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
-                parameters,
-                bundleInfo as BundleInfo<GenerateDevBundle.DevBundleConfig>,
-            )
+        fun create(parameters: UserdevSetup.Parameters): SetupHandler {
+            val bundleInfo = readBundleInfo(parameters.bundleZip.path)
+            return when (bundleInfo.config) {
+                is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
+                    parameters,
+                    bundleInfo as BundleInfo<GenerateDevBundle.DevBundleConfig>,
+                )
 
-            is DevBundleV5.Config -> SetupHandlerImplV5(
-                parameters,
-                bundleInfo as BundleInfo<DevBundleV5.Config>
-            )
+                is DevBundleV5.Config -> SetupHandlerImplV5(
+                    parameters,
+                    bundleInfo as BundleInfo<DevBundleV5.Config>
+                )
 
-            is DevBundleV2.Config -> SetupHandlerImplV2(
-                parameters,
-                bundleInfo as BundleInfo<DevBundleV2.Config>
-            )
+                is DevBundleV2.Config -> SetupHandlerImplV2(
+                    parameters,
+                    bundleInfo as BundleInfo<DevBundleV2.Config>
+                )
 
-            else -> throw PaperweightException("Unknown dev bundle config type: ${bundleInfo.config::class.java.typeName}")
+                else -> throw PaperweightException("Unknown dev bundle config type: ${bundleInfo.config::class.java.typeName}")
+            }
         }
     }
 }

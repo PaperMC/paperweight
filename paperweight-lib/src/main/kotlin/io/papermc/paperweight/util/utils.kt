@@ -483,11 +483,12 @@ fun ioDispatcher(name: String): ExecutorCoroutineDispatcher =
     Executors.newFixedThreadPool(
         Runtime.getRuntime().availableProcessors(),
         object : ThreadFactory {
-            val logger = Logging.getLogger("$name-ioDispatcher-${ioDispatcherCount.getAndIncrement()}")
+            val id = ioDispatcherCount.getAndIncrement()
+            val logger = Logging.getLogger("$name-ioDispatcher-$id")
             val count = AtomicInteger(0)
 
             override fun newThread(r: Runnable): Thread {
-                val thr = Thread(r, "$name-ioDispatcher-${ioDispatcherCount.getAndIncrement()}-Thread-${count.getAndIncrement()}")
+                val thr = Thread(r, "$name-ioDispatcher-$id-Thread-${count.getAndIncrement()}")
                 thr.setUncaughtExceptionHandler { thread, ex ->
                     logger.error("Uncaught exception in thread $thread", ex)
                 }

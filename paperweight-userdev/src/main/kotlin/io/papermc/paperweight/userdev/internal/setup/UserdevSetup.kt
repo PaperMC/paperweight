@@ -23,7 +23,7 @@
 package io.papermc.paperweight.userdev.internal.setup
 
 import io.papermc.paperweight.DownloadService
-import io.papermc.paperweight.userdev.internal.action.CacheCleaner
+import io.papermc.paperweight.userdev.internal.action.CacheManager
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import org.gradle.api.Project
@@ -38,20 +38,19 @@ import org.gradle.tooling.events.OperationCompletionListener
 abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandler, AutoCloseable, OperationCompletionListener {
 
     interface Parameters : BuildServiceParameters {
-        val bundleZip: RegularFileProperty
-        val bundleZipHash: Property<String>
         val cache: RegularFileProperty
         val downloadService: Property<DownloadService>
         val genSources: Property<Boolean>
-        val deleteUnusedAfter: Property<Long>
+
+        val bundleZip: RegularFileProperty
+        val bundleZipHash: Property<String>
+
+        val expireUnusedAfter: Property<Long>
+        val performCleanupAfter: Property<Long>
+        val delayCleanupBy: Property<Long>
     }
 
-    private val bundleInfo: BundleInfo<Any> = readBundleInfo(parameters.bundleZip.path)
-
-    private val setup = createSetup()
-
-    private fun createSetup(): SetupHandler =
-        SetupHandler.create(parameters, bundleInfo)
+    private val setup: SetupHandler = SetupHandler.create(parameters)
 
     override fun onFinish(event: FinishEvent?) {
         // no-op, a workaround to keep the service alive for the entire build
@@ -59,8 +58,12 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     }
 
     override fun close() {
-        CacheCleaner(parameters.cache.path)
-            .cleanCache(parameters.deleteUnusedAfter.get())
+        CacheManager(parameters.cache.path).performMaintenance(
+            parameters.expireUnusedAfter.get(),
+            parameters.performCleanupAfter.get(),
+            parameters.delayCleanupBy.get(),
+            parameters.bundleZipHash.get(),
+        )
     }
 
     // begin delegate to setup

@@ -33,8 +33,10 @@ import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
 import io.papermc.paperweight.userdev.internal.util.cleanSharedCaches
-import io.papermc.paperweight.userdev.internal.util.deleteUnusedAfter
+import io.papermc.paperweight.userdev.internal.util.delayCleanupBy
+import io.papermc.paperweight.userdev.internal.util.expireUnusedAfter
 import io.papermc.paperweight.userdev.internal.util.genSources
+import io.papermc.paperweight.userdev.internal.util.performCleanupAfter
 import io.papermc.paperweight.userdev.internal.util.sharedCaches
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -350,17 +352,20 @@ abstract class PaperweightUser : Plugin<Project> {
         }
 
         val serviceName = "paperweight-userdev:setupService:$bundleHash"
-        val ret = target.gradle.sharedServices
-            .registerIfAbsent(serviceName, UserdevSetup::class) {
-                parameters {
-                    cache.set(cacheDir)
-                    bundleZip.set(devBundleZip)
-                    bundleZipHash.set(bundleHash)
-                    downloadService.set(target.download)
-                    genSources.set(target.genSources)
-                    deleteUnusedAfter.set(deleteUnusedAfter(target))
-                }
+        val ret = target.gradle.sharedServices.registerIfAbsent(serviceName, UserdevSetup::class) {
+            parameters {
+                cache.set(cacheDir)
+                downloadService.set(target.download)
+                genSources.set(target.genSources)
+
+                bundleZip.set(devBundleZip)
+                bundleZipHash.set(bundleHash)
+
+                expireUnusedAfter.set(expireUnusedAfter(target))
+                performCleanupAfter.set(performCleanupAfter(target))
+                delayCleanupBy.set(delayCleanupBy(target))
             }
+        }
         buildEventsListenerRegistry.onTaskCompletion(ret)
         return ret
     }

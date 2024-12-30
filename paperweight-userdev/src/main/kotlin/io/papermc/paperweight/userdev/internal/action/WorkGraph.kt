@@ -40,6 +40,7 @@ class WorkGraph(
 ) {
     companion object {
         private val logger = Logging.getLogger(WorkGraph::class.java)
+        const val METADATA_FILE = "metadata.json"
     }
 
     class Node(
@@ -151,7 +152,7 @@ class WorkGraph(
 
         val lockFile = work.resolve("${node.registration.name}_$inputHash/lock")
 
-        val metadataFile = work.resolve("${node.registration.name}_$inputHash/metadata.json")
+        val metadataFile = work.resolve("${node.registration.name}_$inputHash/$METADATA_FILE")
         val upToDate = withLock(lockFile) {
             if (metadataFile.exists()) {
                 val metadata = metadataFile.bufferedReader().use { gson.fromJson(it, Metadata::class.java) }

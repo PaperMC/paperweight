@@ -74,11 +74,34 @@ val Project.sharedCaches: Boolean
         .orElse(true)
         .get()
 
-fun deleteUnusedAfter(target: Project): Provider<Long> = target.providers.gradleProperty(stableProp("sharedCaches.deleteUnusedAfter"))
-    .map { value -> parseDuration(value) }
-    .orElse(Duration.ofDays(7))
-    .map { duration -> duration.toMillis() }
+private fun Provider<String>.durationMillis(): Provider<Long> = map { value -> parseDuration(value).toMillis() }
 
+// how long a cache entry must be unused for before it is considered expired
+fun expireUnusedAfter(target: Project): Provider<Long> =
+    target.providers.gradleProperty(experimentalProp("caches.expireUnusedAfter"))
+        .durationMillis()
+        .orElse(deleteUnusedAfter(target))
+
+// how often to clean up expired cache entries
+fun performCleanupAfter(target: Project): Provider<Long> =
+    target.providers.gradleProperty(experimentalProp("caches.performCleanupAfter"))
+        .durationMillis()
+        .orElse(expireUnusedAfter(target))
+
+// how long to delay cleanup by. this way if someone comes back to work on projects after a
+// break, the first userdev project won't delete caches used by later ones *immediately*
+fun delayCleanupBy(target: Project): Provider<Long> =
+    target.providers.gradleProperty(experimentalProp("caches.delayCleanupBy"))
+        .durationMillis()
+        .orElse(Duration.ofHours(12).toMillis())
+
+// v1 cache cleanup
+private fun deleteUnusedAfter(target: Project): Provider<Long> =
+    target.providers.gradleProperty(stableProp("sharedCaches.deleteUnusedAfter"))
+        .durationMillis()
+        .orElse(Duration.ofDays(7).toMillis())
+
+// v1 cache cleanup
 fun cleanSharedCaches(target: Project, root: Path) {
     if (!root.exists()) {
         return
