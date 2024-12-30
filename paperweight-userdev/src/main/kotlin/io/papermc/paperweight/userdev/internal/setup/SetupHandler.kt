@@ -42,6 +42,7 @@ import org.gradle.internal.logging.progress.ProgressLogger
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
@@ -59,9 +60,16 @@ interface SetupHandler {
     fun extractReobfMappings(output: Path)
 
     fun afterEvaluate(context: ConfigurationContext) {
+        context.project.tasks.named<RemapJar>("reobfJar") {
+            remapperArgs.convention(pluginRemapArgs)
+            fromNamespace.convention(deobfNamespace)
+        }
     }
 
     val minecraftVersion: String
+
+    val deobfNamespace: String
+        get() = DEOBF_NAMESPACE
 
     val pluginRemapArgs: List<String>
 

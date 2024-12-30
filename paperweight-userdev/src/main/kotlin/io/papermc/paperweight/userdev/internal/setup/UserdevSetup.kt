@@ -89,6 +89,9 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
     override val minecraftVersion: String
         get() = setup.minecraftVersion
 
+    override val deobfNamespace: String
+        get() = setup.deobfNamespace
+
     override val pluginRemapArgs: List<String>
         get() = setup.pluginRemapArgs
 

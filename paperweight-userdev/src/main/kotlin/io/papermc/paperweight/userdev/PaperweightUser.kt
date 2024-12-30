@@ -122,18 +122,14 @@ abstract class PaperweightUser : Plugin<Project> {
 
         createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
-        val reobfJar by target.tasks.registering<RemapJarTiny> {
+        val reobfJar by target.tasks.registering<RemapJar> {
             group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
             mappingsFile.set(setupTask.flatMap { it.reobfMappings })
             remapClasspath.from(setupTask.flatMap { it.mappedServerJar })
-
-            fromNamespace.set(DEOBF_NAMESPACE)
             toNamespace.set(SPIGOT_NAMESPACE)
-
             remapper.from(project.configurations.named(PLUGIN_REMAPPER_CONFIG))
-            remapperArgs.set(target.provider { userdevSetup.pluginRemapArgs })
         }
 
         target.configurations.register(REOBF_CONFIG) {

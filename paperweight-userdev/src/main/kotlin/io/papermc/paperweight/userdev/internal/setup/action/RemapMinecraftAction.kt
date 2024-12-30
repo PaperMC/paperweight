@@ -53,7 +53,7 @@ class RemapMinecraftAction(
             inputJar = filteredVanillaJar.get(),
             mappingsFile = mappings.get(),
             fromNamespace = OBF_NAMESPACE,
-            toNamespace = DEOBF_NAMESPACE,
+            toNamespace = LEGACY_DEOBF_NAMESPACE,
             remapClasspath = minecraftLibraryJars.get().jars(),
             remapper = remapper.get(),
             outputJar = outputJar.get(),

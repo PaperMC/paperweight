@@ -276,6 +276,9 @@ class SetupHandlerImplV2(
     override val minecraftVersion: String
         get() = bundle.config.minecraftVersion
 
+    override val deobfNamespace: String
+        get() = LEGACY_DEOBF_NAMESPACE
+
     override val pluginRemapArgs: List<String>
         get() = TinyRemapper.pluginRemapArgs // plugin remap args were not included in v2 bundles, if these change check this
 

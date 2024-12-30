@@ -54,6 +54,7 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
@@ -68,6 +69,7 @@ fun generateMappings(
     vanillaMappingsPath: Path,
     paramMappingsPath: Path?,
     outputMappingsPath: Path,
+    deobfNamespaceString: String,
     workerExecutor: WorkerExecutor,
     launcher: JavaLauncher,
     jvmArgs: List<String> = listOf("-Xmx1G")
@@ -83,6 +85,7 @@ fun generateMappings(
         vanillaMappings.set(vanillaMappingsPath)
         paramMappings.set(paramMappingsPath)
         outputMappings.set(outputMappingsPath)
+        deobfNamespace.set(deobfNamespaceString)
     }
 
     return queue
@@ -129,6 +132,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
             vanillaMappings.path,
             paramMappings.pathOrNull,
             outputMappings.path,
+            DEOBF_NAMESPACE,
             workerExecutor,
             launcher.get(),
             jvmargs.get()
@@ -141,6 +145,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
         val vanillaMappings: RegularFileProperty
         val paramMappings: RegularFileProperty
         val outputMappings: RegularFileProperty
+        val deobfNamespace: Property<String>
     }
 
     abstract class GenerateMappingsAction : WorkAction<GenerateMappingsParams> {
@@ -184,7 +189,7 @@ abstract class GenerateMappings : JavaLauncherTask() {
                 }
 
             ensureParentExists(parameters.outputMappings)
-            MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, OBF_NAMESPACE, DEOBF_NAMESPACE)
+            MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, OBF_NAMESPACE, parameters.deobfNamespace.get())
         }
     }
 }

@@ -35,7 +35,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
-abstract class RemapJarTiny : JavaLauncherTask() {
+abstract class RemapJar : JavaLauncherTask() {
 
     @get:Classpath
     abstract val inputJar: RegularFileProperty

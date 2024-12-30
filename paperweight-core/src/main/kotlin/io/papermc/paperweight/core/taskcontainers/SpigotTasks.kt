@@ -60,7 +60,7 @@ open class SpigotTasks(
 
         sourceMappings.set(generateMappings.flatMap { it.outputMappings })
 
-        outputMappings.set(cache.resolve(SPIGOT_MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(SPIGOT_MOJANG_MAPPINGS))
         notchToSpigotMappings.set(cache.resolve(OBF_SPIGOT_MAPPINGS))
         spigotMemberMappings.set(cache.resolve(SPIGOT_MEMBER_MAPPINGS))
     }
@@ -87,7 +87,7 @@ open class SpigotTasks(
         libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
         inputMappings.set(generateSpigotMappings.flatMap { it.outputMappings })
 
-        outputMappings.set(cache.resolve(CLEANED_SPIGOT_MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(CLEANED_SPIGOT_MOJANG_MAPPINGS))
     }
 
     val patchMappings by tasks.registering<PatchMappings> {
@@ -97,6 +97,6 @@ open class SpigotTasks(
         fromNamespace.set(SPIGOT_NAMESPACE)
         toNamespace.set(DEOBF_NAMESPACE)
 
-        outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(PATCHED_SPIGOT_MOJANG_MAPPINGS))
     }
 }

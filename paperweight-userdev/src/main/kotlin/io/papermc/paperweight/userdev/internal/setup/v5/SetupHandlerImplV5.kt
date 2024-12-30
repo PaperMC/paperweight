@@ -34,6 +34,7 @@ import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.action.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.artifacts.DependencySet
@@ -270,6 +271,9 @@ class SetupHandlerImplV5(
 
     override val minecraftVersion: String
         get() = bundle.config.minecraftVersion
+
+    override val deobfNamespace: String
+        get() = LEGACY_DEOBF_NAMESPACE
 
     override val pluginRemapArgs: List<String>
         get() = bundle.config.buildData.pluginRemapArgs

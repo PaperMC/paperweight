@@ -31,6 +31,7 @@ import io.papermc.paperweight.userdev.internal.action.Output
 import io.papermc.paperweight.userdev.internal.action.Value
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
 import io.papermc.paperweight.userdev.internal.util.jars
+import io.papermc.paperweight.util.constants.*
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.workers.WorkerExecutor
 
@@ -50,6 +51,7 @@ class GenerateMappingsAction(
             vanillaMappingsPath = serverMappings.get(),
             paramMappingsPath = paramMappings.get().singleFile.toPath(),
             outputMappingsPath = outputMappings.get(),
+            deobfNamespaceString = LEGACY_DEOBF_NAMESPACE,
             workerExecutor = workerExecutor,
             launcher = javaLauncher.get()
         ).await()

@@ -66,7 +66,7 @@ fun Project.createBuildTasks(
         }
     }
 
-    val reobfJar by tasks.registering<RemapJarTiny> {
+    val reobfJar by tasks.registering<RemapJar> {
         group = "build"
         description = "Re-obfuscate the built jar to obf mappings"
 
@@ -102,5 +102,5 @@ fun Task.reobfRequiresDebug() {
 
 data class ServerBuildTasks(
     val includeMappings: TaskProvider<IncludeMappings>,
-    val reobfJar: TaskProvider<RemapJarTiny>,
+    val reobfJar: TaskProvider<RemapJar>,
 )

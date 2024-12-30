@@ -108,6 +108,6 @@ open class InitialTasks(
 
         vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
 
-        outputMappings.set(cache.resolve(MOJANG_YARN_MAPPINGS))
+        outputMappings.set(cache.resolve(MOJANG_MAPPINGS))
     }
 }
