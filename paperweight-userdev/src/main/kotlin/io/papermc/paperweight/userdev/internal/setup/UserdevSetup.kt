@@ -26,7 +26,6 @@ import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.userdev.internal.action.CacheManager
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
-import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -83,8 +82,8 @@ abstract class UserdevSetup : BuildService<UserdevSetup.Parameters>, SetupHandle
         setup.extractReobfMappings(output)
     }
 
-    override fun afterEvaluate(project: Project) {
-        setup.afterEvaluate(project)
+    override fun afterEvaluate(context: SetupHandler.ConfigurationContext) {
+        setup.afterEvaluate(context)
     }
 
     override val minecraftVersion: String

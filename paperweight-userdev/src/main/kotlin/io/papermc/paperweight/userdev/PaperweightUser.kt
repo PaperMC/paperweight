@@ -180,7 +180,7 @@ abstract class PaperweightUser : Plugin<Project> {
             configureRepositories(userdevSetup)
 
             setupTask.configure { setupService.set(userdevSetupProvider) }
-            userdevSetup.afterEvaluate(this)
+            userdevSetup.afterEvaluate(createContext(this, setupTask))
 
             userdev.addServerDependencyTo.get().forEach {
                 it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
@@ -339,7 +339,7 @@ abstract class PaperweightUser : Plugin<Project> {
     }
 
     private fun createContext(project: Project, setupTask: TaskProvider<UserdevSetupTask>): SetupHandler.ConfigurationContext =
-        SetupHandler.ConfigurationContext(project, dependencyFactory, setupTask)
+        SetupHandler.ConfigurationContext(project, dependencyFactory, javaToolchainService, setupTask)
 
     private fun createSetup(target: Project): Provider<UserdevSetup> {
         val bundleConfig = target.configurations.named(DEV_BUNDLE_CONFIG)

@@ -23,6 +23,7 @@
 package io.papermc.paperweight.userdev.internal.setup.v2
 
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.userdev.PaperweightUserExtension
 import io.papermc.paperweight.userdev.internal.action.*
 import io.papermc.paperweight.userdev.internal.action.Input
 import io.papermc.paperweight.userdev.internal.action.Output
@@ -35,8 +36,8 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImplV2(
@@ -258,10 +259,17 @@ class SetupHandlerImplV2(
         }
     }
 
-    override fun afterEvaluate(project: Project) {
-        super.afterEvaluate(project)
-        project.tasks.withType(UserdevSetupTask::class).configureEach {
+    override fun afterEvaluate(context: SetupHandler.ConfigurationContext) {
+        super.afterEvaluate(context)
+        context.project.tasks.withType(UserdevSetupTask::class).configureEach {
             legacyPaperclipResult.set(layout.cache.resolve(paperTaskOutput("legacyPaperclipResult", "jar")))
+        }
+        context.project.extensions.configure<PaperweightUserExtension> {
+            javaLauncher.convention(
+                context.javaToolchainService.launcherFor {
+                    languageVersion.set(JavaLanguageVersion.of(17))
+                }
+            )
         }
     }
 

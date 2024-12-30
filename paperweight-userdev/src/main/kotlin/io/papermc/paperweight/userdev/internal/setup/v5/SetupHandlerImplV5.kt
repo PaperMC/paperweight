@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.setup.v5
 
+import io.papermc.paperweight.userdev.PaperweightUserExtension
 import io.papermc.paperweight.userdev.internal.action.FileCollectionValue
 import io.papermc.paperweight.userdev.internal.action.StringValue
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
@@ -36,6 +37,8 @@ import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.kotlin.dsl.*
 
 class SetupHandlerImplV5(
     private val parameters: UserdevSetup.Parameters,
@@ -239,6 +242,29 @@ class SetupHandlerImplV5(
     override fun extractReobfMappings(output: Path) {
         bundle.zip.openZipSafe().use { fs ->
             fs.getPath(bundle.config.buildData.reobfMappingsFile).copyTo(output, true)
+        }
+    }
+
+    override fun afterEvaluate(context: SetupHandler.ConfigurationContext) {
+        super.afterEvaluate(context)
+        legacyDefaultJavaLauncher(context)
+    }
+
+    // Apply JDK 17 launcher as default for < 1.19.3
+    private fun legacyDefaultJavaLauncher(context: SetupHandler.ConfigurationContext) {
+        val versionParts = bundle.config.minecraftVersion.split('.', '-').mapNotNull { it.toIntOrNull() }
+        if (versionParts[1] > 19) {
+            return
+        }
+        if (versionParts[1] == 19 && versionParts[2] >= 3) {
+            return
+        }
+        context.project.extensions.configure<PaperweightUserExtension> {
+            javaLauncher.convention(
+                context.javaToolchainService.launcherFor {
+                    languageVersion.set(JavaLanguageVersion.of(17))
+                }
+            )
         }
     }
 

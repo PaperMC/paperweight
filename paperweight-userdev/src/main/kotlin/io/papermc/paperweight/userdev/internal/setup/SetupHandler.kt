@@ -41,6 +41,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.logging.progress.ProgressLogger
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.workers.WorkerExecutor
 
 interface SetupHandler {
@@ -57,7 +58,7 @@ interface SetupHandler {
 
     fun extractReobfMappings(output: Path)
 
-    fun afterEvaluate(project: Project) {
+    fun afterEvaluate(context: ConfigurationContext) {
     }
 
     val minecraftVersion: String
@@ -77,6 +78,7 @@ interface SetupHandler {
     data class ConfigurationContext(
         val project: Project,
         val dependencyFactory: DependencyFactory,
+        val javaToolchainService: JavaToolchainService,
         val devBundleCoordinates: String,
         val setupTask: TaskProvider<UserdevSetupTask>,
         val layout: ProjectLayout = project.layout,
@@ -84,10 +86,12 @@ interface SetupHandler {
         constructor(
             project: Project,
             dependencyFactory: DependencyFactory,
+            javaToolchainService: JavaToolchainService,
             setupTask: TaskProvider<UserdevSetupTask>
         ) : this(
             project,
             dependencyFactory,
+            javaToolchainService,
             determineArtifactCoordinates(project.configurations.getByName(DEV_BUNDLE_CONFIG)).single(),
             setupTask,
         )

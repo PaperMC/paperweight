@@ -40,7 +40,6 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Path
 import kotlin.io.path.*
-import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.FileCollection
 import org.gradle.kotlin.dsl.*
@@ -204,11 +203,11 @@ class SetupHandlerImpl(
         }
     }
 
-    override fun afterEvaluate(project: Project) {
-        super.afterEvaluate(project)
-        setupMacheMeta(project.configurations.getByName(MACHE_CONFIG))
+    override fun afterEvaluate(context: SetupHandler.ConfigurationContext) {
+        super.afterEvaluate(context)
+        setupMacheMeta(context.project.configurations.getByName(MACHE_CONFIG))
 
-        val configurations = project.configurations
+        val configurations = context.project.configurations
 
         val macheCodebook = configurations.register(MACHE_CODEBOOK_CONFIG) {
             isTransitive = false
@@ -226,7 +225,7 @@ class SetupHandlerImpl(
             isTransitive = false
         }
 
-        project.tasks.withType(UserdevSetupTask::class).configureEach {
+        context.project.tasks.withType(UserdevSetupTask::class).configureEach {
             macheCodebookConfig.from(macheCodebook)
             macheRemapperConfig.from(macheRemapper)
             macheDecompilerConfig.from(macheDecompiler)
@@ -234,8 +233,8 @@ class SetupHandlerImpl(
             macheConstantsConfig.from(macheConstants)
         }
 
-        macheMeta().addDependencies(project)
-        macheMeta().addRepositories(project)
+        macheMeta().addDependencies(context.project)
+        macheMeta().addRepositories(context.project)
     }
 
     override val minecraftVersion: String
