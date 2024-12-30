@@ -20,8 +20,9 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.userdev.internal.util
 
+import io.papermc.paperweight.util.AsmUtil
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode

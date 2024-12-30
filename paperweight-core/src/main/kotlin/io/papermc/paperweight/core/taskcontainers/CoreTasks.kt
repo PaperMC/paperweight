@@ -30,7 +30,7 @@ import io.papermc.paperweight.core.tasks.SetupPaperScript
 import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
-import io.papermc.paperweight.tasks.mache.RemapJar
+import io.papermc.paperweight.tasks.mache.RunCodebook
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
@@ -45,7 +45,7 @@ class CoreTasks(
     val mache: Property<MacheMeta>,
     tasks: TaskContainer = project.tasks
 ) : AllTasks(project) {
-    val macheRemapJar by tasks.registering(RemapJar::class) {
+    val macheRemapJar by tasks.registering(RunCodebook::class) {
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
         serverMappings.set(downloadMappings.flatMap { it.outputFile })
 

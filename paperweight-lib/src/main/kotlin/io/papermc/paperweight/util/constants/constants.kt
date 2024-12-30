@@ -109,7 +109,6 @@ const val SERVER_LIBRARIES_LIST = "$BUNDLER_PATH/libraries.list"
 const val SERVER_VERSIONS_LIST = "$BUNDLER_PATH/versions.list"
 const val SERVER_JAR = "$BUNDLER_PATH/server.jar"
 
-private const val SETUP_CACHE = "$PAPER_PATH/setupCache"
 private const val TASK_CACHE = "$PAPER_PATH/taskCache"
 
 const val FINAL_REMAPPED_CODEBOOK_JAR = "$TASK_CACHE/codebook-minecraft.jar"
@@ -120,7 +119,6 @@ const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 private const val MACHE_PATH = "$PAPER_PATH/mache"
 const val BASE_PROJECT = "$MACHE_PATH/base"
 
-fun paperSetupOutput(name: String, ext: String) = "$SETUP_CACHE/$name.$ext"
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")
 

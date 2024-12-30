@@ -20,20 +20,13 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.userdev.internal.util
 
 import io.papermc.paperweight.util.*
-import io.papermc.paperweight.util.ParameterAnnotationFixer
 import java.nio.file.Path
-import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
@@ -61,7 +54,7 @@ fun fixJar(
         forkOptions.executable(launcher.executablePath.path.absolutePathString())
     }
 
-    queue.submit(FixJarTask.FixJarAction::class) {
+    queue.submit(FixJarAction::class) {
         inputJar.set(inputJarPath)
         vanillaJar.set(vanillaJarPath)
         outputJar.set(outputJarPath)
@@ -71,77 +64,39 @@ fun fixJar(
     return queue
 }
 
-abstract class FixJarTask : JavaLauncherTask() {
-
-    @get:Classpath
-    abstract val inputJar: RegularFileProperty
-
-    @get:Classpath
-    abstract val vanillaJar: RegularFileProperty
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    @get:Internal
-    abstract val jvmArgs: ListProperty<String>
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    override fun init() {
-        super.init()
-
-        jvmArgs.convention(listOf("-Xmx512m"))
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    fun run() {
-        fixJar(
-            workerExecutor = workerExecutor,
-            jvmArgs = jvmArgs.get(),
-            launcher = launcher.get(),
-            vanillaJarPath = vanillaJar.path,
-            inputJarPath = inputJar.path,
-            outputJarPath = outputJar.path
-        )
-    }
-
-    interface FixJarParams : WorkParameters {
+abstract class FixJarAction : WorkAction<FixJarAction.Params> {
+    interface Params : WorkParameters {
         val inputJar: RegularFileProperty
         val vanillaJar: RegularFileProperty
         val outputJar: RegularFileProperty
         val useLegacyParamAnnotationFixer: Property<Boolean>
     }
 
-    abstract class FixJarAction : WorkAction<FixJarParams> {
-
-        override fun execute() {
-            parameters.vanillaJar.path.openZip().use { vanillaJar ->
-                parameters.outputJar.path.writeZip().use { out ->
-                    parameters.inputJar.path.openZip().use { jarFile ->
-                        JarProcessing.processJar(
-                            jarFile,
-                            vanillaJar,
-                            out,
-                            FixJarClassProcessor(parameters.useLegacyParamAnnotationFixer.get())
-                        )
-                    }
+    override fun execute() {
+        parameters.vanillaJar.path.openZip().use { vanillaJar ->
+            parameters.outputJar.path.writeZip().use { out ->
+                parameters.inputJar.path.openZip().use { jarFile ->
+                    JarProcessing.processJar(
+                        jarFile,
+                        vanillaJar,
+                        out,
+                        FixJarClassProcessor(parameters.useLegacyParamAnnotationFixer.get())
+                    )
                 }
             }
         }
+    }
 
-        private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor.NodeBased, AsmUtil {
-            override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
-                if (legacy) {
-                    ParameterAnnotationFixer(node).visitNode()
-                }
+    private class FixJarClassProcessor(private val legacy: Boolean) : JarProcessing.ClassProcessor.NodeBased, AsmUtil {
+        override fun processClass(node: ClassNode, classNodeCache: ClassNodeCache) {
+            if (legacy) {
+                ParameterAnnotationFixer(node).visitNode()
+            }
 
-                OverrideAnnotationAdder(node, classNodeCache).visitNode()
+            OverrideAnnotationAdder(node, classNodeCache).visitNode()
 
-                if (Opcodes.ACC_RECORD in node.access) {
-                    RecordFieldAccessFixer(node).visitNode()
-                }
+            if (Opcodes.ACC_RECORD in node.access) {
+                RecordFieldAccessFixer(node).visitNode()
             }
         }
     }

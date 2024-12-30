@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.core.tasks.patching
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import kotlin.io.path.createDirectories
+import java.nio.file.Path
+import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -88,5 +90,66 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
         git("gc").runSilently(silenceErr = true)
 
         applyGitPatches(git, "server repo", repoPath, patches.path, printOutput.get(), verbose.get())
+    }
+
+    private fun applyGitPatches(
+        git: Git,
+        target: String,
+        outputDir: Path,
+        patchDir: Path?,
+        printOutput: Boolean,
+        verbose: Boolean,
+    ) {
+        if (printOutput) {
+            logger.lifecycle("Applying patches to $target...")
+        }
+
+        val statusFile = outputDir.resolve(".git/patch-apply-failed")
+        statusFile.deleteForcefully()
+
+        git("am", "--abort").runSilently(silenceErr = true)
+
+        val patches = patchDir?.useDirectoryEntries("*.patch") { it.toMutableList() } ?: mutableListOf()
+        if (patches.isEmpty()) {
+            if (printOutput) {
+                logger.lifecycle("No patches found")
+            }
+            return
+        }
+
+        // This prevents the `git am` command line from getting too big with too many patches
+        // mostly an issue with Windows
+        layout.cache.createDirectories()
+        val tempDir = createTempDirectory(layout.cache, "paperweight")
+        try {
+            val mailDir = tempDir.resolve("new")
+            mailDir.createDirectories()
+
+            for (patch in patches) {
+                patch.copyTo(mailDir.resolve(patch.fileName))
+            }
+
+            val gitOut = printOutput && verbose
+            val result = git("am", "--3way", "--ignore-whitespace", tempDir.absolutePathString()).captureOut(gitOut)
+            if (result.exit != 0) {
+                statusFile.writeText("1")
+
+                if (!gitOut) {
+                    // Log the output anyway on failure
+                    logger.lifecycle(result.out)
+                }
+                logger.error("***   Please review above details and finish the apply then")
+                logger.error("***   save the changes with `./gradlew rebuildPatches`")
+
+                throw PaperweightException("Failed to apply patches")
+            } else {
+                statusFile.deleteForcefully()
+                if (printOutput) {
+                    logger.lifecycle("${patches.size} patches applied cleanly to $target")
+                }
+            }
+        } finally {
+            tempDir.deleteRecursive()
+        }
     }
 }

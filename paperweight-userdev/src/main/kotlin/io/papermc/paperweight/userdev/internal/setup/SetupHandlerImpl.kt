@@ -31,7 +31,7 @@ import io.papermc.paperweight.userdev.internal.action.javaLauncherValue
 import io.papermc.paperweight.userdev.internal.action.stringListValue
 import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
 import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
-import io.papermc.paperweight.userdev.internal.setup.action.RemapMinecraftMacheAction
+import io.papermc.paperweight.userdev.internal.setup.action.RunCodebookAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunPaperclipAction
 import io.papermc.paperweight.userdev.internal.setup.action.SetupMacheSourcesAction
 import io.papermc.paperweight.userdev.internal.setup.action.VanillaServerDownloads
@@ -97,7 +97,7 @@ class SetupHandlerImpl(
 
         val remap = dispatcher.register(
             "remapMinecraft",
-            RemapMinecraftMacheAction(
+            RunCodebookAction(
                 javaLauncher,
                 stringListValue(macheMeta().remapperArgs),
                 extract.vanillaServerJar,

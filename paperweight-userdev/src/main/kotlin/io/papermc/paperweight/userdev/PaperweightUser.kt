@@ -122,7 +122,7 @@ abstract class PaperweightUser : Plugin<Project> {
 
         createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
-        val reobfJar by target.tasks.registering<RemapJar> {
+        val reobfJar by target.tasks.registering<RemapJarTiny> {
             group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 

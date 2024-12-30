@@ -117,6 +117,23 @@ abstract class ApplyFilePatches : BaseTask() {
         }
     }
 
+    private fun recreateCloneDirectory(target: Path) {
+        if (target.exists()) {
+            if (target.resolve(".git").isDirectory()) {
+                val git = Git(target)
+                git("clean", "-fxd").runSilently(silenceErr = true)
+                git("reset", "--hard", "HEAD").runSilently(silenceErr = true)
+            } else {
+                for (entry in target.listDirectoryEntries()) {
+                    entry.deleteRecursive()
+                }
+                target.createDirectories()
+            }
+        } else {
+            target.createDirectories()
+        }
+    }
+
     private fun tagBase() {
         val git = Git.open(output.path.toFile())
         val ident = PersonIdent("base", "noreply+automated@papermc.io")

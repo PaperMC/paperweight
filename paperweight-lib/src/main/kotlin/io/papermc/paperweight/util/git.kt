@@ -64,6 +64,11 @@ class Git(private val repo: Path, private val env: Map<String, String> = emptyMa
         }
     }
 
+    fun disableAutoGpgSigningInRepo() {
+        invoke("config", "commit.gpgSign", "false").executeSilently(silenceErr = true)
+        invoke("config", "tag.gpgSign", "false").executeSilently(silenceErr = true)
+    }
+
     operator fun invoke(vararg args: String): Command {
         val cmd = cmd(args)
         return try {
@@ -254,4 +259,25 @@ class Command(private val processBuilder: ProcessBuilder, private val command: S
         }
         Result(run(), String(out.toByteArray()))
     }
+}
+
+fun checkoutRepoFromUpstream(
+    git: Git,
+    upstream: Path,
+    upstreamBranch: String,
+    upstreamName: String = "upstream",
+    branchName: String = "master",
+    ref: Boolean = false,
+) {
+    git("init", "--quiet").executeSilently(silenceErr = true)
+    git.disableAutoGpgSigningInRepo()
+    git("remote", "remove", upstreamName).runSilently(silenceErr = true)
+    git("remote", "add", upstreamName, upstream.toUri().toString()).executeSilently(silenceErr = true)
+    git("fetch", upstreamName, "--prune", "--prune-tags", "--force").executeSilently(silenceErr = true)
+    if (git("checkout", branchName).runSilently(silenceErr = true) != 0) {
+        git("checkout", "-b", branchName).runSilently(silenceErr = true)
+    }
+    git("reset", "--hard", if (ref) upstreamBranch else "$upstreamName/$upstreamBranch")
+        .executeSilently(silenceErr = true)
+    git("gc").runSilently(silenceErr = true)
 }

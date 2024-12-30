@@ -34,7 +34,7 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
 @CacheableTask
-abstract class RemapJar : JavaLauncherTask() {
+abstract class RunCodebook : JavaLauncherTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -68,7 +68,7 @@ abstract class RemapJar : JavaLauncherTask() {
 
     @TaskAction
     fun run() {
-        macheRemapJar(
+        runCodebook(
             launcher.get(),
             codebookClasspath,
             outputJar.path,
@@ -84,7 +84,7 @@ abstract class RemapJar : JavaLauncherTask() {
     }
 }
 
-fun macheRemapJar(
+fun runCodebook(
     launcher: JavaLauncher,
     codebookClasspath: FileCollection,
     outputJar: Path,

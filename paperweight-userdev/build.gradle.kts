@@ -10,6 +10,7 @@ dependencies {
         isTransitive = false
     }
     implementation(libs.coroutines)
+    implementation(libs.bundles.asm)
 }
 
 gradlePlugin {

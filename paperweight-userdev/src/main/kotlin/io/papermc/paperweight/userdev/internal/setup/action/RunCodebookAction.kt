@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.userdev.internal.setup.action
 
-import io.papermc.paperweight.tasks.mache.macheRemapJar
+import io.papermc.paperweight.tasks.mache.runCodebook
 import io.papermc.paperweight.userdev.internal.action.DirectoryValue
 import io.papermc.paperweight.userdev.internal.action.FileCollectionValue
 import io.papermc.paperweight.userdev.internal.action.FileValue
@@ -36,7 +36,7 @@ import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.jvm.toolchain.JavaLauncher
 
-class RemapMinecraftMacheAction(
+class RunCodebookAction(
     @Input private val javaLauncher: Value<JavaLauncher>,
     @Input val minecraftRemapArgs: ListValue<String>,
     @Input val vanillaJar: FileValue,
@@ -50,7 +50,7 @@ class RemapMinecraftMacheAction(
 ) : WorkDispatcher.Action {
     override fun execute() {
         val temp = outputJar.get().parent.resolve("work").createDirectories()
-        macheRemapJar(
+        runCodebook(
             javaLauncher.get(),
             codebook.get(),
             outputJar.get(),

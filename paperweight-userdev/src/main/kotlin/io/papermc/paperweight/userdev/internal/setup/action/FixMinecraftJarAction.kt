@@ -22,12 +22,12 @@
 
 package io.papermc.paperweight.userdev.internal.setup.action
 
-import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.action.FileValue
 import io.papermc.paperweight.userdev.internal.action.Input
 import io.papermc.paperweight.userdev.internal.action.Output
 import io.papermc.paperweight.userdev.internal.action.Value
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import io.papermc.paperweight.userdev.internal.util.fixJar
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.workers.WorkerExecutor
 

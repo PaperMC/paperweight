@@ -36,7 +36,7 @@ import org.gradle.kotlin.dsl.*
  * Configures input/output for `reobfJar` and potentially changes classifiers of other jars.
  */
 fun interface ReobfArtifactConfiguration {
-    fun configure(project: Project, reobfJar: TaskProvider<RemapJar>)
+    fun configure(project: Project, reobfJar: TaskProvider<RemapJarTiny>)
 
     companion object {
         /**
