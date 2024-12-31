@@ -257,7 +257,7 @@ class SetupHandlerImplV5(
         if (versionParts[1] > 19) {
             return
         }
-        if (versionParts[1] == 19 && versionParts[2] >= 3) {
+        if (versionParts.size >= 3 && versionParts[1] == 19 && versionParts[2] >= 3) {
             return
         }
         context.project.extensions.configure<PaperweightUserExtension> {
