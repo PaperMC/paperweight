@@ -225,6 +225,9 @@ abstract class PaperweightUser : Plugin<Project> {
         }
     }
 
+    // Update the Paper repository endpoint for old dev bundles
+    private fun String.fixRepoUrl(): String = replace("https://papermc.io/repo/", "https://repo.papermc.io/")
+
     private fun Project.configureRepositories(userdevSetup: UserdevSetup) = repositories {
         userdevSetup.mache?.url?.let {
             maven(it) {
@@ -233,13 +236,13 @@ abstract class PaperweightUser : Plugin<Project> {
             }
         }
         userdevSetup.paramMappings?.url?.let {
-            maven(it) {
+            maven(it.fixRepoUrl()) {
                 name = PARAM_MAPPINGS_REPO_NAME
                 content { onlyForConfigurations(PARAM_MAPPINGS_CONFIG) }
             }
         }
         userdevSetup.remapper?.url?.let {
-            maven(it) {
+            maven(it.fixRepoUrl()) {
                 name = REMAPPER_REPO_NAME
                 content { onlyForConfigurations(REMAPPER_CONFIG) }
             }
@@ -249,13 +252,13 @@ abstract class PaperweightUser : Plugin<Project> {
             content { onlyForConfigurations(PLUGIN_REMAPPER_CONFIG) }
         }
         userdevSetup.decompiler?.url?.let {
-            maven(it) {
+            maven(it.fixRepoUrl()) {
                 name = DECOMPILER_REPO_NAME
                 content { onlyForConfigurations(DECOMPILER_CONFIG) }
             }
         }
         for (repo in userdevSetup.libraryRepositories) {
-            maven(repo)
+            maven(repo.fixRepoUrl())
         }
     }
 
