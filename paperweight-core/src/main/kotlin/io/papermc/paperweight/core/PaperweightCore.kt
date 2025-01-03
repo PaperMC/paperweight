@@ -98,7 +98,7 @@ abstract class PaperweightCore : Plugin<Project> {
 
         val mache: Property<MacheMeta> = target.objects.property()
         val tasks = CoreTasks(target, mache)
-        val devBundleTasks = DevBundleTasks(target)
+        val devBundleTasks = DevBundleTasks(target, tasks)
 
         val jar = target.tasks.named("jar", AbstractArchiveTask::class)
         tasks.generateReobfMappings {
@@ -137,18 +137,9 @@ abstract class PaperweightCore : Plugin<Project> {
 
             tasks.afterEvaluate()
 
-            devBundleTasks.configure(
-                ext.bundlerJarName.get(),
-                ext.mainClass,
-                ext.minecraftVersion,
-                tasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
-                tasks.extractFromBundler.map { it.serverLibrariesList.path },
-                tasks.downloadServerJar.map { it.outputJar.path },
-                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
-            ) {
-                reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
-            }
-            devBundleTasks.configureAfterEvaluate()
+            devBundleTasks.configureAfterEvaluate(
+                includeMappings.flatMap { it.outputJar },
+            )
         }
     }
 }
