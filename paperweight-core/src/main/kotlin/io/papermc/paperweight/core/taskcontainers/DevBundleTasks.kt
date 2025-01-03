@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
+import io.papermc.paperweight.core.taskcontainers.PaperclipTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -34,7 +34,6 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -42,7 +41,6 @@ import org.gradle.kotlin.dsl.*
 class DevBundleTasks(
     project: Project,
     tasks: TaskContainer = project.tasks,
-    private val providers: ProviderFactory = project.providers,
 ) {
     val serverBundlerForDevBundle by tasks.registering<CreateBundlerJar> {
         paperclip.from(project.configurations.named(PAPERCLIP_CONFIG))
@@ -77,7 +75,6 @@ class DevBundleTasks(
                 registerVersionArtifact(
                     bundlerJarName,
                     versionJsonFile,
-                    providers,
                     project.tasks.named<IncludeMappings>("includeMappings").flatMap { it.outputJar }
                 )
             }

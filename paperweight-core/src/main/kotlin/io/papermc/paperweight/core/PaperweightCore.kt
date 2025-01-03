@@ -25,9 +25,9 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
-import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
+import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -112,18 +112,16 @@ abstract class PaperweightCore : Plugin<Project> {
             ext.reobfPackagesToFix,
             tasks.generateRelocatedReobfMappings
         )
-        val bundlerJarTasks = BundlerJarTasks(
+        PaperclipTasks(
             target,
             ext.bundlerJarName,
-            ext.mainClass
-        )
-        bundlerJarTasks.configureBundlerTasks(
+            ext.mainClass,
             tasks.extractFromBundler.flatMap { it.versionJson },
             tasks.extractFromBundler.flatMap { it.serverLibrariesList },
             tasks.downloadServerJar.flatMap { it.outputJar },
             includeMappings.flatMap { it.outputJar },
-            reobfJar,
-            ext.minecraftVersion
+            reobfJar.flatMap { it.outputJar },
+            ext.minecraftVersion,
         )
 
         target.afterEvaluate {
