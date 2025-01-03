@@ -22,65 +22,88 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.taskcontainers.PaperclipTasks.Companion.registerVersionArtifact
-import io.papermc.paperweight.core.util.coreExt
+import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks.Companion.registerVersionArtifact
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
 @Suppress("MemberVisibilityCanBePrivate")
 class DevBundleTasks(
     project: Project,
-    private val coreTasks: CoreTasks,
     tasks: TaskContainer = project.tasks,
+    private val providers: ProviderFactory = project.providers,
 ) {
     val serverBundlerForDevBundle by tasks.registering<CreateBundlerJar> {
-        mainClass.set(project.coreExt.mainClass)
         paperclip.from(project.configurations.named(PAPERCLIP_CONFIG))
-        serverLibrariesList.set(coreTasks.extractFromBundler.flatMap { it.serverLibrariesList })
-        vanillaBundlerJar.set(coreTasks.downloadServerJar.flatMap { it.outputJar })
     }
 
     val paperclipForDevBundle by tasks.registering<CreatePaperclipJar> {
         bundlerJar.set(serverBundlerForDevBundle.flatMap { it.outputZip })
         libraryChangesJson.set(serverBundlerForDevBundle.flatMap { it.libraryChangesJson })
-        originalBundlerJar.set(coreTasks.downloadServerJar.flatMap { it.outputJar })
-        mcVersion.set(project.coreExt.minecraftVersion)
     }
 
     val generateDevelopmentBundle by tasks.registering<GenerateDevBundle> {
         group = "bundling"
 
         devBundleFile.set(project.layout.buildDirectory.file("libs/paperweight-development-bundle-${project.version}.zip"))
-        sourceDirectories.from(
-            project.extensions.getByType(JavaPluginExtension::class).sourceSets
-                .getByName("main")
-                .allJava
-        )
-        vanillaJavaDir.set(coreTasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir })
-
-        minecraftVersion.set(project.coreExt.minecraftVersion)
-        mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })
-        reobfMappingsFile.set(coreTasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
     }
 
-    fun configureAfterEvaluate(serverJar: Provider<RegularFile>) {
+    fun configure(
+        bundlerJarName: String,
+        mainClassName: Property<String>,
+        minecraftVer: Provider<String>,
+        vanillaJava: Provider<Directory>,
+        serverLibrariesListFile: Provider<Path>,
+        vanillaBundlerJarFile: Provider<Path>,
+        versionJsonFile: Provider<RegularFile>,
+        devBundleConfiguration: GenerateDevBundle.() -> Unit
+    ) {
         serverBundlerForDevBundle {
+            mainClass.set(mainClassName)
+            serverLibrariesList.pathProvider(serverLibrariesListFile)
+            vanillaBundlerJar.pathProvider(vanillaBundlerJarFile)
             versionArtifacts {
                 registerVersionArtifact(
-                    project.coreExt.bundlerJarName.get(),
-                    coreTasks.extractFromBundler.flatMap { it.versionJson },
-                    serverJar,
+                    bundlerJarName,
+                    versionJsonFile,
+                    providers,
+                    project.tasks.named<IncludeMappings>("includeMappings").flatMap { it.outputJar }
                 )
             }
         }
+
+        paperclipForDevBundle {
+            originalBundlerJar.pathProvider(vanillaBundlerJarFile)
+            mcVersion.set(minecraftVer)
+        }
+
+        generateDevelopmentBundle {
+            sourceDirectories.from(
+                project.extensions.getByType(JavaPluginExtension::class).sourceSets
+                    .getByName("main")
+                    .allJava
+            )
+            vanillaJavaDir.set(vanillaJava)
+
+            minecraftVersion.set(minecraftVer)
+            mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })
+
+            devBundleConfiguration(this)
+        }
+    }
+
+    fun configureAfterEvaluate() {
         generateDevelopmentBundle {
             macheUrl.set(project.repositories.named<MavenArtifactRepository>(MACHE_REPO_NAME).map { it.url.toString() })
             macheDep.set(determineArtifactCoordinates(project.configurations.getByName(MACHE_CONFIG)).single())

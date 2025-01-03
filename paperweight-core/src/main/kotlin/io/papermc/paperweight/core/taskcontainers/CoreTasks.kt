@@ -36,7 +36,10 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -125,7 +128,49 @@ class CoreTasks(
     }
 
     fun afterEvaluate() {
+        val mache = mache.get()
+
         setupPatchingTasks()
+
+        project.configurations.named(MAPPED_JAR_OUTGOING_CONFIG) {
+            outgoing.artifact(macheRemapJar)
+        }
+
+        // setup repos
+        mache.addRepositories(project)
+
+        // setup mc deps
+        project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG) {
+            extendsFrom(project.configurations.getByName(MACHE_CONFIG))
+        }
+        project.configurations.named(MACHE_MINECRAFT_CONFIG) {
+            extendsFrom(project.configurations.getByName(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+            withDependencies {
+                add(
+                    project.dependencies.create(
+                        project.files(macheRemapJar.flatMap { it.outputJar })
+                    )
+                )
+            }
+        }
+
+        // setup mache deps
+        mache.addDependencies(project)
+
+        // impl extends minecraft
+        project.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
+            extendsFrom(project.configurations.getByName(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        }
+
+        // add Minecraft source dir
+        project.the<JavaPluginExtension>().sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
+            java {
+                srcDirs(project.projectDir.resolve("src/minecraft/java"))
+            }
+            resources {
+                srcDirs(project.projectDir.resolve("src/minecraft/resources"))
+            }
+        }
     }
 
     private fun setupPatchingTasks() {

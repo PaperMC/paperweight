@@ -25,38 +25,21 @@ package io.papermc.paperweight.core
 import io.papermc.paperweight.DownloadService
 import io.papermc.paperweight.attribute.MacheOutput
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
+import io.papermc.paperweight.core.taskcontainers.BundlerJarTasks
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
-import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
-import io.papermc.paperweight.core.util.createBuildTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
-import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.dsl.DependencyFactory
-import org.gradle.api.file.ProjectLayout
-import org.gradle.api.model.ObjectFactory
-import org.gradle.api.plugins.JavaPlugin
-import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
 abstract class PaperweightCore : Plugin<Project> {
-    @get:Inject
-    abstract val layout: ProjectLayout
-
-    @get:Inject
-    abstract val dependencyFactory: DependencyFactory
-
-    @get:Inject
-    abstract val objects: ObjectFactory
-
     override fun apply(target: Project) {
         Git.checkForGit(target.providers)
         printId<PaperweightCore>("paperweight-core", target.gradle)
@@ -70,43 +53,37 @@ abstract class PaperweightCore : Plugin<Project> {
         target.tasks.register<Delete>("cleanCache") {
             group = GENERAL_TASK_GROUP
             description = "Delete the project setup cache and task outputs."
-            delete(layout.cache)
+            delete(target.layout.cache)
         }
 
         target.configurations.create(REMAPPER_CONFIG) {
             defaultDependencies {
-                // Join list to avoid relocations breaking the string
-                val coordinates = "${listOf("net", "fabricmc").joinToString(".")}:tiny-remapper:${LibraryVersions.TINY_REMAPPER}:fat"
-                val remapper = dependencyFactory.create(coordinates).also { it.isTransitive = false }
-                add(remapper)
+                add(
+                    target.dependencies.create(
+                        "${listOf("net", "fabricmc").joinToString(".")}:tiny-remapper:${LibraryVersions.TINY_REMAPPER}:fat"
+                    ) {
+                        isTransitive = false
+                    }
+                )
             }
         }
         target.configurations.create(PAPERCLIP_CONFIG)
-        val macheConfig = target.configurations.create(MACHE_CONFIG) {
-            attributes.attribute(MacheOutput.ATTRIBUTE, objects.named(MacheOutput.ZIP))
+        target.configurations.create(MACHE_CONFIG) {
+            attributes.attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
         }
         target.configurations.register(MACHE_CODEBOOK_CONFIG) { isTransitive = false }
         target.configurations.register(MACHE_REMAPPER_CONFIG) { isTransitive = false }
         target.configurations.register(MACHE_DECOMPILER_CONFIG) { isTransitive = false }
         target.configurations.register(MACHE_PARAM_MAPPINGS_CONFIG) { isTransitive = false }
         target.configurations.register(MACHE_CONSTANTS_CONFIG) { isTransitive = false }
-        val macheMinecraftLibrariesConfig = target.configurations.register(MACHE_MINECRAFT_LIBRARIES_CONFIG) {
-            extendsFrom(macheConfig)
-        }
-        target.configurations.register(MACHE_MINECRAFT_CONFIG) {
-            extendsFrom(macheMinecraftLibrariesConfig.get())
-        }
+        target.configurations.register(MACHE_MINECRAFT_LIBRARIES_CONFIG)
         target.configurations.consumable(MAPPED_JAR_OUTGOING_CONFIG) // For source generator modules
+        target.configurations.register(MACHE_MINECRAFT_CONFIG)
         target.configurations.register(JST_CONFIG) {
             defaultDependencies {
-                // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${LibraryVersions.JST}"))
+                // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${JSTVersion.VERSION}"))
                 add(target.dependencies.create("io.papermc.jst:jst-cli-bundle:${LibraryVersions.JST}"))
             }
-        }
-
-        // impl extends minecraft
-        target.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
-            extendsFrom(macheMinecraftLibrariesConfig.get())
         }
 
         if (target.providers.gradleProperty("paperweight.dev").orNull == "true") {
@@ -114,26 +91,14 @@ abstract class PaperweightCore : Plugin<Project> {
                 inputDir.convention(ext.paper.paperServerDir.map { it.dir("src/main/java") })
                 val prop = target.providers.gradleProperty("paperweight.diff.output")
                 if (prop.isPresent) {
-                    baseDir.convention(layout.projectDirectory.dir(prop))
+                    baseDir.convention(target.layout.projectDirectory.dir(prop))
                 }
             }
         }
 
-        val mache: Property<MacheMeta> = objects.property()
+        val mache: Property<MacheMeta> = target.objects.property()
         val tasks = CoreTasks(target, mache)
-        val devBundleTasks = DevBundleTasks(target, tasks)
-
-        target.configurations.named(MAPPED_JAR_OUTGOING_CONFIG) {
-            outgoing.artifact(tasks.macheRemapJar)
-        }
-        target.configurations.named(MACHE_MINECRAFT_CONFIG) {
-            withDependencies {
-                val minecraftJar = dependencyFactory.create(
-                    layout.files(tasks.macheRemapJar.flatMap { it.outputJar })
-                )
-                add(minecraftJar)
-            }
-        }
+        val devBundleTasks = DevBundleTasks(target)
 
         val jar = target.tasks.named("jar", AbstractArchiveTask::class)
         tasks.generateReobfMappings {
@@ -145,35 +110,24 @@ abstract class PaperweightCore : Plugin<Project> {
         val (includeMappings, reobfJar) = target.createBuildTasks(
             ext.spigot.packageVersion,
             ext.reobfPackagesToFix,
-            tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings },
+            tasks.generateRelocatedReobfMappings
         )
-
-        PaperclipTasks(
+        val bundlerJarTasks = BundlerJarTasks(
             target,
             ext.bundlerJarName,
-            ext.mainClass,
+            ext.mainClass
+        )
+        bundlerJarTasks.configureBundlerTasks(
             tasks.extractFromBundler.flatMap { it.versionJson },
             tasks.extractFromBundler.flatMap { it.serverLibrariesList },
             tasks.downloadServerJar.flatMap { it.outputJar },
             includeMappings.flatMap { it.outputJar },
-            reobfJar.flatMap { it.outputJar },
-            ext.minecraftVersion,
+            reobfJar,
+            ext.minecraftVersion
         )
 
-        // add Minecraft source dirs
-        target.extensions.configure<JavaPluginExtension> {
-            sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
-                java {
-                    srcDirs(layout.projectDirectory.dir("src/minecraft/java"))
-                }
-                resources {
-                    srcDirs(layout.projectDirectory.dir("src/minecraft/resources"))
-                }
-            }
-        }
-
         target.afterEvaluate {
-            repositories {
+            target.repositories {
                 maven(ext.macheRepo) {
                     name = MACHE_REPO_NAME
                     content { onlyForConfigurations(MACHE_CONFIG) }
@@ -181,15 +135,22 @@ abstract class PaperweightCore : Plugin<Project> {
             }
 
             // load mache
-            mache.set(configurations.resolveMacheMeta())
-            mache.get().addRepositories(this)
-            mache.get().addDependencies(this)
+            mache.set(project.configurations.resolveMacheMeta())
 
             tasks.afterEvaluate()
 
-            devBundleTasks.configureAfterEvaluate(
-                includeMappings.flatMap { it.outputJar },
-            )
+            devBundleTasks.configure(
+                ext.bundlerJarName.get(),
+                ext.mainClass,
+                ext.minecraftVersion,
+                tasks.setupMacheSourcesForDevBundle.flatMap { it.outputDir },
+                tasks.extractFromBundler.map { it.serverLibrariesList.path },
+                tasks.downloadServerJar.map { it.outputJar.path },
+                tasks.extractFromBundler.map { it.versionJson.path }.convertToFileProvider(layout, providers)
+            ) {
+                reobfMappingsFile.set(tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
+            }
+            devBundleTasks.configureAfterEvaluate()
         }
     }
 }
