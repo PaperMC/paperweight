@@ -344,6 +344,8 @@ interface InputStreamProvider {
                 return op(input)
             }
         }
+
+        fun string(value: String) = wrap(value.byteInputStream())
     }
 }
 

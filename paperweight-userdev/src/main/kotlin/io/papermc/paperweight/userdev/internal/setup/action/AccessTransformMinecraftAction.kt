@@ -26,9 +26,9 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.action.FileValue
 import io.papermc.paperweight.userdev.internal.action.Input
 import io.papermc.paperweight.userdev.internal.action.Output
-import io.papermc.paperweight.userdev.internal.action.StringValue
 import io.papermc.paperweight.userdev.internal.action.Value
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import io.papermc.paperweight.userdev.internal.action.ZippedFileValue
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.jvm.toolchain.JavaLauncher
@@ -37,17 +37,13 @@ import org.gradle.workers.WorkerExecutor
 class AccessTransformMinecraftAction(
     @Input private val javaLauncher: Value<JavaLauncher>,
     private val workerExecutor: WorkerExecutor,
-    @Input private val bundleZip: FileValue,
-    @Input val atPath: StringValue,
+    @Input val at: ZippedFileValue,
     @Input private val inputJar: FileValue,
     @Output val outputJar: FileValue,
 ) : WorkDispatcher.Action {
     override fun execute() {
         val atTmp = outputJar.get().resolveSibling("tmp.at").cleanFile()
-        bundleZip.get().openZipSafe().use { fs ->
-            val at = fs.getPath(atPath.get())
-            at.copyTo(atTmp)
-        }
+        at.extractTo(atTmp)
         try {
             applyAccessTransform(
                 inputJarPath = inputJar.get(),

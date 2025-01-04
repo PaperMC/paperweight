@@ -150,13 +150,12 @@ class SetupHandlerImplV2(
             AccessTransformMinecraftAction(
                 javaLauncher,
                 context.workerExecutor,
-                bundleZip,
-                StringValue(bundle.config.buildData.accessTransformFile),
+                ZippedFileValue(bundle.zip, bundle.config.buildData.accessTransformFile),
                 fix.outputJar,
                 dispatcher.outputFile("output.jar"),
             )
         )
-        dispatcher.provided(at.atPath)
+        dispatcher.provided(at.at)
 
         val decompile = dispatcher.register(
             "decompileMinecraftServer",
@@ -206,7 +205,7 @@ class SetupHandlerImplV2(
                 applyPaperclip.outputJar,
                 dispatcher.outputFile("output.jar"),
                 value(bundle.config.buildData.relocations) {
-                    listOf(InputStreamProvider.wrap(gson.toJson(it).byteInputStream()))
+                    listOf(InputStreamProvider.string(gson.toJson(it)))
                 },
             )
         )

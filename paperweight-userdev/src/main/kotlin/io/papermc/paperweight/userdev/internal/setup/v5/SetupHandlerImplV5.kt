@@ -26,6 +26,7 @@ import io.papermc.paperweight.userdev.PaperweightUserExtension
 import io.papermc.paperweight.userdev.internal.action.FileCollectionValue
 import io.papermc.paperweight.userdev.internal.action.StringValue
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
+import io.papermc.paperweight.userdev.internal.action.ZippedFileValue
 import io.papermc.paperweight.userdev.internal.action.fileValue
 import io.papermc.paperweight.userdev.internal.action.javaLauncherValue
 import io.papermc.paperweight.userdev.internal.action.stringListValue
@@ -145,13 +146,12 @@ class SetupHandlerImplV5(
             AccessTransformMinecraftAction(
                 javaLauncher,
                 context.workerExecutor,
-                bundleZip,
-                StringValue(bundle.config.buildData.accessTransformFile),
+                ZippedFileValue(bundle.zip, bundle.config.buildData.accessTransformFile),
                 fix.outputJar,
                 dispatcher.outputFile("output.jar"),
             )
         )
-        dispatcher.provided(at.atPath)
+        dispatcher.provided(at.at)
 
         val decompile = dispatcher.register(
             "decompileMinecraftServer",

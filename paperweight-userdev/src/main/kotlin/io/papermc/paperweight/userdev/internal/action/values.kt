@@ -154,8 +154,32 @@ fun javaLauncherValue(javaLauncher: JavaLauncher): Value<JavaLauncher> = object 
             javaLauncher.metadata.vendor,
             javaLauncher.metadata.languageVersion.asInt().toString(),
         ).joinToString("\n")
-        return listOf(InputStreamProvider.wrap(jdkMetadata.byteInputStream()))
+        return listOf(InputStreamProvider.string(jdkMetadata))
     }
 
     override fun toString(): String = "javaLauncherValue('$javaLauncher')"
+}
+
+class ZippedFileValue(
+    val zipFile: Path,
+    val path: String,
+) : Value<Unit> {
+    override fun get() = Unit
+
+    fun extractTo(target: Path, overwrite: Boolean = false) {
+        useEntry { it.copyTo(target.createParentDirectories(), overwrite) }
+    }
+
+    fun <R> useEntry(op: (Path) -> R): R = zipFile.openZipSafe().use { fs ->
+        val path = fs.getPath("/").resolve(path)
+        return op(path)
+    }
+
+    override fun bytes(): List<InputStreamProvider> = listOf(
+        object : InputStreamProvider {
+            override fun <T> use(op: (InputStream) -> T): T = useEntry { it.inputStream().use(op) }
+        }
+    )
+
+    override fun toString(): String = "ZippedFileValue(zipFile='$zipFile', path='$path')"
 }

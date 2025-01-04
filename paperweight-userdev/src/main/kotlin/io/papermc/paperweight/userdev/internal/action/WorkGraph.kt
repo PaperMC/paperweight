@@ -142,7 +142,7 @@ class WorkGraph(
             terminalInputHash
         } else {
             val inputHashes = node.registration.inputs.hash(hashCache)
-            inputHashes.map { InputStreamProvider.wrap(it.byteInputStream()) }
+            inputHashes.map(InputStreamProvider::string)
                 .hash(HashingAlgorithm.SHA256)
                 .asHexString()
         }
