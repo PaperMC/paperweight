@@ -20,13 +20,15 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.core.util
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -35,8 +37,8 @@ import org.gradle.kotlin.dsl.*
 fun Project.createBuildTasks(
     craftBukkitPackageVersion: Provider<String>,
     packagesToFix: Provider<List<String>?>,
-    relocatedReobfMappings: TaskProvider<GenerateRelocatedReobfMappings>
-): ServerTasks {
+    relocatedReobfMappings: Provider<RegularFile>
+): ServerBuildTasks {
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
         group = "build"
         inputJar.set(tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile })
@@ -46,7 +48,7 @@ fun Project.createBuildTasks(
     val includeMappings by tasks.registering<IncludeMappings> {
         group = "build"
         inputJar.set(fixJarForReobf.flatMap { it.outputJar })
-        mappings.set(relocatedReobfMappings.flatMap { it.outputMappings })
+        mappings.set(relocatedReobfMappings)
         mappingsDest.set("META-INF/mappings/reobf.tiny")
     }
 
@@ -72,7 +74,7 @@ fun Project.createBuildTasks(
 
         inputJar.set(relocateConstants.flatMap { it.outputJar })
 
-        mappingsFile.set(relocatedReobfMappings.flatMap { it.outputMappings })
+        mappingsFile.set(relocatedReobfMappings)
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)
@@ -83,7 +85,7 @@ fun Project.createBuildTasks(
         outputJar.set(layout.buildDirectory.map { it.dir("libs").file("${project.name}-${project.version}-reobf.jar") })
     }
 
-    return ServerTasks(includeMappings, reobfJar)
+    return ServerBuildTasks(includeMappings, reobfJar)
 }
 
 fun Task.reobfRequiresDebug() {
@@ -98,7 +100,7 @@ fun Task.reobfRequiresDebug() {
     }
 }
 
-data class ServerTasks(
+data class ServerBuildTasks(
     val includeMappings: TaskProvider<IncludeMappings>,
     val reobfJar: TaskProvider<RemapJar>,
 )

@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import com.google.gson.JsonObject
+import io.papermc.paperweight.core.util.reobfRequiresDebug
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
