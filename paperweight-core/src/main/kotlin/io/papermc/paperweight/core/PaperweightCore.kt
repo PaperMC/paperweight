@@ -166,10 +166,10 @@ abstract class PaperweightCore : Plugin<Project> {
             target.extensions.configure<JavaPluginExtension> {
                 sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME) {
                     java {
-                        srcDirs(layout.projectDirectory.dir("src/minecraft/java"))
+                        srcDirs(this@PaperweightCore.layout.projectDirectory.dir("src/minecraft/java"))
                     }
                     resources {
-                        srcDirs(layout.projectDirectory.dir("src/minecraft/resources"))
+                        srcDirs(this@PaperweightCore.layout.projectDirectory.dir("src/minecraft/resources"))
                     }
                 }
             }
