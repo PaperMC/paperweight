@@ -220,6 +220,7 @@ class MinecraftPatchingTasks(
             base.set(baseResources)
             input.set(outputResources)
             patches.set(resourcePatchDir)
+            gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
         }
 
         val rebuildFilePatches = tasks.register<Task>(rebuildFilePatchesName) {
