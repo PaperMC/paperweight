@@ -279,8 +279,10 @@ class CoreTasks(
             return serverTasks to upstreamConfigTasks
         }
 
-        forkPatchingTaskOrder().forEach { config ->
-            patchingTasks[config.name] = makePatchingTasks(config)
+        if (project.coreExt.forks.isNotEmpty()) {
+            forkPatchingTaskOrder().forEach { config ->
+                patchingTasks[config.name] = makePatchingTasks(config)
+            }
         }
     }
 
