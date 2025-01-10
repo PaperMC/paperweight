@@ -296,31 +296,32 @@ class CoreTasks(
         order.addAll(forksPaper)
         forks.removeAll(forksPaper)
 
-        fun addDependants(forkCfg: ForkConfig) {
+        var current: ForkConfig? = order.last()
+        while (current != null) {
             val deps = mutableListOf<ForkConfig>()
             for (f in forks) {
-                if (f.forks.get().name == forkCfg.name) {
+                if (f.forks.get().name == current.name) {
                     deps.add(f)
                 }
             }
             if (deps.isNotEmpty()) {
                 if (deps.size != 1) {
                     throw PaperweightException(
-                        "Multiple ForkConfigs are set to fork ${forkCfg.name}, but only one is allowed. ${deps.map { it.name }}"
+                        "Multiple ForkConfigs are set to fork ${current.name}, but only one is allowed. ${deps.map { it.name }}"
                     )
                 }
                 order.addAll(deps)
                 forks.removeAll(deps)
-                addDependants(order.last())
+                current = order.last()
             } else {
                 if (forks.isNotEmpty()) {
                     throw PaperweightException(
                         "ForkConfigs are not in a valid order. Current order: ${order.map { it.name }}; Remaining: ${forks.map { it.name }}"
                     )
                 }
+                current = null
             }
         }
-        addDependants(order.last())
         return order
     }
 }
