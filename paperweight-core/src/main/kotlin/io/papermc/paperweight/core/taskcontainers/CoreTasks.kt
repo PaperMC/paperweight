@@ -280,7 +280,7 @@ class CoreTasks(
         }
 
         if (project.coreExt.forks.isNotEmpty()) {
-            forkPatchingTaskOrder().also { println(it) }.forEach { config ->
+            forkPatchingTaskOrder().forEach { config ->
                 patchingTasks[config.name] = makePatchingTasks(config)
             }
         }
@@ -298,12 +298,7 @@ class CoreTasks(
 
         var current: ForkConfig? = order.last()
         while (current != null) {
-            val deps = mutableListOf<ForkConfig>()
-            for (f in forks) {
-                if (f.forks.get().name == current.name) {
-                    deps.add(f)
-                }
-            }
+            val deps = forks.filter { it.forks.get().name == current.name }
             if (deps.isNotEmpty()) {
                 if (deps.size != 1) {
                     throw PaperweightException(
@@ -322,6 +317,7 @@ class CoreTasks(
                 current = null
             }
         }
+        project.logger.info("Fork order: {}", order.joinToString(" -> ") { it.name })
         return order
     }
 }
