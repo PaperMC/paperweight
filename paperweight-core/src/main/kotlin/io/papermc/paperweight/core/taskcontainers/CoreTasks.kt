@@ -280,7 +280,7 @@ class CoreTasks(
         }
 
         if (project.coreExt.forks.isNotEmpty()) {
-            forkPatchingTaskOrder().forEach { config ->
+            forkPatchingTaskOrder().also { println(it) }.forEach { config ->
                 patchingTasks[config.name] = makePatchingTasks(config)
             }
         }
