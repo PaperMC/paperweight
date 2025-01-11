@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.extension.ForkConfig
 import io.papermc.paperweight.core.tasks.ImportLibraryFiles
 import io.papermc.paperweight.core.tasks.IndexLibraryFiles
@@ -169,8 +170,8 @@ class CoreTasks(
             val upstreamTasks = if (cfg.forksPaper.get()) {
                 paperPatchingTasks to null
             } else {
-                patchingTasks[cfg.forks.get().name]
-                    ?: makePatchingTasks(cfg).also { patchingTasks[cfg.forks.get().name] = it }
+                val tasks = patchingTasks[cfg.forks.get().name]
+                requireNotNull(tasks) { "Upstream patching tasks for ${cfg.forks.get().name} not present when expected" }
             }
 
             val activeFork = project.coreExt.activeFork.get().name == cfg.name
@@ -278,10 +279,45 @@ class CoreTasks(
             return serverTasks to upstreamConfigTasks
         }
 
-        project.coreExt.forks.forEach { config ->
-            if (config.name !in patchingTasks) {
+        if (project.coreExt.forks.isNotEmpty()) {
+            forkPatchingTaskOrder().forEach { config ->
                 patchingTasks[config.name] = makePatchingTasks(config)
             }
         }
+    }
+
+    private fun forkPatchingTaskOrder(): List<ForkConfig> {
+        val order = mutableListOf<ForkConfig>()
+        val forks = project.coreExt.forks.toMutableList()
+        val forksPaper = forks.filter { it.forksPaper.get() }
+        if (forksPaper.size != 1) {
+            throw PaperweightException("Multiple ForkConfigs are set to fork Paper, but only one is allowed. ${forksPaper.map { it.name }}")
+        }
+        order.addAll(forksPaper)
+        forks.removeAll(forksPaper)
+
+        var current: ForkConfig? = order.last()
+        while (current != null) {
+            val deps = forks.filter { it.forks.get().name == requireNotNull(current).name }
+            if (deps.isNotEmpty()) {
+                if (deps.size != 1) {
+                    throw PaperweightException(
+                        "Multiple ForkConfigs are set to fork ${current.name}, but only one is allowed. ${deps.map { it.name }}"
+                    )
+                }
+                order.addAll(deps)
+                forks.removeAll(deps)
+                current = order.last()
+            } else {
+                if (forks.isNotEmpty()) {
+                    throw PaperweightException(
+                        "ForkConfigs are not in a valid order. Current order: ${order.map { it.name }}; Remaining: ${forks.map { it.name }}"
+                    )
+                }
+                current = null
+            }
+        }
+        project.logger.info("Fork order: {}", order.joinToString(" -> ") { it.name })
+        return order
     }
 }
