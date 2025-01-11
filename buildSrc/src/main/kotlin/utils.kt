@@ -10,7 +10,7 @@ import org.gradle.plugin.devel.PluginDeclaration
 fun Configuration.compatibilityAttributes(objects: ObjectFactory) {
     attributes {
         attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 17)
-        attribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE, objects.named("8.11.1"))
+        attribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE, objects.named("8.12"))
     }
 }
 
