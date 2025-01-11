@@ -298,7 +298,7 @@ class CoreTasks(
 
         var current: ForkConfig? = order.last()
         while (current != null) {
-            val deps = forks.filter { it.forks.get().name == current.name }
+            val deps = forks.filter { it.forks.get().name == requireNotNull(current).name }
             if (deps.isNotEmpty()) {
                 if (deps.size != 1) {
                     throw PaperweightException(
