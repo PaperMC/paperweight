@@ -95,11 +95,6 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
         super.init()
         mappedServerJar.set(layout.cache.resolve(paperTaskOutput("mappedServerJar", "jar")))
         reobfMappings.set(layout.cache.resolve(paperTaskOutput("reobfMappings", "tiny")))
-        devBundle.from(project.configurations.named(DEV_BUNDLE_CONFIG))
-        decompilerConfig.from(project.configurations.named(DECOMPILER_CONFIG))
-        paramMappingsConfig.from(project.configurations.named(PARAM_MAPPINGS_CONFIG))
-        remapperConfig.from(project.configurations.named(REMAPPER_CONFIG))
-        macheConfig.from(project.configurations.named(MACHE_CONFIG))
     }
 
     @TaskAction

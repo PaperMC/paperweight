@@ -64,6 +64,13 @@ interface SetupHandler {
             remapperArgs.convention(pluginRemapArgs)
             fromNamespace.convention(deobfNamespace)
         }
+        context.project.tasks.withType<UserdevSetupTask>().configureEach {
+            devBundle.from(project.configurations.named(DEV_BUNDLE_CONFIG))
+            decompilerConfig.from(project.configurations.named(DECOMPILER_CONFIG))
+            paramMappingsConfig.from(project.configurations.named(PARAM_MAPPINGS_CONFIG))
+            remapperConfig.from(project.configurations.named(REMAPPER_CONFIG))
+            macheConfig.from(project.configurations.named(MACHE_CONFIG))
+        }
     }
 
     val minecraftVersion: String
