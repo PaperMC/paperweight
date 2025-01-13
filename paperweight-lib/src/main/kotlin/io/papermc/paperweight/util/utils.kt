@@ -379,12 +379,13 @@ fun ByteArray.asHexString(): String {
 }
 
 fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLauncher> {
-    return launcherFor(project.extensions.getByType<JavaPluginExtension>().toolchain).orElse(
-        launcherFor {
-            // If the java plugin isn't applied, or no toolchain value was set
-            languageVersion.set(JavaLanguageVersion.of(21))
-        }
-    )
+    // If the java plugin isn't applied, or no toolchain value was set
+    val fallback = launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+
+    val ext = project.extensions.findByType<JavaPluginExtension>() ?: return fallback
+    return launcherFor(ext.toolchain).orElse(fallback)
 }
 
 fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
