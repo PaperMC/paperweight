@@ -26,6 +26,7 @@ import io.papermc.paperweight.util.*
 import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.Named
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
@@ -40,12 +41,22 @@ abstract class ForkConfig @Inject constructor(
     providers: ProviderFactory,
     objects: ObjectFactory,
     layout: ProjectLayout,
+    activeFork: Property<ForkConfig>,
+    upstreamsDir: Provider<Directory>,
 ) : Named {
     override fun getName(): String {
         return configName
     }
 
-    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory.dir("../"))
+    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(
+        activeFork.map {
+            if (it.name == name) {
+                layout.projectDirectory.dir("../")
+            } else {
+                upstreamsDir.get().dir(name)
+            }
+        }
+    )
     val serverDirectory: DirectoryProperty = objects.dirFrom(rootDirectory, providers.provider { "$name-server" })
     val serverPatchesDir: DirectoryProperty = objects.dirFrom(serverDirectory, "minecraft-patches")
     val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")

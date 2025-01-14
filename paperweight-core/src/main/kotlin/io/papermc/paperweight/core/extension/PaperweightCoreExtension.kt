@@ -23,17 +23,23 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.constants.*
+import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.*
 
-open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayout) {
-
+abstract class PaperweightCoreExtension @Inject constructor(
+    objects: ObjectFactory,
+    layout: ProjectLayout,
+    upstreamsDir: Provider<Directory>
+) {
     val minecraftVersion: Property<String> = objects.property()
     val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
 
@@ -64,7 +70,9 @@ open class PaperweightCoreExtension(objects: ObjectFactory, layout: ProjectLayou
         action.execute(paper)
     }
 
-    val forks: NamedDomainObjectContainer<ForkConfig> = objects.domainObjectContainer(ForkConfig::class)
+    val forks: NamedDomainObjectContainer<ForkConfig> = objects.domainObjectContainer(ForkConfig::class) {
+        objects.newInstance<ForkConfig>(it, activeFork, upstreamsDir)
+    }
 
     val activeFork: Property<ForkConfig> = objects.property()
 }

@@ -36,8 +36,6 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskContainer
@@ -135,7 +133,9 @@ class CoreTasks(
         val hasFork = project.coreExt.forks.isNotEmpty()
 
         if (hasFork) {
-            validateRootDirs()
+            project.coreExt.paper.rootDirectory.set(
+                project.upstreamsDirectory().map { it.dir("paper") }
+            )
         }
 
         if (!hasFork) {
@@ -212,7 +212,7 @@ class CoreTasks(
                 cfg.name,
                 cfg.upstream,
                 if (cfg.forksPaper.get()) {
-                    project.coreExt.paper.paperServerDir.dir("../")
+                    project.coreExt.paper.rootDirectory
                 } else {
                     cfg.forks.get().rootDirectory
                 },
@@ -325,20 +325,5 @@ class CoreTasks(
         }
         project.logger.info("Fork order: {}", order.joinToString(" -> ") { it.name })
         return order
-    }
-
-    private fun validateRootDirs() {
-        val usedRoots = mutableMapOf<Path, String>()
-        usedRoots[project.coreExt.paper.paperServerDir.dir("../").path.normalize().absolute()] = "paper"
-        project.coreExt.forks.forEach {
-            val root = it.rootDirectory.path.normalize().absolute()
-            val prev = usedRoots.putIfAbsent(root, it.name)
-            if (prev != null) {
-                throw PaperweightException(
-                    "Multiple forks use root directory $root. Ensure all forks and Paper have their root directory/" +
-                        "Paper server directory changed, except for the current project."
-                )
-            }
-        }
     }
 }
