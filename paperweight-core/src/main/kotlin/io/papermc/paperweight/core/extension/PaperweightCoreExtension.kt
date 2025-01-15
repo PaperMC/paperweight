@@ -26,13 +26,14 @@ import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
-abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFactory) {
+abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFactory, project: Project) {
     val minecraftVersion: Property<String> = objects.property()
     val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
 
@@ -51,7 +52,7 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
     val spigot = objects.newInstance<SpigotExtension>()
-    val paper = objects.newInstance<PaperExtension>()
+    val paper = objects.newInstance<PaperExtension>(project)
 
     @Suppress("unused")
     fun spigot(action: Action<in SpigotExtension>) {
