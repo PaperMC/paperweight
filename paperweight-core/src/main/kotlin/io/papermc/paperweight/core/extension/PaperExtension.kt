@@ -23,14 +23,15 @@
 package io.papermc.paperweight.core.extension
 
 import io.papermc.paperweight.util.*
+import javax.inject.Inject
+import org.gradle.api.file.BuildLayout
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 
-open class PaperExtension(objects: ObjectFactory, layout: ProjectLayout) {
+abstract class PaperExtension @Inject constructor(objects: ObjectFactory, buildLayout: BuildLayout) {
 
-    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(layout.projectDirectory.dir("../"))
+    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(buildLayout.rootDirectory)
     val paperServerDir: DirectoryProperty = objects.dirFrom(rootDirectory, "paper-server")
     val serverPatchesDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches")
     val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")

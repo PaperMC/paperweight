@@ -22,12 +22,10 @@
 
 package io.papermc.paperweight.core.extension
 
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.kotlin.dsl.*
 
-open class SpigotExtension(objects: ObjectFactory) {
+interface SpigotExtension {
 
-    val buildDataRef: Property<String> = objects.property()
-    val packageVersion: Property<String> = objects.property()
+    val buildDataRef: Property<String>
+    val packageVersion: Property<String>
 }

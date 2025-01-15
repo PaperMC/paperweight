@@ -61,7 +61,7 @@ abstract class PaperweightCore : Plugin<Project> {
         Git.checkForGit(target.providers)
         printId<PaperweightCore>("paperweight-core", target.gradle)
 
-        val ext = target.extensions.create(PAPERWEIGHT_EXTENSION, PaperweightCoreExtension::class, target.upstreamsDirectory())
+        val ext = target.extensions.create<PaperweightCoreExtension>(PAPERWEIGHT_EXTENSION)
 
         target.gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
             parameters.projectPath.set(target.projectDir)

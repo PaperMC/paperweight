@@ -26,20 +26,13 @@ import io.papermc.paperweight.util.constants.*
 import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.*
 
-abstract class PaperweightCoreExtension @Inject constructor(
-    objects: ObjectFactory,
-    layout: ProjectLayout,
-    upstreamsDir: Provider<Directory>
-) {
+abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFactory) {
     val minecraftVersion: Property<String> = objects.property()
     val minecraftManifestUrl: Property<String> = objects.property<String>().convention(MC_MANIFEST_URL)
 
@@ -57,8 +50,8 @@ abstract class PaperweightCoreExtension @Inject constructor(
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
-    val spigot = SpigotExtension(objects)
-    val paper = PaperExtension(objects, layout)
+    val spigot = objects.newInstance<SpigotExtension>()
+    val paper = objects.newInstance<PaperExtension>()
 
     @Suppress("unused")
     fun spigot(action: Action<in SpigotExtension>) {
@@ -71,7 +64,7 @@ abstract class PaperweightCoreExtension @Inject constructor(
     }
 
     val forks: NamedDomainObjectContainer<ForkConfig> = objects.domainObjectContainer(ForkConfig::class) {
-        objects.newInstance<ForkConfig>(it, activeFork, upstreamsDir)
+        objects.newInstance<ForkConfig>(it)
     }
 
     val activeFork: Property<ForkConfig> = objects.property()

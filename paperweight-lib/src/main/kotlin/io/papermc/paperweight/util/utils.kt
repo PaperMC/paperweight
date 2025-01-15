@@ -388,8 +388,8 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
     return launcherFor(ext.toolchain).orElse(fallback)
 }
 
-fun <P : Property<*>> P.withDisallowChanges(): P = apply { disallowChanges() }
-fun <P : Property<*>> P.withDisallowUnsafeRead(): P = apply { disallowUnsafeRead() }
+fun <P : Property<*>> P.changesDisallowed(): P = apply { disallowChanges() }
+fun <P : Property<*>> P.finalizedOnRead(): P = apply { finalizeValueOnRead() }
 
 fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> = files.asSequence()
     .map { f -> f.toPath() }

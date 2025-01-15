@@ -136,6 +136,14 @@ class CoreTasks(
             project.coreExt.paper.rootDirectory.set(
                 project.upstreamsDirectory().map { it.dir("paper") }
             )
+            project.coreExt.forks.forEach { fork ->
+                val activeFork = project.coreExt.activeFork.get().name == fork.name
+                if (!activeFork) {
+                    fork.rootDirectory.set(
+                        project.upstreamsDirectory().map { it.dir(fork.name) }
+                    )
+                }
+            }
         }
 
         if (!hasFork) {
