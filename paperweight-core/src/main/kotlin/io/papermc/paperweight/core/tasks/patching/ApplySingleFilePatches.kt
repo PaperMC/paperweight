@@ -26,6 +26,7 @@ import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.core.util.defaultMinFuzz
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
@@ -37,6 +38,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
@@ -48,6 +50,9 @@ import org.gradle.kotlin.dsl.*
 
 abstract class ApplySingleFilePatches : BaseTask() {
 
+    @get:Inject
+    abstract val providers: ProviderFactory
+
     @get:Internal
     abstract val upstream: DirectoryProperty
 
@@ -56,6 +61,9 @@ abstract class ApplySingleFilePatches : BaseTask() {
 
     @get:Input
     abstract val mode: Property<PatchMode>
+
+    @get:Input
+    abstract val minFuzz: Property<String>
 
     abstract class Patch @Inject constructor(
         objects: ObjectFactory,
@@ -93,6 +101,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
     override fun init() {
         super.init()
         mode.convention(PatchMode.EXACT)
+        minFuzz.convention(providers.defaultMinFuzz())
     }
 
     @TaskAction
@@ -118,6 +127,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
                         .logTo(logOut)
                         .level(LogLevel.ALL)
                         .mode(mode.get())
+                        .minFuzz(minFuzz.get().toFloat())
                         .summary(false)
                         .basePath(tmpWork)
                         .patchesPath(tmpPatch)

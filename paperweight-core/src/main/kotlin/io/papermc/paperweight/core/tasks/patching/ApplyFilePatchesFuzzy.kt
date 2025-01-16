@@ -21,14 +21,21 @@
  */
 
 package io.papermc.paperweight.core.tasks.patching
+
 import codechicken.diffpatch.util.PatchMode
+import io.papermc.paperweight.core.util.defaultMinFuzz
+import javax.inject.Inject
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
 @UntrackedTask(because = "Always apply patches")
 abstract class ApplyFilePatchesFuzzy : ApplyFilePatches() {
+
+    @get:Inject
+    abstract val providers: ProviderFactory
 
     @get:Input
     @get:Option(
@@ -39,7 +46,7 @@ abstract class ApplyFilePatchesFuzzy : ApplyFilePatches() {
 
     init {
         run {
-            minFuzz.convention("0.5")
+            minFuzz.convention(providers.defaultMinFuzz())
         }
     }
 

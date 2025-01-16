@@ -25,6 +25,10 @@ package io.papermc.paperweight.core.util
 import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 
 val Project.coreExt: PaperweightCoreExtension
     get() = extensions.getByName(PAPERWEIGHT_EXTENSION) as PaperweightCoreExtension
+
+fun ProviderFactory.defaultMinFuzz(): Provider<String> = gradleProperty("paperweight.defaultMinFuzz").orElse("0.5")
