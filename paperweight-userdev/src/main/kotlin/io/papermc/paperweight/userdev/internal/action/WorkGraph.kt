@@ -147,6 +147,7 @@ class WorkGraph(
                 .asHexString()
         }
         node.inputHash = inputHash
+        logger.info("Input hash for ${node.registration.name}: $inputHash")
 
         realizeOutputPaths(node, work, inputHash)
 
