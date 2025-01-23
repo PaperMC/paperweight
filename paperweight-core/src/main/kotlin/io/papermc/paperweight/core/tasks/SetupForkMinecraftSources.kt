@@ -81,7 +81,13 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
         }
 
         if (libraryImports.isPresent) {
-            libraryImports.path.copyRecursivelyTo(out)
+            libraryImports.path.walk().forEach {
+                val outFile = out.resolve(it.relativeTo(libraryImports.path).invariantSeparatorsPathString)
+                // The file may already exist if upstream imported it
+                if (!outFile.exists()) {
+                    it.copyTo(outFile.createParentDirectories())
+                }
+            }
 
             commitAndTag(git, "Imports", "${identifier.get()} Imports")
         }
