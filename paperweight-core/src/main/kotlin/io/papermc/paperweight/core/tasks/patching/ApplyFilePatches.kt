@@ -34,6 +34,7 @@ import java.time.Instant
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.transport.URIish
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
@@ -76,10 +77,19 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Optional
     abstract val identifier: Property<String>
 
+    // An additional remote to add and fetch from before applying patches (to bring in objects for 3-way merge).
+    @get:Input
+    @get:Optional
+    abstract val additionalRemote: Property<String>
+
+    @get:Input
+    abstract val additionalRemoteName: Property<String>
+
     init {
         run {
             verbose.convention(false)
             gitFilePatches.convention(false)
+            additionalRemoteName.convention("old")
         }
     }
 
@@ -98,6 +108,13 @@ abstract class ApplyFilePatches : BaseTask() {
             "main",
             baseRef.isPresent,
         )
+
+        if (additionalRemote.isPresent) {
+            val jgit = Git.open(outputPath.toFile())
+            jgit.remoteRemove().setRemoteName(additionalRemoteName.get()).call()
+            jgit.remoteAdd().setName(additionalRemoteName.get()).setUri(URIish(additionalRemote.get())).call()
+            jgit.fetch().setRemote(additionalRemoteName.get()).call()
+        }
 
         setupGitHook(outputPath)
 

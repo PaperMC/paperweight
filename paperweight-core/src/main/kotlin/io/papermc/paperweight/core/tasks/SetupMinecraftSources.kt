@@ -25,10 +25,12 @@ package io.papermc.paperweight.core.tasks
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
@@ -64,8 +66,8 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
     abstract val mache: ConfigurableFileCollection
 
     @get:Optional
-    @get:InputDirectory
-    abstract val macheOld: DirectoryProperty
+    @get:Input
+    abstract val oldPaperCommit: Property<String>
 
     @get:Nested
     val ats: ApplySourceATs = objects.newInstance()
@@ -79,7 +81,26 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         val outputPath = outputDir.convertToPath()
 
         val git: Git
-        if (outputPath.resolve(".git/HEAD").isRegularFile()) {
+        if (oldPaperCommit.isPresent) {
+            val oldPaperDir = setupOldPaper()
+
+            if (outputPath.exists()) {
+                outputPath.deleteRecursive()
+            }
+
+            outputPath.createDirectories()
+
+            git = Git.cloneRepository()
+                .setDirectory(outputPath.toFile())
+                .setRemote("old")
+                .setURI(oldPaperDir.resolve("paper-server/src/minecraft/java").absolutePathString())
+                .call()
+            git.reset().setMode(ResetCommand.ResetType.HARD).setRef("ATs").call()
+
+            // Now delete all MC sources so that when we copy in current and commit, it creates an 'update commit'
+            outputPath.resolve("com/mojang").deleteRecursive()
+            outputPath.resolve("net/minecraft").deleteRecursive()
+        } else if (outputPath.resolve(".git/HEAD").isRegularFile()) {
             git = Git.open(outputPath.toFile())
             git.reset().setRef("ROOT").setMode(ResetCommand.ResetType.HARD).call()
         } else {
@@ -94,16 +115,6 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
             git.commit().setMessage("ROOT").setAllowEmpty(true).setAuthor(rootIdent).setSign(false).call()
             git.tagDelete().setTags("ROOT").call()
             git.tag().setName("ROOT").setTagger(rootIdent).setSigned(false).call()
-        }
-
-        if (macheOld.isPresent) {
-            println("Using ${macheOld.convertToPath().absolutePathString()} as starting point")
-            git.remoteRemove().setRemoteName("old").call()
-            git.remoteAdd().setName("old").setUri(URIish(macheOld.convertToPath().absolutePathString())).call()
-            git.fetch().setRemote("old").call()
-            git.checkout().setName("old/mache").call()
-            git.branchDelete().setBranchNames("main").setForce(true).call()
-            git.checkout().setName("main").setCreateBranch(true).call()
         }
 
         println("Copy initial sources...")
@@ -128,8 +139,7 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         }
 
         println("Setup git repo...")
-        if (!macheOld.isPresent) {
-            // skip this if we are diffing against old, since it would be a commit without mache patches
+        if (!oldPaperCommit.isPresent) {
             commitAndTag(git, "Vanilla")
         }
 
@@ -147,7 +157,9 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 .build()
                 .operate()
 
-            commitAndTag(git, "Mache")
+            if (!oldPaperCommit.isPresent) {
+                commitAndTag(git, "Mache")
+            }
 
             if (result.exit != 0) {
                 throw Exception("Failed to apply ${result.summary.failedMatches} mache patches")
@@ -165,7 +177,13 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
                 atFile.path,
                 temporaryDir.toPath(),
             )
-            commitAndTag(git, "ATs", "paper ATs")
+            if (!oldPaperCommit.isPresent) {
+                commitAndTag(git, "ATs", "paper ATs")
+            }
+        }
+
+        if (oldPaperCommit.isPresent) {
+            commitAndTag(git, "Vanilla", "Vanilla, Mache, & paper ATs (Squashed for better Git history during updates)")
         }
 
         if (libraryImports.isPresent) {
@@ -175,6 +193,56 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         }
 
         git.close()
+    }
+
+    private fun setupOldPaper(): Path {
+        logger.lifecycle("Setting up Paper commit ${oldPaperCommit.get()} to use as base for constructing Git repo...")
+
+        val rootProjectDir = layout.projectDirectory.dir("../").path
+        val oldPaperDir = layout.cache.resolve("paperweight/oldPaper/${oldPaperCommit.get()}")
+        val oldPaperLog = layout.cache.resolve("paperweight/oldPaper/${oldPaperCommit.get()}.log")
+
+        val oldPaperGit: Git
+        if (oldPaperDir.exists()) {
+            oldPaperGit = Git.open(oldPaperDir.toFile())
+        } else {
+            oldPaperDir.createParentDirectories()
+            oldPaperGit = Git.init()
+                .setDirectory(oldPaperDir.toFile())
+                .setInitialBranch("main")
+                .call()
+            oldPaperGit.remoteRemove().setRemoteName("origin").call()
+            oldPaperGit.remoteAdd().setName("origin").setUri(URIish(rootProjectDir.absolutePathString())).call()
+        }
+
+        oldPaperGit.fetch().setDepth(1).setRemote("origin").setRefSpecs(oldPaperCommit.get()).call()
+        oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
+        oldPaperGit.close()
+
+        oldPaperLog.outputStream().use { logOut ->
+            val processBuilder = ProcessBuilder(
+                "./gradlew",
+                "applyPatches",
+                "--console",
+                "plain",
+                "--stacktrace",
+                "-Dpaperweight.debug=true"
+            )
+            processBuilder.directory(oldPaperDir)
+            val process = processBuilder.start()
+
+            val outFuture = redirect(process.inputStream, logOut)
+            val errFuture = redirect(process.errorStream, logOut)
+
+            val exit = process.waitFor()
+            outFuture.get(500L, TimeUnit.MILLISECONDS)
+            errFuture.get(500L, TimeUnit.MILLISECONDS)
+
+            if (exit != 0) {
+                throw PaperweightException("Failed to apply old Paper, see log at $oldPaperLog")
+            }
+        }
+        return oldPaperDir
     }
 }
 
