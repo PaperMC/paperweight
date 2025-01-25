@@ -29,6 +29,7 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
@@ -199,8 +200,8 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         logger.lifecycle("Setting up Paper commit ${oldPaperCommit.get()} to use as base for constructing Git repo...")
 
         val rootProjectDir = layout.projectDirectory.dir("../").path
-        val oldPaperDir = layout.cache.resolve("paperweight/oldPaper/${oldPaperCommit.get()}")
-        val oldPaperLog = layout.cache.resolve("paperweight/oldPaper/${oldPaperCommit.get()}.log")
+        val oldPaperDir = layout.cache.resolve("$OLD_PAPER_PATH/${oldPaperCommit.get()}")
+        val oldPaperLog = layout.cache.resolve("$OLD_PAPER_PATH/${oldPaperCommit.get()}.log")
 
         val oldPaperGit: Git
         if (oldPaperDir.exists()) {

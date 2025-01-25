@@ -177,6 +177,7 @@ class CoreTasks(
             setupMacheSources.flatMap { it.outputDir },
             setupMacheResources.flatMap { it.outputDir },
             project.coreExt.gitFilePatches,
+            project.coreExt.filterPatches,
             paperOutputRoot,
         )
 
@@ -212,6 +213,7 @@ class CoreTasks(
                 upstreamTasks.first.applyFeaturePatches.flatMap { it.repo },
                 upstreamTasks.first.applyResourcePatches.flatMap { it.output },
                 project.coreExt.gitFilePatches,
+                project.coreExt.filterPatches,
                 outputRoot,
             )
 
@@ -233,6 +235,7 @@ class CoreTasks(
                     "upstream server patching"
                 },
                 project.coreExt.gitFilePatches,
+                project.coreExt.filterPatches,
                 null,
                 upstreamTasks.second,
             )

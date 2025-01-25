@@ -42,6 +42,7 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
     val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
     val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)
+    val filterPatches: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     val vanillaJarIncludes: ListProperty<String> = objects.listProperty<String>().convention(
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")

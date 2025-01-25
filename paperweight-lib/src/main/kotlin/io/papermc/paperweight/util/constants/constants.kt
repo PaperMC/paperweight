@@ -116,6 +116,7 @@ const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 
 private const val MACHE_PATH = "$PAPER_PATH/mache"
 const val BASE_PROJECT = "$MACHE_PATH/base"
+const val OLD_PAPER_PATH = "$PAPER_PATH/oldPaper"
 
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")

@@ -26,6 +26,7 @@ import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.match.FuzzyLineMatcher
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.PatchMode
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
@@ -85,11 +86,15 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Input
     abstract val additionalRemoteName: Property<String>
 
+    @get:Input
+    abstract val moveFailedGitPatchesToRejects: Property<Boolean>
+
     init {
         run {
             verbose.convention(false)
             gitFilePatches.convention(false)
             additionalRemoteName.convention("old")
+            moveFailedGitPatchesToRejects.convention(false)
         }
     }
 
@@ -161,15 +166,36 @@ abstract class ApplyFilePatches : BaseTask() {
 
     private fun applyWithGit(outputPath: Path): Int {
         val git = Git(outputPath)
-        val patches = patches.path.filesMatchingRecursive("*.patch")
-        val patchStrings = patches.map { outputPath.relativize(it).pathString }
-        patchStrings.chunked(12).forEach {
-            git("apply", "--3way", *it.toTypedArray()).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+        val patchFiles = patches.path.filesMatchingRecursive("*.patch")
+        if (moveFailedGitPatchesToRejects.get() && rejects.isPresent) {
+            patchFiles.forEach { patch ->
+                val patchPathFromGit = outputPath.relativize(patch)
+                val responseCode =
+                    git("apply", "--3way", patchPathFromGit.pathString).runSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                when {
+                    responseCode == 0 -> {}
+                    responseCode > 1 -> throw PaperweightException("Failed to apply patch $patch: $responseCode")
+                    responseCode == 1 -> {
+                        val relativePatch = patches.path.relativize(patch)
+                        val failedFile = relativePatch.parent.resolve(relativePatch.fileName.toString().substringBeforeLast(".patch"))
+                        git("reset", "--", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                        git("restore", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+
+                        val rejectFile = rejects.path.resolve(relativePatch)
+                        patch.moveTo(rejectFile.createParentDirectories(), overwrite = true)
+                    }
+                }
+            }
+        } else {
+            val patchStrings = patchFiles.map { outputPath.relativize(it).pathString }
+            patchStrings.chunked(12).forEach {
+                git("apply", "--3way", *it.toTypedArray()).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+            }
         }
 
         commit()
 
-        return patches.size
+        return patchFiles.size
     }
 
     private fun applyWithDiffPatch(): Int {
