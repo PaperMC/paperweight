@@ -28,6 +28,7 @@ import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.io.PrintStream
 import java.nio.file.Path
 import java.time.Instant
@@ -202,8 +203,8 @@ abstract class ApplyFilePatches : BaseTask() {
             .setAllowEmpty(true)
             .setSign(false)
             .call()
-        git.tagDelete().setTags("file").call()
-        git.tag().setName("file").setTagger(ident).setSigned(false).call()
+        git.tagDelete().setTags(MACHE_TAG_FILE).call()
+        git.tag().setName(MACHE_TAG_FILE).setTagger(ident).setSigned(false).call()
         git.close()
     }
 

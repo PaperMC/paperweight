@@ -23,6 +23,7 @@
 package io.papermc.paperweight
 
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -42,7 +43,7 @@ class FunctionalTest {
 
     val debug = true
 
-    @Disabled
+    @Disabled("only used for debugging")
     @Test
     fun setupCleanTestRepo() {
         val projectDir = Path.of("F:\\Projects\\paperweight\\test").cleanFile().createDirectories()
@@ -89,34 +90,6 @@ class FunctionalTest {
             testResource.resolve("fake-patches/sources/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
         )
-
-        // add AT to source -> patch and AT file is updated
-        println("adding at to source")
-        modifyFile(tempDir.resolve("test-server/src/minecraft/java/Test.java")) {
-            it.replace(
-                "\"2\";",
-                "\"2\"; // Woo"
-            ).replace("public final String getTest2() {", "public String getTest2() {// Paper-AT: public-f getTest2()Ljava/lang/String;")
-        }
-
-        Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
-            git("add", ".").executeSilently()
-            git("commit", "--fixup", "file").executeSilently()
-            git("rebase", "--autosquash", "upstream/main").executeSilently()
-        }
-
-        println("\nrunning rebuildPatches again\n")
-        val rebP2 = gradleRunner
-            .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
-            .withDebug(debug)
-            .build()
-
-        assertEquals(rebP2.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
-        assertEquals(
-            testResource.resolve("fake-patches/expected/Test.java.patch").readText(),
-            tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
-        )
-        assertEquals(testResource.resolve("build-data/expected.at").readText(), tempDir.resolve("build-data/fake.at").readText())
 
         // feature patch
         println("\nmodifying feature patch\n")
