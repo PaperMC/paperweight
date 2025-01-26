@@ -28,6 +28,7 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
+import io.papermc.paperweight.core.tasks.patchroulette.PatchRouletteTasks
 import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.core.util.createBuildTasks
 import io.papermc.paperweight.tasks.*
@@ -201,6 +202,14 @@ abstract class PaperweightCore : Plugin<Project> {
                     ).absolutePathString()
                 }
             }
+            // TODO move into above 'if'
+            PatchRouletteTasks(
+                target,
+                "paper",
+                coreExt.minecraftVersion,
+                coreExt.paper.sourcePatchDir, // TODO use reject dir
+                layout.projectDirectory.dir("src/minecraft/java"),
+            )
         }
     }
 }

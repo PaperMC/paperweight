@@ -171,7 +171,13 @@ abstract class ApplyFilePatches : BaseTask() {
             patchFiles.forEach { patch ->
                 val patchPathFromGit = outputPath.relativize(patch)
                 val responseCode =
-                    git("apply", "--3way", patchPathFromGit.pathString).runSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                    git(
+                        "-c",
+                        "rerere.enabled=false",
+                        "apply",
+                        "--3way",
+                        patchPathFromGit.pathString
+                    ).runSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
                 when {
                     responseCode == 0 -> {}
                     responseCode > 1 -> throw PaperweightException("Failed to apply patch $patch: $responseCode")
