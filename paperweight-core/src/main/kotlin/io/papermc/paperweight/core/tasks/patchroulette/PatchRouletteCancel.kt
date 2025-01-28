@@ -26,13 +26,28 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.options.Option
 
 abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
     @get:OutputFile
     abstract val config: RegularFileProperty
 
+    @get:Input
+    @get:Optional
+    // ./gradlew taskName --patch=net/minecraft/something.java.patch
+    @get:Option(option = "patch", description = "Cancel a patch by path instead of using the current patch")
+    abstract val patch: Property<String>
+
     override fun run() {
+        if (patch.isPresent) {
+            cancelPatch(patch.get())
+            return
+        }
+
         val config = if (config.path.isRegularFile()) {
             gson.fromJson<PatchRouletteApply.Config>(config.path)
         } else {
