@@ -44,6 +44,7 @@ class UpstreamConfigTasks(
     private val readOnly: Boolean,
     private val taskGroup: String,
     private val gitFilePatches: Provider<Boolean>,
+    private val filterPatches: Provider<Boolean>,
     private val setupUpstream: TaskProvider<out RunNestedBuild>?,
     private val upstreamTasks: UpstreamConfigTasks?,
 ) {
@@ -132,6 +133,7 @@ class UpstreamConfigTasks(
             cfg.featurePatchDir,
             base,
             gitFilePatches,
+            filterPatches,
             cfg.outputDir.path,
         )
     }

@@ -57,6 +57,7 @@ class MinecraftPatchingTasks(
     private val baseSources: Provider<Directory>,
     private val baseResources: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
+    private val filterPatches: Provider<Boolean>,
     outputRoot: Path,
     private val outputSrc: Path = outputRoot.resolve("src/minecraft/java"),
     private val outputResources: Path = outputRoot.resolve("src/minecraft/resources"),
@@ -237,6 +238,7 @@ class MinecraftPatchingTasks(
             inputDir.set(outputSrc)
             patchDir.set(featurePatchDir)
             baseRef.set("file")
+            filterPatches.set(this@MinecraftPatchingTasks.filterPatches)
         }
 
         val rebuildPatches = tasks.register<Task>(rebuildPatchesName) {
@@ -259,6 +261,14 @@ class MinecraftPatchingTasks(
 
             repo.set(outputResources)
             upstream.set("upstream/main")
+        }
+
+        val applyOrMoveSourcePatches = tasks.register<ApplyFilePatches>("applyOrMove${namePart}SourcePatches") {
+            configureApplyFilePatches()
+            description = "Applies $configName file patches to the Minecraft sources as Git patches, moving any failed patches to the rejects dir. " +
+                "Useful when updating to a new Minecraft version."
+            gitFilePatches = true
+            moveFailedGitPatchesToRejects = true
         }
     }
 }
