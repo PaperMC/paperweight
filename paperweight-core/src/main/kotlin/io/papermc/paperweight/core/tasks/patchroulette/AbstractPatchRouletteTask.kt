@@ -84,8 +84,8 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun getAvailablePatches(): List<String> {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(minecraftVersion.get()))
-                .uri(URI.create(endpoint.get() + "/get-available-patches"))
+                .GET()
+                .uri(URI.create(endpoint.get() + "/get-available-patches?minecraftVersion=${minecraftVersion.get()}"))
                 .auth()
                 .contentTypeTextPlain()
                 .build(),
@@ -109,8 +109,8 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun getAllPatches(): List<Patch> {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(minecraftVersion.get()))
-                .uri(URI.create(endpoint.get() + "/get-all-patches"))
+                .GET()
+                .uri(URI.create(endpoint.get() + "/get-all-patches?minecraftVersion=${minecraftVersion.get()}"))
                 .auth()
                 .contentTypeTextPlain()
                 .build(),
