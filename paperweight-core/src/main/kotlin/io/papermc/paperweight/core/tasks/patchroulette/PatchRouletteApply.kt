@@ -98,13 +98,17 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     private fun applyPatch(patch: String) {
         val git = Git(targetDir.path)
-        git(
+        val responseCode = git(
             "-c",
             "rerere.enabled=false",
             "apply",
             "--3way",
             patchDir.path.resolve(patch).relativeTo(targetDir.path).invariantSeparatorsPathString
         ).runOut()
+        if (responseCode > 0) {
+            logger.error("Check above ^^^, Something when wrong while applying $patch")
+            logger.error("You might need to apply manually or check the target repo state.")
+        }
         logger.lifecycle("Finish the patch apply and rebuild, then run the finish task (or cancel with the cancel task)")
     }
 

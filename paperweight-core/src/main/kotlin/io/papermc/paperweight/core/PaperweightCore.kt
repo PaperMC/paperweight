@@ -201,15 +201,15 @@ abstract class PaperweightCore : Plugin<Project> {
                         "$OLD_PAPER_PATH/${coreExt.updatingMinecraft.oldPaperCommit.get()}/paper-server/src/minecraft/java"
                     ).absolutePathString()
                 }
+
+                PatchRouletteTasks(
+                    target,
+                    "paper",
+                    coreExt.minecraftVersion,
+                    coreExt.paper.rejectsDir,
+                    layout.projectDirectory.dir("src/minecraft/java"),
+                )
             }
-            // TODO move into above 'if'
-            PatchRouletteTasks(
-                target,
-                "paper",
-                coreExt.minecraftVersion,
-                coreExt.paper.sourcePatchDir, // TODO use reject dir
-                layout.projectDirectory.dir("src/minecraft/java"),
-            )
         }
     }
 }
