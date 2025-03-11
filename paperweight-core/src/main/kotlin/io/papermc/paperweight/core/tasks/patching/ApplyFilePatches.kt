@@ -89,12 +89,16 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Input
     abstract val moveFailedGitPatchesToRejects: Property<Boolean>
 
+    @get:Internal
+    abstract val rejectsForDiffPatches: Property<Boolean>
+
     init {
         run {
             verbose.convention(false)
             gitFilePatches.convention(false)
             additionalRemoteName.convention("old")
             moveFailedGitPatchesToRejects.convention(false)
+            rejectsForDiffPatches.convention(true)
         }
     }
 
@@ -219,7 +223,7 @@ abstract class ApplyFilePatches : BaseTask() {
             .summary(verbose.get())
             .lineEnding("\n")
             .ignorePrefix(".git")
-        if (rejects.isPresent) {
+        if (rejects.isPresent && rejectsForDiffPatches.get()) {
             builder.rejectsPath(rejects.path)
         }
 
