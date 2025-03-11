@@ -184,8 +184,10 @@ abstract class ApplyFilePatches : BaseTask() {
                     responseCode == 1 -> {
                         val relativePatch = patches.path.relativize(patch)
                         val failedFile = relativePatch.parent.resolve(relativePatch.fileName.toString().substringBeforeLast(".patch"))
-                        git("reset", "--", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
-                        git("restore", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                        if (outputPath.resolve(failedFile).exists()) {
+                            git("reset", "--", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                            git("restore", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                        }
 
                         val rejectFile = rejects.path.resolve(relativePatch)
                         patch.moveTo(rejectFile.createParentDirectories(), overwrite = true)
