@@ -51,8 +51,9 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
                 return@forEach
             }
 
-            if (userFilter.isPresent
-                && (patch.responsibleUser == null || !patch.responsibleUser.lowercase().contains(userFilter.get().lowercase()))) {
+            if (userFilter.isPresent &&
+                (patch.responsibleUser == null || !patch.responsibleUser.lowercase().contains(userFilter.get().lowercase()))
+            ) {
                 return@forEach
             }
 
