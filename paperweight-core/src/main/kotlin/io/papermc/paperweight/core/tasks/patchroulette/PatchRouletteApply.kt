@@ -79,6 +79,11 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:OutputFile
     abstract val config: RegularFileProperty
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "reapplyPatches", description = "Whether to reapply current selected patched")
+    abstract val reapplyPatches: Property<Boolean>
+
     override fun run() {
         config.path.createParentDirectories()
         var config = if (config.path.isRegularFile()) {
@@ -87,11 +92,14 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             Config(listOf(), null, listOf())
         }
 
-        if (config.currentPatches.isNotEmpty()) {
+        val git = Git(targetDir.path)
+        if (this.reapplyPatches.getOrElse(false)) {
+            applyPatches(git, config.currentPatches)
+            return
+        } else if (config.currentPatches.isNotEmpty()) {
             throw PaperweightException("You already selected the patches [${config.currentPatches.joinToString(", ") { it.name }}]!")
         }
 
-        val git = Git(targetDir.path)
         val potentiallyDirtyTargetDir = git("status", "--porcelain").getText()
         if (potentiallyDirtyTargetDir.isNotEmpty()) {
             throw PaperweightException("Target directory is dirty, finish and rebuild previous patches first: [$potentiallyDirtyTargetDir]")
