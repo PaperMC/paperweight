@@ -40,31 +40,6 @@ import org.gradle.api.tasks.options.Option
 
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
-    data class Config(val skip: List<Path>, val suggestedPackage: Path?, val currentPatches: List<Path>)
-
-    sealed interface PatchSelectionStrategy {
-        data class NumericInPackage(val count: Int) : PatchSelectionStrategy {
-            override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
-                if (config.suggestedPackage != null) {
-                    val possiblePatches = available.filter { it.parent.equals(config.suggestedPackage) }.take(count)
-                    if (possiblePatches.isNotEmpty()) return config to possiblePatches
-                }
-
-                return select(config.copy(suggestedPackage = available.first().parent), available)
-            }
-        }
-
-        fun select(config: Config, available: List<Path>): Pair<Config, List<Path>>
-    }
-
-    private fun parsePatchSelectionStrategy(input: String): PatchSelectionStrategy {
-        try {
-            return PatchSelectionStrategy.NumericInPackage(input.toInt())
-        } catch (e: Exception) {
-            throw PaperweightException("Failed to parse patch selection strategy $input", e)
-        }
-    }
-
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 
@@ -189,5 +164,30 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             }
         }
         logger.lifecycle("Finish the patch apply and rebuild, then run the finish task (or cancel with the cancel task)")
+    }
+
+    data class Config(val skip: List<Path>, val suggestedPackage: Path?, val currentPatches: List<Path>)
+
+    sealed interface PatchSelectionStrategy {
+        data class NumericInPackage(val count: Int) : PatchSelectionStrategy {
+            override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
+                if (config.suggestedPackage != null) {
+                    val possiblePatches = available.filter { it.parent.equals(config.suggestedPackage) }.take(count)
+                    if (possiblePatches.isNotEmpty()) return config to possiblePatches
+                }
+
+                return select(config.copy(suggestedPackage = available.first().parent), available)
+            }
+        }
+
+        fun select(config: Config, available: List<Path>): Pair<Config, List<Path>>
+    }
+
+    private fun parsePatchSelectionStrategy(input: String): PatchSelectionStrategy {
+        try {
+            return PatchSelectionStrategy.NumericInPackage(input.toInt())
+        } catch (e: Exception) {
+            throw PaperweightException("Failed to parse patch selection strategy $input", e)
+        }
     }
 }
