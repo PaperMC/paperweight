@@ -22,11 +22,43 @@
 
 package io.papermc.paperweight.core.tasks.patchroulette
 
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.options.Option
+
 abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "state", description = "Filter patches by status")
+    abstract val statusFilter: Property<Status>
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "user", description = "Filter patches by user")
+    abstract val userFilter: Property<String>
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "path", description = "Filter patches by path")
+    abstract val pathFilter: Property<String>
 
     override fun run() {
         logger.lifecycle("| Status    | User                 | Path ")
         getAllPatches().forEach { patch ->
+            if (statusFilter.isPresent && patch.status != statusFilter.get()) {
+                return@forEach
+            }
+
+            if (userFilter.isPresent && (patch.responsibleUser == null || !patch.responsibleUser.lowercase().contains(userFilter.get().lowercase()))) {
+                return@forEach
+            }
+
+            if (pathFilter.isPresent && !patch.path.lowercase().contains(pathFilter.get().lowercase())) {
+                return@forEach
+            }
+
             logger.lifecycle(String.format("| %-9s | %-20s | %s", patch.status, patch.responsibleUser, patch.path))
         }
     }
