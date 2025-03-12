@@ -67,21 +67,23 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             Config(listOf(), null, listOf())
         }
 
-        val reapplyPatches = this.reapplyPatches.getOrElse(false);
-        if (config.currentPatches.isNotEmpty() && !reapplyPatches) { // Ignore if reapplying
-            throw PaperweightException("You already selected the patches [${config.currentPatches.joinToString(", ") { it.name }}]!")
-        }
-
+        // Nothing can be applied if the target repo is dirty.
         val git = Git(targetDir.path)
         val potentiallyDirtyTargetDir = git("status", "--porcelain").getText()
         if (potentiallyDirtyTargetDir.isNotEmpty()) {
             throw PaperweightException("Target directory is dirty, finish and rebuild previous patches first: [$potentiallyDirtyTargetDir]")
         }
 
-        if (reapplyPatches) {
+        // Early opt out if someone is only attempting to re-apply
+        if (this.reapplyPatches.getOrElse(false)) {
             logger.lifecycle("Reapplying ${config.currentPatches.size} currently selected patches")
             applyPatches(git, config.currentPatches)
             return
+        }
+
+        // Prevent acquiring new patches from roulette if current patches have not been marked as finished yet.
+        if (config.currentPatches.isNotEmpty()) {
+            throw PaperweightException("You already selected the patches [${config.currentPatches.joinToString(", ") { it.name }}]!")
         }
 
         var tries = 5
