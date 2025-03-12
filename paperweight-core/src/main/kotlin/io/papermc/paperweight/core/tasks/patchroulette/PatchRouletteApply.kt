@@ -92,17 +92,20 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             Config(listOf(), null, listOf())
         }
 
-        val git = Git(targetDir.path)
-        if (this.reapplyPatches.getOrElse(false)) {
-            applyPatches(git, config.currentPatches)
-            return
-        } else if (config.currentPatches.isNotEmpty()) {
+        if (config.currentPatches.isNotEmpty()) {
             throw PaperweightException("You already selected the patches [${config.currentPatches.joinToString(", ") { it.name }}]!")
         }
 
+        val git = Git(targetDir.path)
         val potentiallyDirtyTargetDir = git("status", "--porcelain").getText()
         if (potentiallyDirtyTargetDir.isNotEmpty()) {
             throw PaperweightException("Target directory is dirty, finish and rebuild previous patches first: [$potentiallyDirtyTargetDir]")
+        }
+
+        if (this.reapplyPatches.getOrElse(false)) {
+            logger.lifecycle("Reapplying ${config.currentPatches.size} currently selected patches")
+            applyPatches(git, config.currentPatches)
+            return
         }
 
         var tries = 5
