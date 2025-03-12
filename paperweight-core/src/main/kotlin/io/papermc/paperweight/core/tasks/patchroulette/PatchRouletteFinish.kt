@@ -57,13 +57,15 @@ abstract class PatchRouletteFinish : AbstractPatchRouletteTask() {
         } else {
             throw PaperweightException("No config exists")
         }
-        if (config.currentPatch == null) {
+        if (config.currentPatches.isEmpty()) {
             throw PaperweightException("No current patch in config")
         }
 
-        completePatch(config.currentPatch)
         // TODO: Do we want to fixup file patches & rebuild here as well?
-        patchDir.path.resolve(config.currentPatch).deleteIfExists() // todo git rm
-        this.config.path.writeText(gson.toJson(config.copy(currentPatch = null)))
+        config.currentPatches.forEach {
+            completePatch(it.pathString)
+            patchDir.path.resolve(it).deleteIfExists() // todo git rm
+        }
+        this.config.path.writeText(gson.toJson(config.copy(currentPatches = listOf())))
     }
 }

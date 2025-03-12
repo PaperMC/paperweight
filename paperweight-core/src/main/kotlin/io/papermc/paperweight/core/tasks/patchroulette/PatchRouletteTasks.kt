@@ -40,14 +40,14 @@ class PatchRouletteTasks(
         target.tasks.register<ShowPatchRouletteList>("${namePrefix}PatchRouletteList") {
             minecraftVersion = minecraftVer
         }
-        target.tasks.register<PushPatchRouletteList>("${namePrefix}PatchRoulettePush") {
-            minecraftVersion = minecraftVer
-            patchDir = patchDirectory
-        }
         if (paperweightDebug()) {
             // Require debug to ensure no one does this by accident
             target.tasks.register<ClearPatchRouletteList>("${namePrefix}PatchRouletteClear") {
                 minecraftVersion = minecraftVer
+            }
+            target.tasks.register<PushPatchRouletteList>("${namePrefix}PatchRoulettePush") {
+                minecraftVersion = minecraftVer
+                patchDir = patchDirectory
             }
         }
         target.tasks.register<PatchRouletteApply>("${namePrefix}PatchRouletteApply") {

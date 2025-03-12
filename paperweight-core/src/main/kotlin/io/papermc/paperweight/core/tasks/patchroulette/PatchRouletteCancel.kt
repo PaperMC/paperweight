@@ -53,11 +53,11 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
         } else {
             throw PaperweightException("No config exists")
         }
-        if (config.currentPatch == null) {
+        if (config.currentPatches.isEmpty()) {
             throw PaperweightException("No current patch in config")
         }
 
-        cancelPatch(config.currentPatch)
-        this.config.path.writeText(gson.toJson(config.copy(currentPatch = null)))
+        config.currentPatches.forEach { cancelPatch(it.pathString) }
+        this.config.path.writeText(gson.toJson(config.copy(currentPatches = listOf())))
     }
 }
