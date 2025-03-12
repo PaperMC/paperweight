@@ -43,7 +43,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     data class Config(val skip: List<Path>, val suggestedPackage: Path?, val currentPatches: List<Path>)
 
     sealed interface PatchSelectionStrategy {
-        data class NumericInPackage(val count: Int): PatchSelectionStrategy {
+        data class NumericInPackage(val count: Int) : PatchSelectionStrategy {
             override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
                 if (config.suggestedPackage != null) {
                     val possiblePatches = available.filter { it.parent.equals(config.suggestedPackage) }.take(count)
@@ -107,7 +107,9 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
         var tries = 5
         var patches = listOf<Path>()
-        val patchSelectionStrategy = patchSelectionStrategy.map { parsePatchSelectionStrategy(it) }.getOrElse(PatchSelectionStrategy.NumericInPackage(5))
+        val patchSelectionStrategy = patchSelectionStrategy
+            .map { parsePatchSelectionStrategy(it) }
+            .getOrElse(PatchSelectionStrategy.NumericInPackage(5))
         while (tries > 0) {
             val available = getAvailablePatches().map { Path(it) }.toMutableSet()
 
@@ -159,26 +161,29 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     }
 
     private fun applyPatches(git: Git, patches: List<Path>) {
-        val applyCommand = git(
-            "-c",
-            "rerere.enabled=false",
-            "apply",
-            "--3way",
-            *patches.map { patchDir.path.resolve(it).relativeTo(targetDir.path).invariantSeparatorsPathString }.toTypedArray()
-        )
-        val errorTextBuffer = ByteArrayOutputStream()
-        applyCommand.setup(System.out, errorTextBuffer)
-        val applyCommandExitCode = applyCommand.run()
-        val applyCommandErrorText = String(errorTextBuffer.toByteArray(), Charset.defaultCharset())
+        patches.forEach { patch ->
+            val applyCommand = git(
+                "-c",
+                "rerere.enabled=false",
+                "apply",
+                "--3way",
+                patchDir.path.resolve(patch).relativeTo(targetDir.path).invariantSeparatorsPathString
+            )
+            val errorTextBuffer = ByteArrayOutputStream()
+            applyCommand.setup(System.out, errorTextBuffer)
+            val applyCommandExitCode = applyCommand.run()
+            val applyCommandErrorText = String(errorTextBuffer.toByteArray(), Charset.defaultCharset())
+            val applyCommandErrorTextContainsUnexpected = applyCommandErrorText.lines()
+                .filter { it.isNotBlank() }
+                .any { !it.startsWith("Applied patch") && !it.startsWith("U ") } // Unexpected output, warn user to double check
 
-        if (applyCommandExitCode > 1 || applyCommandErrorText.lines().filter { it.isNotBlank() }.any {
-            !it.startsWith("Applied patch") && !it.startsWith("U ") // Unexpected output, warn user to double check
-        }) {
-            logger.error("===============================================")
-            logger.error(applyCommandErrorText)
-            logger.error("===============================================")
-            logger.error("ERROR: Check above ^^^, Something might have gone wrong while applying!!")
-            logger.error("ERROR: You might need to apply manually or check the target repo state.")
+            if (applyCommandExitCode > 1 || applyCommandErrorTextContainsUnexpected) {
+                logger.error("===============================================")
+                logger.error(applyCommandErrorText)
+                logger.error("===============================================")
+                logger.error("ERROR: Check above ^^^, Something might have gone wrong while applying!!")
+                logger.error("ERROR: You might need to apply manually or check the target repo state.")
+            }
         }
         logger.lifecycle("Finish the patch apply and rebuild, then run the finish task (or cancel with the cancel task)")
     }
