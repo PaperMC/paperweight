@@ -67,7 +67,8 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             Config(listOf(), null, listOf())
         }
 
-        if (config.currentPatches.isNotEmpty()) {
+        val reapplyPatches = this.reapplyPatches.getOrElse(false);
+        if (config.currentPatches.isNotEmpty() && !reapplyPatches) { // Ignore if reapplying
             throw PaperweightException("You already selected the patches [${config.currentPatches.joinToString(", ") { it.name }}]!")
         }
 
@@ -77,7 +78,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             throw PaperweightException("Target directory is dirty, finish and rebuild previous patches first: [$potentiallyDirtyTargetDir]")
         }
 
-        if (this.reapplyPatches.getOrElse(false)) {
+        if (reapplyPatches) {
             logger.lifecycle("Reapplying ${config.currentPatches.size} currently selected patches")
             applyPatches(git, config.currentPatches)
             return
