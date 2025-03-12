@@ -43,11 +43,6 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
     abstract val patch: Property<String>
 
     override fun run() {
-        if (patch.isPresent) {
-            cancelPatch(patch.get())
-            return
-        }
-
         val config = if (config.path.isRegularFile()) {
             gson.fromJson<PatchRouletteApply.Config>(config.path)
         } else {
@@ -57,7 +52,15 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
             throw PaperweightException("No current patch in config")
         }
 
-        config.currentPatches.forEach { cancelPatch(it.pathString) }
-        this.config.path.writeText(gson.toJson(config.copy(currentPatches = listOf())))
+        val patchesToCancel = if (!patch.isPresent) config.currentPatches else {
+            if (!config.currentPatches.contains(Path(patch.get()))) {
+                throw PaperweightException("Cannot cancel patch ${patch.get()} as it isn't currently being worked on!")
+            }
+
+            listOf(Path(patch.get()))
+        }
+
+        patchesToCancel.forEach { cancelPatch(it.pathString) }
+        this.config.path.writeText(gson.toJson(config.copy(currentPatches = (config.currentPatches - patchesToCancel.toSet()))))
     }
 }
