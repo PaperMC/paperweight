@@ -67,7 +67,7 @@ class PatchingTasks(
             output.set(outputDir)
         }
         patches.set(filePatchDir.fileExists(project))
-        rejectsDir.set(rejectsDir)
+        rejectsDir.set(this@PatchingTasks.rejectsDir)
         gitFilePatches.set(this@PatchingTasks.gitFilePatches)
         baseRef.set("base")
         identifier = "$forkName $patchSetName"
