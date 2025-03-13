@@ -46,6 +46,8 @@ class CoreTasks(
     val mache: Property<MacheMeta>,
     tasks: TaskContainer = project.tasks
 ) : AllTasks(project) {
+    lateinit var paperPatchingTasks: MinecraftPatchingTasks
+
     val macheRemapJar by tasks.registering(RunCodebook::class) {
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
         serverMappings.set(downloadMappings.flatMap { it.outputFile })
@@ -95,7 +97,7 @@ class CoreTasks(
 
     private fun SetupMinecraftSources.configureSetupMacheSources() {
         mache.from(project.configurations.named(MACHE_CONFIG))
-        macheOld.set(project.coreExt.macheOldPath)
+        oldPaperCommit.convention(project.coreExt.updatingMinecraft.oldPaperCommit)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
@@ -161,7 +163,7 @@ class CoreTasks(
         } else {
             project.layout.projectDirectory.path
         }
-        val paperPatchingTasks = MinecraftPatchingTasks(
+        paperPatchingTasks = MinecraftPatchingTasks(
             project,
             "paper",
             true,
@@ -175,6 +177,7 @@ class CoreTasks(
             setupMacheSources.flatMap { it.outputDir },
             setupMacheResources.flatMap { it.outputDir },
             project.coreExt.gitFilePatches,
+            project.coreExt.filterPatches,
             paperOutputRoot,
         )
 
@@ -210,6 +213,7 @@ class CoreTasks(
                 upstreamTasks.first.applyFeaturePatches.flatMap { it.repo },
                 upstreamTasks.first.applyResourcePatches.flatMap { it.output },
                 project.coreExt.gitFilePatches,
+                project.coreExt.filterPatches,
                 outputRoot,
             )
 
@@ -231,6 +235,7 @@ class CoreTasks(
                     "upstream server patching"
                 },
                 project.coreExt.gitFilePatches,
+                project.coreExt.filterPatches,
                 null,
                 upstreamTasks.second,
             )

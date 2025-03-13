@@ -28,12 +28,15 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
+import io.papermc.paperweight.core.tasks.patchroulette.PatchRouletteTasks
+import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.core.util.createBuildTasks
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import javax.inject.Inject
+import kotlin.io.path.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyFactory
@@ -191,6 +194,23 @@ abstract class PaperweightCore : Plugin<Project> {
             devBundleTasks.configureAfterEvaluate(
                 includeMappings.flatMap { it.outputJar },
             )
+
+            if (coreExt.updatingMinecraft.oldPaperCommit.isPresent) {
+                tasks.paperPatchingTasks.applySourcePatches.configure {
+                    additionalRemote = layout.cache.resolve(
+                        "$OLD_PAPER_PATH/${coreExt.updatingMinecraft.oldPaperCommit.get()}/paper-server/src/minecraft/java"
+                    ).absolutePathString()
+                    emitRejects = false
+                }
+
+                PatchRouletteTasks(
+                    target,
+                    "paper",
+                    coreExt.minecraftVersion,
+                    coreExt.paper.rejectsDir,
+                    layout.projectDirectory.dir("src/minecraft/java"),
+                )
+            }
         }
     }
 }

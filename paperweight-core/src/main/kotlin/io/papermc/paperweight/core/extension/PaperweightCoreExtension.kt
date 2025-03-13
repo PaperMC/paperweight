@@ -27,7 +27,6 @@ import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -42,8 +41,8 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
 
     val macheRepo: Property<String> = objects.property<String>().convention(PAPER_MAVEN_REPO_URL)
 
-    val macheOldPath: DirectoryProperty = objects.directoryProperty()
     val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)
+    val filterPatches: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     val vanillaJarIncludes: ListProperty<String> = objects.listProperty<String>().convention(
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
@@ -69,4 +68,10 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
     }
 
     val activeFork: Property<ForkConfig> = objects.property()
+
+    val updatingMinecraft = objects.newInstance<UpdatingMinecraftExtension>()
+
+    fun updatingMinecraft(action: Action<UpdatingMinecraftExtension>) {
+        action.execute(updatingMinecraft)
+    }
 }

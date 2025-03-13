@@ -26,6 +26,7 @@ import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.match.FuzzyLineMatcher
 import codechicken.diffpatch.util.LoggingOutputStream
 import codechicken.diffpatch.util.PatchMode
+import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
@@ -34,6 +35,7 @@ import java.time.Instant
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.transport.URIish
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
@@ -62,7 +64,7 @@ abstract class ApplyFilePatches : BaseTask() {
     abstract val patches: DirectoryProperty
 
     @get:Internal
-    abstract val rejects: DirectoryProperty
+    abstract val rejectsDir: DirectoryProperty
 
     @get:Optional
     @get:Input
@@ -76,10 +78,27 @@ abstract class ApplyFilePatches : BaseTask() {
     @get:Optional
     abstract val identifier: Property<String>
 
+    // An additional remote to add and fetch from before applying patches (to bring in objects for 3-way merge).
+    @get:Input
+    @get:Optional
+    abstract val additionalRemote: Property<String>
+
+    @get:Input
+    abstract val additionalRemoteName: Property<String>
+
+    @get:Input
+    abstract val moveFailedGitPatchesToRejects: Property<Boolean>
+
+    @get:Internal
+    abstract val emitRejects: Property<Boolean>
+
     init {
         run {
             verbose.convention(false)
             gitFilePatches.convention(false)
+            additionalRemoteName.convention("old")
+            moveFailedGitPatchesToRejects.convention(false)
+            emitRejects.convention(true)
         }
     }
 
@@ -98,6 +117,13 @@ abstract class ApplyFilePatches : BaseTask() {
             "main",
             baseRef.isPresent,
         )
+
+        if (additionalRemote.isPresent) {
+            val jgit = Git.open(outputPath.toFile())
+            jgit.remoteRemove().setRemoteName(additionalRemoteName.get()).call()
+            jgit.remoteAdd().setName(additionalRemoteName.get()).setUri(URIish(additionalRemote.get())).call()
+            jgit.fetch().setRemote(additionalRemoteName.get()).call()
+        }
 
         setupGitHook(outputPath)
 
@@ -144,15 +170,44 @@ abstract class ApplyFilePatches : BaseTask() {
 
     private fun applyWithGit(outputPath: Path): Int {
         val git = Git(outputPath)
-        val patches = patches.path.filesMatchingRecursive("*.patch")
-        val patchStrings = patches.map { outputPath.relativize(it).pathString }
-        patchStrings.chunked(12).forEach {
-            git("apply", "--3way", *it.toTypedArray()).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+        val patchFiles = patches.path.filesMatchingRecursive("*.patch")
+        if (moveFailedGitPatchesToRejects.get() && rejectsDir.isPresent) {
+            patchFiles.forEach { patch ->
+                val patchPathFromGit = outputPath.relativize(patch)
+                val responseCode =
+                    git(
+                        "-c",
+                        "rerere.enabled=false",
+                        "apply",
+                        "--3way",
+                        patchPathFromGit.pathString
+                    ).runSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                when {
+                    responseCode == 0 -> {}
+                    responseCode > 1 -> throw PaperweightException("Failed to apply patch $patch: $responseCode")
+                    responseCode == 1 -> {
+                        val relativePatch = patches.path.relativize(patch)
+                        val failedFile = relativePatch.parent.resolve(relativePatch.fileName.toString().substringBeforeLast(".patch"))
+                        if (outputPath.resolve(failedFile).exists()) {
+                            git("reset", "--", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                            git("restore", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+                        }
+
+                        val rejectFile = rejectsDir.path.resolve(relativePatch)
+                        patch.moveTo(rejectFile.createParentDirectories(), overwrite = true)
+                    }
+                }
+            }
+        } else {
+            val patchStrings = patchFiles.map { outputPath.relativize(it).pathString }
+            patchStrings.chunked(12).forEach {
+                git("apply", "--3way", *it.toTypedArray()).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
+            }
         }
 
         commit()
 
-        return patches.size
+        return patchFiles.size
     }
 
     private fun applyWithDiffPatch(): Int {
@@ -168,8 +223,8 @@ abstract class ApplyFilePatches : BaseTask() {
             .summary(verbose.get())
             .lineEnding("\n")
             .ignorePrefix(".git")
-        if (rejects.isPresent) {
-            builder.rejectsPath(rejects.path)
+        if (rejectsDir.isPresent && emitRejects.get()) {
+            builder.rejectsPath(rejectsDir.path)
         }
 
         val result = builder.build().operate()

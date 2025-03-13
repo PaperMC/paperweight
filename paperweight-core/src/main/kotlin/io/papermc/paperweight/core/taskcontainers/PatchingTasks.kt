@@ -50,6 +50,7 @@ class PatchingTasks(
     private val featurePatchDir: DirectoryProperty,
     private val baseDir: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
+    private val filterPatches: Provider<Boolean>,
     private val outputDir: Path,
     private val tasks: TaskContainer = project.tasks,
 ) {
@@ -66,7 +67,7 @@ class PatchingTasks(
             output.set(outputDir)
         }
         patches.set(filePatchDir.fileExists(project))
-        rejects.set(rejectsDir)
+        rejectsDir.set(this@PatchingTasks.rejectsDir)
         gitFilePatches.set(this@PatchingTasks.gitFilePatches)
         baseRef.set("base")
         identifier = "$forkName $patchSetName"
@@ -146,12 +147,21 @@ class PatchingTasks(
             inputDir.set(outputDir)
             patchDir.set(featurePatchDir)
             baseRef.set("file")
+            filterPatches.set(this@PatchingTasks.filterPatches)
         }
 
         val rebuildPatches = tasks.register<Task>(rebuildPatchesName) {
             group = taskGroup
             description = "Rebuilds all $patchSetName patches"
             dependsOn(rebuildFilePatches, rebuildFeaturePatches)
+        }
+
+        val applyOrMoveFilePatches = tasks.register<ApplyFilePatches>("applyOrMove${namePart}FilePatches") {
+            configureApplyFilePatches()
+            description = "Applies $patchSetName file patches as Git patches, moving any failed patches to the rejects dir. " +
+                "Useful when updating to a new Minecraft version."
+            gitFilePatches = true
+            moveFailedGitPatchesToRejects = true
         }
     }
 }

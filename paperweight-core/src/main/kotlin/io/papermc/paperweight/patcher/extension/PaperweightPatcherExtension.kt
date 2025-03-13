@@ -28,10 +28,14 @@ import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.*
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 abstract class PaperweightPatcherExtension @Inject constructor(private val objects: ObjectFactory) {
+
+    val gitFilePatches: Property<Boolean> = objects.property<Boolean>().convention(false)
+    val filterPatches: Property<Boolean> = objects.property<Boolean>().convention(true)
 
     val upstreams: NamedDomainObjectContainer<UpstreamConfig> = objects.domainObjectContainer(UpstreamConfig::class) {
         objects.newInstance(it, true)
