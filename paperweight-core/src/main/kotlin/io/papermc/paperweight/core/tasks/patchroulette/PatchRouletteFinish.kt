@@ -63,7 +63,7 @@ abstract class PatchRouletteFinish : AbstractPatchRouletteTask() {
 
         // TODO: Do we want to fixup file patches & rebuild here as well?
         config.currentPatches.forEach {
-            completePatch(it.pathString)
+            completePatch(it.invariantSeparatorsPathString)
             patchDir.path.resolve(it).deleteIfExists() // todo git rm
         }
         this.config.path.writeText(gson.toJson(config.copy(currentPatches = listOf())))

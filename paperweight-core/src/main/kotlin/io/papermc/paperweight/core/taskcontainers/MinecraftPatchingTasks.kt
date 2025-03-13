@@ -82,7 +82,7 @@ class MinecraftPatchingTasks(
             output.set(outputSrc)
         }
         patches.set(sourcePatchDir.fileExists(project))
-        rejects.set(rejectsDir)
+        rejectsDir.set(rejectsDir)
         gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
         identifier = configName
     }

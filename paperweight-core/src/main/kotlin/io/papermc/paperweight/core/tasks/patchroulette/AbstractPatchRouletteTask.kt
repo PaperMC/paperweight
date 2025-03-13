@@ -127,7 +127,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun setPatches(paths: List<String>) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SetPatches(paths.normalisePathSeparators(), minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SetPatches(paths, minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/set-patches"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -161,7 +161,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun startPatches(paths: List<String>): List<String> {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths.normalisePathSeparators(), minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths, minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/start-patches"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -181,7 +181,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun completePatch(path: String) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path.normalisePathSeparators(), minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/complete-patch"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -197,7 +197,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun cancelPatch(path: String) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path.normalisePathSeparators(), minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/cancel-patch"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -210,6 +210,3 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
         logger.lifecycle("Cancelled patch $path")
     }
 }
-
-private fun String.normalisePathSeparators(): String = replace("\\", "/")
-private fun List<String>.normalisePathSeparators(): List<String> = map { it.replace("\\", "/") }

@@ -45,7 +45,7 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
     abstract val pathFilter: Property<String>
 
     override fun run() {
-        var results = 0;
+        var results = 0
 
         logger.lifecycle("| Status    | User                 | Path ")
         getAllPatches().forEach { patch ->

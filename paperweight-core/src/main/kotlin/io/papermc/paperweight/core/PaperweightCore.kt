@@ -200,7 +200,7 @@ abstract class PaperweightCore : Plugin<Project> {
                     additionalRemote = layout.cache.resolve(
                         "$OLD_PAPER_PATH/${coreExt.updatingMinecraft.oldPaperCommit.get()}/paper-server/src/minecraft/java"
                     ).absolutePathString()
-                    rejectsForDiffPatches = false
+                    emitRejects = false
                 }
 
                 PatchRouletteTasks(

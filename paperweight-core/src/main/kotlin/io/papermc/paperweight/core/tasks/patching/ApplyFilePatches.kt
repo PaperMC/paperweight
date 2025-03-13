@@ -64,7 +64,7 @@ abstract class ApplyFilePatches : BaseTask() {
     abstract val patches: DirectoryProperty
 
     @get:Internal
-    abstract val rejects: DirectoryProperty
+    abstract val rejectsDir: DirectoryProperty
 
     @get:Optional
     @get:Input
@@ -90,7 +90,7 @@ abstract class ApplyFilePatches : BaseTask() {
     abstract val moveFailedGitPatchesToRejects: Property<Boolean>
 
     @get:Internal
-    abstract val rejectsForDiffPatches: Property<Boolean>
+    abstract val emitRejects: Property<Boolean>
 
     init {
         run {
@@ -98,7 +98,7 @@ abstract class ApplyFilePatches : BaseTask() {
             gitFilePatches.convention(false)
             additionalRemoteName.convention("old")
             moveFailedGitPatchesToRejects.convention(false)
-            rejectsForDiffPatches.convention(true)
+            emitRejects.convention(true)
         }
     }
 
@@ -171,7 +171,7 @@ abstract class ApplyFilePatches : BaseTask() {
     private fun applyWithGit(outputPath: Path): Int {
         val git = Git(outputPath)
         val patchFiles = patches.path.filesMatchingRecursive("*.patch")
-        if (moveFailedGitPatchesToRejects.get() && rejects.isPresent) {
+        if (moveFailedGitPatchesToRejects.get() && rejectsDir.isPresent) {
             patchFiles.forEach { patch ->
                 val patchPathFromGit = outputPath.relativize(patch)
                 val responseCode =
@@ -193,7 +193,7 @@ abstract class ApplyFilePatches : BaseTask() {
                             git("restore", failedFile.pathString).executeSilently(silenceOut = !verbose.get(), silenceErr = !verbose.get())
                         }
 
-                        val rejectFile = rejects.path.resolve(relativePatch)
+                        val rejectFile = rejectsDir.path.resolve(relativePatch)
                         patch.moveTo(rejectFile.createParentDirectories(), overwrite = true)
                     }
                 }
@@ -223,8 +223,8 @@ abstract class ApplyFilePatches : BaseTask() {
             .summary(verbose.get())
             .lineEnding("\n")
             .ignorePrefix(".git")
-        if (rejects.isPresent && rejectsForDiffPatches.get()) {
-            builder.rejectsPath(rejects.path)
+        if (rejectsDir.isPresent && emitRejects.get()) {
+            builder.rejectsPath(rejectsDir.path)
         }
 
         val result = builder.build().operate()

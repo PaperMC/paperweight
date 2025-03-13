@@ -52,7 +52,9 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
             throw PaperweightException("No current patch in config")
         }
 
-        val patchesToCancel = if (!patch.isPresent) config.currentPatches else {
+        val patchesToCancel = if (!patch.isPresent) {
+            config.currentPatches
+        } else {
             if (!config.currentPatches.contains(Path(patch.get()))) {
                 throw PaperweightException("Cannot cancel patch ${patch.get()} as it isn't currently being worked on!")
             }
@@ -60,7 +62,7 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
             listOf(Path(patch.get()))
         }
 
-        patchesToCancel.forEach { cancelPatch(it.pathString) }
+        patchesToCancel.forEach { cancelPatch(it.invariantSeparatorsPathString) }
         this.config.path.writeText(gson.toJson(config.copy(currentPatches = (config.currentPatches - patchesToCancel.toSet()))))
     }
 }
