@@ -123,22 +123,16 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
                 continue
             }
 
-            val startedPatches = mutableListOf<Path>()
             try {
-                patches.forEach {
-                    startPatch(it.pathString)
-                    startedPatches.add(it)
-                }
+                val startedPatches = startPatches(patches.map { it.pathString })
                 this.config.path.writeText(gson.toJson(config.copy(currentPatches = patches)))
+                applyPatches(git, startedPatches.map { Path(it) })
                 break
             } catch (e: PaperweightException) {
-                logger.lifecycle("Patch could not be started: ${e.message}, retrying...")
-                startedPatches.forEach { cancelPatch(it.pathString) }
+                logger.lifecycle("Patches could not be started: ${e.message}, retrying...")
                 tries--
             }
         }
-
-        applyPatches(git, patches)
     }
 
     private fun applyPatches(git: Git, patches: List<Path>) {

@@ -220,9 +220,10 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
         oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
         oldPaperGit.close()
 
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
         oldPaperLog.outputStream().use { logOut ->
             val processBuilder = ProcessBuilder(
-                "./gradlew",
+                "./gradlew" + if (isWindows) ".bat" else "",
                 "applyPatches",
                 "--console",
                 "plain",

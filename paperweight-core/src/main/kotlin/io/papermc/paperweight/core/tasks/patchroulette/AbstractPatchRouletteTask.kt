@@ -127,7 +127,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun setPatches(paths: List<String>) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SetPatches(paths, minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SetPatches(paths.normalisePathSeparators(), minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/set-patches"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -156,13 +156,13 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
         logger.lifecycle("Cleared patches for ${minecraftVersion.get()}")
     }
 
-    data class PatchInfo(val path: String, val minecraftVersion: String)
+    data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)
 
-    fun startPatch(path: String) {
+    fun startPatches(paths: List<String>): List<String> {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
-                .uri(URI.create(endpoint.get() + "/start-patch"))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths.normalisePathSeparators(), minecraftVersion.get()))))
+                .uri(URI.create(endpoint.get() + "/start-patches"))
                 .auth()
                 .contentTypeApplicationJson()
                 .build(),
@@ -171,13 +171,17 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
         if (response.statusCode() != 200) {
             throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
         }
-        logger.lifecycle("Started patch $path")
+        val startedPatches = gson.fromJson<List<String>>(response.body(), typeToken<List<String>>())
+        logger.lifecycle("Started patches $startedPatches")
+        return startedPatches
     }
+
+    data class PatchInfo(val path: String, val minecraftVersion: String)
 
     fun completePatch(path: String) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path.normalisePathSeparators(), minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/complete-patch"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -193,7 +197,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     fun cancelPatch(path: String) {
         val response = httpClient().send(
             HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path.normalisePathSeparators(), minecraftVersion.get()))))
                 .uri(URI.create(endpoint.get() + "/cancel-patch"))
                 .auth()
                 .contentTypeApplicationJson()
@@ -206,3 +210,6 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
         logger.lifecycle("Cancelled patch $path")
     }
 }
+
+private fun String.normalisePathSeparators(): String = replace("\\", "/")
+private fun List<String>.normalisePathSeparators(): List<String> = map { it.replace("\\", "/") }
