@@ -89,7 +89,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
         var tries = 5
         var patches = listOf<Path>()
         val patchSelectionStrategy = patchSelectionStrategy
-            .map { parsePatchSelectionStrategy(it) }
+            .map { PatchSelectionStrategy.parse(it) }
             .getOrElse(PatchSelectionStrategy.NumericInPackage(5))
         while (tries > 0) {
             val available = getAvailablePatches().map { Path(it) }.toMutableSet()
@@ -178,13 +178,15 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
         }
 
         fun select(config: Config, available: List<Path>): Pair<Config, List<Path>>
-    }
 
-    private fun parsePatchSelectionStrategy(input: String): PatchSelectionStrategy {
-        try {
-            return PatchSelectionStrategy.NumericInPackage(input.toInt())
-        } catch (e: Exception) {
-            throw PaperweightException("Failed to parse patch selection strategy $input", e)
+        companion object {
+            fun parse(input: String): PatchSelectionStrategy {
+                try {
+                    return NumericInPackage(input.toInt())
+                } catch (e: Exception) {
+                    throw PaperweightException("Failed to parse patch selection strategy $input", e)
+                }
+            }
         }
     }
 }
