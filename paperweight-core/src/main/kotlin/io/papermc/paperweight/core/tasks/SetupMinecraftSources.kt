@@ -216,8 +216,18 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
             oldPaperGit.remoteAdd().setName("origin").setUri(URIish(rootProjectDir.absolutePathString())).call()
         }
 
-        oldPaperGit.fetch().setDepth(1).setRemote("origin").setRefSpecs(oldPaperCommit.get()).call()
-        oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
+        val upstream = Git.open(rootProjectDir.toFile())
+        try {
+            // Temporarily allow fetching reachable sha1 refs from the "upstream" paper repository.
+            upstream.repository.config.setBoolean("uploadpack", null, "allowreachablesha1inwant", true);
+            upstream.repository.config.save()
+            oldPaperGit.fetch().setDepth(1).setRemote("origin").setRefSpecs(oldPaperCommit.get()).call()
+            oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
+        } finally {
+            upstream.repository.config.unset("uploadpack", null, "allowreachablesha1inwant");
+            upstream.close()
+        }
+
         oldPaperGit.close()
 
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
