@@ -216,8 +216,30 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
             oldPaperGit.remoteAdd().setName("origin").setUri(URIish(rootProjectDir.absolutePathString())).call()
         }
 
-        oldPaperGit.fetch().setDepth(1).setRemote("origin").setRefSpecs(oldPaperCommit.get()).call()
-        oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
+        val upstream = Git.open(rootProjectDir.toFile())
+        val upstreamConfig = upstream.repository.config
+        val upstreamReachableSHA1 = upstreamConfig.getString("uploadpack", null, "allowreachablesha1inwant")
+        val upstreamConfigContainsUploadPack = upstreamConfig.sections.contains("uploadpack")
+        try {
+            // Temporarily allow fetching reachable sha1 refs from the "upstream" paper repository.
+            upstreamConfig.setBoolean("uploadpack", null, "allowreachablesha1inwant", true)
+            upstreamConfig.save()
+            oldPaperGit.fetch().setDepth(1).setRemote("origin").setRefSpecs(oldPaperCommit.get()).call()
+            oldPaperGit.reset().setMode(ResetCommand.ResetType.HARD).setRef(oldPaperCommit.get()).call()
+        } finally {
+            if (upstreamReachableSHA1 == null) {
+                if (upstreamConfigContainsUploadPack) {
+                    upstreamConfig.unset("uploadpack", null, "allowreachablesha1inwant")
+                } else {
+                    upstreamConfig.unsetSection("uploadpack", null)
+                }
+            } else {
+                upstreamConfig.setString("uploadpack", null, "allowreachablesha1inwant", upstreamReachableSHA1)
+            }
+            upstreamConfig.save()
+            upstream.close()
+        }
+
         oldPaperGit.close()
 
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
