@@ -244,14 +244,19 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
 
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
         oldPaperLog.outputStream().use { logOut ->
-            val processBuilder = ProcessBuilder(
-                "./gradlew" + if (isWindows) ".bat" else "",
+            val args = arrayOf(
                 "applyPatches",
                 "--console",
                 "plain",
                 "--stacktrace",
                 "-Dpaperweight.debug=true"
             )
+            val command = if (isWindows) {
+                listOf("cmd.exe", "/C", "gradlew.bat " + args.joinToString(" "))
+            } else {
+                listOf("./gradlew", *args)
+            }
+            val processBuilder = ProcessBuilder(command)
             processBuilder.directory(oldPaperDir)
             val process = processBuilder.start()
 
