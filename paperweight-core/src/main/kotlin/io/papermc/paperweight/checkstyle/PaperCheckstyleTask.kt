@@ -23,6 +23,7 @@
 package io.papermc.paperweight.checkstyle
 
 import java.nio.file.Paths
+import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.io.path.relativeTo
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.provider.Property
@@ -49,7 +50,7 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         exclude {
             if (it.isDirectory) return@exclude false
             val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-            val parentPath = (absPath.parent?.toString() + "/")
+            val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
             directoriesToSkip.get().any { pkg -> parentPath == pkg }
         }
         if (!source.isEmpty) {
