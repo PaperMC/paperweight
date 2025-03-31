@@ -39,7 +39,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
             configDirectory.set(ext.projectLocalCheckstyleConfig)
         }
 
-        tasks.withType(PaperCheckstyleTask::class.java) {
+        tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.set(project.rootDir.path)
             directoriesToSkip.set(ext.directoriesToSkip)
             typeUseAnnotations.set(ext.typeUseAnnotations)
