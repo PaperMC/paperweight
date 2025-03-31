@@ -20,7 +20,7 @@
  * USA
  */
 
-package io.papermc.paperweight.core.extension
+package io.papermc.paperweight.checkstyle
 
 import javax.inject.Inject
 import org.gradle.api.file.DirectoryProperty
