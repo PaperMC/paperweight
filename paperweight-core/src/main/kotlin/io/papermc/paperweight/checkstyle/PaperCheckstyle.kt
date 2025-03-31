@@ -30,20 +30,19 @@ import org.gradle.kotlin.dsl.*
 
 abstract class PaperCheckstyle : Plugin<Project> {
 
-    override fun apply(target: Project) = with(target) {
-        val ext = extensions.create(PAPER_CHECKSTYLE_EXTENSION, PaperCheckstyleExt::class)
-        plugins.apply(PaperCheckstylePlugin::class.java)
+    override fun apply(target: Project) {
+        val ext = target.extensions.create(PAPER_CHECKSTYLE_EXTENSION, PaperCheckstyleExt::class)
+        target.plugins.apply(PaperCheckstylePlugin::class.java)
 
-        extensions.configure(CheckstyleExtension::class.java) {
+        target.extensions.configure(CheckstyleExtension::class.java) {
             toolVersion = "10.21.0"
             configDirectory.set(ext.projectLocalCheckstyleConfig)
         }
 
-        tasks.withType(PaperCheckstyleTask::class.java).configureEach {
+        target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.set(project.rootDir.path)
             directoriesToSkip.set(ext.directoriesToSkip)
             typeUseAnnotations.set(ext.typeUseAnnotations)
         }
-        Unit
     }
 }
