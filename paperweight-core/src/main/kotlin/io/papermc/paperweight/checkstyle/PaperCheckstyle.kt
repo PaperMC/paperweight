@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.checkstyle
 
-import io.papermc.paperweight.core.extension.PaperCheckstyleExt
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
