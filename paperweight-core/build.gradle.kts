@@ -1,6 +1,7 @@
 plugins {
     `config-kotlin`
     `config-publish`
+    id("net.kyori.blossom") version "2.1.0"
 }
 
 dependencies {
@@ -25,5 +26,15 @@ gradlePlugin {
     setupPlugin("patcher") {
         description = "Gradle plugin for developing Paper derivatives"
         implementationClass = "io.papermc.paperweight.patcher.PaperweightPatcher"
+    }
+}
+
+sourceSets {
+    main {
+        blossom {
+            kotlinSources {
+                property("checkstyle_version", libs.versions.checkstyle)
+            }
+        }
     }
 }

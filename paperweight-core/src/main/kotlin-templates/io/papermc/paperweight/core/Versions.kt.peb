@@ -1,0 +1,5 @@
+package io.papermc.paperweight.core
+
+object Versions {
+    const val CHECKSTYLE: String = "{{ checkstyle_version }}"
+}
