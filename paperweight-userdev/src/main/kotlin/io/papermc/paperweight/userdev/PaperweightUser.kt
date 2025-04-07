@@ -50,8 +50,6 @@ import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
-import org.gradle.api.problems.Problems
-import org.gradle.api.problems.Severity
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
@@ -72,9 +70,6 @@ abstract class PaperweightUser : Plugin<Project> {
 
     @get:Inject
     abstract val javaToolchainService: JavaToolchainService
-
-    @get:Inject
-    abstract val problems: Problems
 
     override fun apply(target: Project) {
         target.plugins.apply("java")
@@ -272,8 +267,12 @@ abstract class PaperweightUser : Plugin<Project> {
             !configurations.getByName(DEV_BUNDLE_CONFIG).isEmpty
         }
         if (hasDevBundle.isFailure || !hasDevBundle.getOrThrow()) {
-            val message = "Unable to resolve a dev bundle, which is required for paperweight to function."
+            val message = "Unable to resolve a dev bundle, which is required for paperweight to function.\n" +
+                "Add a dev bundle to the 'paperweightDevelopmentBundle' configuration (the dependencies.paperweight extension can" +
+                " help with this), and ensure there is a repository to resolve it from (the Paper repository is used by default)."
             val ex = PaperweightException(message, hasDevBundle.exceptionOrNull())
+            throw ex
+            /* TODO migrate this to the Problems API when it comes out of incubating
             throw problems.reporter.throwing {
                 severity(Severity.ERROR)
                 id("paperweight-userdev-cannot-resolve-dev-bundle", message)
@@ -283,6 +282,7 @@ abstract class PaperweightUser : Plugin<Project> {
                 )
                 withException(ex)
             }
+             */
         }
     }
 
