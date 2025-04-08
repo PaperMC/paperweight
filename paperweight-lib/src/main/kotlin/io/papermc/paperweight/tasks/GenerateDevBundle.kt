@@ -31,21 +31,21 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class GenerateDevBundle : DefaultTask() {
+abstract class GenerateDevBundle : BaseTask() {
 
     @get:InputFiles
     abstract val sourceDirectories: ConfigurableFileCollection
@@ -69,13 +69,14 @@ abstract class GenerateDevBundle : DefaultTask() {
     abstract val macheDep: Property<String>
 
     @get:InputFile
+    @get:Optional
     abstract val reobfMappingsFile: RegularFileProperty
 
     @get:OutputFile
     abstract val devBundleFile: RegularFileProperty
 
     @get:Inject
-    abstract val layout: ProjectLayout
+    abstract val providers: ProviderFactory
 
     @TaskAction
     fun run() {
@@ -100,7 +101,9 @@ abstract class GenerateDevBundle : DefaultTask() {
 
             val dataZip = zip.getPath(dataDir)
             dataZip.createDirectories()
-            reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
+            if (reobfMappingsFile.isPresent) {
+                reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
+            }
             mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
 
             val patchesZip = zip.getPath(patchesDir)
@@ -186,7 +189,7 @@ abstract class GenerateDevBundle : DefaultTask() {
             minecraftVersion = minecraftVersion.get(),
             mache = createMacheDep(),
             patchDir = patchTargetDir,
-            reobfMappingsFile = "$dataTargetDir/$reobfMappingsFileName",
+            reobfMappingsFile = if (reobfMappingsFile.isPresent) "$dataTargetDir/$reobfMappingsFileName" else null,
             mojangMappedPaperclipFile = "$dataTargetDir/$mojangMappedPaperclipFileName",
             libraryRepositories = libraryRepositories.get(),
             pluginRemapArgs = TinyRemapper.pluginRemapArgs,
@@ -200,7 +203,7 @@ abstract class GenerateDevBundle : DefaultTask() {
         val minecraftVersion: String,
         val mache: MavenDep,
         val patchDir: String,
-        val reobfMappingsFile: String,
+        val reobfMappingsFile: String?,
         val mojangMappedPaperclipFile: String,
         val libraryRepositories: List<String>,
         val pluginRemapArgs: List<String>,
@@ -211,6 +214,6 @@ abstract class GenerateDevBundle : DefaultTask() {
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 6
+        const val currentDataVersion = 7
     }
 }

@@ -145,8 +145,8 @@ abstract class PaperweightCore : Plugin<Project> {
         tasks.generateRelocatedReobfMappings {
             inputJar.set(jar.flatMap { it.archiveFile })
         }
-        val (includeMappings, reobfJar) = target.createBuildTasks(
-            ext.spigot.packageVersion,
+        val (mappedJar, reobfJar) = target.createBuildTasks(
+            ext.spigot,
             ext.reobfPackagesToFix,
             tasks.generateRelocatedReobfMappings.flatMap { it.outputMappings },
         )
@@ -158,8 +158,8 @@ abstract class PaperweightCore : Plugin<Project> {
             tasks.extractFromBundler.flatMap { it.versionJson },
             tasks.extractFromBundler.flatMap { it.serverLibrariesList },
             tasks.downloadServerJar.flatMap { it.outputJar },
-            includeMappings.flatMap { it.outputJar },
-            reobfJar.flatMap { it.outputJar },
+            mappedJar,
+            reobfJar,
             ext.minecraftVersion,
         )
 
@@ -192,7 +192,7 @@ abstract class PaperweightCore : Plugin<Project> {
             tasks.afterEvaluate()
 
             devBundleTasks.configureAfterEvaluate(
-                includeMappings.flatMap { it.outputJar },
+                mappedJar,
             )
 
             if (coreExt.updatingMinecraft.oldPaperCommit.isPresent) {
