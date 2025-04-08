@@ -188,8 +188,10 @@ class SetupHandlerImpl(
     }
 
     override fun extractReobfMappings(output: Path) {
-        bundle.zip.openZipSafe().use { fs ->
-            fs.getPath(bundle.config.reobfMappingsFile).copyTo(output, true)
+        bundle.config.reobfMappingsFile?.let { location ->
+            bundle.zip.openZipSafe().use { fs ->
+                fs.getPath(location).copyTo(output, true)
+            }
         }
     }
 

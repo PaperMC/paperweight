@@ -23,6 +23,7 @@
 package io.papermc.paperweight.core.util
 
 import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.core.extension.SpigotExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -30,18 +31,19 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
 
 fun Project.createBuildTasks(
-    craftBukkitPackageVersion: Provider<String>,
+    spigot: SpigotExtension,
     packagesToFix: Provider<List<String>?>,
     relocatedReobfMappings: Provider<RegularFile>
-): ServerBuildTasks {
+): ServerArtifacts {
+    val jar = tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile }
+
     val fixJarForReobf by tasks.registering<FixJarForReobf> {
         group = "build"
-        inputJar.set(tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile })
+        inputJar.set(jar)
         packagesToProcess.set(packagesToFix)
     }
 
@@ -59,7 +61,7 @@ fun Project.createBuildTasks(
     }
     afterEvaluate {
         relocateConstants {
-            relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${craftBukkitPackageVersion.get()}") {
+            relocate("org.bukkit.craftbukkit", "org.bukkit.craftbukkit.${spigot.packageVersion.get()}") {
                 // This is not actually needed as there are no string constant references to Main
                 // exclude("org.bukkit.craftbukkit.Main*")
             }
@@ -85,7 +87,16 @@ fun Project.createBuildTasks(
         outputJar.set(layout.buildDirectory.map { it.dir("libs").file("${project.name}-${project.version}-reobf.jar") })
     }
 
-    return ServerBuildTasks(includeMappings, reobfJar)
+    return ServerArtifacts(
+        spigot.enabled.flatMap {
+            if (it) {
+                includeMappings.flatMap { it.outputJar }
+            } else {
+                jar
+            }
+        },
+        reobfJar.flatMap { it.outputJar }
+    )
 }
 
 fun Task.reobfRequiresDebug() {
@@ -100,7 +111,7 @@ fun Task.reobfRequiresDebug() {
     }
 }
 
-data class ServerBuildTasks(
-    val includeMappings: TaskProvider<IncludeMappings>,
-    val reobfJar: TaskProvider<RemapJar>,
+data class ServerArtifacts(
+    val mappedJar: Provider<RegularFile>,
+    val reobfJar: Provider<RegularFile>,
 )

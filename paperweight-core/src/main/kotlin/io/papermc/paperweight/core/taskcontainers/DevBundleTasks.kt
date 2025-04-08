@@ -68,7 +68,15 @@ class DevBundleTasks(
 
         minecraftVersion.set(project.coreExt.minecraftVersion)
         mojangMappedPaperclipFile.set(paperclipForDevBundle.flatMap { it.outputZip })
-        reobfMappingsFile.set(coreTasks.generateRelocatedReobfMappings.flatMap { it.outputMappings })
+        reobfMappingsFile.set(
+            project.coreExt.spigot.enabled.flatMap<RegularFile?> {
+                if (it) {
+                    coreTasks.generateRelocatedReobfMappings.flatMap { it.outputMappings }
+                } else {
+                    providers.provider { null }
+                }
+            }
+        )
     }
 
     fun configureAfterEvaluate(serverJar: Provider<RegularFile>) {

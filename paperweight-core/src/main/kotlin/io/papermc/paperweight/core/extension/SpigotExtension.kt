@@ -28,4 +28,5 @@ interface SpigotExtension {
 
     val buildDataRef: Property<String>
     val packageVersion: Property<String>
+    val enabled: Property<Boolean>
 }

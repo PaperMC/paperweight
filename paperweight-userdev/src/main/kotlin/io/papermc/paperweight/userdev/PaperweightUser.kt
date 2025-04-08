@@ -126,7 +126,17 @@ abstract class PaperweightUser : Plugin<Project> {
             group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
-            mappingsFile.set(setupTask.flatMap { it.reobfMappings })
+            mappingsFile.set(
+                setupTask.flatMap { task ->
+                    task.reobfMappings.map { mappings ->
+                        if (mappings.asFile.exists()) {
+                            mappings
+                        } else {
+                            throw PaperweightException("The current dev bundle does not provide reobf mappings.")
+                        }
+                    }
+                }
+            )
             remapClasspath.from(setupTask.flatMap { it.mappedServerJar })
             toNamespace.set(SPIGOT_NAMESPACE)
             remapper.from(project.configurations.named(PLUGIN_REMAPPER_CONFIG))

@@ -50,7 +50,13 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
 
     val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
 
-    val spigot = objects.newInstance<SpigotExtension>()
+    val spigot = objects.newInstance<SpigotExtension>().also { spigot ->
+        spigot.enabled.convention(
+            spigot.buildDataRef.zip(spigot.packageVersion) { ref, pkg ->
+                ref !== null && pkg !== null && ref.isNotBlank() && pkg.isNotBlank()
+            }
+        )
+    }
     val paper = objects.newInstance<PaperExtension>(project)
 
     @Suppress("unused")

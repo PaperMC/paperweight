@@ -125,6 +125,7 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
         val copiedTime = measureNanoTime {
             result.mainOutput.copyTo(mappedServerJar.path.createParentDirectories(), overwrite = true)
             result.legacyOutput?.copyTo(legacyPaperclipResult.path.createParentDirectories(), overwrite = true)
+            reobfMappings.path.createParentDirectories().deleteForcefully()
             setupService.get().extractReobfMappings(reobfMappings.path.createParentDirectories())
         }
         logger.lifecycle("Copied artifacts to project cache in ${formatNs(copiedTime)}")
