@@ -1,5 +1,5 @@
 [versions]
-asm = "9.7.1"
+asm = "9.8"
 lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.5.1"
