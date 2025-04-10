@@ -14,7 +14,7 @@ httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
 coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
 jgit = "org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r"
-gson = "com.google.code.gson:gson:2.10.1"
+gson = "com.google.code.gson:gson:2.12.1"
 
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
 cadix-lorenz-asm = { module = "org.cadixdev:lorenz-asm", version.ref = "lorenz" }
