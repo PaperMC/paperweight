@@ -3,7 +3,7 @@ asm = "9.7.1"
 lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.5.1"
-jst = "1.0.68+paper.2-SNAPSHOT"
+jst = "1.0.68-SNAPSHOT"
 tinyRemapper = "0.10.4"
 
 [libraries]
