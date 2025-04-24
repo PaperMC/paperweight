@@ -54,7 +54,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     override fun init() {
         super.init()
-        endpoint.convention("https://patch-roulette.papermc.io/api")
+        endpoint.convention("http://localhost:8080/api")
         authToken.convention(providers.gradleProperty("paperweight.patch-roulette-token"))
         doNotTrackState("Run when requested")
     }
