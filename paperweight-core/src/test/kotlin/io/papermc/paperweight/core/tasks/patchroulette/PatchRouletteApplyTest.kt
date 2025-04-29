@@ -115,6 +115,29 @@ class PatchRouletteApplyTest {
                     ),
                 )
             ),
+            Arguments.of(
+                PatchRouletteApply.PatchSelectionStrategy.NumericInPackage(4, true),
+                listOf(
+                    "io/papermc/paper/block/Block.java",
+                    "io/papermc/paper/block/BlockData.java",
+                    "io/papermc/paper/block/BlockState.java",
+                    "io/papermc/paper/entity/Entity.java",
+                    "io/papermc/paper/entity/Entity2.java",
+                    "io/papermc/paper/entity/Entity3.java"
+                ),
+                listOf(
+                    listOf(
+                        "io/papermc/paper/block/Block.java",
+                        "io/papermc/paper/block/BlockData.java",
+                        "io/papermc/paper/block/BlockState.java",
+                        "io/papermc/paper/entity/Entity.java",
+                    ),
+                    listOf(
+                        "io/papermc/paper/entity/Entity2.java",
+                        "io/papermc/paper/entity/Entity3.java"
+                    )
+                )
+            )
         )
 
         fun mockAvailablePatches() = listOf(

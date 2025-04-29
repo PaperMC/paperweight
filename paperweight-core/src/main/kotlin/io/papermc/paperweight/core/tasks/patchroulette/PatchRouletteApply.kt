@@ -168,6 +168,10 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     sealed interface PatchSelectionStrategy {
         data class NumericInPackage(val count: Int, val enforceCount: Boolean = false) : PatchSelectionStrategy {
             override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
+                return this.select(config, available, this.count)
+            }
+
+            fun select(config: Config, available: List<Path>, count: Int): Pair<Config, List<Path>> {
                 if (config.suggestedPackage != null) {
                     val possiblePatches = available.filter { it.parent.equals(config.suggestedPackage) }.take(count)
                     if (possiblePatches.isNotEmpty()) {
@@ -180,14 +184,15 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
                         // config, as the last suggested package is the one to suggest in potentially next runs.
                         val additionalPatches = select(
                             config.copy(suggestedPackage = null),
-                            available.filter { !possiblePatches.contains(it) }
+                            available.filter { !possiblePatches.contains(it) },
+                            count - possiblePatches.size
                         )
 
                         return additionalPatches.first to possiblePatches + additionalPatches.second
                     }
                 }
 
-                return select(config.copy(suggestedPackage = available.first().parent), available)
+                return select(config.copy(suggestedPackage = available.first().parent), available, count)
             }
         }
 
