@@ -38,6 +38,19 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.options.Option
 
+/**
+ * Patch roulette apply allows selection a set of patches from the remote patch roulette instance to work on.
+ * To control the amount/strategy of selecting these patches, the `--select` option can be passed.
+ * The following options are available:
+ *   - `n`:  Any positive integer number.
+ *           Paperweight will select *up to* `n` patches from the current package the user is working in.
+ *           If the package offers 0 patches, a new package will be chosen.
+ *           If the package offers `m` patches, and `m < n`, only `m` patches will be returned.
+ *   - `n!`: Any positive integer number followed by a `!`.
+ *           Paperweight will select `n` patches, prioritizing patches in the current package.
+ *           The only time less than `n` patches will be selected is if the entire patch roulette
+ *           instance has less than `n` patches available, in which case all of them will be selected.
+ */
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:InputDirectory
