@@ -38,6 +38,19 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.options.Option
 
+/**
+ * Patch roulette apply allows selection a set of patches from the remote patch roulette instance to work on.
+ * To control the amount/strategy of selecting these patches, the `--select` option can be passed.
+ * The following options are available:
+ *   - `n`:  Any positive integer number.
+ *           Paperweight will select *up to* `n` patches from the current package the user is working in.
+ *           If the package offers 0 patches, a new package will be chosen.
+ *           If the package offers `m` patches, and `m < n`, only `m` patches will be returned.
+ *   - `n!`: Any positive integer number followed by a `!`.
+ *           Paperweight will select `n` patches, prioritizing patches in the current package.
+ *           The only time less than `n` patches will be selected is if the entire patch roulette
+ *           instance has less than `n` patches available, in which case all of them will be selected.
+ */
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:InputDirectory
@@ -87,7 +100,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
         }
 
         var tries = 5
-        var patches = listOf<Path>()
+        var patches: List<Path>
         val patchSelectionStrategy = patchSelectionStrategy
             .map { PatchSelectionStrategy.parse(it) }
             .getOrElse(PatchSelectionStrategy.NumericInPackage(5))
@@ -166,14 +179,33 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     data class Config(val skip: List<Path>, val suggestedPackage: Path?, val currentPatches: List<Path>)
 
     sealed interface PatchSelectionStrategy {
-        data class NumericInPackage(val count: Int) : PatchSelectionStrategy {
+        data class NumericInPackage(val count: Int, val enforceCount: Boolean = false) : PatchSelectionStrategy {
             override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
+                return this.select(config, available, this.count)
+            }
+
+            fun select(config: Config, available: List<Path>, count: Int): Pair<Config, List<Path>> {
                 if (config.suggestedPackage != null) {
                     val possiblePatches = available.filter { it.parent.equals(config.suggestedPackage) }.take(count)
-                    if (possiblePatches.isNotEmpty()) return config to possiblePatches
+                    if (possiblePatches.isNotEmpty()) {
+                        if (!enforceCount) return config to possiblePatches
+                        // The patches we found satisfy the count param or the entire available set simply does not offer enough patches.
+                        if (possiblePatches.size >= count || possiblePatches.size == available.size) return config to possiblePatches
+
+                        // The patches found in the package do not satisfy the requested count *and* the strategy was configured to enforce the
+                        // count. Re-select from a new package and different patch set, add them to our already fetched patches and update the
+                        // config, as the last suggested package is the one to suggest in potentially next runs.
+                        val additionalPatches = select(
+                            config.copy(suggestedPackage = null),
+                            available.filter { !possiblePatches.contains(it) },
+                            count - possiblePatches.size
+                        )
+
+                        return additionalPatches.first to possiblePatches + additionalPatches.second
+                    }
                 }
 
-                return select(config.copy(suggestedPackage = available.first().parent), available)
+                return select(config.copy(suggestedPackage = available.first().parent), available, count)
             }
         }
 
@@ -182,7 +214,10 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
         companion object {
             fun parse(input: String): PatchSelectionStrategy {
                 try {
-                    return NumericInPackage(input.toInt())
+                    return when {
+                        input.endsWith("!") -> NumericInPackage(input.substring(0, input.length - 1).toInt(), true)
+                        else -> NumericInPackage(input.toInt())
+                    }
                 } catch (e: Exception) {
                     throw PaperweightException("Failed to parse patch selection strategy $input", e)
                 }
