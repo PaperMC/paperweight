@@ -67,9 +67,9 @@ testing {
         val test by getting(JvmTestSuite::class) {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
-                implementation("org.junit.platform:junit-platform-launcher:1.10.1")
+                implementation("org.junit.jupiter:junit-jupiter-engine:5.12.2")
+                implementation("org.junit.jupiter:junit-jupiter-params:5.12.2")
+                implementation("org.junit.platform:junit-platform-launcher:1.12.2")
             }
 
             targets.configureEach {
