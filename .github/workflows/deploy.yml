@@ -14,7 +14,7 @@ jobs:
           java-version: 21
           distribution: 'temurin'
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/actions/setup-gradle@v4
       - name: Deploy release
         run: ./gradlew publishPlugins --no-daemon --stacktrace
         env:
