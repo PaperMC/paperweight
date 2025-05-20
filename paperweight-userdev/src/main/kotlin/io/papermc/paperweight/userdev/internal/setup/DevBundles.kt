@@ -35,8 +35,8 @@ private val supported = mapOf(
     3 to DevBundleV5.Config::class, // up to 1.20.4
     4 to DevBundleV5.Config::class, // 1.20.5, early 1.20.6
     5 to DevBundleV5.Config::class, // 1.20.6+ (nullable mojangApiCoordinates)
-    6 to GenerateDevBundle.DevBundleConfig::class, // Post-repo-restructure 1.21.4
-    7 to GenerateDevBundle.DevBundleConfig::class, // 1.21.4+
+    6 to GenerateDevBundle.DevBundleConfig::class, // Post-repo-restructure 1.21.4, early 1.21.5
+    7 to GenerateDevBundle.DevBundleConfig::class, // 1.21.5+
 )
 
 fun readBundleInfo(bundleZip: Path): BundleInfo<Any> {
