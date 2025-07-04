@@ -29,13 +29,11 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-@CacheableTask
 abstract class ExtractFromBundler : BaseTask() {
 
     @get:Classpath

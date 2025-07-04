@@ -46,7 +46,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.*
 
-abstract class SetupMinecraftSources : JavaLauncherTask() {
+@CacheableTask
+abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -55,11 +56,9 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
     @get:Internal
     abstract val predicate: Property<Predicate<Path>>
 
-    @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
-
     @get:Optional
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val libraryImports: DirectoryProperty
 
     @get:Optional
@@ -75,12 +74,10 @@ abstract class SetupMinecraftSources : JavaLauncherTask() {
 
     @get:InputFile
     @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
 
-    @TaskAction
-    fun run() {
-        val outputPath = outputDir.convertToPath()
-
+    override fun run(outputPath: Path) {
         val git: Git
         if (oldPaperCommit.isPresent) {
             val oldPaperDir = setupOldPaper()

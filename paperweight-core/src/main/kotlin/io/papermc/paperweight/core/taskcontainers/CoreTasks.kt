@@ -24,6 +24,7 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.extension.ForkConfig
+import io.papermc.paperweight.core.tasks.ExtractMinecraftSources
 import io.papermc.paperweight.core.tasks.ImportLibraryFiles
 import io.papermc.paperweight.core.tasks.IndexLibraryFiles
 import io.papermc.paperweight.core.tasks.SetupMinecraftSources
@@ -106,16 +107,26 @@ class CoreTasks(
         description = "Setup Minecraft source dir (applying mache patches and paper ATs)."
         configureSetupMacheSources()
         libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
-        outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+        outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("sources.zip"))
 
         atFile.set(mergePaperATs.flatMap { it.outputFile })
         ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
         ats.jst.from(project.configurations.named(JST_CONFIG))
     }
 
+    val extractMacheSources by tasks.registering(ExtractMinecraftSources::class) {
+        zip.set(setupMacheSources.flatMap { it.outputZip })
+        outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
+    }
+
     val setupMacheSourcesForDevBundle by tasks.registering(SetupMinecraftSources::class) {
         description = "Setup Minecraft source dir (applying mache patches)."
         configureSetupMacheSources()
+        outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle.zip"))
+    }
+
+    val extractMacheSourcesForDevBundle by tasks.registering(ExtractMinecraftSources::class) {
+        zip.set(setupMacheSourcesForDevBundle.flatMap { it.outputZip })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle"))
     }
 
@@ -124,6 +135,11 @@ class CoreTasks(
 
         inputFile.set(extractFromBundler.flatMap { it.serverJar })
         predicate.set { Files.isRegularFile(it) && !it.toString().endsWith(".class") }
+        outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("resources.zip"))
+    }
+
+    val extractMacheResources by tasks.registering(ExtractMinecraftSources::class) {
+        zip.set(setupMacheResources.flatMap { it.outputZip })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
 
@@ -174,8 +190,8 @@ class CoreTasks(
             project.coreExt.paper.resourcePatchDir,
             project.coreExt.paper.featurePatchDir,
             project.coreExt.paper.additionalAts,
-            setupMacheSources.flatMap { it.outputDir },
-            setupMacheResources.flatMap { it.outputDir },
+            extractMacheSources.flatMap { it.outputDir },
+            extractMacheResources.flatMap { it.outputDir },
             project.coreExt.gitFilePatches,
             project.coreExt.filterPatches,
             paperOutputRoot,
