@@ -100,7 +100,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
 
     override fun init() {
         super.init()
-        mode.convention(PatchMode.EXACT)
+        mode.convention(PatchMode.OFFSET)
         minFuzz.convention(providers.defaultMinFuzz())
     }
 
