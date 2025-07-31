@@ -73,7 +73,7 @@ class DevBundleTasks(
                 if (it) {
                     coreTasks.generateRelocatedReobfMappings.flatMap { t -> t.outputMappings }
                 } else {
-                    providers.provider { null }
+                    null
                 }
             }
         )

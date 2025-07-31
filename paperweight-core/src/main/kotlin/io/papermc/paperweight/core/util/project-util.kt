@@ -90,7 +90,7 @@ fun Project.createBuildTasks(
     return ServerArtifacts(
         spigot.enabled.flatMap {
             if (it) {
-                includeMappings.flatMap { it.outputJar }
+                includeMappings.flatMap { t -> t.outputJar }
             } else {
                 jar
             }
