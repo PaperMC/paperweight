@@ -31,6 +31,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -54,7 +55,7 @@ abstract class ApplyFeaturePatches : ControllableOutputTask() {
     @get:Input
     abstract val verbose: Property<Boolean>
 
-    @get:Input
+    @get:Internal
     abstract val emitRejects: Property<Boolean>
 
     override fun init() {
