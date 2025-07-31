@@ -36,7 +36,7 @@ import org.gradle.kotlin.dsl.*
 
 fun Project.createBuildTasks(
     spigot: SpigotExtension,
-    packagesToFix: Provider<List<String>?>,
+    packagesToFix: Provider<List<String>>,
     relocatedReobfMappings: Provider<RegularFile>
 ): ServerArtifacts {
     val jar = tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile }

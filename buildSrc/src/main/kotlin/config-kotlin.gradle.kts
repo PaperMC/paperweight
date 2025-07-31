@@ -23,16 +23,11 @@ kotlin {
     }
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
+        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17")
     }
 }
 
 repositories {
-    maven("https://repo.papermc.io/repository/maven-snapshots/") {
-        mavenContent {
-            includeModule("org.cadixdev", "mercury")
-        }
-    }
     maven("https://repo.papermc.io/repository/maven-public/") {
         mavenContent {
             includeGroup("codechicken")
@@ -54,7 +49,9 @@ repositories {
             includeGroupAndSubgroups("net.fabricmc")
         }
     }
-    mavenCentral()
+    mavenCentral {
+        mavenContent { releasesOnly() }
+    }
     gradlePluginPortal()
 }
 
