@@ -2,7 +2,7 @@
 asm = "9.8"
 lorenz = "0.5.8"
 hypo = "1.2.4"
-serialize = "1.8.1"
+serialize = "1.9.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
 tinyRemapper = "0.11.2"
 
