@@ -4,7 +4,7 @@ lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.8.1"
 jst = "1.0.68+paper.2-SNAPSHOT"
-tinyRemapper = "0.11.1"
+tinyRemapper = "0.11.2"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
