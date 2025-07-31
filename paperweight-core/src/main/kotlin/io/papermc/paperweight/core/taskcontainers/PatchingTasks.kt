@@ -66,7 +66,7 @@ class PatchingTasks(
         } else {
             output.set(outputDir)
         }
-        patches.set(filePatchDir.fileExists(project))
+        patches.set(filePatchDir.fileExists())
         rejectsDir.set(this@PatchingTasks.rejectsDir)
         gitFilePatches.set(this@PatchingTasks.gitFilePatches)
         baseRef.set("base")
@@ -90,7 +90,7 @@ class PatchingTasks(
         if (readOnly) {
             base.set(applyFilePatches.flatMap { it.output })
         }
-        patches.set(featurePatchDir.fileExists(project))
+        patches.set(featurePatchDir.fileExists())
     }
 
     val applyPatches = tasks.register<Task>("apply${namePart}Patches") {
