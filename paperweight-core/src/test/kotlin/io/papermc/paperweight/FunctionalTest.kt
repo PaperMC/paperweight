@@ -55,7 +55,7 @@ class FunctionalTest {
         val text = settings.readText()
         settings.writeText(text.replace("// includeBuild '..'", "includeBuild '..'").replace("functional_test", "test"))
 
-        projectDir.resolve("patches").deleteRecursively()
+        projectDir.resolve("patches").deleteRecursive()
     }
 
     @Test
@@ -146,7 +146,7 @@ class FunctionalTest {
         testResource.resolve("lib-patches/dev-imports.txt").copyTo(tempDir.resolve("build-data/dev-imports.txt"))
         testResource.resolve("lib-patches/0002-Remove-rotten-apples.patch")
             .copyTo(tempDir.resolve("fake-patches/features/0002-Remove-rotten-apples.patch"))
-        testResource.resolve("lib-patches/org").copyToRecursively(tempDir.resolve("fake-patches/sources/org"), followLinks = false)
+        testResource.resolve("lib-patches/org").copyRecursivelyTo(tempDir.resolve("fake-patches/sources/org"))
         modifyFile(tempDir.resolve("test-server/build.gradle")) {
             it.replace(
                 "implementation project(\":test-api\")",

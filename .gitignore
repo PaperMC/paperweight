@@ -44,4 +44,4 @@ ehthumbs_vista.db
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.ja
 
-/.kotlin/
+.kotlin/

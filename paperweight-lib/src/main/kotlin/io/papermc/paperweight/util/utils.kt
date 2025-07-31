@@ -106,7 +106,7 @@ fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
 
-fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T?> {
+fun <T : FileSystemLocation> Provider<out T>.fileExists(project: Project): Provider<out T> {
     return flatMap { project.provider { it.takeIf { f -> f.path.exists() } } }
 }
 
@@ -448,7 +448,7 @@ fun FileCollection.resolveMacheMeta() = singleFile.toPath().openZipSafe().use { 
 fun isIDEASync(): Boolean =
     java.lang.Boolean.getBoolean("idea.sync.active")
 
-inline fun <reified T> ObjectFactory.providerSet(
+inline fun <reified T : Any> ObjectFactory.providerSet(
     vararg providers: Provider<out T>
 ): Provider<Set<T>> {
     if (providers.isEmpty()) {
