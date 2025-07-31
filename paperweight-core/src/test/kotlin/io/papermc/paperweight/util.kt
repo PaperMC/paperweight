@@ -30,7 +30,7 @@ import org.gradle.testkit.runner.GradleRunner
 
 fun Path.copyProject(resourcesProjectName: String): ProjectFiles {
     Paths.get("src/test/resources/$resourcesProjectName")
-        .copyToRecursively(this, followLinks = false)
+        .copyRecursivelyTo(this)
     Git(this)("init").executeSilently()
     return ProjectFiles(this)
 }
