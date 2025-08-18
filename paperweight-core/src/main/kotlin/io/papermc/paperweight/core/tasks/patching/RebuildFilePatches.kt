@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.tasks.patching
 
 import io.codechicken.diffpatch.cli.DiffOperation
-import io.codechicken.diffpatch.util.ConsumingOutputStream
 import io.codechicken.diffpatch.util.Input as DiffInput
 import io.codechicken.diffpatch.util.LogLevel
 import io.codechicken.diffpatch.util.Output as DiffOutput
@@ -31,7 +30,6 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import java.io.PrintStream
 import java.nio.file.Path
 import kotlin.io.path.*
 import org.cadixdev.at.AccessTransformSet
@@ -185,9 +183,8 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
         inputDir: Path,
         patchDir: Path
     ): Int? {
-        val printStream = PrintStream(ConsumingOutputStream { s -> logger.log(org.gradle.api.logging.LogLevel.LIFECYCLE, s) })
         val result = DiffOperation.builder()
-            .logTo(printStream)
+            .logTo(logger::lifecycle)
             .baseInput(DiffInput.MultiInput.folder(baseDir))
             .changedInput(DiffInput.MultiInput.folder(inputDir))
             .patchesOutput(DiffOutput.MultiOutput.folder(patchDir))

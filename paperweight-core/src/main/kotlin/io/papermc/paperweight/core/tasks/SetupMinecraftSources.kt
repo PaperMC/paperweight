@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.tasks
 
 import io.codechicken.diffpatch.cli.PatchOperation
-import io.codechicken.diffpatch.util.ConsumingOutputStream
 import io.codechicken.diffpatch.util.Input as DiffInput
 import io.codechicken.diffpatch.util.Output as DiffOutput
 import io.codechicken.diffpatch.util.archiver.ArchiveFormat
@@ -147,7 +146,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
             println("Applying mache patches...")
 
             val result = PatchOperation.builder()
-                .logTo(ConsumingOutputStream { s -> logger.log(LogLevel.LIFECYCLE, s) })
+                .logTo(logger::lifecycle)
                 .baseInput(DiffInput.MultiInput.folder(outputPath.convertToPath()))
                 .patchedOutput(DiffOutput.MultiOutput.folder(outputPath.convertToPath()))
                 .patchesInput(DiffInput.MultiInput.archive(ArchiveFormat.ZIP, mache.singleFile.toPath()))

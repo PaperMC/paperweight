@@ -24,14 +24,12 @@ package io.papermc.paperweight.core.tasks.patching
 
 import io.codechicken.diffpatch.cli.PatchOperation
 import io.codechicken.diffpatch.match.FuzzyLineMatcher
-import io.codechicken.diffpatch.util.ConsumingOutputStream
 import io.codechicken.diffpatch.util.Input as DiffInput
 import io.codechicken.diffpatch.util.Output as DiffOutput
 import io.codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
-import java.io.PrintStream
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.io.path.*
@@ -213,9 +211,8 @@ abstract class ApplyFilePatches : BaseTask() {
     }
 
     private fun applyWithDiffPatch(): Int? {
-        val printStream = PrintStream(ConsumingOutputStream { s -> logger.log(LogLevel.LIFECYCLE, s) })
         val builder = PatchOperation.builder()
-            .logTo(printStream)
+            .logTo(logger::lifecycle)
             .baseInput(DiffInput.MultiInput.folder(output.path))
             .patchesInput(DiffInput.MultiInput.folder(patches.path))
             .patchedOutput(DiffOutput.MultiOutput.folder(output.path))
