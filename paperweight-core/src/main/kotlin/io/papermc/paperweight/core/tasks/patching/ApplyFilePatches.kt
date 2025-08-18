@@ -22,10 +22,12 @@
 
 package io.papermc.paperweight.core.tasks.patching
 
-import codechicken.diffpatch.cli.PatchOperation
-import codechicken.diffpatch.match.FuzzyLineMatcher
-import codechicken.diffpatch.util.LoggingOutputStream
-import codechicken.diffpatch.util.PatchMode
+import io.codechicken.diffpatch.cli.PatchOperation
+import io.codechicken.diffpatch.match.FuzzyLineMatcher
+import io.codechicken.diffpatch.util.ConsumingOutputStream
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.Output as DiffOutput
+import io.codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
@@ -210,21 +212,21 @@ abstract class ApplyFilePatches : BaseTask() {
         return patchFiles.size
     }
 
-    private fun applyWithDiffPatch(): Int {
-        val printStream = PrintStream(LoggingOutputStream(logger, LogLevel.LIFECYCLE))
+    private fun applyWithDiffPatch(): Int? {
+        val printStream = PrintStream(ConsumingOutputStream { s -> logger.log(LogLevel.LIFECYCLE, s) })
         val builder = PatchOperation.builder()
             .logTo(printStream)
-            .basePath(output.path)
-            .patchesPath(patches.path)
-            .outputPath(output.path)
-            .level(if (verbose.get()) codechicken.diffpatch.util.LogLevel.ALL else codechicken.diffpatch.util.LogLevel.INFO)
+            .baseInput(DiffInput.MultiInput.folder(output.path))
+            .patchesInput(DiffInput.MultiInput.folder(patches.path))
+            .patchedOutput(DiffOutput.MultiOutput.folder(output.path))
+            .level(if (verbose.get()) io.codechicken.diffpatch.util.LogLevel.ALL else io.codechicken.diffpatch.util.LogLevel.INFO)
             .mode(mode())
             .minFuzz(minFuzz())
             .summary(verbose.get())
             .lineEnding("\n")
             .ignorePrefix(".git")
         if (rejectsDir.isPresent && emitRejects.get()) {
-            builder.rejectsPath(rejectsDir.path)
+            builder.rejectsOutput(DiffOutput.MultiOutput.folder(rejectsDir.path))
         }
 
         val result = builder.build().operate()
@@ -232,12 +234,12 @@ abstract class ApplyFilePatches : BaseTask() {
         commit()
 
         if (result.exit != 0) {
-            val total = result.summary.failedMatches + result.summary.exactMatches +
-                result.summary.accessMatches + result.summary.offsetMatches + result.summary.fuzzyMatches
-            throw Exception("Failed to apply ${result.summary.failedMatches}/$total hunks")
+            val total = (result.summary?.failedMatches ?: 0) + (result.summary?.exactMatches ?: 0) +
+                (result.summary?.accessMatches ?: 0) + (result.summary?.offsetMatches ?: 0) + (result.summary?.fuzzyMatches ?: 0)
+            throw Exception("Failed to apply ${result.summary?.failedMatches}/$total hunks")
         }
 
-        return result.summary.changedFiles
+        return result.summary?.changedFiles
     }
 
     private fun setupGitHook(outputPath: Path) {

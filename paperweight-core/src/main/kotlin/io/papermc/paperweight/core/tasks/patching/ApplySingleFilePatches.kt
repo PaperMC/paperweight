@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.core.tasks.patching
 
-import codechicken.diffpatch.cli.PatchOperation
-import codechicken.diffpatch.util.LogLevel
-import codechicken.diffpatch.util.PatchMode
+import io.codechicken.diffpatch.cli.PatchOperation
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.util.Output as DiffOutput
+import io.codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.util.defaultMinFuzz
 import io.papermc.paperweight.tasks.*
@@ -129,10 +131,10 @@ abstract class ApplySingleFilePatches : BaseTask() {
                         .mode(mode.get())
                         .minFuzz(minFuzz.get().toFloat())
                         .summary(false)
-                        .basePath(tmpWork)
-                        .patchesPath(tmpPatch)
-                        .outputPath(tmpWork)
-                        .rejectsPath(tmpRej)
+                        .baseInput(DiffInput.MultiInput.folder(tmpWork))
+                        .patchesInput(DiffInput.MultiInput.folder(tmpPatch))
+                        .patchedOutput(DiffOutput.MultiOutput.folder(tmpWork))
+                        .rejectsOutput(DiffOutput.MultiOutput.folder(tmpRej))
                         .build()
 
                     op.operate()

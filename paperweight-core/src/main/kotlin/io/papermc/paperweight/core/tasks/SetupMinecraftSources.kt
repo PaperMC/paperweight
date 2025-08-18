@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.core.tasks
 
-import codechicken.diffpatch.cli.PatchOperation
-import codechicken.diffpatch.util.LoggingOutputStream
-import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.codechicken.diffpatch.cli.PatchOperation
+import io.codechicken.diffpatch.util.ConsumingOutputStream
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.Output as DiffOutput
+import io.codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.util.ApplySourceATs
 import io.papermc.paperweight.tasks.*
@@ -145,12 +147,12 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
             println("Applying mache patches...")
 
             val result = PatchOperation.builder()
-                .logTo(LoggingOutputStream(logger, LogLevel.LIFECYCLE))
-                .basePath(outputPath.convertToPath())
-                .outputPath(outputPath.convertToPath())
-                .patchesPath(mache.singleFile.toPath(), ArchiveFormat.ZIP)
+                .logTo(ConsumingOutputStream { s -> logger.log(LogLevel.LIFECYCLE, s) })
+                .baseInput(DiffInput.MultiInput.folder(outputPath.convertToPath()))
+                .patchedOutput(DiffOutput.MultiOutput.folder(outputPath.convertToPath()))
+                .patchesInput(DiffInput.MultiInput.archive(ArchiveFormat.ZIP, mache.singleFile.toPath()))
                 .patchesPrefix("patches")
-                .level(codechicken.diffpatch.util.LogLevel.INFO)
+                .level(io.codechicken.diffpatch.util.LogLevel.INFO)
                 .ignorePrefix(".git")
                 .build()
                 .operate()
@@ -160,10 +162,10 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
             }
 
             if (result.exit != 0) {
-                throw Exception("Failed to apply ${result.summary.failedMatches} mache patches")
+                throw Exception("Failed to apply ${result.summary?.failedMatches} mache patches")
             }
 
-            logger.lifecycle("Applied ${result.summary.changedFiles} mache patches")
+            logger.lifecycle("Applied ${result.summary?.changedFiles} mache patches")
         }
 
         if (atFile.isPresent) {

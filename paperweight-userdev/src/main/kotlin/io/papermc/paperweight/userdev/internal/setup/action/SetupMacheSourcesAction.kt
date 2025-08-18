@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.userdev.internal.setup.action
 
-import codechicken.diffpatch.cli.PatchOperation
-import codechicken.diffpatch.util.LogLevel
-import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.codechicken.diffpatch.cli.PatchOperation
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.util.Output as DiffOutput
+import io.codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.mache.macheDecompileJar
 import io.papermc.paperweight.userdev.internal.action.DirectoryValue
@@ -72,9 +74,9 @@ class SetupMacheSourcesAction(
         val result = PrintStream(log.toFile(), Charsets.UTF_8).use { logOut ->
             PatchOperation.builder()
                 .logTo(logOut)
-                .basePath(tempOut, ArchiveFormat.ZIP)
-                .outputPath(outputJar.get(), ArchiveFormat.ZIP)
-                .patchesPath(mache.get().singleFile.toPath(), ArchiveFormat.ZIP)
+                .baseInput(DiffInput.MultiInput.archive(ArchiveFormat.ZIP, tempOut))
+                .patchedOutput(DiffOutput.MultiOutput.archive(ArchiveFormat.ZIP, outputJar.get()))
+                .patchesInput(DiffInput.MultiInput.archive(ArchiveFormat.ZIP, mache.get().singleFile.toPath()))
                 .patchesPrefix("patches")
                 .level(LogLevel.ALL)
                 .summary(true)
