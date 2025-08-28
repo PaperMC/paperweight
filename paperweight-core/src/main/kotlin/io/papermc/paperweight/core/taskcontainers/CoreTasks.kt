@@ -74,11 +74,11 @@ class CoreTasks(
     }
 
     val collectPaperATsFromPatches by tasks.registering(CollectATsFromPatches::class) {
-        patchDir.set(project.coreExt.paper.featurePatchDir.fileExists(project))
+        patchDir.set(project.coreExt.paper.featurePatchDir.fileExists())
     }
 
     val mergePaperATs by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(project.coreExt.paper.additionalAts.fileExists(project))
+        firstFile.set(project.coreExt.paper.additionalAts.fileExists())
         secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
 
@@ -91,7 +91,7 @@ class CoreTasks(
 
     val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
         patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
-        devImports.set(project.coreExt.paper.devImports.fileExists(project))
+        devImports.set(project.coreExt.paper.devImports.fileExists())
         libraryFileIndex.set(indexLibraryFiles.flatMap { it.outputFile })
         libraries.from(indexLibraryFiles.map { it.libraries })
     }

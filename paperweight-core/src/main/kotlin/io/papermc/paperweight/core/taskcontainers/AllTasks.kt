@@ -87,7 +87,7 @@ open class AllTasks(
 
     val patchReobfMappings by tasks.registering<PatchMappings> {
         inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
-        patch.set(extension.paper.reobfMappingsPatch.fileExists(project))
+        patch.set(extension.paper.reobfMappingsPatch.fileExists())
 
         fromNamespace.set(DEOBF_NAMESPACE)
         toNamespace.set(SPIGOT_NAMESPACE)

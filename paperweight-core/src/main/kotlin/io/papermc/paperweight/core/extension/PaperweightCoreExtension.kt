@@ -52,9 +52,8 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
 
     val spigot = objects.newInstance<SpigotExtension>().also { spigot ->
         spigot.enabled.convention(
-            spigot.buildDataRef.zip(spigot.packageVersion) { ref, pkg ->
-                ref !== null && pkg !== null && ref.isNotBlank() && pkg.isNotBlank()
-            }
+            spigot.buildDataRef.zip(spigot.packageVersion) { ref, pkg -> ref.isNotBlank() && pkg.isNotBlank() }
+                .orElse(false)
         )
     }
     val paper = objects.newInstance<PaperExtension>(project)

@@ -56,11 +56,7 @@ class UpstreamConfigTasks(
             it.map { cfg ->
                 ApplySingleFilePatches.Patch.patch(target.objects, upstream) {
                     path = cfg.path
-                    patchFile = layout.file(
-                        cfg.patchFile.flatMap { f ->
-                            if (f.path.exists()) target.providers.provider { f.asFile } else target.providers.provider { null }
-                        }
-                    )
+                    patchFile = cfg.patchFile.fileExists()
                     outputFile = cfg.outputFile
                     rejectsFile = cfg.rejectsFile
                 }
