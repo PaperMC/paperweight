@@ -61,9 +61,12 @@ fun interface ReobfArtifactConfiguration {
             }
 
             reobfJar {
+                dependsOn(devJarTask)
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
                 outputJar.convention(archivesName(project).flatMap { layout.buildDirectory.file("libs/$it-${project.version}.jar") })
             }
+
+            project.tasks["assemble"].dependsOn(reobfJar)
         }
 
         /**
@@ -80,6 +83,7 @@ fun interface ReobfArtifactConfiguration {
                 project.tasks.named<AbstractArchiveTask>(JavaPlugin.JAR_TASK_NAME)
             }
             reobfJar {
+                dependsOn(devJarTask)
                 inputJar.set(devJarTask.flatMap { it.archiveFile })
                 outputJar.convention(archivesName(project).flatMap { layout.buildDirectory.file("libs/$it-${project.version}-reobf.jar") })
             }
