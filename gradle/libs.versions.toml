@@ -50,7 +50,7 @@ gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:7.2.1"
 gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.1.0"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.2.0"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.3.1"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.0.0"
 
 [bundles]
 asm = ["asm-core", "asm-tree"]
