@@ -95,7 +95,7 @@ val shadowJar by tasks.existing(ShadowJar::class) {
 
 publishing {
     repositories {
-        maven("https://repo.papermc.io/repository/maven-snapshots/") {
+        maven("https://artifactory.papermc.io/artifactory/snapshots/") {
             credentials(PasswordCredentials::class)
             name = "paper"
         }

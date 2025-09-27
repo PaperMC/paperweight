@@ -31,5 +31,5 @@ jobs:
         if: endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
         run: ./gradlew -Dorg.gradle.parallel=true publish --no-daemon --stacktrace -Dorg.gradle.internal.http.socketTimeout=90000 -Dorg.gradle.internal.http.connectionTimeout=90000
         env:
-          ORG_GRADLE_PROJECT_paperUsername: ${{ secrets.DEPLOY_USER }}
-          ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.DEPLOY_PASS }}
+          ORG_GRADLE_PROJECT_paperUsername: ${{ secrets.ARTIFACTORY_USERNAME }}
+          ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.ARTIFACTORY_PASSWORD }}
