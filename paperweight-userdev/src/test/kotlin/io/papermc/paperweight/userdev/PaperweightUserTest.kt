@@ -20,10 +20,8 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.action
+package io.papermc.paperweight.userdev
 
-import io.papermc.paperweight.userdev.PaperweightUserDependenciesExtension
-import io.papermc.paperweight.userdev.PaperweightUserExtension
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
