@@ -47,7 +47,7 @@ mockk = "io.mockk:mockk:1.14.5"
 # Gradle
 gradle-licenser = "net.kyori:indra-licenser-spotless:3.2.0"
 gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:7.2.1"
-gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9"
+gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.2.2"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.2.0"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.0.0"
