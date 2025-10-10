@@ -17,7 +17,7 @@ jobs:
           java-version: 21
           distribution: 'temurin'
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
       - name: Execute Gradle build
         run: |
           git config --global user.email "no-reply@github.com"
