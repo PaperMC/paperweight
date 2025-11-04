@@ -77,6 +77,14 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
 
+    @get:Internal
+    abstract val atWorkingDir: DirectoryProperty
+
+    override fun init() {
+        super.init()
+        atWorkingDir.set(layout.cache.resolve(paperTaskOutput(name = "${name}_atWorkingDir")))
+    }
+
     override fun run(outputPath: Path) {
         val git: Git
         if (oldPaperCommit.isPresent) {
@@ -173,7 +181,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
                 outputPath,
                 outputPath,
                 atFile.path,
-                temporaryDir.toPath(),
+                atWorkingDir.path,
             )
             if (!oldPaperCommit.isPresent) {
                 commitAndTag(git, "ATs", "paper ATs")
