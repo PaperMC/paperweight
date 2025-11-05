@@ -41,6 +41,11 @@ paperweight {
             additionalAts.set(file('../build-data/fake.at'))
         }
     } else {
+        paper {
+            sourcePatchDir.set(file('patches/sources'))
+            resourcePatchDir.set(file('patches/resources'))
+            featurePatchDir.set(file('patches/features'))
+        }
         minecraftVersion = '1.21.4'
     }
 }
