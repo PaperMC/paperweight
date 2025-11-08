@@ -22,8 +22,10 @@
 
 package io.papermc.paperweight.core.tasks.patching
 
-import codechicken.diffpatch.cli.DiffOperation
-import codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.cli.DiffOperation
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.util.Output as DiffOutput
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
@@ -80,9 +82,9 @@ abstract class RebuildSingleFilePatches : BaseTask() {
 
                 val result = DiffOperation.builder()
                     .logTo(logOut)
-                    .aPath(tmpA)
-                    .bPath(tmpB)
-                    .outputPath(tmpPatch)
+                    .baseInput(DiffInput.MultiInput.folder(tmpA))
+                    .changedInput(DiffInput.MultiInput.folder(tmpB))
+                    .patchesOutput(DiffOutput.MultiOutput.folder(tmpPatch))
                     .autoHeader(true)
                     .level(LogLevel.ALL)
                     .lineEnding("\n")
