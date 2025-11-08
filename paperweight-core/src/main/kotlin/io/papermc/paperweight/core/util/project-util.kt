@@ -36,7 +36,7 @@ import org.gradle.kotlin.dsl.*
 
 fun Project.createBuildTasks(
     spigot: SpigotExtension,
-    packagesToFix: Provider<List<String>?>,
+    packagesToFix: Provider<List<String>>,
     relocatedReobfMappings: Provider<RegularFile>
 ): ServerArtifacts {
     val jar = tasks.named("jar", AbstractArchiveTask::class).flatMap { it.archiveFile }
@@ -90,7 +90,7 @@ fun Project.createBuildTasks(
     return ServerArtifacts(
         spigot.enabled.flatMap {
             if (it) {
-                includeMappings.flatMap { it.outputJar }
+                includeMappings.flatMap { t -> t.outputJar }
             } else {
                 jar
             }

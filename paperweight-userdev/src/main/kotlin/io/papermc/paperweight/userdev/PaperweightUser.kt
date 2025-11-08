@@ -117,7 +117,8 @@ abstract class PaperweightUser : Plugin<Project> {
         target.dependencies.extensions.create(
             PAPERWEIGHT_EXTENSION,
             PaperweightUserDependenciesExtension::class,
-            target.dependencies
+            target.dependencies,
+            target.dependencyFactory,
         )
 
         createConfigurations(target, target.provider { userdevSetup }, setupTask)

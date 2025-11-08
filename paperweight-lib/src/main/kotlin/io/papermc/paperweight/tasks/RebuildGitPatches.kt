@@ -94,7 +94,7 @@ abstract class RebuildGitPatches : ControllableOutputTask() {
         }
 
         val git = Git(inputDir.path)
-        git("fetch", "--all", "--prune").runSilently(silenceErr = true)
+        git("fetch", "--all", "--prune", "--no-prune-tags").runSilently(silenceErr = true)
         git(
             "format-patch",
             "--diff-algorithm=myers", "--zero-commit", "--full-index", "--no-signature", "--no-stat", "-N",
