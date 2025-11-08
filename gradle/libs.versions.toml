@@ -32,7 +32,7 @@ hypo-mappings = { module = "dev.denwav.hypo:hypo-mappings", version.ref = "hypo"
 lorenzTiny = "net.fabricmc:lorenz-tiny:3.0.0"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
-diffpatch = "io.codechicken:DiffPatch:2.0.1.40"
+diffpatch = "io.codechicken:DiffPatch:2.1.0.42"
 
 serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
 serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
