@@ -1,7 +1,7 @@
 [versions]
 asm = "9.9"
 lorenz = "0.5.8"
-hypo = "1.2.4"
+hypo = "2.4.1"
 serialize = "1.9.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
 tinyRemapper = "0.12.0"
