@@ -35,9 +35,4 @@ abstract class PaperCheckstyleExt {
 
     abstract val typeUseAnnotations: SetProperty<String>
     abstract val directoriesToSkip: SetProperty<String>
-    abstract val projectLocalCheckstyleConfig: DirectoryProperty
-
-    init {
-        projectLocalCheckstyleConfig.convention(layout.projectDirectory.dir(".checkstyle"))
-    }
 }

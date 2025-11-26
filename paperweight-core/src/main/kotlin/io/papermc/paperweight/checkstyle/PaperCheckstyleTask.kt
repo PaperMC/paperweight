@@ -29,6 +29,8 @@ import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 abstract class PaperCheckstyleTask : Checkstyle() {
@@ -37,21 +39,28 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     abstract val rootPath: Property<String>
 
     @get:Input
+    @get:Optional
     abstract val directoriesToSkip: SetProperty<String>
 
     @get:Input
+    @get:Optional
     abstract val typeUseAnnotations: SetProperty<String>
+
+    @get:Nested
+    @get:Optional
+    abstract val customJavadocTags: SetProperty<JavadocTag>
 
     @TaskAction
     override fun run() {
         val existingProperties = configProperties?.toMutableMap() ?: mutableMapOf()
-        existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
+        existingProperties["type_use_annotations"] = typeUseAnnotations.getOrElse(emptySet()).joinToString("|")
+        existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
         configProperties = existingProperties
         exclude {
             if (it.isDirectory) return@exclude false
             val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
             val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
-            directoriesToSkip.get().any { pkg -> parentPath == pkg }
+            directoriesToSkip.getOrElse(emptySet()).any { pkg -> parentPath == pkg }
         }
         if (!source.isEmpty) {
             super.run()

@@ -37,7 +37,6 @@ abstract class PaperCheckstyle : Plugin<Project> {
 
         target.extensions.configure(CheckstyleExtension::class.java) {
             toolVersion = Versions.CHECKSTYLE
-            configDirectory.set(ext.projectLocalCheckstyleConfig)
         }
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {

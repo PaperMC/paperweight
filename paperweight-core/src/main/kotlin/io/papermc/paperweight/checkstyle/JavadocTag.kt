@@ -22,14 +22,10 @@
 
 package io.papermc.paperweight.checkstyle
 
-data class JavadocTag(val tag: String, val appliesTo: String, val prefix: String) {
+import org.gradle.api.tasks.Input
+
+data class JavadocTag(@get:Input val tag: String, @get:Input val appliesTo: String, @get:Input val prefix: String) {
     fun toOptionString(): String {
         return "$tag:$appliesTo:$prefix"
-    }
-}
-
-fun PaperCheckstyleTask.setCustomJavadocTags(tags: Iterable<JavadocTag>) {
-    configProperties = (configProperties ?: emptyMap()).toMutableMap().apply {
-        this["custom_javadoc_tags"] = tags.joinToString("|") { it.toOptionString() }
     }
 }
