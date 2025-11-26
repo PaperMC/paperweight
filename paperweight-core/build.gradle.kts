@@ -1,7 +1,6 @@
 plugins {
     `config-kotlin`
     `config-publish`
-    id("net.kyori.blossom") version "2.1.0"
 }
 
 dependencies {
