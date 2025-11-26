@@ -23,16 +23,11 @@ kotlin {
     }
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
+        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17")
     }
 }
 
 repositories {
-    maven("https://repo.papermc.io/repository/maven-snapshots/") {
-        mavenContent {
-            includeModule("org.cadixdev", "mercury")
-        }
-    }
     maven("https://repo.papermc.io/repository/maven-public/") {
         mavenContent {
             includeGroup("codechicken")
@@ -54,7 +49,9 @@ repositories {
             includeGroupAndSubgroups("net.fabricmc")
         }
     }
-    mavenCentral()
+    mavenCentral {
+        mavenContent { releasesOnly() }
+    }
     gradlePluginPortal()
 }
 
@@ -67,9 +64,9 @@ testing {
         val test by getting(JvmTestSuite::class) {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter-engine:5.12.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.12.2")
-                implementation("org.junit.platform:junit-platform-launcher:1.12.2")
+                implementation("org.junit.jupiter:junit-jupiter-engine:6.0.0")
+                implementation("org.junit.jupiter:junit-jupiter-params:6.0.0")
+                implementation("org.junit.platform:junit-platform-launcher:6.0.0")
             }
 
             targets.configureEach {

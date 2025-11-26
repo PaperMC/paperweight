@@ -27,6 +27,9 @@ configurations.shadowRuntimeElements {
 
 fun ShadowJar.configureStandard() {
     configurations = listOf(shade)
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
@@ -95,7 +98,7 @@ val shadowJar by tasks.existing(ShadowJar::class) {
 
 publishing {
     repositories {
-        maven("https://repo.papermc.io/repository/maven-snapshots/") {
+        maven("https://artifactory.papermc.io/artifactory/snapshots/") {
             credentials(PasswordCredentials::class)
             name = "paper"
         }

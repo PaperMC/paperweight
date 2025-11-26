@@ -23,15 +23,19 @@
 package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.util.constants.*
+import javax.inject.Inject
 import org.gradle.api.Action
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.*
 
-abstract class PaperweightUserDependenciesExtension(
-    private val dependencies: DependencyHandler
+@Suppress("unused")
+abstract class PaperweightUserDependenciesExtension @Inject constructor(
+    private val dependencies: DependencyHandler,
+    private val dependencyFactory: DependencyFactory,
 ) {
     /**
      * Adds a dependency on Paper's dev bundle to the dev bundle [org.gradle.api.artifacts.Configuration].
@@ -39,9 +43,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param version dependency version
      * @param group dependency group
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
      * @param configurationAction action configuring the dependency
      * @return dependency
@@ -51,13 +52,10 @@ abstract class PaperweightUserDependenciesExtension(
         version: String? = null,
         group: String = "io.papermc.paper",
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         dependencies.add(devBundleConfigurationName, dep)
         return dep
@@ -69,9 +67,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param version dependency version
      * @param group dependency group
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
      * @param configurationAction action configuring the dependency
      * @return dependency
@@ -81,13 +76,10 @@ abstract class PaperweightUserDependenciesExtension(
         version: String? = null,
         group: String = "dev.folia",
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         dependencies.add(devBundleConfigurationName, dep)
         return dep
@@ -99,9 +91,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param group dependency group
      * @param version dependency version
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param devBundleConfigurationName name of the dev bundle [org.gradle.api.artifacts.Configuration]
      * @param configurationAction action configuring the dependency
      * @return dependency
@@ -111,13 +100,10 @@ abstract class PaperweightUserDependenciesExtension(
         group: String,
         version: String? = null,
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         devBundleConfigurationName: String = DEV_BUNDLE_CONFIG,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         dependencies.add(devBundleConfigurationName, dep)
         return dep
@@ -177,9 +163,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param version dependency version
      * @param group dependency group
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param configurationAction action configuring the dependency
      * @return dependency
      */
@@ -188,12 +171,9 @@ abstract class PaperweightUserDependenciesExtension(
         version: String? = null,
         group: String = "dev.folia",
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         return dep
     }
@@ -204,9 +184,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param version dependency version
      * @param group dependency group
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param configurationAction action configuring the dependency
      * @return dependency
      */
@@ -215,12 +192,9 @@ abstract class PaperweightUserDependenciesExtension(
         version: String? = null,
         group: String = "io.papermc.paper",
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         return dep
     }
@@ -231,9 +205,6 @@ abstract class PaperweightUserDependenciesExtension(
      * @param group dependency group
      * @param version dependency version
      * @param artifactId dependency artifactId
-     * @param configuration dependency configuration
-     * @param classifier dependency classifier
-     * @param ext dependency extension
      * @param configurationAction action configuring the dependency
      * @return dependency
      */
@@ -242,22 +213,33 @@ abstract class PaperweightUserDependenciesExtension(
         group: String,
         version: String? = null,
         artifactId: String = "dev-bundle",
-        configuration: String? = null,
-        classifier: String? = null,
-        ext: String? = null,
         configurationAction: Action<ExternalModuleDependency> = nullAction()
     ): ExternalModuleDependency {
-        val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
+        val dep = dependencyFactory.create(buildDependencyString(group, artifactId, version))
         configurationAction(dep)
         return dep
     }
 
     @Suppress("unchecked_cast")
-    private fun <T> nullAction(): Action<T> {
+    private fun <T : Any> nullAction(): Action<T> {
         return NullAction as Action<T>
     }
 
     private object NullAction : Action<Any> {
         override fun execute(t: Any) {}
+    }
+
+    private fun buildDependencyString(
+        group: String,
+        artifactId: String,
+        version: String?
+    ): String {
+        val s = StringBuilder(group)
+            .append(':')
+            .append(artifactId)
+        if (version != null) {
+            s.append(':').append(version)
+        }
+        return s.toString()
     }
 }

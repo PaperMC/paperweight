@@ -1,6 +1,6 @@
 plugins {
     `config-kotlin`
-    id("net.kyori.blossom") version "2.1.0"
+    id("net.kyori.blossom") version "2.2.0"
 }
 
 repositories {
