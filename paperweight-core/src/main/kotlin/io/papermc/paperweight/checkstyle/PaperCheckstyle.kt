@@ -43,6 +43,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
             rootPath.set(project.rootDir.path)
             directoriesToSkip.set(ext.directoriesToSkip)
             typeUseAnnotations.set(ext.typeUseAnnotations)
+            customJavadocTags.set(ext.customJavadocTags)
         }
     }
 }
