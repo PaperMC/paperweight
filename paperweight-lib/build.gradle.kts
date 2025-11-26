@@ -12,6 +12,7 @@ sourceSets.main {
         kotlinSources {
             properties.put("jst_version", libs.versions.jst)
             properties.put("tinyRemapper_version", libs.versions.tinyRemapper)
+            properties.put("checkstyle_version", libs.versions.checkstyle)
         }
     }
 }

@@ -28,13 +28,3 @@ gradlePlugin {
         implementationClass = "io.papermc.paperweight.patcher.PaperweightPatcher"
     }
 }
-
-sourceSets {
-    main {
-        blossom {
-            kotlinSources {
-                property("checkstyle_version", libs.versions.checkstyle)
-            }
-        }
-    }
-}

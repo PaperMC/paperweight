@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.checkstyle
 
-import io.papermc.paperweight.core.Versions
+import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -36,7 +36,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
         target.plugins.apply(PaperCheckstylePlugin::class.java)
 
         target.extensions.configure(CheckstyleExtension::class.java) {
-            toolVersion = Versions.CHECKSTYLE
+            toolVersion = LibraryVersions.CHECKSTYLE
         }
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
