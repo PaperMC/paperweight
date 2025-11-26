@@ -23,7 +23,6 @@
 package io.papermc.paperweight.checkstyle
 
 import javax.inject.Inject
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.SetProperty
 
