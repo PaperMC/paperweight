@@ -40,10 +40,10 @@ abstract class PaperCheckstyle : Plugin<Project> {
         }
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
-            rootPath.set(project.rootDir.path)
-            directoriesToSkip.set(ext.directoriesToSkip)
-            typeUseAnnotations.set(ext.typeUseAnnotations)
-            customJavadocTags.set(ext.customJavadocTags)
+            rootPath.convention(project.rootDir.path)
+            directoriesToSkip.convention(ext.directoriesToSkip)
+            typeUseAnnotations.convention(ext.typeUseAnnotations)
+            customJavadocTags.convention(ext.customJavadocTags)
         }
     }
 }
