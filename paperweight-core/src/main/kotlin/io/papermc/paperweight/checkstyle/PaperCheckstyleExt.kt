@@ -20,10 +20,19 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.checkstyle
 
-object LibraryVersions {
-    const val JST: String = "{{ jst_version }}"
-    const val TINY_REMAPPER: String = "{{ tinyRemapper_version }}"
-    const val CHECKSTYLE: String = "{{ checkstyle_version }}"
+import javax.inject.Inject
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.provider.SetProperty
+
+@Suppress("LeakingThis")
+abstract class PaperCheckstyleExt {
+
+    @get:Inject
+    abstract val layout: ProjectLayout
+
+    abstract val typeUseAnnotations: SetProperty<String>
+    abstract val directoriesToSkip: SetProperty<String>
+    abstract val customJavadocTags: SetProperty<JavadocTag>
 }

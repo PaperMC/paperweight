@@ -5,6 +5,8 @@ hypo = "1.2.4"
 serialize = "1.9.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
 tinyRemapper = "0.12.0"
+# For paper-checkstyle plugin
+checkstyle = "12.1.2"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -51,6 +53,9 @@ gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.2.2"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.2.0"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
 gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.0.0"
+
+# for renovate
+zCheckstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
 
 [bundles]
 asm = ["asm-core", "asm-tree"]

@@ -20,10 +20,12 @@
  * USA
  */
 
-package io.papermc.paperweight.util
+package io.papermc.paperweight.checkstyle
 
-object LibraryVersions {
-    const val JST: String = "{{ jst_version }}"
-    const val TINY_REMAPPER: String = "{{ tinyRemapper_version }}"
-    const val CHECKSTYLE: String = "{{ checkstyle_version }}"
+import org.gradle.api.tasks.Input
+
+data class JavadocTag(@get:Input val tag: String, @get:Input val appliesTo: String, @get:Input val prefix: String) {
+    fun toOptionString(): String {
+        return "$tag:$appliesTo:$prefix"
+    }
 }
