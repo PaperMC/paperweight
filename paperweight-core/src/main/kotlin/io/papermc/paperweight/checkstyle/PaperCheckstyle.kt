@@ -41,9 +41,13 @@ abstract class PaperCheckstyle : Plugin<Project> {
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.convention(project.rootDir.path)
-            directoriesToSkip.convention(ext.directoriesToSkip)
-            typeUseAnnotations.convention(ext.typeUseAnnotations)
+            directoriesToSkipFile.convention(ext.directoriesToSkipFile)
+            typeUseAnnotationsFile.convention(ext.typeUseAnnotationsFile)
             customJavadocTags.convention(ext.customJavadocTags)
+        }
+
+        target.dependencies {
+            "checkstyle"(project(":paper-checkstyle"))
         }
     }
 }
