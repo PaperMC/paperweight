@@ -22,6 +22,8 @@
 
 package io.papermc.paperweight.checkstyle
 
+import io.papermc.paperweight.checkstyle.tasks.MergeCheckstyleConfig
+import io.papermc.paperweight.checkstyle.tasks.PaperCheckstyleTask
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Plugin
@@ -39,11 +41,14 @@ abstract class PaperCheckstyle : Plugin<Project> {
             toolVersion = LibraryVersions.CHECKSTYLE
         }
 
+        val mergeCheckstyleConfigs by target.tasks.registering<MergeCheckstyleConfig>()
+
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.convention(project.rootDir.path)
             directoriesToSkipFile.convention(ext.directoriesToSkipFile)
             typeUseAnnotationsFile.convention(ext.typeUseAnnotationsFile)
             customJavadocTags.convention(ext.customJavadocTags)
+            mergedConfigFile.set(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
         }
 
         target.dependencies {

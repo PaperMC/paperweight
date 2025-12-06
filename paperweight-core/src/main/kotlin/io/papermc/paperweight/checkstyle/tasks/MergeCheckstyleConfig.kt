@@ -1,44 +1,21 @@
-/*
- * paperweight is a Gradle plugin for the PaperMC project.
- *
- * Copyright (c) 2023 Kyle Wood (DenWav)
- *                    Contributors
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation;
- * version 2.1 only, no later versions.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
- * USA
- */
+package io.papermc.paperweight.checkstyle.tasks
 
-package io.papermc.paperweight.checkstyle
-
-import io.papermc.paperweight.util.*
+import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.deleteForcefully
+import io.papermc.paperweight.util.path
 import java.nio.file.Path
-import java.nio.file.Paths
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
-import kotlin.io.path.*
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.exists
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.plugins.quality.Checkstyle
-import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
-import org.gradle.api.resources.TextResourceFactory
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -46,21 +23,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
 
-abstract class PaperCheckstyleTask : Checkstyle() {
-
-    @get:Input
-    abstract val rootPath: Property<String>
-
-    @get:InputFile
-    @get:Optional
-    abstract val directoriesToSkipFile: RegularFileProperty
-
-    @get:InputFile
-    abstract val typeUseAnnotationsFile: RegularFileProperty
-
-    @get:Nested
-    @get:Optional
-    abstract val customJavadocTags: SetProperty<JavadocTag>
+abstract class MergeCheckstyleConfig : BaseTask() {
 
     @get:InputFile
     abstract val baseConfigFile: RegularFileProperty
@@ -72,48 +35,24 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     @get:OutputFile
     abstract val mergedConfigFile: RegularFileProperty
 
-    @get:Internal
-    val textResourceFactory: TextResourceFactory = project.resources.text
-
-    init {
-        reports.xml.required.set(true)
-        reports.html.required.set(true)
-        maxHeapSize.set("2g")
-        configDirectory.set(project.rootProject.layout.projectDirectory.dir(".checkstyle"))
+    override fun init() {
         baseConfigFile.convention(project.rootProject.layout.projectDirectory.file(".checkstyle/checkstyle_base.xml"))
         overrideConfigFile.convention(project.layout.projectDirectory.file(".checkstyle/checkstyle.xml"))
-
         mergedConfigFile.convention(project.layout.buildDirectory.file("checkstyle/merged_config.xml"))
     }
 
     @TaskAction
-    override fun run() {
+    fun run() {
         mergedConfigFile.path.deleteForcefully()
         if (overrideConfigFile.isPresent && overrideConfigFile.path.exists()) {
             mergeCheckstyleConfigs(baseConfigFile.path, overrideConfigFile.path, mergedConfigFile.path)
-            config = textResourceFactory.fromFile(mergedConfigFile.path.toFile())
         } else {
-            config = textResourceFactory.fromFile(baseConfigFile.path.toFile())
-        }
-        val existingProperties = configProperties?.toMutableMap() ?: mutableMapOf()
-        existingProperties["type_use_annotations"] = typeUseAnnotationsFile.path.readText().trim().split("\n").joinToString("|")
-        existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
-        configProperties = existingProperties
-        exclude {
-            if (it.isDirectory) return@exclude false
-            val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-            val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
-            if (directoriesToSkipFile.isPresent) {
-                return@exclude directoriesToSkipFile.path.readText().trim().split("\n").any { pkg -> parentPath == pkg }
-            }
-            return@exclude false
-        }
-        if (!source.isEmpty) {
-            super.run()
+            mergedConfigFile.path.parent.createDirectories()
+            baseConfigFile.path.copyTo(mergedConfigFile.path)
         }
     }
 
-    fun mergeCheckstyleConfigs(baseFile: Path, additionalFile: Path, outputFile: Path) {
+    private fun mergeCheckstyleConfigs(baseFile: Path, additionalFile: Path, outputFile: Path) {
         val factory = DocumentBuilderFactory.newInstance()
         val builder = factory.newDocumentBuilder()
 
@@ -140,7 +79,7 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         transformer.transform(DOMSource(baseDoc), StreamResult(outputFile.bufferedWriter()))
     }
 
-    fun mergeModules(baseDoc: Document, baseParent: Element, additionalParent: Element) {
+    private fun mergeModules(baseDoc: Document, baseParent: Element, additionalParent: Element) {
         val additionalChildren = additionalParent.childNodes
 
         for (i in 0 until additionalChildren.length) {
@@ -167,7 +106,7 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         }
     }
 
-    fun findDirectChildModule(parent: Element, name: String): Element? {
+    private fun findDirectChildModule(parent: Element, name: String): Element? {
         val children = parent.childNodes
         for (i in 0 until children.length) {
             val child = children.item(i)
