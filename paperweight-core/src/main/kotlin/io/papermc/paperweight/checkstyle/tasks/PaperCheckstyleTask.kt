@@ -25,15 +25,16 @@ package io.papermc.paperweight.checkstyle.tasks
 import io.papermc.paperweight.checkstyle.JavadocTag
 import io.papermc.paperweight.util.*
 import java.nio.file.Paths
+import javax.inject.Inject
 import kotlin.io.path.*
+import org.gradle.api.file.BuildLayout
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.file.FileOperations
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
-import org.gradle.api.resources.TextResourceFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -55,21 +56,26 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     abstract val customJavadocTags: SetProperty<JavadocTag>
 
     @get:InputFile
-    abstract val mergedConfigFile: RegularFileProperty
+    @get:Optional
+    abstract val configOverride: RegularFileProperty
 
-    @get:Internal
-    val textResourceFactory: TextResourceFactory = project.resources.text
+    @get:Inject
+    abstract val buildLayout: BuildLayout
 
     init {
-        reports.xml.required.set(true)
-        reports.html.required.set(true)
-        maxHeapSize.set("2g")
-        configDirectory.set(project.rootProject.layout.projectDirectory.dir(".checkstyle"))
+        reports.xml.required.convention(true)
+        reports.html.required.convention(true)
+        maxHeapSize.convention("2g")
+        configDirectory.convention(buildLayout.rootDirectory.dir(".checkstyle"))
     }
 
     @TaskAction
     override fun run() {
-        config = textResourceFactory.fromFile(mergedConfigFile.path.toFile())
+        if (configOverride.isPresent && configOverride.path.exists()) {
+            // https://github.com/gradle/gradle/issues/16134
+            config = services.get(FileOperations::class.java).resources.text
+                .fromFile(configOverride.path.toFile())
+        }
         val existingProperties = configProperties?.toMutableMap() ?: mutableMapOf()
         existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
         existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
