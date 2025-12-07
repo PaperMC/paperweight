@@ -51,8 +51,8 @@ abstract class PaperCheckstyle : Plugin<Project> {
             typeUseAnnotations.convention(ext.typeUseAnnotationsFile.map { it.path.readText().trim().split("\n") })
             customJavadocTags.convention(ext.customJavadocTags)
             configOverride.convention(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
-            reports.xml.required.convention(false)
-            reports.html.required.convention(false)
+            reports.xml.required.convention(true)
+            reports.html.required.convention(true)
             maxHeapSize.convention("2g")
             configDirectory.convention(layout.settingsDirectory.dir(".checkstyle"))
         }
