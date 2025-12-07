@@ -25,9 +25,7 @@ package io.papermc.paperweight.checkstyle.tasks
 import io.papermc.paperweight.checkstyle.JavadocTag
 import io.papermc.paperweight.util.*
 import java.nio.file.Paths
-import javax.inject.Inject
 import kotlin.io.path.*
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.file.FileOperations
 import org.gradle.api.plugins.quality.Checkstyle
@@ -58,9 +56,6 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     @get:InputFile
     @get:Optional
     abstract val configOverride: RegularFileProperty
-
-    @get:Inject
-    abstract val layout: ProjectLayout
 
     @TaskAction
     override fun run() {
