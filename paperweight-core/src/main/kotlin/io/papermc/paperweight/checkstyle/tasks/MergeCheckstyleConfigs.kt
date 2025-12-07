@@ -43,6 +43,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.w3c.dom.Document
 import org.w3c.dom.Element
+import org.w3c.dom.Node
 import org.xml.sax.InputSource
 
 abstract class MergeCheckstyleConfigs : BaseTask() {
@@ -84,10 +85,15 @@ abstract class MergeCheckstyleConfigs : BaseTask() {
         baseDoc.documentElement.normalize()
         additionalDoc.documentElement.normalize()
 
+        // Remove existing whitespace/indentation nodes
+        stripWhitespace(baseDoc)
+        stripWhitespace(additionalDoc)
+
         mergeModules(baseDoc, baseDoc.documentElement, additionalDoc.documentElement)
 
         outputFile.createParentDirectories()
         val transformer = TransformerFactory.newInstance().newTransformer()
+        // Add standard indent after merging
         transformer.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes")
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
         transformer.setOutputProperty(
@@ -137,5 +143,28 @@ abstract class MergeCheckstyleConfigs : BaseTask() {
             }
         }
         return null
+    }
+
+    private fun stripWhitespace(doc: Document) {
+        stripWhitespace(doc.documentElement)
+    }
+
+    /**
+     * Removes whitespace-only text nodes (indentation/newlines between elements).
+     * Safe for checkstyle configs as they never have meaningful text content -
+     * all values are stored in attributes.
+     */
+    private fun stripWhitespace(node: Node) {
+        val children = node.childNodes
+        var i = 0
+        while (i < children.length) {
+            val child = children.item(i)
+            if (child.nodeType == Node.TEXT_NODE && child.textContent.isBlank()) {
+                node.removeChild(child)
+            } else {
+                stripWhitespace(child)
+                i++
+            }
+        }
     }
 }
