@@ -27,7 +27,7 @@ import io.papermc.paperweight.util.*
 import java.nio.file.Paths
 import javax.inject.Inject
 import kotlin.io.path.*
-import org.gradle.api.file.BuildLayout
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.file.FileOperations
 import org.gradle.api.plugins.quality.Checkstyle
@@ -60,13 +60,13 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     abstract val configOverride: RegularFileProperty
 
     @get:Inject
-    abstract val buildLayout: BuildLayout
+    abstract val layout: ProjectLayout
 
     init {
         reports.xml.required.convention(true)
         reports.html.required.convention(true)
         maxHeapSize.convention("2g")
-        configDirectory.convention(buildLayout.rootDirectory.dir(".checkstyle"))
+        configDirectory.convention(layout.settingsDirectory.dir(".checkstyle"))
     }
 
     @TaskAction

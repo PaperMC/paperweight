@@ -26,7 +26,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.deleteForcefully
 import io.papermc.paperweight.util.path
 import java.nio.file.Path
-import javax.inject.Inject
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
@@ -37,8 +36,6 @@ import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.exists
-import org.gradle.api.file.BuildLayout
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -60,16 +57,10 @@ abstract class MergeCheckstyleConfigs : BaseTask() {
     @get:OutputFile
     abstract val mergedConfigFile: RegularFileProperty
 
-    @get:Inject
-    abstract val buildLayout: BuildLayout
-
-    @get:Inject
-    abstract val projectLayout: ProjectLayout
-
     override fun init() {
-        baseConfigFile.convention(buildLayout.rootDirectory.file(".checkstyle/checkstyle_base.xml"))
-        overrideConfigFile.convention(projectLayout.projectDirectory.file(".checkstyle/checkstyle.xml"))
-        mergedConfigFile.convention(projectLayout.buildDirectory.file("$name/merged_config.xml"))
+        baseConfigFile.convention(layout.settingsDirectory.file(".checkstyle/checkstyle_base.xml"))
+        overrideConfigFile.convention(layout.projectDirectory.file(".checkstyle/checkstyle.xml"))
+        mergedConfigFile.convention(layout.buildDirectory.file("$name/merged_config.xml"))
     }
 
     @TaskAction

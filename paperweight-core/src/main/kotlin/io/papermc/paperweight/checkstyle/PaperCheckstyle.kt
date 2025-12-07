@@ -52,9 +52,5 @@ abstract class PaperCheckstyle : Plugin<Project> {
             customJavadocTags.convention(ext.customJavadocTags)
             configOverride.set(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
         }
-
-        target.dependencies {
-            "checkstyle"(project(":paper-checkstyle"))
-        }
     }
 }

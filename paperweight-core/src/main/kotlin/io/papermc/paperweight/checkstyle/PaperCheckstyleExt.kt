@@ -23,7 +23,7 @@
 package io.papermc.paperweight.checkstyle
 
 import javax.inject.Inject
-import org.gradle.api.file.BuildLayout
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.SetProperty
 
@@ -31,7 +31,7 @@ import org.gradle.api.provider.SetProperty
 abstract class PaperCheckstyleExt {
 
     @get:Inject
-    abstract val buildLayout: BuildLayout
+    abstract val layout: ProjectLayout
 
     abstract val typeUseAnnotationsFile: RegularFileProperty
 
@@ -45,7 +45,7 @@ abstract class PaperCheckstyleExt {
 
     private fun init() {
         typeUseAnnotationsFile.convention(
-            buildLayout.rootDirectory.file(".checkstyle/type_use_annotations.txt")
+            layout.settingsDirectory.file(".checkstyle/type_use_annotations.txt")
         )
     }
 }
