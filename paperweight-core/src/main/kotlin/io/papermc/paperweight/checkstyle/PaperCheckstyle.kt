@@ -59,7 +59,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
             reports.xml.required.convention(true)
             reports.html.required.convention(true)
             maxHeapSize.convention("2g")
-            configDirectory.convention(layout.settingsDirectory.dir(".checkstyle"))
+            configDirectory.convention(target.rootProject.layout.settingsDirectory.dir(".checkstyle"))
         }
     }
 }
