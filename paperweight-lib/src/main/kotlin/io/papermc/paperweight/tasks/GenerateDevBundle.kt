@@ -22,8 +22,10 @@
 
 package io.papermc.paperweight.tasks
 
-import codechicken.diffpatch.cli.DiffOperation
-import codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.cli.DiffOperation
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.util.Output as DiffOutput
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.io.PrintStream
@@ -168,9 +170,9 @@ abstract class GenerateDevBundle : BaseTask() {
         PrintStream(logFile.toFile(), Charsets.UTF_8).use { logOut ->
             DiffOperation.builder()
                 .logTo(logOut)
-                .aPath(a)
-                .bPath(b)
-                .outputPath(patchOut, null)
+                .baseInput(DiffInput.MultiInput.folder(a))
+                .changedInput(DiffInput.MultiInput.folder(b))
+                .patchesOutput(DiffOutput.MultiOutput.folder(patchOut))
                 .autoHeader(true)
                 .level(LogLevel.ALL)
                 .lineEnding("\n")
