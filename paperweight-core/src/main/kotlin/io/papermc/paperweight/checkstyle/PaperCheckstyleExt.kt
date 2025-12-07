@@ -24,6 +24,7 @@ package io.papermc.paperweight.checkstyle
 
 import javax.inject.Inject
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.SetProperty
 
 @Suppress("LeakingThis")
@@ -32,7 +33,19 @@ abstract class PaperCheckstyleExt {
     @get:Inject
     abstract val layout: ProjectLayout
 
-    abstract val typeUseAnnotations: SetProperty<String>
-    abstract val directoriesToSkip: SetProperty<String>
+    abstract val typeUseAnnotationsFile: RegularFileProperty
+
+    abstract val directoriesToSkipFile: RegularFileProperty
+
     abstract val customJavadocTags: SetProperty<JavadocTag>
+
+    init {
+        init()
+    }
+
+    private fun init() {
+        typeUseAnnotationsFile.convention(
+            layout.settingsDirectory.file(".checkstyle/type_use_annotations.txt")
+        )
+    }
 }

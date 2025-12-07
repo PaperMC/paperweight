@@ -20,15 +20,21 @@
  * USA
  */
 
-package io.papermc.paperweight.checkstyle
+package io.papermc.paperweight.checkstyle.tasks
 
+import io.papermc.paperweight.checkstyle.JavadocTag
+import io.papermc.paperweight.util.*
 import java.nio.file.Paths
-import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.io.path.relativeTo
+import javax.inject.Inject
+import kotlin.io.path.*
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.file.FileOperations
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -43,24 +49,45 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     abstract val directoriesToSkip: SetProperty<String>
 
     @get:Input
-    @get:Optional
     abstract val typeUseAnnotations: SetProperty<String>
 
     @get:Nested
     @get:Optional
     abstract val customJavadocTags: SetProperty<JavadocTag>
 
+    @get:InputFile
+    @get:Optional
+    abstract val configOverride: RegularFileProperty
+
+    @get:Inject
+    abstract val layout: ProjectLayout
+
+    init {
+        reports.xml.required.convention(true)
+        reports.html.required.convention(true)
+        maxHeapSize.convention("2g")
+        configDirectory.convention(layout.settingsDirectory.dir(".checkstyle"))
+    }
+
     @TaskAction
     override fun run() {
+        if (configOverride.isPresent && configOverride.path.exists()) {
+            // https://github.com/gradle/gradle/issues/16134
+            config = services.get(FileOperations::class.java).resources.text
+                .fromFile(configOverride.path.toFile())
+        }
         val existingProperties = configProperties?.toMutableMap() ?: mutableMapOf()
-        existingProperties["type_use_annotations"] = typeUseAnnotations.getOrElse(emptySet()).joinToString("|")
+        existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
         existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
         configProperties = existingProperties
         exclude {
             if (it.isDirectory) return@exclude false
             val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
             val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
-            directoriesToSkip.getOrElse(emptySet()).any { pkg -> parentPath == pkg }
+            if (directoriesToSkip.isPresent) {
+                return@exclude directoriesToSkip.get().any { pkg -> parentPath == pkg }
+            }
+            return@exclude false
         }
         if (!source.isEmpty) {
             super.run()

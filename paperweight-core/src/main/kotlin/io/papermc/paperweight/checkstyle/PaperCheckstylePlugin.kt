@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.checkstyle
 
+import io.papermc.paperweight.checkstyle.tasks.PaperCheckstyleTask
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstylePlugin
 
