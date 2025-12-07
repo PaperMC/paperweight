@@ -50,7 +50,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
             directoriesToSkip.convention(ext.directoriesToSkipFile.map { it.path.readText().trim().split("\n").toSet() })
             typeUseAnnotations.convention(ext.typeUseAnnotationsFile.map { it.path.readText().trim().split("\n") })
             customJavadocTags.convention(ext.customJavadocTags)
-            configOverride.set(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
+            configOverride.convention(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
         }
     }
 }
