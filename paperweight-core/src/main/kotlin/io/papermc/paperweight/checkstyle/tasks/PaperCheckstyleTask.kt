@@ -62,13 +62,6 @@ abstract class PaperCheckstyleTask : Checkstyle() {
     @get:Inject
     abstract val layout: ProjectLayout
 
-    init {
-        reports.xml.required.convention(true)
-        reports.html.required.convention(true)
-        maxHeapSize.convention("2g")
-        configDirectory.convention(layout.settingsDirectory.dir(".checkstyle"))
-    }
-
     @TaskAction
     override fun run() {
         if (configOverride.isPresent && configOverride.path.exists()) {
