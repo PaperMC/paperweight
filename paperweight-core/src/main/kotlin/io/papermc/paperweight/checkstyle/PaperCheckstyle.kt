@@ -26,19 +26,21 @@ import io.papermc.paperweight.checkstyle.tasks.MergeCheckstyleConfigs
 import io.papermc.paperweight.checkstyle.tasks.PaperCheckstyleTask
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
-import io.papermc.paperweight.util.path
 import javax.inject.Inject
-import kotlin.io.path.readText
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.quality.CheckstyleExtension
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.kotlin.dsl.*
 
 abstract class PaperCheckstyle : Plugin<Project> {
 
     @get:Inject
     abstract val layout: ProjectLayout
+
+    @get:Inject
+    abstract val providers: ProviderFactory
 
     override fun apply(target: Project) {
         val ext = target.extensions.create<PaperCheckstyleExt>(PAPER_CHECKSTYLE_EXTENSION)
@@ -52,8 +54,16 @@ abstract class PaperCheckstyle : Plugin<Project> {
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.convention(layout.settingsDirectory.asFile.path)
-            directoriesToSkip.convention(ext.directoriesToSkipFile.map { it.path.readText().trim().split("\n").toSet() })
-            typeUseAnnotations.convention(ext.typeUseAnnotationsFile.map { it.path.readText().trim().split("\n") })
+            directoriesToSkip.convention(
+                providers.fileContents(ext.directoriesToSkipFile).asText.map {
+                    it.trim().lines().map { line -> line.trim() }
+                }
+            )
+            typeUseAnnotations.convention(
+                providers.fileContents(ext.typeUseAnnotationsFile).asText.map {
+                    it.trim().lines().map { line -> line.trim() }
+                }
+            )
             customJavadocTags.convention(ext.customJavadocTags)
             configOverride.convention(mergeCheckstyleConfigs.flatMap { it.mergedConfigFile })
             reports.xml.required.convention(true)
