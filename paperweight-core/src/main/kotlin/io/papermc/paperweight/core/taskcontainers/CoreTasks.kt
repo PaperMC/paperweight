@@ -101,6 +101,7 @@ class CoreTasks(
         oldPaperCommit.convention(project.coreExt.updatingMinecraft.oldPaperCommit)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
+        validateAts.set(project.coreExt.validateAts)
     }
 
     val setupMacheSources by tasks.registering(SetupMinecraftSources::class) {
