@@ -69,6 +69,10 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
     @get:Input
     abstract val oldPaperCommit: Property<String>
 
+    @get:Optional
+    @get:Input
+    abstract val validateAts: Property<Boolean>
+
     @get:Nested
     val ats: ApplySourceATs = objects.newInstance()
 
@@ -182,6 +186,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
                 outputPath,
                 atFile.path,
                 atWorkingDir.path,
+                validate = validateAts.get(),
             )
             if (!oldPaperCommit.isPresent) {
                 commitAndTag(git, "ATs", "paper ATs")
