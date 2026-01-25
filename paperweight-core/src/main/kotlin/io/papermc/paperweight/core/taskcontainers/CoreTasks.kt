@@ -101,7 +101,6 @@ class CoreTasks(
         oldPaperCommit.convention(project.coreExt.updatingMinecraft.oldPaperCommit)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
-        validateAts.set(project.coreExt.validateAts)
     }
 
     val setupMacheSources by tasks.registering(SetupMinecraftSources::class) {
@@ -113,6 +112,7 @@ class CoreTasks(
         atFile.set(mergePaperATs.flatMap { it.outputFile })
         ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
         ats.jst.from(project.configurations.named(JST_CONFIG))
+        validateAts.set(project.coreExt.validateAts)
     }
 
     val extractMacheSources by tasks.registering(ExtractMinecraftSources::class) {

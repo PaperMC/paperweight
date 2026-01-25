@@ -53,7 +53,7 @@ abstract class ApplySourceATs {
         atFile: Path,
         workDir: Path,
         singleFile: Boolean = false,
-        validate: Boolean,
+        validate: Boolean = false,
     ) {
         workDir.deleteRecursive()
         workDir.createDirectories()
@@ -71,7 +71,7 @@ abstract class ApplySourceATs {
         outputDir: Path,
         atFile: Path,
         singleFile: Boolean = false,
-        validate: Boolean,
+        validate: Boolean = false,
     ): List<String> {
         val format = if (singleFile) "FILE" else "FOLDER"
         val validation = if (validate) "ERROR" else "LOG"
