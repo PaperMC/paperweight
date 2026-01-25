@@ -69,6 +69,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
     @get:Input
     abstract val oldPaperCommit: Property<String>
 
+    @get:Optional
     @get:Input
     abstract val validateAts: Property<Boolean>
 
@@ -85,7 +86,6 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
 
     override fun init() {
         super.init()
-        validateAts.convention(false)
         atWorkingDir.set(layout.cache.resolve(paperTaskOutput(name = "${name}_atWorkingDir")))
     }
 
