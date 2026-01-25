@@ -85,8 +85,8 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
 
     override fun init() {
         super.init()
-        atWorkingDir.set(layout.cache.resolve(paperTaskOutput(name = "${name}_atWorkingDir")))
         validateAts.convention(false)
+        atWorkingDir.set(layout.cache.resolve(paperTaskOutput(name = "${name}_atWorkingDir")))
     }
 
     override fun run(outputPath: Path) {
