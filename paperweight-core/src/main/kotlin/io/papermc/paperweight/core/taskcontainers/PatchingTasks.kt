@@ -116,7 +116,7 @@ class PatchingTasks(
 
     fun setupUpstream() {
         val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart}ATsFromPatches") {
-            patchDir.set(this@PatchingTasks.featurePatchDir.fileExists())
+            patchDir.set(featurePatchDir.fileExists())
         }
 
         val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart}ATs") {
