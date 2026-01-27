@@ -27,7 +27,6 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.PersonIdent
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -76,9 +75,7 @@ abstract class SetupForkUpstreamSources : JavaLauncherTask() {
             )
             commitAndTag(git, "ATs", "${identifier.get()} ATs")
         }
-        val ident = PersonIdent("base", "noreply+automated@papermc.io")
-        git.tagDelete().setTags("base").call()
-        git.tag().setName("base").setTagger(ident).setSigned(false).call()
+        commitAndTag(git, "base")
 
         git.close()
     }
