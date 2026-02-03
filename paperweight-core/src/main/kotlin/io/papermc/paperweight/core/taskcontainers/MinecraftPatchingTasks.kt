@@ -39,6 +39,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -170,7 +171,10 @@ class MinecraftPatchingTasks(
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(project.configurations.named(JST_CONFIG))
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+            ats.jstClasspath.from(
+                project.configurations.named(MACHE_MINECRAFT_CONFIG),
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
+            )
         }
 
         applySourcePatches.configure {
@@ -208,7 +212,10 @@ class MinecraftPatchingTasks(
             patches.set(sourcePatchDir)
             gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
 
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
+            ats.jstClasspath.from(
+                project.configurations.named(MACHE_MINECRAFT_CONFIG),
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
+            )
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
             atFileOut.set(additionalAts.fileExists())
