@@ -127,9 +127,11 @@ class PatchingTasks(
 
         val setup = tasks.register<SetupForkUpstreamSources>("run${namePart}Setup") {
             description = "Applies $forkName ATs to $namePart sources"
+
             inputDir.set(baseDir)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
             identifier.set(namePart)
+
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(project.configurations.named(JST_CONFIG))
             ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
@@ -169,6 +171,7 @@ class PatchingTasks(
             input.set(outputDir)
             patches.set(filePatchDir)
             gitFilePatches.set(this@PatchingTasks.gitFilePatches)
+
             ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
