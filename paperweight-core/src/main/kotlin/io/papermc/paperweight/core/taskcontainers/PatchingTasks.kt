@@ -22,6 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
+import io.papermc.paperweight.core.tasks.SetupForkUpstreamSources
 import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
@@ -29,12 +30,15 @@ import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.JST_CONFIG
 import io.papermc.paperweight.util.constants.paperTaskOutput
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -48,6 +52,7 @@ class PatchingTasks(
     private val filePatchDir: DirectoryProperty,
     private val rejectsDir: DirectoryProperty,
     private val featurePatchDir: DirectoryProperty,
+    private val additionalAts: RegularFileProperty,
     private val baseDir: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
     private val filterPatches: Provider<Boolean>,
@@ -110,6 +115,52 @@ class PatchingTasks(
         }
     }
 
+    fun setupUpstream() {
+        val collectAccessTransform = tasks.register<CollectATsFromPatches>("collect${namePart}ATsFromPatches") {
+            patchDir.set(featurePatchDir.fileExists())
+        }
+
+        val mergeCollectedAts = tasks.register<MergeAccessTransforms>("merge${namePart}ATs") {
+            firstFile.set(additionalAts.fileExists())
+            secondFile.set(collectAccessTransform.flatMap { it.outputFile })
+        }
+
+        val setup = tasks.register<SetupForkUpstreamSources>("run${namePart}Setup") {
+            description = "Applies $forkName ATs to $namePart sources"
+
+            inputDir.set(baseDir)
+            outputDir.set(layout.cache.resolve(paperTaskOutput()))
+            identifier.set(namePart)
+
+            atFile.set(mergeCollectedAts.flatMap { it.outputFile })
+            ats.jst.from(project.configurations.named(JST_CONFIG))
+            ats.jstClasspath.from(
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
+                *project.subprojects.map {
+                    it.provider {
+                        it.configurations.named(
+                            JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME
+                        ).get().files
+                    }
+                }.toTypedArray()
+            )
+        }
+
+        applyFilePatches.configure {
+            input.set(setup.flatMap { it.outputDir })
+        }
+
+        applyFilePatchesFuzzy.configure {
+            input.set(setup.flatMap { it.outputDir })
+        }
+        val name = "rebuild${namePart}FilePatches"
+        if (name in tasks.names) {
+            tasks.named<RebuildFilePatches>(name) {
+                base.set(setup.flatMap { it.outputDir })
+            }
+        }
+    }
+
     private fun setupWritable() {
         listOf(
             applyFilePatches,
@@ -129,6 +180,20 @@ class PatchingTasks(
             input.set(outputDir)
             patches.set(filePatchDir)
             gitFilePatches.set(this@PatchingTasks.gitFilePatches)
+
+            ats.jstClasspath.from(
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
+                *project.subprojects.map {
+                    it.provider {
+                        it.configurations.named(
+                            JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME
+                        ).get().files
+                    }
+                }.toTypedArray()
+            )
+            ats.jst.from(project.configurations.named(JST_CONFIG))
+            atFile.set(additionalAts.fileExists())
+            atFileOut.set(additionalAts.fileExists())
         }
 
         val fixupFilePatches = tasks.register<FixupFilePatches>(fixupFilePatchesName) {

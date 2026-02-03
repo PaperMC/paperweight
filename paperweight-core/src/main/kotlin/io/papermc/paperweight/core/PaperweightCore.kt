@@ -28,6 +28,8 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
+import io.papermc.paperweight.core.tasks.SetupForkUpstreamSources
+import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.core.tasks.patchroulette.PatchRouletteTasks
 import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.core.util.createBuildTasks
@@ -49,6 +51,7 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.withType
 
 abstract class PaperweightCore : Plugin<Project> {
     @get:Inject
@@ -188,6 +191,17 @@ abstract class PaperweightCore : Plugin<Project> {
             mache.set(configurations.resolveMacheMeta())
             mache.get().addRepositories(this)
             mache.get().addDependencies(this)
+
+            // attach the mache minecraft jar so JST can properly create binary representations
+            target.tasks.withType<SetupForkUpstreamSources>().configureEach {
+                dependsOn(target.tasks.named("macheRemapJar"))
+                ats.jstClasspath.from(target.configurations.named(MACHE_MINECRAFT_CONFIG))
+            }
+
+            target.tasks.withType<RebuildFilePatches>().configureEach {
+                dependsOn(target.tasks.named("macheRemapJar"))
+                ats.jstClasspath.from(target.configurations.named(MACHE_MINECRAFT_CONFIG))
+            }
 
             tasks.afterEvaluate()
 
