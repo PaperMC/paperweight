@@ -134,7 +134,10 @@ class PatchingTasks(
 
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(project.configurations.named(JST_CONFIG))
-            ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+            ats.jstClasspath.from(
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
+                *project.subprojects.map { it.provider { it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).get().files } }.toTypedArray()
+            )
         }
 
         applyFilePatches.configure {
@@ -172,7 +175,10 @@ class PatchingTasks(
             patches.set(filePatchDir)
             gitFilePatches.set(this@PatchingTasks.gitFilePatches)
 
-            ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+            ats.jstClasspath.from(
+                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
+                *project.subprojects.map { it.provider { it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).get().files } }.toTypedArray()
+            )
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
             atFileOut.set(additionalAts.fileExists())
