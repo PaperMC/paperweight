@@ -38,6 +38,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -131,6 +132,7 @@ class PatchingTasks(
             identifier.set(namePart)
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(project.configurations.named(JST_CONFIG))
+            ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
         }
 
         applyFilePatches.configure {
@@ -167,6 +169,7 @@ class PatchingTasks(
             input.set(outputDir)
             patches.set(filePatchDir)
             gitFilePatches.set(this@PatchingTasks.gitFilePatches)
+            ats.jstClasspath.from(project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
             atFileOut.set(additionalAts.fileExists())
