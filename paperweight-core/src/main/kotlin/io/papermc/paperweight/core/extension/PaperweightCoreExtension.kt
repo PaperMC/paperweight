@@ -79,4 +79,6 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
     fun updatingMinecraft(action: Action<UpdatingMinecraftExtension>) {
         action.execute(updatingMinecraft)
     }
+
+    val validateATs: Property<Boolean> = objects.property<Boolean>().convention(false)
 }
