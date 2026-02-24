@@ -136,13 +136,9 @@ class PatchingTasks(
             ats.jst.from(project.configurations.named(JST_CONFIG))
             ats.jstClasspath.from(
                 project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
-                *project.subprojects.map {
-                    it.provider {
-                        it.configurations.named(
-                            JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME
-                        ).get().files
-                    }
-                }.toTypedArray()
+                project.subprojects.map {
+                    it.files(it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+                }
             )
         }
 
@@ -183,13 +179,9 @@ class PatchingTasks(
 
             ats.jstClasspath.from(
                 project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
-                *project.subprojects.map {
-                    it.provider {
-                        it.configurations.named(
-                            JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME
-                        ).get().files
-                    }
-                }.toTypedArray()
+                project.subprojects.map {
+                    it.files(it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+                }
             )
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
