@@ -137,7 +137,7 @@ class PatchingTasks(
             ats.jstClasspath.from(
                 project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
                 project.subprojects.map {
-                    it.files(it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+                    it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).map { it.files }
                 }
             )
         }
@@ -180,7 +180,7 @@ class PatchingTasks(
             ats.jstClasspath.from(
                 project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
                 project.subprojects.map {
-                    it.files(it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+                    it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).map { it.files }
                 }
             )
             ats.jst.from(project.configurations.named(JST_CONFIG))
