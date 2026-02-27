@@ -23,7 +23,6 @@
 package io.papermc.paperweight.core.taskcontainers
 
 import com.google.gson.JsonObject
-import io.papermc.paperweight.core.util.reobfRequiresDebug
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -46,23 +45,14 @@ class PaperclipTasks(
     private val bundlerVersionJson: Provider<RegularFile>,
     private val serverLibrariesList: Provider<RegularFile>,
     private val vanillaJar: Provider<RegularFile>,
-    mojangJar: Provider<RegularFile>,
-    reobfJar: Provider<RegularFile>,
+    serverJar: Provider<RegularFile>,
     private val mcVersion: Provider<String>
 ) {
     init {
-        val (createBundlerJar, createPaperclipJar) = project.createTasks("mojmap")
-        val (createReobfBundlerJar, createReobfPaperclipJar) = project.createTasks("reobf")
+        val (createBundlerJar, createPaperclipJar) = project.createTasks()
 
-        createBundlerJar.serverJar(mojangJar)
-        createReobfBundlerJar.serverJar(reobfJar) {
-            reobfRequiresDebug()
-        }
-
+        createBundlerJar.serverJar(serverJar)
         createPaperclipJar.bundlerJar(createBundlerJar)
-        createReobfPaperclipJar.bundlerJar(createReobfBundlerJar) {
-            reobfRequiresDebug()
-        }
     }
 
     private fun Project.createTasks(

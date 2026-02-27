@@ -40,25 +40,14 @@ abstract class RunCodebook : JavaLauncherTask() {
     @get:InputFile
     abstract val serverJar: RegularFileProperty
 
-    @get:PathSensitive(PathSensitivity.NONE)
-    @get:InputFile
-    abstract val serverMappings: RegularFileProperty
-
     @get:Input
-    abstract val remapperArgs: ListProperty<String>
+    abstract val codebookArgs: ListProperty<String>
 
     @get:Classpath
     abstract val codebookClasspath: ConfigurableFileCollection
 
     @get:CompileClasspath
     abstract val minecraftClasspath: ConfigurableFileCollection
-
-    @get:Classpath
-    abstract val remapperClasspath: ConfigurableFileCollection
-
-    @get:PathSensitive(PathSensitivity.NONE)
-    @get:InputFiles
-    abstract val paramMappings: ConfigurableFileCollection
 
     @get:Classpath
     abstract val constants: ConfigurableFileCollection
@@ -72,11 +61,11 @@ abstract class RunCodebook : JavaLauncherTask() {
             launcher.get(),
             codebookClasspath,
             outputJar.path,
-            remapperArgs.get(),
+            codebookArgs.get(),
             temporaryDir.toPath(),
-            remapperClasspath,
-            serverMappings.path,
-            paramMappings.singleFile.toPath(),
+            null,
+            null,
+            null,
             constants.files.singleOrNull()?.toPath(),
             serverJar.path,
             minecraftClasspath.files.map { it.toPath() }
@@ -90,9 +79,9 @@ fun runCodebook(
     outputJar: Path,
     remapperArgs: List<String>,
     tempDir: Path,
-    remapperClasspath: FileCollection,
-    serverMappings: Path,
-    paramMappings: Path,
+    remapperClasspath: FileCollection?,
+    serverMappings: Path?,
+    paramMappings: Path?,
     constants: Path?,
     serverJar: Path,
     minecraftClasspath: List<Path>,
@@ -106,9 +95,9 @@ fun runCodebook(
     remapperArgs.forEach { arg ->
         args += arg
             .replace(Regex("\\{tempDir}")) { tempDir.absolutePathString() }
-            .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
-            .replace(Regex("\\{mappingsFile}")) { serverMappings.absolutePathString() }
-            .replace(Regex("\\{paramsFile}")) { paramMappings.absolutePathString() }
+            .replace(Regex("\\{remapperFile}")) { remapperClasspath!!.singleFile.absolutePath }
+            .replace(Regex("\\{mappingsFile}")) { serverMappings!!.absolutePathString() }
+            .replace(Regex("\\{paramsFile}")) { paramMappings!!.absolutePathString() }
             .replace(Regex("\\{constantsFile}")) { constants!!.absolutePathString() }
             .replace(Regex("\\{output}")) { outputJar.absolutePathString() }
             .replace(Regex("\\{input}")) { serverJar.absolutePathString() }

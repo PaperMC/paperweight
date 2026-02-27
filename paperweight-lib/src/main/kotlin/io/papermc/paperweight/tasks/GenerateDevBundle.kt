@@ -68,10 +68,6 @@ abstract class GenerateDevBundle : BaseTask() {
     @get:Input
     abstract val macheDep: Property<String>
 
-    @get:InputFile
-    @get:Optional
-    abstract val reobfMappingsFile: RegularFileProperty
-
     @get:OutputFile
     abstract val devBundleFile: RegularFileProperty
 
@@ -101,9 +97,6 @@ abstract class GenerateDevBundle : BaseTask() {
 
             val dataZip = zip.getPath(dataDir)
             dataZip.createDirectories()
-            if (reobfMappingsFile.isPresent) {
-                reobfMappingsFile.path.copyTo(dataZip.resolve(reobfMappingsFileName))
-            }
             mojangMappedPaperclipFile.path.copyTo(dataZip.resolve(mojangMappedPaperclipFileName))
 
             val patchesZip = zip.getPath(patchesDir)
@@ -189,7 +182,6 @@ abstract class GenerateDevBundle : BaseTask() {
             minecraftVersion = minecraftVersion.get(),
             mache = createMacheDep(),
             patchDir = patchTargetDir,
-            reobfMappingsFile = if (reobfMappingsFile.isPresent) "$dataTargetDir/$reobfMappingsFileName" else null,
             mojangMappedPaperclipFile = "$dataTargetDir/$mojangMappedPaperclipFileName",
             libraryRepositories = libraryRepositories.get(),
             pluginRemapArgs = TinyRemapper.pluginRemapArgs,
@@ -203,17 +195,15 @@ abstract class GenerateDevBundle : BaseTask() {
         val minecraftVersion: String,
         val mache: MavenDep,
         val patchDir: String,
-        val reobfMappingsFile: String?,
         val mojangMappedPaperclipFile: String,
         val libraryRepositories: List<String>,
         val pluginRemapArgs: List<String>,
     )
 
     companion object {
-        const val reobfMappingsFileName = "$DEOBF_NAMESPACE-$SPIGOT_NAMESPACE-reobf.tiny"
         const val mojangMappedPaperclipFileName = "paperclip-$DEOBF_NAMESPACE.jar"
 
         // Should be bumped when the dev bundle config/contents changes in a way which will require users to update paperweight
-        const val currentDataVersion = 7
+        const val currentDataVersion = 8
     }
 }

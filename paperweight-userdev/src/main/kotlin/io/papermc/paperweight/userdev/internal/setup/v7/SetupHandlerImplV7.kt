@@ -20,15 +20,18 @@
  * USA
  */
 
-package io.papermc.paperweight.userdev.internal.setup
+package io.papermc.paperweight.userdev.internal.setup.v7
 
-import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.action.FileCollectionValue
 import io.papermc.paperweight.userdev.internal.action.StringValue
 import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
 import io.papermc.paperweight.userdev.internal.action.fileValue
 import io.papermc.paperweight.userdev.internal.action.javaLauncherValue
 import io.papermc.paperweight.userdev.internal.action.stringListValue
+import io.papermc.paperweight.userdev.internal.setup.BundleInfo
+import io.papermc.paperweight.userdev.internal.setup.SetupHandler
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
+import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
 import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
 import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunCodebookAction
@@ -44,9 +47,9 @@ import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.FileCollection
 import org.gradle.kotlin.dsl.*
 
-class SetupHandlerImpl(
+class SetupHandlerImplV7(
     private val parameters: UserdevSetup.Parameters,
-    private val bundle: BundleInfo<GenerateDevBundle.DevBundleConfig>,
+    private val bundle: BundleInfo<DevBundleV7.Config>,
 ) : SetupHandler {
     private var macheMeta: MacheMeta? = null
 
@@ -188,7 +191,11 @@ class SetupHandlerImpl(
     }
 
     override fun extractReobfMappings(output: Path) {
-        // TODO
+        bundle.config.reobfMappingsFile?.let { location ->
+            bundle.zip.openZipSafe().use { fs ->
+                fs.getPath(location).copyTo(output, true)
+            }
+        }
     }
 
     private fun macheMeta(): MacheMeta = requireNotNull(macheMeta) { "Mache meta is not setup yet" }
