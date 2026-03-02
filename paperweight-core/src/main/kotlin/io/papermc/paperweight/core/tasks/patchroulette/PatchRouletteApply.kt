@@ -75,6 +75,11 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:Option(option = "reapplyPatches", description = "Whether to reapply current selected patched")
     abstract val reapplyPatches: Property<Boolean>
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "acept", description = "Automatically accept selected patches")
+    abstract val autoAccept: Property<Boolean>
+
     override fun run() {
         config.path.createParentDirectories()
         var config = if (config.path.isRegularFile()) {
@@ -129,14 +134,16 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             logger.lifecycle("===============================================")
             patches.forEach { logger.lifecycle(it.pathString) }
 
-            var response: String? = null
-            while (response != "y" && response != "n") {
-                response = System.`in`.bufferedReader().readLine()
-            }
-            if (response == "n") {
-                config = config.copy(skip = config.skip + patches)
-                this.config.path.writeText(gson.toJson(config))
-                continue
+            if (!autoAccept.getOrElse(false)) {
+                var response: String? = null
+                while (response != "y" && response != "n") {
+                    response = System.`in`.bufferedReader().readLine()
+                }
+                if (response == "n") {
+                    config = config.copy(skip = config.skip + patches)
+                    this.config.path.writeText(gson.toJson(config))
+                    continue
+                }
             }
 
             try {
