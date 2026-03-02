@@ -77,7 +77,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:Input
     @get:Optional
-    @get:Option(option = "acept", description = "Automatically accept selected patches")
+    @get:Option(option = "accept", description = "Automatically accept selected patches")
     abstract val autoAccept: Property<Boolean>
 
     override fun run() {
