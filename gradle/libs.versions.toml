@@ -44,7 +44,7 @@ jst = { module = "io.papermc.jst:jst-cli-bundle", version.ref = "jst" }
 tinyRemapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tinyRemapper" }
 
 # test
-mockk = "io.mockk:mockk:1.14.6"
+mockk = "io.mockk:mockk:1.14.9"
 
 # Gradle
 gradle-licenser = "net.kyori:indra-licenser-spotless:4.0.0"
