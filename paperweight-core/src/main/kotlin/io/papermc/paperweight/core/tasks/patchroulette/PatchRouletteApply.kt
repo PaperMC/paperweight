@@ -241,7 +241,9 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
                 try {
                     val normalizedInput = input.trim()
                     return when {
-                        normalizedInput.matches(Regex("\\d+!")) -> NumericInPackage(normalizedInput.substring(0, normalizedInput.length - 1).toInt(), true)
+                        normalizedInput.matches(
+                            Regex("\\d+!")
+                        ) -> NumericInPackage(normalizedInput.substring(0, normalizedInput.length - 1).toInt(), true)
                         normalizedInput.matches(Regex("\\d+")) -> NumericInPackage(normalizedInput.toInt())
                         else -> {
                             val patches = normalizedInput.split(',').map { it.trim() }.filter { it.isNotEmpty() }
