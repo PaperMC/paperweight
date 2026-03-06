@@ -20,39 +20,18 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.userdev.internal.setup.v7
 
-import io.papermc.paperweight.util.*
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import io.papermc.paperweight.util.MavenDep
 
-@CacheableTask
-abstract class FilterJar : BaseTask() {
-
-    @get:Classpath
-    abstract val inputJar: RegularFileProperty
-
-    @get:Input
-    abstract val includes: ListProperty<String>
-
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
-
-    override fun init() {
-        outputJar.convention(defaultOutput())
-    }
-
-    @TaskAction
-    open fun run() {
-        filterJar(
-            inputJar.path,
-            outputJar.path,
-            includes.get()
-        )
-    }
+object DevBundleV7 {
+    data class Config(
+        val minecraftVersion: String,
+        val mache: MavenDep,
+        val patchDir: String,
+        val reobfMappingsFile: String?,
+        val mojangMappedPaperclipFile: String,
+        val libraryRepositories: List<String>,
+        val pluginRemapArgs: List<String>,
+    )
 }

@@ -42,20 +42,26 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
     @get:Option(option = "patch", description = "Cancel a patch by path instead of using the current patch")
     abstract val patch: Property<String>
 
+    @get:Input
+    @get:Optional
+    @get:Option(option = "force", description = "Force canceling a patch even if it's not currently being worked on")
+    abstract val force: Property<Boolean>
+
     override fun run() {
         val config = if (config.path.isRegularFile()) {
             gson.fromJson<PatchRouletteApply.Config>(config.path)
         } else {
             throw PaperweightException("No config exists")
         }
-        if (config.currentPatches.isEmpty()) {
+        val force = force.getOrElse(false)
+        if (!force && config.currentPatches.isEmpty()) {
             throw PaperweightException("No current patch in config")
         }
 
         val patchesToCancel = if (!patch.isPresent) {
             config.currentPatches
         } else {
-            if (!config.currentPatches.contains(Path(patch.get()))) {
+            if (!force && !config.currentPatches.contains(Path(patch.get()))) {
                 throw PaperweightException("Cannot cancel patch ${patch.get()} as it isn't currently being worked on!")
             }
 

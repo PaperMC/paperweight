@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.core.tasks.patchroulette
 
+import io.papermc.paperweight.PaperweightException
 import kotlin.io.path.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
@@ -41,6 +43,8 @@ class PatchRouletteApplyTest {
                 assertEquals(10, strategy.count)
                 assertFalse(strategy.enforceCount)
             }
+
+            is PatchRouletteApply.PatchSelectionStrategy.SpecificPatches -> error("Unexpected strategy type")
         }
     }
 
@@ -52,6 +56,34 @@ class PatchRouletteApplyTest {
                 assertEquals(20, strategy.count)
                 assertTrue(strategy.enforceCount)
             }
+
+            is PatchRouletteApply.PatchSelectionStrategy.SpecificPatches -> error("Unexpected strategy type")
+        }
+    }
+
+    @Test
+    fun `test patch strategy parsing specific patches`() {
+        val strategy = PatchRouletteApply.PatchSelectionStrategy.parse("io/papermc/paper/block/Block.java, io/papermc/paper/entity/Entity.java")
+        when (strategy) {
+            is PatchRouletteApply.PatchSelectionStrategy.SpecificPatches -> {
+                assertEquals(
+                    listOf(Path("io/papermc/paper/block/Block.java"), Path("io/papermc/paper/entity/Entity.java")),
+                    strategy.patches
+                )
+            }
+
+            is PatchRouletteApply.PatchSelectionStrategy.NumericInPackage -> error("Unexpected strategy type")
+        }
+    }
+
+    @Test
+    fun `test specific patch selection fails when patch unavailable`() {
+        val strategy = PatchRouletteApply.PatchSelectionStrategy.SpecificPatches(
+            listOf(Path("io/papermc/paper/block/Block.java"), Path("io/papermc/paper/entity/Missing.java"))
+        )
+
+        assertFailsWith<PaperweightException> {
+            strategy.select(PatchRouletteApply.Config(listOf(), null, listOf()), mockAvailablePatches().map { Path(it) })
         }
     }
 
@@ -135,6 +167,24 @@ class PatchRouletteApplyTest {
                     listOf(
                         "io/papermc/paper/entity/Entity2.java",
                         "io/papermc/paper/entity/Entity3.java"
+                    )
+                )
+            ),
+            Arguments.of(
+                PatchRouletteApply.PatchSelectionStrategy.SpecificPatches(
+                    listOf(
+                        Path("io/papermc/paper/block/BlockState.java"),
+                        Path("io/papermc/paper/entity/Entity.java")
+                    )
+                ),
+                listOf(
+                    "io/papermc/paper/block/BlockState.java",
+                    "io/papermc/paper/entity/Entity.java"
+                ),
+                listOf(
+                    listOf(
+                        "io/papermc/paper/block/BlockState.java",
+                        "io/papermc/paper/entity/Entity.java"
                     )
                 )
             )
