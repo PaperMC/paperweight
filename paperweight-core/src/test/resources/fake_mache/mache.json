@@ -6,70 +6,26 @@
       {
         "group": "io.papermc.codebook",
         "name": "codebook-cli",
-        "version": "1.0.10",
+        "version": "2.0.0-SNAPSHOT",
         "classifier": "all"
-      }
-    ],
-    "paramMappings": [
-      {
-        "group": "org.parchmentmc.data",
-        "name": "parchment-1.21",
-        "version": "2024.07.28",
-        "extension": "zip"
       }
     ],
     "constants": [
-    ],
-    "remapper": [
-      {
-        "group": "net.neoforged",
-        "name": "AutoRenamingTool",
-        "version": "1.0.14",
-        "classifier": "all"
-      }
     ],
     "decompiler": [
       {
         "group": "org.vineflower",
         "name": "vineflower",
-        "version": "1.11.0-20241204.173358-53"
+        "version": "1.11.2"
       }
     ]
   },
   "repositories": [
     {
-      "url": "https://maven.fabricmc.net/",
-      "name": "FabricMC",
-      "groups": [
-        "net.fabricmc"
-      ]
-    },
-    {
-      "url": "https://maven.neoforged.net/releases/",
-      "name": "NeoForged",
-      "groups": [
-        "net.neoforged",
-        "net.minecraftforge"
-      ]
-    },
-    {
       "url": "https://repo.papermc.io/repository/maven-public/",
       "name": "PaperMC",
       "groups": [
-        "io.papermc"
-      ]
-    },
-    {
-      "url": "https://maven.parchmentmc.org/",
-      "name": "ParchmentMC",
-      "groups": [
-        "org.parchmentmc"
-      ]
-    },
-    {
-      "url": "https://s01.oss.sonatype.org/content/repositories/snapshots/",
-      "name": "sonatype snapshots",
-      "groups": [
+        "io.papermc",
         "org.vineflower"
       ]
     }
@@ -95,12 +51,10 @@
   ],
   "remapperArgs": [
     "--temp-dir={tempDir}",
-    "--remapper-file={remapperFile}",
-    "--mappings-file={mappingsFile}",
-    "--params-file={paramsFile}",
     "--output={output}",
     "--input={input}",
-    "--input-classpath={inputClasspath}"
+    "--input-classpath={inputClasspath}",
+    "--hypo-parallelism=1"
   ],
   "additionalCompileDependencies": {
     "compileOnly": [
@@ -108,6 +62,16 @@
         "group": "org.jetbrains",
         "name": "annotations",
         "version": "24.0.1"
+      },
+      {
+        "group": "com.google.code.findbugs",
+        "name": "jsr305",
+        "version": "3.0.2"
+      },
+      {
+        "group": "org.checkerframework",
+        "name": "checker-qual",
+        "version": "3.49.0"
       }
     ]
   }
