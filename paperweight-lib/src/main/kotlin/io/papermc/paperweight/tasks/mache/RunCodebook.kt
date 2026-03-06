@@ -95,10 +95,18 @@ fun runCodebook(
     remapperArgs.forEach { arg ->
         args += arg
             .replace(Regex("\\{tempDir}")) { tempDir.absolutePathString() }
-            .replace(Regex("\\{remapperFile}")) { remapperClasspath!!.singleFile.absolutePath }
-            .replace(Regex("\\{mappingsFile}")) { serverMappings!!.absolutePathString() }
-            .replace(Regex("\\{paramsFile}")) { paramMappings!!.absolutePathString() }
-            .replace(Regex("\\{constantsFile}")) { constants!!.absolutePathString() }
+            .replace(Regex("\\{remapperFile}")) {
+                remapperClasspath?.singleFile?.absolutePath ?: error("{remapperFile} in args, but no remapperClasspath provided")
+            }
+            .replace(Regex("\\{mappingsFile}")) {
+                serverMappings?.absolutePathString() ?: error("{mappingsFile} in args, but no serverMappings provided")
+            }
+            .replace(Regex("\\{paramsFile}")) {
+                paramMappings?.absolutePathString() ?: error("{paramsFile} in args, but no paramMappings provided")
+            }
+            .replace(Regex("\\{constantsFile}")) {
+                constants?.absolutePathString() ?: error("{constantsFile} in args, but no constants provided")
+            }
             .replace(Regex("\\{output}")) { outputJar.absolutePathString() }
             .replace(Regex("\\{input}")) { serverJar.absolutePathString() }
             .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.joinToString(":") { it.absolutePathString() } }
