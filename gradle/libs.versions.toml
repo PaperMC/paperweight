@@ -52,7 +52,7 @@ gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:8.0.0"
 gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.3.2"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.4.2"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.0.0"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.1.1"
 
 # for renovate
 zCheckstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
