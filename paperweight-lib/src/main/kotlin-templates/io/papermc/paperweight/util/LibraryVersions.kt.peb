@@ -25,4 +25,5 @@ package io.papermc.paperweight.util
 object LibraryVersions {
     const val JST: String = "{{ jst_version }}"
     const val TINY_REMAPPER: String = "{{ tinyRemapper_version }}"
+    const val CHECKSTYLE: String = "{{ checkstyle_version }}"
 }

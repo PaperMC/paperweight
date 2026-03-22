@@ -381,7 +381,7 @@ fun ByteArray.asHexString(): String {
 fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLauncher> {
     // If the java plugin isn't applied, or no toolchain value was set
     val fallback = launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 
     val ext = project.extensions.findByType<JavaPluginExtension>() ?: return fallback

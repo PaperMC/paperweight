@@ -20,13 +20,16 @@
  * USA
  */
 
-package io.papermc.paperweight.core.extension
+package io.papermc.paperweight.checkstyle
 
-import org.gradle.api.provider.Property
+import io.papermc.paperweight.checkstyle.tasks.PaperCheckstyleTask
+import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.plugins.quality.CheckstylePlugin
 
-interface SpigotExtension {
+abstract class PaperCheckstylePlugin : CheckstylePlugin() {
 
-    val buildDataRef: Property<String>
-    val packageVersion: Property<String>
-    val enabled: Property<Boolean>
+    override fun getTaskType(): Class<Checkstyle> {
+        @Suppress("UNCHECKED_CAST")
+        return PaperCheckstyleTask::class.java as Class<Checkstyle>
+    }
 }

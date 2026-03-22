@@ -36,7 +36,6 @@ import dev.denwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
-import javax.inject.Inject
 import kotlin.io.path.*
 import org.cadixdev.lorenz.MappingSet
 import org.cadixdev.lorenz.merge.FieldMergeStrategy
@@ -53,9 +52,7 @@ import org.cadixdev.lorenz.model.MethodParameterMapping
 import org.cadixdev.lorenz.model.TopLevelClassMapping
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkAction
@@ -79,7 +76,7 @@ fun generateMappings(
         forkOptions.executable(launcher.executablePath.path.absolutePathString())
     }
 
-    queue.submit(GenerateMappings.GenerateMappingsAction::class) {
+    queue.submit(GenerateMappingsAction::class) {
         vanillaJar.set(vanillaJarPath)
         libraries.from(libraryPaths)
         vanillaMappings.set(vanillaMappingsPath)
@@ -91,106 +88,57 @@ fun generateMappings(
     return queue
 }
 
-@CacheableTask
-abstract class GenerateMappings : JavaLauncherTask() {
+interface GenerateMappingsParams : WorkParameters {
+    val vanillaJar: RegularFileProperty
+    val libraries: ConfigurableFileCollection
+    val vanillaMappings: RegularFileProperty
+    val paramMappings: RegularFileProperty
+    val outputMappings: RegularFileProperty
+    val deobfNamespace: Property<String>
+}
 
-    @get:Classpath
-    abstract val vanillaJar: RegularFileProperty
+abstract class GenerateMappingsAction : WorkAction<GenerateMappingsParams> {
 
-    @get:Classpath
-    abstract val libraries: ConfigurableFileCollection
+    override fun execute() {
+        val vanillaMappings = MappingFormats.PROGUARD.createReader(parameters.vanillaMappings.path).use { it.read() }.reverse()
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val vanillaMappings: RegularFileProperty
+        val paramMappings = parameters.paramMappings.orNull?.let { mappingsFile ->
+            mappingsFile.path.openZip().use { fs ->
+                val path = fs.getPath("mappings", "mappings.tiny")
+                MappingFormats.TINY.read(path, "official", "named")
+            }
+        }
 
-    @get:InputFile
-    @get:Optional
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val paramMappings: RegularFileProperty
+        val merged = paramMappings?.let {
+            MappingSetMerger.create(
+                vanillaMappings,
+                it,
+                MergeConfig.builder()
+                    .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
+                    .withMergeHandler(ParamsMergeHandler())
+                    .build()
+            ).merge()
+        } ?: vanillaMappings
 
-    @get:OutputFile
-    abstract val outputMappings: RegularFileProperty
+        val filledMerged = HypoContext.builder()
+            .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.vanillaJar.path)))
+            .withContextProvider(AsmClassDataProvider.of(parameters.libraries.toJarClassProviderRoots()))
+            .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
+            .build().use { hypoContext ->
+                HydrationManager.createDefault()
+                    .register(BridgeMethodHydrator.create())
+                    .register(SuperConstructorHydrator.create())
+                    .hydrate(hypoContext)
 
-    @get:Internal
-    abstract val jvmargs: ListProperty<String>
-
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
-    override fun init() {
-        super.init()
-
-        jvmargs.convention(listOf("-Xmx1G"))
-    }
-
-    @TaskAction
-    fun run() {
-        generateMappings(
-            vanillaJar.path,
-            libraries.files.map { it.toPath() },
-            vanillaMappings.path,
-            paramMappings.pathOrNull,
-            outputMappings.path,
-            DEOBF_NAMESPACE,
-            workerExecutor,
-            launcher.get(),
-            jvmargs.get()
-        )
-    }
-
-    interface GenerateMappingsParams : WorkParameters {
-        val vanillaJar: RegularFileProperty
-        val libraries: ConfigurableFileCollection
-        val vanillaMappings: RegularFileProperty
-        val paramMappings: RegularFileProperty
-        val outputMappings: RegularFileProperty
-        val deobfNamespace: Property<String>
-    }
-
-    abstract class GenerateMappingsAction : WorkAction<GenerateMappingsParams> {
-
-        override fun execute() {
-            val vanillaMappings = MappingFormats.PROGUARD.createReader(parameters.vanillaMappings.path).use { it.read() }.reverse()
-
-            val paramMappings = parameters.paramMappings.orNull?.let { mappingsFile ->
-                mappingsFile.path.openZip().use { fs ->
-                    val path = fs.getPath("mappings", "mappings.tiny")
-                    MappingFormats.TINY.read(path, "official", "named")
-                }
+                ChangeChain.create()
+                    .addLink(RemoveUnusedMappings.create())
+                    .addLink(PropagateMappingsUp.create())
+                    .addLink(CopyMappingsDown.create())
+                    .applyChain(merged, MappingsCompletionManager.create(hypoContext))
             }
 
-            val merged = paramMappings?.let {
-                MappingSetMerger.create(
-                    vanillaMappings,
-                    it,
-                    MergeConfig.builder()
-                        .withFieldMergeStrategy(FieldMergeStrategy.STRICT)
-                        .withMergeHandler(ParamsMergeHandler())
-                        .build()
-                ).merge()
-            } ?: vanillaMappings
-
-            val filledMerged = HypoContext.builder()
-                .withProvider(AsmClassDataProvider.of(ClassProviderRoot.fromJar(parameters.vanillaJar.path)))
-                .withContextProvider(AsmClassDataProvider.of(parameters.libraries.toJarClassProviderRoots()))
-                .withContextProvider(AsmClassDataProvider.of(ClassProviderRoot.ofJdk()))
-                .build().use { hypoContext ->
-                    HydrationManager.createDefault()
-                        .register(BridgeMethodHydrator.create())
-                        .register(SuperConstructorHydrator.create())
-                        .hydrate(hypoContext)
-
-                    ChangeChain.create()
-                        .addLink(RemoveUnusedMappings.create())
-                        .addLink(PropagateMappingsUp.create())
-                        .addLink(CopyMappingsDown.create())
-                        .applyChain(merged, MappingsCompletionManager.create(hypoContext))
-                }
-
-            ensureParentExists(parameters.outputMappings)
-            MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, OBF_NAMESPACE, parameters.deobfNamespace.get())
-        }
+        ensureParentExists(parameters.outputMappings)
+        MappingFormats.TINY.write(filledMerged, parameters.outputMappings.path, OBF_NAMESPACE, parameters.deobfNamespace.get())
     }
 }
 

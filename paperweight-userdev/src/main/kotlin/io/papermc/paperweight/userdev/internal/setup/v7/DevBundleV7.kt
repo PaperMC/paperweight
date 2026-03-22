@@ -20,20 +20,18 @@
  * USA
  */
 
-package io.papermc.paperweight.core.util
+package io.papermc.paperweight.userdev.internal.setup.v7
 
-import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.constants.*
-import org.gradle.api.Task
+import io.papermc.paperweight.util.MavenDep
 
-fun Task.reobfRequiresDebug() {
-    doFirst {
-        if (!paperweightDebug()) {
-            throw PaperweightException(
-                "Reobfuscated server jars are no longer supported and only exist for debugging purposes.\n" +
-                    "If you are attempting to build a paperclip or bundler jar, use the 'mojmap' variant instead of 'reobf'.\n" +
-                    "Enable paperweight debug mode to bypass this error.\n"
-            )
-        }
-    }
+object DevBundleV7 {
+    data class Config(
+        val minecraftVersion: String,
+        val mache: MavenDep,
+        val patchDir: String,
+        val reobfMappingsFile: String?,
+        val mojangMappedPaperclipFile: String,
+        val libraryRepositories: List<String>,
+        val pluginRemapArgs: List<String>,
+    )
 }

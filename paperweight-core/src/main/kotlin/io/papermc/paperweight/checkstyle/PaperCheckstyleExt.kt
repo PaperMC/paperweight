@@ -20,39 +20,32 @@
  * USA
  */
 
-package io.papermc.paperweight.tasks
+package io.papermc.paperweight.checkstyle
 
-import io.papermc.paperweight.util.*
+import javax.inject.Inject
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.provider.SetProperty
 
-@CacheableTask
-abstract class FilterJar : BaseTask() {
+@Suppress("LeakingThis")
+abstract class PaperCheckstyleExt {
 
-    @get:Classpath
-    abstract val inputJar: RegularFileProperty
+    @get:Inject
+    abstract val layout: ProjectLayout
 
-    @get:Input
-    abstract val includes: ListProperty<String>
+    abstract val typeUseAnnotationsFile: RegularFileProperty
 
-    @get:OutputFile
-    abstract val outputJar: RegularFileProperty
+    abstract val directoriesToSkipFile: RegularFileProperty
 
-    override fun init() {
-        outputJar.convention(defaultOutput())
+    abstract val customJavadocTags: SetProperty<JavadocTag>
+
+    init {
+        init()
     }
 
-    @TaskAction
-    open fun run() {
-        filterJar(
-            inputJar.path,
-            outputJar.path,
-            includes.get()
+    private fun init() {
+        typeUseAnnotationsFile.convention(
+            layout.settingsDirectory.file(".checkstyle/type_use_annotations.txt")
         )
     }
 }

@@ -50,6 +50,9 @@ import org.gradle.api.tasks.options.Option
  *           Paperweight will select `n` patches, prioritizing patches in the current package.
  *           The only time less than `n` patches will be selected is if the entire patch roulette
  *           instance has less than `n` patches available, in which case all of them will be selected.
+ *   - `<path>[,<path>...]`: A comma separated list of patch paths.
+ *           Paperweight will attempt to select exactly the provided patch paths.
+ *           If any of the provided patches are not available, the task will fail.
  */
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
@@ -71,6 +74,11 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:Optional
     @get:Option(option = "reapplyPatches", description = "Whether to reapply current selected patched")
     abstract val reapplyPatches: Property<Boolean>
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "accept", description = "Automatically accept selected patches")
+    abstract val autoAccept: Property<Boolean>
 
     override fun run() {
         config.path.createParentDirectories()
@@ -126,14 +134,16 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             logger.lifecycle("===============================================")
             patches.forEach { logger.lifecycle(it.pathString) }
 
-            var response: String? = null
-            while (response != "y" && response != "n") {
-                response = System.`in`.bufferedReader().readLine()
-            }
-            if (response == "n") {
-                config = config.copy(skip = config.skip + patches)
-                this.config.path.writeText(gson.toJson(config))
-                continue
+            if (!autoAccept.getOrElse(false)) {
+                var response: String? = null
+                while (response != "y" && response != "n") {
+                    response = System.`in`.bufferedReader().readLine()
+                }
+                if (response == "n") {
+                    config = config.copy(skip = config.skip + patches)
+                    this.config.path.writeText(gson.toJson(config))
+                    continue
+                }
             }
 
             try {
@@ -209,17 +219,42 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             }
         }
 
+        data class SpecificPatches(val patches: List<Path>) : PatchSelectionStrategy {
+            override fun select(config: Config, available: List<Path>): Pair<Config, List<Path>> {
+                val availableSet = available.toSet()
+                val unavailable = patches.filterNot { availableSet.contains(it) }
+                if (unavailable.isNotEmpty()) {
+                    throw PaperweightException(
+                        "Failed to select specific patches. The following patches are unavailable: " +
+                            unavailable.joinToString(", ") { it.invariantSeparatorsPathString }
+                    )
+                }
+
+                return config to patches
+            }
+        }
+
         fun select(config: Config, available: List<Path>): Pair<Config, List<Path>>
 
         companion object {
             fun parse(input: String): PatchSelectionStrategy {
                 try {
+                    val normalizedInput = input.trim()
                     return when {
-                        input.endsWith("!") -> NumericInPackage(input.substring(0, input.length - 1).toInt(), true)
-                        else -> NumericInPackage(input.toInt())
+                        normalizedInput.matches(
+                            Regex("\\d+!")
+                        ) -> NumericInPackage(normalizedInput.substring(0, normalizedInput.length - 1).toInt(), true)
+                        normalizedInput.matches(Regex("\\d+")) -> NumericInPackage(normalizedInput.toInt())
+                        else -> {
+                            val patches = normalizedInput.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                            if (patches.isEmpty()) {
+                                throw PaperweightException("Failed to parse patch selection strategy $normalizedInput")
+                            }
+                            SpecificPatches(patches.map { Path(it) })
+                        }
                     }
                 } catch (e: Exception) {
-                    throw PaperweightException("Failed to parse patch selection strategy $input", e)
+                    throw PaperweightException("Failed to parse patch selection strategy ${input.trim()}", e)
                 }
             }
         }

@@ -20,20 +20,12 @@
  * USA
  */
 
-package io.papermc.paperweight.core.util
+package io.papermc.paperweight.checkstyle
 
-import io.papermc.paperweight.PaperweightException
-import io.papermc.paperweight.util.constants.*
-import org.gradle.api.Task
+import org.gradle.api.tasks.Input
 
-fun Task.reobfRequiresDebug() {
-    doFirst {
-        if (!paperweightDebug()) {
-            throw PaperweightException(
-                "Reobfuscated server jars are no longer supported and only exist for debugging purposes.\n" +
-                    "If you are attempting to build a paperclip or bundler jar, use the 'mojmap' variant instead of 'reobf'.\n" +
-                    "Enable paperweight debug mode to bypass this error.\n"
-            )
-        }
+data class JavadocTag(@get:Input val tag: String, @get:Input val appliesTo: String, @get:Input val prefix: String) {
+    fun toOptionString(): String {
+        return "$tag:$appliesTo:$prefix"
     }
 }
