@@ -31,7 +31,7 @@ hypo-asm-core = { module = "dev.denwav.hypo:hypo-asm", version.ref = "hypo" }
 hypo-asm-hydrate = { module = "dev.denwav.hypo:hypo-asm-hydrate", version.ref = "hypo" }
 hypo-mappings = { module = "dev.denwav.hypo:hypo-mappings", version.ref = "hypo" }
 
-lorenzTiny = "net.fabricmc:lorenz-tiny:3.0.0"
+lorenzTiny = "net.fabricmc:lorenz-tiny:4.0.2"
 jbsdiff = "io.sigpipe:jbsdiff:1.0"
 
 diffpatch = "io.codechicken:DiffPatch:1.5.0.30"
