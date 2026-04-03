@@ -103,12 +103,19 @@ plugins.apply("com.diffplug.spotless")
 extensions.configure<SpotlessExtension> {
     val overrides = mapOf(
         "ktlint_standard_no-wildcard-imports" to "disabled",
+        "ktlint_standard_class-signature" to "disabled",
         "ktlint_standard_filename" to "disabled",
+        "ktlint_standard_function-expression-body" to "disabled",
+        "ktlint_standard_function-signature" to "disabled",
+        "ktlint_standard_if-else-wrapping" to "disabled",
+        "ktlint_standard_multiline-if-else" to "disabled",
+        "ktlint_standard_multiline-expression-wrapping" to "disabled",
+        "ktlint_standard_property-naming" to "disabled",
         "ktlint_standard_trailing-comma-on-call-site" to "disabled",
         "ktlint_standard_trailing-comma-on-declaration-site" to "disabled",
     )
 
-    val ktlintVer = "0.50.0"
+    val ktlintVer = "1.5.0"
 
     kotlin {
         ktlint(ktlintVer).editorConfigOverride(overrides)

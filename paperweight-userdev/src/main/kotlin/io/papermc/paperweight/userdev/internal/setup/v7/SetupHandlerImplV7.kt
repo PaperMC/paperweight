@@ -34,8 +34,8 @@ import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
 import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
 import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
-import io.papermc.paperweight.userdev.internal.setup.action.RunRemappingCodebookAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunPaperclipAction
+import io.papermc.paperweight.userdev.internal.setup.action.RunRemappingCodebookAction
 import io.papermc.paperweight.userdev.internal.setup.action.SetupMacheSourcesAction
 import io.papermc.paperweight.userdev.internal.setup.action.VanillaServerDownloads
 import io.papermc.paperweight.util.*
