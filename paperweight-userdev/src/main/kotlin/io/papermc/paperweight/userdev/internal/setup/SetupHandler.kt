@@ -28,6 +28,8 @@ import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
 import io.papermc.paperweight.userdev.internal.setup.v2.SetupHandlerImplV2
 import io.papermc.paperweight.userdev.internal.setup.v5.DevBundleV5
 import io.papermc.paperweight.userdev.internal.setup.v5.SetupHandlerImplV5
+import io.papermc.paperweight.userdev.internal.setup.v7.DevBundleV7
+import io.papermc.paperweight.userdev.internal.setup.v7.SetupHandlerImplV7
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
@@ -152,6 +154,11 @@ interface SetupHandler {
                 is GenerateDevBundle.DevBundleConfig -> SetupHandlerImpl(
                     parameters,
                     bundleInfo as BundleInfo<GenerateDevBundle.DevBundleConfig>,
+                )
+
+                is DevBundleV7.Config -> SetupHandlerImplV7(
+                    parameters,
+                    bundleInfo as BundleInfo<DevBundleV7.Config>
                 )
 
                 is DevBundleV5.Config -> SetupHandlerImplV5(
