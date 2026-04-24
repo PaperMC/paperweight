@@ -22,7 +22,6 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import io.papermc.paperweight.core.PaperweightCore
 import io.papermc.paperweight.core.tasks.SetupForkUpstreamSources
 import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
@@ -31,6 +30,7 @@ import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.JST_CLASSPATH_CONFIG
 import io.papermc.paperweight.util.constants.JST_CONFIG
 import io.papermc.paperweight.util.constants.paperTaskOutput
 import java.nio.file.Path
@@ -39,7 +39,6 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -135,16 +134,7 @@ class PatchingTasks(
 
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             ats.jst.from(project.configurations.named(JST_CONFIG))
-            ats.jstClasspath.from(
-                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
-                project.subprojects.mapNotNull {
-                    if (!it.plugins.hasPlugin(PaperweightCore::class)) {
-                        it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).map { it.files }
-                    } else {
-                        null
-                    }
-                }
-            )
+            ats.jstClasspath.from(project.configurations.named(JST_CLASSPATH_CONFIG))
         }
 
         applyFilePatches.configure {
@@ -182,16 +172,7 @@ class PatchingTasks(
             patches.set(filePatchDir)
             gitFilePatches.set(this@PatchingTasks.gitFilePatches)
 
-            ats.jstClasspath.from(
-                project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME),
-                project.subprojects.mapNotNull {
-                    if (!it.plugins.hasPlugin(PaperweightCore::class)) {
-                        it.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).map { it.files }
-                    } else {
-                        null
-                    }
-                }
-            )
+            ats.jstClasspath.from(project.configurations.named(JST_CLASSPATH_CONFIG))
             ats.jst.from(project.configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
             atFileOut.set(additionalAts.fileExists())
