@@ -258,7 +258,7 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
             at,
             temporaryDir.toPath().resolve("jst_work"),
             singleFile = true,
-            validate = false,
+            validate = true,
         )
         println("NEW: " + decomp.readText())
     }
