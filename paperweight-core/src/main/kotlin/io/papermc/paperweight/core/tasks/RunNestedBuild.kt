@@ -35,6 +35,7 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.build.NestedRootBuildRunner
@@ -49,12 +50,16 @@ abstract class RunNestedBuild : BaseTask() {
     @get:InputDirectory
     abstract val projectDir: DirectoryProperty
 
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
     @get:Internal
     abstract val workDir: DirectoryProperty
 
     override fun init() {
         super.init()
         workDir.convention(project.upstreamsDirectory())
+        outputDir.convention(projectDir)
     }
 
     @TaskAction

@@ -292,6 +292,7 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
 
 inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
 inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
+inline fun <reified T : Task> TaskContainer.namedOrNull(name: String) = if (name in names) named<T>(name) else null
 
 enum class HashingAlgorithm(val algorithmName: String) {
     SHA256("SHA-256"),
@@ -389,7 +390,6 @@ fun JavaToolchainService.defaultJavaLauncher(project: Project): Provider<JavaLau
 }
 
 fun <P : Property<*>> P.changesDisallowed(): P = apply { disallowChanges() }
-fun <P : Property<*>> P.finalizedOnRead(): P = apply { finalizeValueOnRead() }
 
 fun FileCollection.toJarClassProviderRoots(): List<ClassProviderRoot> = files.asSequence()
     .map { f -> f.toPath() }

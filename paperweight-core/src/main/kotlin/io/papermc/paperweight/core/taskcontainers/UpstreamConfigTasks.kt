@@ -29,7 +29,6 @@ import io.papermc.paperweight.core.tasks.RunNestedBuild
 import io.papermc.paperweight.core.tasks.patching.ApplySingleFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildSingleFilePatches
 import io.papermc.paperweight.util.*
-import kotlin.io.path.*
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
@@ -48,10 +47,17 @@ class UpstreamConfigTasks(
     private val setupUpstream: TaskProvider<out RunNestedBuild>?,
     private val upstreamTasks: UpstreamConfigTasks?,
 ) {
+    private fun upstreamBaseDir(): Provider<Directory> =
+        if (upstreamCfg.applyUpstreamNested.get()) {
+            setupUpstream?.flatMap { it.outputDir } ?: upstreamDir
+        } else {
+            upstreamDir
+        }
+
     private fun ApplySingleFilePatches.configureApplySingleFilePatches() {
         group = taskGroup
         description = "Applies all ${upstreamCfg.name} single-file patches"
-        upstream.set(upstreamDir)
+        upstream.set(upstreamBaseDir())
         val patches = upstreamCfg.singleFilePatchSets.map {
             it.map { cfg ->
                 ApplySingleFilePatches.Patch.patch(target.objects, upstream) {
@@ -89,14 +95,14 @@ class UpstreamConfigTasks(
         target.tasks.register<RebuildSingleFilePatches>("rebuild${upstreamCfg.name.capitalized()}SingleFilePatches") {
             group = taskGroup
             description = "Rebuilds all ${upstreamCfg.name} single-file patches"
-            upstream.set(upstreamDir)
+            val upstream = objects.directoryProperty().convention(upstreamBaseDir())
             val patches = upstreamCfg.singleFilePatchSets.map {
                 it.map { cfg ->
-                    val p = objects.newInstance<RebuildSingleFilePatches.Patch>()
-                    p.path = cfg.path
-                    p.patchFile = cfg.patchFile
-                    p.outputFile = cfg.outputFile
-                    p
+                    RebuildSingleFilePatches.Patch.patch(objects, upstream) {
+                        path = cfg.path
+                        patchFile = cfg.patchFile
+                        outputFile = cfg.outputFile
+                    }
                 }
             }
             this.patches.set(patches)
@@ -130,7 +136,7 @@ class UpstreamConfigTasks(
             base,
             gitFilePatches,
             filterPatches,
-            cfg.outputDir.path,
+            cfg.outputDir,
         )
     }
 
@@ -146,7 +152,7 @@ class UpstreamConfigTasks(
                 val input = patchingTasksForDir.applyFeaturePatches.flatMap { it.repo }
                 inputDir.set(input)
             } else {
-                inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
+                inputDir.set(upstreamBaseDir().flatMap { it.dir(cfg.upstreamPath) })
             }
             excludes.set(cfg.excludes)
             setupUpstream?.let { dependsOn(it) }
@@ -158,8 +164,9 @@ class UpstreamConfigTasks(
         val task = target.tasks.register<FilterRepo>(
             "filter${cfg.name.capitalized()}From${upstreamCfg.name.capitalized()}"
         ) {
-            inputDir.set(upstreamDir.flatMap { it.dir(cfg.upstreamPath) })
-            gitDir.set(upstreamDir.map { it.dir(".git") })
+            val upstreamBase = upstreamBaseDir()
+            inputDir.set(upstreamBase.flatMap { it.dir(cfg.upstreamPath) })
+            gitDir.set(upstreamBase.map { it.dir(".git") })
             excludes.set(cfg.excludes)
         }
         return task.flatMap { it.outputDir }

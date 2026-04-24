@@ -51,7 +51,7 @@ class PatchingTasks(
     private val baseDir: Provider<Directory>,
     private val gitFilePatches: Provider<Boolean>,
     private val filterPatches: Provider<Boolean>,
-    private val outputDir: Path,
+    private val outputDir: DirectoryProperty,
     private val tasks: TaskContainer = project.tasks,
 ) {
     private val namePart: String = if (readOnly) "${forkName.capitalized()}${patchSetName.capitalized()}" else patchSetName.capitalized()
