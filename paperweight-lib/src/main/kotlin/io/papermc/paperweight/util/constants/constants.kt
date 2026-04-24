@@ -65,7 +65,7 @@ const val PLUGIN_REMAPPER_REPO_NAME = "paperweightPluginRemapperRepository"
 const val MACHE_REPO_NAME = "paperweightMacheRepository"
 
 const val CACHE_PATH = "caches"
-private const val PAPER_PATH = "paperweight"
+const val PAPER_PATH = "paperweight"
 
 const val LOCK_DIR = "$PAPER_PATH/lock"
 const val USERDEV_SETUP_LOCK = "$LOCK_DIR/userdev/setup.lock"

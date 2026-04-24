@@ -28,6 +28,7 @@ import io.papermc.paperweight.core.extension.PaperweightCoreExtension
 import io.papermc.paperweight.core.taskcontainers.CoreTasks
 import io.papermc.paperweight.core.taskcontainers.DevBundleTasks
 import io.papermc.paperweight.core.taskcontainers.PaperclipTasks
+import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patchroulette.PatchRouletteTasks
 import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
@@ -195,6 +196,26 @@ abstract class PaperweightCore : Plugin<Project> {
                     "paper",
                     coreExt.minecraftVersion,
                     coreExt.paper.rejectsDir,
+                    layout.projectDirectory.dir("src/minecraft/java"),
+                )
+            } else if (coreExt.activeFork.isPresent && coreExt.updatingMinecraft.oldForkCommit.isPresent) {
+                // old commit fetching for forks through a gradle property
+                target.tasks.named<ApplyFilePatches>("applyMinecraftSourcePatches").configure {
+                    additionalRemote = coreExt.activeFork.map { fork ->
+                        layout.cache
+                            .resolve(
+                                "$PAPER_PATH/old${fork.name.capitalized()}/${coreExt.updatingMinecraft.oldForkCommit.get()}/${fork.name}-server/src/minecraft/java"
+                            )
+                            .absolutePathString()
+                    }
+                    emitRejects = false
+                }
+
+                PatchRouletteTasks(
+                    target,
+                    name.lowercase(),
+                    coreExt.minecraftVersion,
+                    coreExt.activeFork.flatMap { it.rejectsDir },
                     layout.projectDirectory.dir("src/minecraft/java"),
                 )
             }
