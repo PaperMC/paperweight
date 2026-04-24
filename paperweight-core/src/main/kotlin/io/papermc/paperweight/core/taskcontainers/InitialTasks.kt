@@ -71,14 +71,6 @@ open class InitialTasks(
     }
     private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftVersionManifest>(it) }
 
-    val downloadMappings by tasks.registering<CacheableDownloadTask> {
-        url.set(versionManifest.map { version -> version.serverMappingsDownload().url })
-        expectedHash.set(versionManifest.map { version -> version.serverMappingsDownload().hash() })
-        outputFile.set(cache.resolve(SERVER_MAPPINGS))
-
-        downloader.set(downloadService)
-    }
-
     val downloadServerJar by tasks.registering<DownloadServerJar> {
         downloadUrl.set(versionManifest.map { version -> version.serverDownload().url })
         expectedHash.set(versionManifest.map { version -> version.serverDownload().hash() })
@@ -95,19 +87,5 @@ open class InitialTasks(
         serverVersionsList.set(cache.resolve(SERVER_VERSIONS_LIST))
         serverLibraryJars.set(cache.resolve(MINECRAFT_JARS_PATH))
         serverJar.set(cache.resolve(SERVER_JAR))
-    }
-
-    val filterVanillaJar by tasks.registering<FilterJar> {
-        inputJar.set(extractFromBundler.flatMap { it.serverJar })
-        includes.set(extension.vanillaJarIncludes)
-    }
-
-    val generateMappings by tasks.registering<GenerateMappings> {
-        vanillaJar.set(filterVanillaJar.flatMap { it.outputJar })
-        libraries.from(extractFromBundler.map { it.serverLibraryJars.asFileTree })
-
-        vanillaMappings.set(downloadMappings.flatMap { it.outputFile })
-
-        outputMappings.set(cache.resolve(MOJANG_MAPPINGS))
     }
 }

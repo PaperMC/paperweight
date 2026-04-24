@@ -43,7 +43,7 @@ open class AllTasks(
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.coreExt,
     downloadService: Provider<DownloadService> = project.download
-) : SpigotTasks(project) {
+) : InitialTasks(project) {
 
     val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
         mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
@@ -73,31 +73,5 @@ open class AllTasks(
         sources.set(true)
 
         downloader.set(downloadService)
-    }
-
-    val generateReobfMappings by tasks.registering<GenerateReobfMappings> {
-        inputMappings.set(patchMappings.flatMap { it.outputMappings })
-        notchToSpigotMappings.set(generateSpigotMappings.flatMap { it.notchToSpigotMappings })
-        sourceMappings.set(generateMappings.flatMap { it.outputMappings })
-        // TODO: spigot uses javac now(?) so is this needed anymore?
-        // spigotRecompiledClasses.set(remapSpigotSources.flatMap { it.spigotRecompiledClasses })
-
-        reobfMappings.set(cache.resolve(REOBF_MOJANG_SPIGOT_MAPPINGS))
-    }
-
-    val patchReobfMappings by tasks.registering<PatchMappings> {
-        inputMappings.set(generateReobfMappings.flatMap { it.reobfMappings })
-        patch.set(extension.paper.reobfMappingsPatch.fileExists())
-
-        fromNamespace.set(DEOBF_NAMESPACE)
-        toNamespace.set(SPIGOT_NAMESPACE)
-
-        outputMappings.set(cache.resolve(PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
-    }
-
-    val generateRelocatedReobfMappings by tasks.registering<GenerateRelocatedReobfMappings> {
-        inputMappings.set(patchReobfMappings.flatMap { it.outputMappings })
-        outputMappings.set(cache.resolve(RELOCATED_PATCHED_REOBF_MOJANG_SPIGOT_MAPPINGS))
-        craftBukkitPackageVersion.set(extension.spigot.packageVersion)
     }
 }

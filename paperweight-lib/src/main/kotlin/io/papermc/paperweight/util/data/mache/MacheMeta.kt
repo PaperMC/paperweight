@@ -62,7 +62,7 @@ data class MacheMeta(
             }
             named(MACHE_PARAM_MAPPINGS_CONFIG) {
                 defaultDependencies {
-                    macheDeps.paramMappings.forEach {
+                    macheDeps.paramMappings?.forEach {
                         add(project.dependencies.create(it.toMavenString()))
                     }
                 }
@@ -76,7 +76,7 @@ data class MacheMeta(
             }
             named(MACHE_REMAPPER_CONFIG) {
                 defaultDependencies {
-                    macheDeps.remapper.forEach {
+                    macheDeps.remapper?.forEach {
                         add(project.dependencies.create(it.toMavenString()))
                     }
                 }

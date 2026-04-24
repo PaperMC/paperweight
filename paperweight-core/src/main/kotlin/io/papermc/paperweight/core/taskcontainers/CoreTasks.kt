@@ -51,13 +51,10 @@ class CoreTasks(
 
     val macheRemapJar by tasks.registering(RunCodebook::class) {
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
-        serverMappings.set(downloadMappings.flatMap { it.outputFile })
 
-        remapperArgs.set(mache.map { it.remapperArgs })
+        codebookArgs.set(mache.map { it.remapperArgs })
         codebookClasspath.from(project.configurations.named(MACHE_CODEBOOK_CONFIG))
         minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
-        remapperClasspath.from(project.configurations.named(MACHE_REMAPPER_CONFIG))
-        paramMappings.from(project.configurations.named(MACHE_PARAM_MAPPINGS_CONFIG))
         constants.from(project.configurations.named(MACHE_CONSTANTS_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))

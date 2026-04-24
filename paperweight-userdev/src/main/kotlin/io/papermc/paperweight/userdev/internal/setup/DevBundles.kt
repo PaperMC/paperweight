@@ -26,6 +26,7 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.userdev.internal.setup.v2.DevBundleV2
 import io.papermc.paperweight.userdev.internal.setup.v5.DevBundleV5
+import io.papermc.paperweight.userdev.internal.setup.v7.DevBundleV7
 import io.papermc.paperweight.util.*
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -35,8 +36,9 @@ private val supported = mapOf(
     3 to DevBundleV5.Config::class, // up to 1.20.4
     4 to DevBundleV5.Config::class, // 1.20.5, early 1.20.6
     5 to DevBundleV5.Config::class, // 1.20.6+ (nullable mojangApiCoordinates)
-    6 to GenerateDevBundle.DevBundleConfig::class, // Post-repo-restructure 1.21.4, early 1.21.5
-    7 to GenerateDevBundle.DevBundleConfig::class, // 1.21.5+
+    6 to DevBundleV7.Config::class, // Post-repo-restructure 1.21.4, early 1.21.5
+    7 to DevBundleV7.Config::class, // 1.21.5+
+    8 to GenerateDevBundle.DevBundleConfig::class, // 26.1+
 )
 
 fun readBundleInfo(bundleZip: Path): BundleInfo<Any> {

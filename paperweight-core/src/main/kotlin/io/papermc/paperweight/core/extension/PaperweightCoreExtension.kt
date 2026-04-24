@@ -48,20 +48,7 @@ abstract class PaperweightCoreExtension @Inject constructor(objects: ObjectFacto
         listOf("/*.class", "/net/minecraft/**", "/com/mojang/math/**")
     )
 
-    val reobfPackagesToFix: ListProperty<String> = objects.listProperty()
-
-    val spigot = objects.newInstance<SpigotExtension>().also { spigot ->
-        spigot.enabled.convention(
-            spigot.buildDataRef.zip(spigot.packageVersion) { ref, pkg -> ref.isNotBlank() && pkg.isNotBlank() }
-                .orElse(false)
-        )
-    }
     val paper = objects.newInstance<PaperExtension>(project)
-
-    @Suppress("unused")
-    fun spigot(action: Action<in SpigotExtension>) {
-        action.execute(spigot)
-    }
 
     @Suppress("unused")
     fun paper(action: Action<in PaperExtension>) {
