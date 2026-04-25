@@ -116,15 +116,20 @@ abstract class PaperweightPatcher : Plugin<Project> {
                 upstream.directoryPatchSets.names.joinToString(", ") + ", ${upstream.name} single file"
             )
             applyForDownstream { dependsOn("apply${upstream.name.capitalized()}Patches") }
+            val depend = "apply${upstream.name.capitalized()}Patches"
+            val depend1 = "apply${upstream.name.capitalized()}SingleFilePatches"
+
             tasks.register<RunNestedBuild>("applyAllPatches") {
                 group = "patching"
-                val depend = "apply${upstream.name.capitalized()}Patches"
                 tasks.addAll("applyAllServerPatches")
                 description = "Applies all patches defined in the paperweight-patcher project and the server project. " +
-                    "(equivalent to running '$depend' and then '${tasks.get().single()}' in a second Gradle invocation)"
+                    "(equivalent to running '$depend1' and '$depend', and then ${tasks.get().single()}' in a second Gradle invocation)"
                 projectDir.set(layout.projectDirectory)
-                dependsOn("apply${upstream.name.capitalized()}SingleFilePatches")
-                finalizedBy(depend)
+                dependsOn(depend)
+            }
+
+            this@afterEvaluate.tasks.named(depend).configure {
+                dependsOn(depend1)
             }
         }
     }
