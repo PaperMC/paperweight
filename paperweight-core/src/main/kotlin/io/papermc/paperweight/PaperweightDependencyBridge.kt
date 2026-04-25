@@ -30,7 +30,7 @@ import org.gradle.api.plugins.JavaPlugin
 
 abstract class PaperweightDependencyBridge : Plugin<Project> {
     override fun apply(target: Project) {
-        target.configurations.register(JST_CLASSPATH_CONFIG) {
+        target.configurations.consumable(JST_CLASSPATH_CONFIG) {
             attributes {
                 attribute(JST_CLASSPATH_ATTRIBUTE, true)
             }
