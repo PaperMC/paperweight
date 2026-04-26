@@ -174,6 +174,14 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
             logger.lifecycle("Applied ${result.summary.changedFiles} mache patches")
         }
 
+        if (libraryImports.isPresent) {
+            libraryImports.path.copyRecursivelyTo(outputPath)
+
+            if (!oldPaperCommit.isPresent) {
+                commitAndTag(git, "Imports", "paper Imports")
+            }
+        }
+
         if (atFile.isPresent) {
             println("Applying access transformers...")
             ats.run(
@@ -189,13 +197,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
         }
 
         if (oldPaperCommit.isPresent) {
-            commitAndTag(git, "Vanilla", "Vanilla, Mache, & paper ATs (Squashed for better Git history during updates)")
-        }
-
-        if (libraryImports.isPresent) {
-            libraryImports.path.copyRecursivelyTo(outputPath)
-
-            commitAndTag(git, "Imports", "paper Imports")
+            commitAndTag(git, "Vanilla", "Vanilla, Mache, paper Imports & paper ATs (Squashed for better Git history during updates)")
         }
 
         git.close()
