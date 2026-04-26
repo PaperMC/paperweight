@@ -26,4 +26,5 @@ import org.gradle.api.provider.Property
 
 interface UpdatingMinecraftExtension {
     val oldPaperCommit: Property<String>
+    val oldForkCommit: Property<String>
 }
