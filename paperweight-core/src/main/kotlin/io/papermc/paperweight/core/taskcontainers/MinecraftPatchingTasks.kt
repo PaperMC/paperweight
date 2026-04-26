@@ -155,6 +155,7 @@ class MinecraftPatchingTasks(
 
         val importLibFiles = tasks.register<ImportLibraryFiles>("import${configName.capitalized()}LibraryFiles") {
             patches.from(config.featurePatchDir, config.sourcePatchDir)
+            atFile.set(mergeCollectedAts.flatMap { it.outputFile })
             devImports.set(config.devImports.fileExists())
             libraryFileIndex.set(coreTasks.indexLibraryFiles.flatMap { it.outputFile })
             libraries.from(coreTasks.indexLibraryFiles.map { it.libraries })
