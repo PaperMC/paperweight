@@ -26,6 +26,7 @@ import com.github.salomonbrys.kotson.fromJson
 import com.google.gson.*
 import dev.denwav.hypo.model.ClassProviderRoot
 import io.papermc.paperweight.DownloadService
+import io.papermc.paperweight.GitMutationLockService
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
@@ -113,6 +114,11 @@ fun <T : FileSystemLocation> Provider<out T>.fileExists(): Provider<out T> {
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
     get() = gradle.sharedServices.registrations.getByName(DOWNLOAD_SERVICE_NAME).service as Provider<DownloadService>
+
+val Project.gitMutationLockService: Provider<GitMutationLockService>
+    get() = gradle.sharedServices.registerIfAbsent(GIT_MUTATION_LOCK_SERVICE_NAME, GitMutationLockService::class) {
+        maxParallelUsages.set(1)
+    }
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")

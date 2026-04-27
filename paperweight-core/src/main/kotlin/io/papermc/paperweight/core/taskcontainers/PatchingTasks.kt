@@ -55,6 +55,7 @@ class PatchingTasks(
     private val tasks: TaskContainer = project.tasks,
 ) {
     private val namePart: String = if (readOnly) "${forkName.capitalized()}${patchSetName.capitalized()}" else patchSetName.capitalized()
+    private val gitMutationLockService = project.gitMutationLockService
 
     private fun ApplyFilePatches.configureApplyFilePatches() {
         group = taskGroup
@@ -75,10 +76,16 @@ class PatchingTasks(
 
     val applyFilePatches = tasks.register<ApplyFilePatches>("apply${namePart}FilePatches") {
         configureApplyFilePatches()
+        if (!readOnly) {
+            usesService(gitMutationLockService)
+        }
     }
 
     val applyFilePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}FilePatchesFuzzy") {
         configureApplyFilePatches()
+        if (!readOnly) {
+            usesService(gitMutationLockService)
+        }
     }
 
     val applyFeaturePatches = tasks.register<ApplyFeaturePatches>("apply${namePart}FeaturePatches") {
@@ -89,6 +96,8 @@ class PatchingTasks(
         repo.set(outputDir)
         if (readOnly) {
             base.set(applyFilePatches.flatMap { it.output })
+        } else {
+            usesService(gitMutationLockService)
         }
         patches.set(featurePatchDir.fileExists())
     }
@@ -124,6 +133,7 @@ class PatchingTasks(
         val rebuildFilePatches = tasks.register<RebuildFilePatches>(rebuildFilePatchesName) {
             group = taskGroup
             description = "Rebuilds $patchSetName file patches"
+            usesService(gitMutationLockService)
 
             base.set(baseDir)
             input.set(outputDir)
@@ -134,6 +144,7 @@ class PatchingTasks(
         val fixupFilePatches = tasks.register<FixupFilePatches>(fixupFilePatchesName) {
             group = taskGroup
             description = "Puts the currently tracked source changes into the $patchSetName file patches commit"
+            usesService(gitMutationLockService)
 
             repo.set(outputDir)
             upstream.set("base")
@@ -143,6 +154,7 @@ class PatchingTasks(
             group = taskGroup
             description = "Rebuilds $patchSetName feature patches"
             dependsOn(rebuildFilePatches)
+            usesService(gitMutationLockService)
 
             inputDir.set(outputDir)
             patchDir.set(featurePatchDir)
@@ -160,6 +172,7 @@ class PatchingTasks(
             configureApplyFilePatches()
             description = "Applies $patchSetName file patches as Git patches, moving any failed patches to the rejects dir. " +
                 "Useful when updating to a new Minecraft version."
+            usesService(gitMutationLockService)
             gitFilePatches = true
             moveFailedGitPatchesToRejects = true
         }
