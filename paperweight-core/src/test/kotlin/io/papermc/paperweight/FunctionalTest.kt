@@ -100,7 +100,7 @@ class FunctionalTest {
         Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
             git("add", ".").executeSilently()
             git("commit", "--fixup", "file").executeSilently()
-            git("rebase", "--autosquash", "upstream/main").executeSilently()
+            git.withEnv(mapOf("GIT_SEQUENCE_EDITOR" to ":"))("rebase", "-i", "--autosquash", "upstream/main").executeSilently()
         }
 
         println("\nrunning rebuildPatches again\n")
