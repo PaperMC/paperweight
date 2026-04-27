@@ -64,6 +64,8 @@ class MinecraftPatchingTasks(
     private val outputSrcFile: Path = outputRoot.resolve("file/src/minecraft/java"),
     private val tasks: TaskContainer = project.tasks
 ) {
+    private val gitMutationLockService = project.gitMutationLockService
+
     private val taskGroup = if (readOnly) "upstream minecraft patching" else "minecraft patching"
     private fun Task.group() {
         group = taskGroup
@@ -89,10 +91,16 @@ class MinecraftPatchingTasks(
 
     val applySourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}SourcePatches") {
         configureApplyFilePatches()
+        if (!readOnly) {
+            usesService(gitMutationLockService)
+        }
     }
 
     val applySourcePatchesFuzzy = tasks.register<ApplyFilePatchesFuzzy>("apply${namePart}SourcePatchesFuzzy") {
         configureApplyFilePatches()
+        if (!readOnly) {
+            usesService(gitMutationLockService)
+        }
     }
 
     val applyResourcePatches = tasks.register<ApplyFilePatches>("apply${namePart}ResourcePatches") {
@@ -103,6 +111,9 @@ class MinecraftPatchingTasks(
         output.set(outputResources)
         patches.set(resourcePatchDir.fileExists())
         // TODO rejects?
+        if (!readOnly) {
+            usesService(gitMutationLockService)
+        }
         gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
         identifier = configName
     }
@@ -120,6 +131,8 @@ class MinecraftPatchingTasks(
 
         if (readOnly) {
             base.set(applySourcePatches.flatMap { it.output })
+        } else {
+            usesService(gitMutationLockService)
         }
         repo.set(outputSrc)
         patches.set(featurePatchDir.fileExists())
@@ -202,6 +215,7 @@ class MinecraftPatchingTasks(
         val rebuildSourcePatches = tasks.register<RebuildFilePatches>(rebuildSourcePatchesName) {
             group()
             description = "Rebuilds $configName file patches to the Minecraft sources"
+            usesService(gitMutationLockService)
 
             base.set(baseSources)
             input.set(outputSrc)
@@ -217,6 +231,7 @@ class MinecraftPatchingTasks(
         val rebuildResourcePatches = tasks.register<RebuildFilePatches>(rebuildResourcePatchesName) {
             group()
             description = "Rebuilds $configName file patches to the Minecraft resources"
+            usesService(gitMutationLockService)
 
             base.set(baseResources)
             input.set(outputResources)
@@ -234,6 +249,7 @@ class MinecraftPatchingTasks(
             group()
             description = "Rebuilds all $configName feature patches to the Minecraft sources"
             dependsOn(rebuildFilePatches)
+            usesService(gitMutationLockService)
 
             inputDir.set(outputSrc)
             patchDir.set(featurePatchDir)
@@ -250,6 +266,7 @@ class MinecraftPatchingTasks(
         val fixupSourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}SourcePatches") {
             group()
             description = "Puts the currently tracked source changes into the $configName Minecraft sources file patches commit"
+            usesService(gitMutationLockService)
 
             repo.set(outputSrc)
             upstream.set("upstream/main")
@@ -258,6 +275,7 @@ class MinecraftPatchingTasks(
         val fixupResourcePatches = tasks.register<FixupFilePatches>("fixup${namePart}ResourcePatches") {
             group()
             description = "Puts the currently tracked resource changes into the $configName Minecraft resources file patches commit"
+            usesService(gitMutationLockService)
 
             repo.set(outputResources)
             upstream.set("upstream/main")
@@ -267,6 +285,7 @@ class MinecraftPatchingTasks(
             configureApplyFilePatches()
             description = "Applies $configName file patches to the Minecraft sources as Git patches, moving any failed patches to the rejects dir. " +
                 "Useful when updating to a new Minecraft version."
+            usesService(gitMutationLockService)
             gitFilePatches = true
             moveFailedGitPatchesToRejects = true
         }

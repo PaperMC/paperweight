@@ -27,8 +27,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -102,7 +100,7 @@ class FunctionalTest {
         Git(tempDir.resolve("test-server/src/minecraft/java")).let { git ->
             git("add", ".").executeSilently()
             git("commit", "--fixup", "file").executeSilently()
-            git("rebase", "--autosquash", "upstream/main").executeSilently()
+            git.withEnv(mapOf("GIT_SEQUENCE_EDITOR" to ":"))("rebase", "-i", "--autosquash", "upstream/main").executeSilently()
         }
 
         println("\nrunning rebuildPatches again\n")
@@ -179,6 +177,95 @@ class FunctionalTest {
             .build()
 
         assertEquals(result.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
+    }
+
+    @Test
+    fun `checkout task output is wired for inactive fork roots`(@TempDir(cleanup = CleanupMode.ON_SUCCESS) tempDir: Path) {
+        println("running in $tempDir")
+        setupMache("fake_mache", tempDir.resolve("mache.zip"))
+        setupMojang("fake_mojang", tempDir.resolve("fake_mojang"))
+
+        val project = tempDir.copyProject("functional_patcher_fork")
+        val upstreamDir = tempDir.resolve("forkOfPaper-upstream")
+        Path("src/test/resources/functional_patcher_fork_upstream").copyRecursivelyTo(upstreamDir)
+        Git(upstreamDir).let { git ->
+            git("init").executeSilently()
+            git("config", "user.email", "test@example.com").executeSilently()
+            git("config", "user.name", "Test User").executeSilently()
+            git("add", ".").executeSilently()
+            git("commit", "-m", "Initial upstream").executeSilently()
+        }
+
+        val result = project.gradleRunner()
+            .withArguments(
+                "checkoutForkOfPaperRepo",
+                ":forkOfFork-server:collectForkOfPaperATsFromPatches",
+                ":forkOfFork-server:filterForkOfPaperServerFromForkOfPaper",
+                "--stacktrace",
+            )
+            .withDebug(debug)
+            .build()
+
+        assertEquals(
+            expected = TaskOutcome.SUCCESS,
+            actual = result.task(":checkoutForkOfPaperRepo")?.outcome,
+        )
+        assertEquals(
+            expected = TaskOutcome.SUCCESS,
+            actual = result.task(":forkOfFork-server:collectForkOfPaperATsFromPatches")?.outcome,
+        )
+        assertEquals(
+            expected = TaskOutcome.SUCCESS,
+            actual = result.task(":forkOfFork-server:filterForkOfPaperServerFromForkOfPaper")?.outcome,
+        )
+        assertEquals(
+            expected = "public net/minecraft/server/Something exampleField",
+            actual = project.resolve(
+                "forkOfFork-server/.gradle/caches/paperweight/taskCache/collectForkOfPaperATsFromPatches.at"
+            ).readText().trimEnd(),
+        )
+        assertEquals(
+            expected = "\"fork of paper\" upstream repo",
+            actual = project.resolve(
+                "forkOfFork-server/.gradle/caches/paperweight/taskCache/filterForkOfPaperServerFromForkOfPaper/README.md"
+            ).readText().trimEnd(),
+        )
+    }
+
+    @Test
+    fun `rebuild single file patches only track the files they read`(@TempDir(cleanup = CleanupMode.ON_SUCCESS) tempDir: Path) {
+        println("running in $tempDir")
+        setupMache("fake_mache", tempDir.resolve("mache.zip"))
+        setupMojang("fake_mojang", tempDir.resolve("fake_mojang"))
+
+        val project = tempDir.copyProject("functional_patcher_fork")
+        val upstreamDir = tempDir.resolve("forkOfPaper-upstream")
+        Path("src/test/resources/functional_patcher_fork_upstream").copyRecursivelyTo(upstreamDir)
+        Git(upstreamDir).let { git ->
+            git("init").executeSilently()
+            git("config", "user.email", "test@example.com").executeSilently()
+            git("config", "user.name", "Test User").executeSilently()
+            git("add", ".").executeSilently()
+            git("commit", "-m", "Initial upstream").executeSilently()
+        }
+
+        val result = project.gradleRunner()
+            .withArguments(
+                "rebuildForkOfPaperSingleFilePatches",
+                "writeForkOfPaperNestedOutput",
+                "--stacktrace",
+            )
+            .withDebug(debug)
+            .build()
+
+        assertEquals(
+            expected = TaskOutcome.SUCCESS,
+            actual = result.task(":rebuildForkOfPaperSingleFilePatches")?.outcome,
+        )
+        assertEquals(
+            expected = TaskOutcome.SUCCESS,
+            actual = result.task(":writeForkOfPaperNestedOutput")?.outcome,
+        )
     }
 
     fun setupMache(macheName: String, target: Path) {

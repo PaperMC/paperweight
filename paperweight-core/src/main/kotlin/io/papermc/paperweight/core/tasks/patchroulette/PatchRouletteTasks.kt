@@ -54,6 +54,7 @@ class PatchRouletteTasks(
             minecraftVersion = minecraftVer
             patchDir = patchDirectory
             targetDir = targetDirectory
+            usesService(target.gitMutationLockService)
             config.pathProvider(
                 minecraftVer.map {
                     layout.cache.resolve(PATCH_ROULETTE_CONFIG_DIR).resolve("$namePrefix-$it.json")
