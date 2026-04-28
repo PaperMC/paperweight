@@ -37,5 +37,6 @@ abstract class PaperweightDependencyBridge : Plugin<Project> {
             }
             extendsFrom(target.configurations.getByName(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
         }
+        target.rootProject.dependencies.add(JST_CLASSPATH_CONFIG, target)
     }
 }
