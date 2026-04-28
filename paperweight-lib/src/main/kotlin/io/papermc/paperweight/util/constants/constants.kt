@@ -23,6 +23,7 @@
 package io.papermc.paperweight.util.constants
 
 import org.gradle.api.Task
+import org.gradle.api.attributes.Attribute
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
 const val PAPER_CHECKSTYLE_EXTENSION = "paperCheckstyle"
@@ -53,16 +54,20 @@ const val MACHE_MINECRAFT_LIBRARIES_CONFIG = "macheMinecraftLibraries"
 const val MACHE_MINECRAFT_CONFIG = "macheMinecraft"
 const val MAPPED_JAR_OUTGOING_CONFIG = "mappedJarOutgoing"
 const val JST_CONFIG = "javaSourceTransformer"
+const val JST_CLASSPATH_CONFIG = "jstClasspath"
 const val DEV_BUNDLE_CONFIG = "paperweightDevelopmentBundle"
 const val MOJANG_MAPPED_SERVER_CONFIG = "mojangMappedServer"
 const val MOJANG_MAPPED_SERVER_RUNTIME_CONFIG = "mojangMappedServerRuntime"
 const val REOBF_CONFIG = "reobf"
+
+val JST_CLASSPATH_ATTRIBUTE = Attribute.of("io.papermc.paperweight.jst-classpath", Boolean::class.javaObjectType)
 
 const val PARAM_MAPPINGS_REPO_NAME = "paperweightParamMappingsRepository"
 const val DECOMPILER_REPO_NAME = "paperweightDecompilerRepository"
 const val REMAPPER_REPO_NAME = "paperweightRemapperRepository"
 const val PLUGIN_REMAPPER_REPO_NAME = "paperweightPluginRemapperRepository"
 const val MACHE_REPO_NAME = "paperweightMacheRepository"
+const val JST_REPO_NAME = "paperweightJstRepository"
 
 const val CACHE_PATH = "caches"
 private const val PAPER_PATH = "paperweight"
