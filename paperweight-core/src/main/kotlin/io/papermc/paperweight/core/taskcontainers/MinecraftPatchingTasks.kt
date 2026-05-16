@@ -28,6 +28,7 @@ import io.papermc.paperweight.core.tasks.SetupForkMinecraftSources
 import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
+import io.papermc.paperweight.core.tasks.patching.FixupFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
@@ -261,6 +262,15 @@ class MinecraftPatchingTasks(
 
             repo.set(outputResources)
             upstream.set("upstream/main")
+        }
+
+        val fixupFeaturePatches = tasks.register<FixupFeaturePatches>("fixup${namePart}FeaturePatches") {
+            group()
+            description = "Puts the currently tracked source changes into the specified $configName Minecraft feature patch commit"
+
+            repo.set(outputSrc)
+            upstream.set("upstream/main")
+            patches.set(featurePatchDir)
         }
 
         val applyOrMoveSourcePatches = tasks.register<ApplyFilePatches>("applyOrMove${namePart}SourcePatches") {

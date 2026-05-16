@@ -25,6 +25,7 @@ package io.papermc.paperweight.core.taskcontainers
 import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
+import io.papermc.paperweight.core.tasks.patching.FixupFeaturePatches
 import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.*
@@ -101,6 +102,7 @@ class PatchingTasks(
 
     val rebuildFilePatchesName = "rebuild${namePart}FilePatches"
     val fixupFilePatchesName = "fixup${namePart}FilePatches"
+    val fixupFeaturePatchesName = "fixup${namePart}FeaturePatches"
     val rebuildFeaturePatchesName = "rebuild${namePart}FeaturePatches"
     val rebuildPatchesName = "rebuild${namePart}Patches"
 
@@ -137,6 +139,15 @@ class PatchingTasks(
 
             repo.set(outputDir)
             upstream.set("base")
+        }
+
+        val fixupFeaturePatches = tasks.register<FixupFeaturePatches>(fixupFeaturePatchesName) {
+            group = taskGroup
+            description = "Puts the currently tracked source changes into the specified $patchSetName feature patch commit"
+
+            repo.set(outputDir)
+            upstream.set("base")
+            patches.set(featurePatchDir)
         }
 
         val rebuildFeaturePatches = tasks.register<RebuildGitPatches>(rebuildFeaturePatchesName) {
