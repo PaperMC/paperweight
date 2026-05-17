@@ -146,7 +146,7 @@ class PatchingTasks(
             description = "Puts the currently tracked source changes into the specified $patchSetName feature patch commit"
 
             repo.set(outputDir)
-            upstream.set("base")
+            upstream.set("file")
             patches.set(featurePatchDir)
         }
 
