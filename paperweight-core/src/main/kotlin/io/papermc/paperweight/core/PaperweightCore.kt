@@ -218,6 +218,18 @@ abstract class PaperweightCore : Plugin<Project> {
                     coreExt.activeFork.flatMap { it.rejectsDir },
                     layout.projectDirectory.dir("src/minecraft/java"),
                 )
+
+                coreExt.activeFork.get().upstream {
+                    directoryPatchSets.forEach {
+                        PatchRouletteTasks(
+                            target,
+                            it.name,
+                            coreExt.minecraftVersion.map { ver -> "${it.name}-$ver" },
+                            it.rejectsDir,
+                            it.outputDir.get(),
+                        )
+                    }
+                }
             }
         }
     }
