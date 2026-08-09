@@ -44,13 +44,18 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 private data class LibraryImport(val libraryFileName: String, val importFilePath: String)
 
+@DisableCachingByDefault(because = "Indexing library sources is faster than loading the result from cache")
 abstract class IndexLibraryFiles : BaseTask() {
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val libraries: ConfigurableFileCollection
 
     @get:OutputFile
@@ -95,20 +100,25 @@ abstract class IndexLibraryFiles : BaseTask() {
     }
 }
 
+@DisableCachingByDefault(because = "Importing library files is not expensive enough to justify caching")
 abstract class ImportLibraryFiles : BaseTask() {
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val libraries: ConfigurableFileCollection
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val libraryFileIndex: RegularFileProperty
 
     @get:Optional
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val patches: ConfigurableFileCollection
 
     @get:Optional
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val devImports: RegularFileProperty
 
     @get:OutputDirectory
