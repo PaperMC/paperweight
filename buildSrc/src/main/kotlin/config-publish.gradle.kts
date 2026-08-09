@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -22,6 +23,9 @@ configurations.implementation {
 }
 
 configurations.shadowRuntimeElements {
+    compatibilityAttributes(objects)
+}
+configurations.runtimeElements {
     compatibilityAttributes(objects)
 }
 
@@ -54,6 +58,13 @@ val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
 gradlePlugin {
     website.set("https://github.com/PaperMC/paperweight")
     vcsUrl.set("https://github.com/PaperMC/paperweight")
+    plugins.configureEach {
+        compatibility {
+            features {
+                configurationCache = true
+            }
+        }
+    }
 }
 
 val shadowJar by tasks.existing(ShadowJar::class) {
