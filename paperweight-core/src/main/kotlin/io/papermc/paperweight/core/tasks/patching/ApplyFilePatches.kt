@@ -41,7 +41,9 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.tasks.options.Option
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "The task produces a Git working repository and may fetch a remote")
 abstract class ApplyFilePatches : BaseTask() {
 
     @get:Input

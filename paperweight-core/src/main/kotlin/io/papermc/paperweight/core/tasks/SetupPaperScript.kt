@@ -30,7 +30,7 @@ import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
@@ -47,7 +47,7 @@ abstract class SetupPaperScript : BaseTask() {
     )
     abstract val scriptName: Property<String>
 
-    @get:InputDirectory
+    @get:Internal
     abstract val root: DirectoryProperty
 
     init {

@@ -47,7 +47,9 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "Applying individual file patches is not expensive enough to justify caching")
 abstract class ApplySingleFilePatches : BaseTask() {
 
     @get:Inject
