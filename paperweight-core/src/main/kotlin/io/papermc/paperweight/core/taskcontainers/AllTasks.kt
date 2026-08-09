@@ -45,7 +45,7 @@ open class AllTasks(
     downloadService: Provider<DownloadService> = project.download
 ) : InitialTasks(project) {
 
-    val downloadMcLibrariesSources by tasks.registering<DownloadMcLibraries> {
+    val downloadMcLibrariesSources = tasks.register<DownloadMcLibraries>("downloadMcLibrariesSources") {
         mcLibrariesFile.set(extractFromBundler.flatMap { it.serverLibrariesTxt })
         repositories.set(listOf(MC_LIBRARY_URL, MAVEN_CENTRAL_URL))
         outputDir.set(cache.resolve(MINECRAFT_SOURCES_PATH))
@@ -54,7 +54,7 @@ open class AllTasks(
         downloader.set(downloadService)
     }
 
-    val downloadRuntimeClasspathSources by tasks.registering<DownloadPaperLibraries> {
+    val downloadRuntimeClasspathSources = tasks.register<DownloadPaperLibraries>("downloadRuntimeClasspathSources") {
         paperDependencies.set(
             project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).map { configuration ->
                 val view = configuration.incoming.artifactView {

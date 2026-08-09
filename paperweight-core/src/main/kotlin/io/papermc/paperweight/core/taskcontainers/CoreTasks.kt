@@ -49,7 +49,7 @@ class CoreTasks(
 ) : AllTasks(project) {
     lateinit var paperPatchingTasks: MinecraftPatchingTasks
 
-    val macheRemapJar by tasks.registering(RunCodebook::class) {
+    val macheRemapJar = tasks.register<RunCodebook>("macheRemapJar") {
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
 
         codebookArgs.set(mache.map { it.remapperArgs })
@@ -60,7 +60,7 @@ class CoreTasks(
         outputJar.set(layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))
     }
 
-    val macheDecompileJar by tasks.registering(DecompileJar::class) {
+    val macheDecompileJar = tasks.register<DecompileJar>("macheDecompileJar") {
         inputJar.set(macheRemapJar.flatMap { it.outputJar })
         decompilerArgs.set(mache.map { it.decompilerArgs })
 
@@ -70,11 +70,11 @@ class CoreTasks(
         outputJar.set(layout.cache.resolve(FINAL_DECOMPILE_JAR))
     }
 
-    val collectPaperATsFromPatches by tasks.registering(CollectATsFromPatches::class) {
+    val collectPaperATsFromPatches = tasks.register<CollectATsFromPatches>("collectPaperATsFromPatches") {
         patchDir.set(project.coreExt.paper.featurePatchDir.fileExists())
     }
 
-    val mergePaperATs by tasks.registering<MergeAccessTransforms> {
+    val mergePaperATs = tasks.register<MergeAccessTransforms>("mergePaperATs") {
         firstFile.set(project.coreExt.paper.additionalAts.fileExists())
         secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
@@ -100,7 +100,7 @@ class CoreTasks(
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
     }
 
-    val setupMacheSources by tasks.registering(SetupMinecraftSources::class) {
+    val setupMacheSources = tasks.register<SetupMinecraftSources>("setupMacheSources") {
         description = "Setup Minecraft source dir (applying mache patches and paper ATs)."
         configureSetupMacheSources()
         libraryImports.set(importLibraryFiles.flatMap { it.outputDir })
@@ -111,23 +111,23 @@ class CoreTasks(
         ats.jst.from(project.configurations.named(JST_CONFIG))
     }
 
-    val extractMacheSources by tasks.registering(ExtractMinecraftSources::class) {
+    val extractMacheSources = tasks.register<ExtractMinecraftSources>("extractMacheSources") {
         zip.set(setupMacheSources.flatMap { it.outputZip })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources"))
     }
 
-    val setupMacheSourcesForDevBundle by tasks.registering(SetupMinecraftSources::class) {
+    val setupMacheSourcesForDevBundle = tasks.register<SetupMinecraftSources>("setupMacheSourcesForDevBundle") {
         description = "Setup Minecraft source dir (applying mache patches)."
         configureSetupMacheSources()
         outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle.zip"))
     }
 
-    val extractMacheSourcesForDevBundle by tasks.registering(ExtractMinecraftSources::class) {
+    val extractMacheSourcesForDevBundle = tasks.register<ExtractMinecraftSources>("extractMacheSourcesForDevBundle") {
         zip.set(setupMacheSourcesForDevBundle.flatMap { it.outputZip })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("sources_dev_bundle"))
     }
 
-    val setupMacheResources by tasks.registering(SetupMinecraftSources::class) {
+    val setupMacheResources = tasks.register<SetupMinecraftSources>("setupMacheResources") {
         description = "Setup Minecraft resources dir"
 
         inputFile.set(extractFromBundler.flatMap { it.serverJar })
@@ -135,7 +135,7 @@ class CoreTasks(
         outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("resources.zip"))
     }
 
-    val extractMacheResources by tasks.registering(ExtractMinecraftSources::class) {
+    val extractMacheResources = tasks.register<ExtractMinecraftSources>("extractMacheResources") {
         zip.set(setupMacheResources.flatMap { it.outputZip })
         outputDir.set(layout.cache.resolve(BASE_PROJECT).resolve("resources"))
     }
@@ -162,7 +162,7 @@ class CoreTasks(
         }
 
         if (!hasFork) {
-            val setupPaperScript by project.tasks.registering(SetupPaperScript::class) {
+            val setupPaperScript = project.tasks.register<SetupPaperScript>("setupPaperScript") {
                 group = GENERAL_TASK_GROUP
                 description = "Creates a util script and installs it into path"
 

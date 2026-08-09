@@ -44,7 +44,7 @@ open class InitialTasks(
     downloadService: Provider<DownloadService> = project.download
 ) {
 
-    val downloadMcManifest by tasks.registering<DownloadTask> {
+    val downloadMcManifest = tasks.register<DownloadTask>("downloadMcManifest") {
         url.set(project.coreExt.minecraftManifestUrl)
         outputFile.set(cache.resolve(MC_MANIFEST))
 
@@ -54,7 +54,7 @@ open class InitialTasks(
     }
     private val mcManifest = downloadMcManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftManifest>(it) }
 
-    val downloadMcVersionManifest by tasks.registering<CacheableDownloadTask> {
+    val downloadMcVersionManifest = tasks.register<CacheableDownloadTask>("downloadMcVersionManifest") {
         url.set(
             mcManifest.zip(extension.minecraftVersion) { manifest, version ->
                 manifest.versions.first { it.id == version }.url
@@ -71,14 +71,14 @@ open class InitialTasks(
     }
     private val versionManifest = downloadMcVersionManifest.flatMap { it.outputFile }.map { gson.fromJson<MinecraftVersionManifest>(it) }
 
-    val downloadServerJar by tasks.registering<DownloadServerJar> {
+    val downloadServerJar = tasks.register<DownloadServerJar>("downloadServerJar") {
         downloadUrl.set(versionManifest.map { version -> version.serverDownload().url })
         expectedHash.set(versionManifest.map { version -> version.serverDownload().hash() })
 
         downloader.set(downloadService)
     }
 
-    val extractFromBundler by tasks.registering<ExtractFromBundler> {
+    val extractFromBundler = tasks.register<ExtractFromBundler>("extractFromBundler") {
         bundlerJar.set(downloadServerJar.flatMap { it.outputJar })
 
         versionJson.set(cache.resolve(SERVER_VERSION_JSON))

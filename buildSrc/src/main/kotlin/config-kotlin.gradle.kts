@@ -61,7 +61,7 @@ dependencies {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        val test = getByName<JvmTestSuite>("test") {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter-engine:6.0.3")

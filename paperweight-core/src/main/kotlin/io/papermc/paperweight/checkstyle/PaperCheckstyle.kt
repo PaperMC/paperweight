@@ -50,7 +50,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
             toolVersion = LibraryVersions.CHECKSTYLE
         }
 
-        val mergeCheckstyleConfigs by target.tasks.registering<MergeCheckstyleConfigs>()
+        val mergeCheckstyleConfigs = target.tasks.register<MergeCheckstyleConfigs>("mergeCheckstyleConfigs")
 
         target.tasks.withType(PaperCheckstyleTask::class.java).configureEach {
             rootPath.convention(layout.settingsDirectory.asFile.path)
