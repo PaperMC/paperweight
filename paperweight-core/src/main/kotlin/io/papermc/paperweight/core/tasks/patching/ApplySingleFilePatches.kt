@@ -45,6 +45,8 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
 import org.gradle.work.DisableCachingByDefault
@@ -87,6 +89,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
         abstract val path: Property<String>
 
         @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
         val upstreamFile: RegularFileProperty = objects.fileProperty().convention(upstream.file(path))
 
         @get:OutputFile
@@ -97,6 +100,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
 
         @get:InputFile
         @get:Optional
+        @get:PathSensitive(PathSensitivity.NONE)
         abstract val patchFile: RegularFileProperty
     }
 
