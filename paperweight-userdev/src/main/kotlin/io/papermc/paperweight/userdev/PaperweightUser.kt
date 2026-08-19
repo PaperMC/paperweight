@@ -84,7 +84,7 @@ abstract class PaperweightUser : Plugin<Project> {
             parameters.projectPath.set(target.projectDir)
         }
 
-        val cleanCache by target.tasks.registering<Delete> {
+        val cleanCache = target.tasks.register<Delete>("cleanCache") {
             group = GENERAL_TASK_GROUP
             description = "Delete the project-local paperweight-userdev setup cache."
             delete(target.layout.cache)
@@ -127,7 +127,7 @@ abstract class PaperweightUser : Plugin<Project> {
 
         createConfigurations(target, target.provider { userdevSetup }, setupTask)
 
-        val reobfJar by target.tasks.registering<RemapJar> {
+        val reobfJar = target.tasks.register<RemapJar>("reobfJar") {
             group = GENERAL_TASK_GROUP
             description = "Remap the compiled plugin jar to Spigot's obfuscated runtime names."
 
@@ -204,7 +204,7 @@ abstract class PaperweightUser : Plugin<Project> {
             // Clean v1 shared caches
             cleanSharedCaches(this, sharedCacheRoot)
 
-            if (cleaningCache(cleanCache, cleanAll)) {
+            if (cleaningCache(cleanCache as TaskProvider<*>, cleanAll as TaskProvider<*>)) {
                 tasks.withType(UserdevSetupTask::class).configureEach {
                     doFirst { throw PaperweightException("Cannot run setup tasks when cleaning caches") }
                 }

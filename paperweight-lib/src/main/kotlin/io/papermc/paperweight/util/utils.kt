@@ -57,7 +57,6 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.Directory
@@ -76,7 +75,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -289,9 +287,6 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
     @Suppress("UNCHECKED_CAST")
     return emptyMergeResult as MergeResult<T?>
 }
-
-inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
-inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
 enum class HashingAlgorithm(val algorithmName: String) {
     SHA256("SHA-256"),

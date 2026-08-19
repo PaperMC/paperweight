@@ -37,11 +37,16 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class RebuildSingleFilePatches : BaseTask() {
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val upstream: DirectoryProperty
 
     @get:Nested
@@ -52,6 +57,7 @@ abstract class RebuildSingleFilePatches : BaseTask() {
         abstract val path: Property<String>
 
         @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
         abstract val outputFile: RegularFileProperty
 
         @get:OutputFile

@@ -31,6 +31,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
@@ -48,6 +50,7 @@ abstract class SetupPaperScript : BaseTask() {
     abstract val scriptName: Property<String>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val root: DirectoryProperty
 
     init {

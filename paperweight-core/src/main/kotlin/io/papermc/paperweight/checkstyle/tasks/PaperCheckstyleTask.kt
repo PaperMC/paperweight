@@ -35,8 +35,12 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Tasks are run on demand via API calls")
 abstract class PaperCheckstyleTask : Checkstyle() {
 
     @get:Input
@@ -55,6 +59,7 @@ abstract class PaperCheckstyleTask : Checkstyle() {
 
     @get:InputFile
     @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val configOverride: RegularFileProperty
 
     @TaskAction

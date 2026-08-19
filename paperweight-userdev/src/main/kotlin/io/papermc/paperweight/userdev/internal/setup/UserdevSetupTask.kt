@@ -37,10 +37,14 @@ import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.workers.WorkerExecutor
 
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class UserdevSetupTask : JavaLauncherTask() {
     @get:ServiceReference
     abstract val setupService: Property<UserdevSetup>
@@ -49,18 +53,21 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
     abstract val workerExecutor: WorkerExecutor
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val devBundle: ConfigurableFileCollection
 
     @get:CompileClasspath
     abstract val decompilerConfig: ConfigurableFileCollection
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val paramMappingsConfig: ConfigurableFileCollection
 
     @get:CompileClasspath
     abstract val macheDecompilerConfig: ConfigurableFileCollection
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val macheConfig: ConfigurableFileCollection
 
     @get:CompileClasspath
@@ -70,9 +77,11 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
     abstract val macheRemapperConfig: ConfigurableFileCollection
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val macheParamMappingsConfig: ConfigurableFileCollection
 
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val macheConstantsConfig: ConfigurableFileCollection
 
     @get:CompileClasspath

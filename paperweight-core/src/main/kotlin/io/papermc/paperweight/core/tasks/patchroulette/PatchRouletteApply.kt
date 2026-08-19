@@ -36,6 +36,9 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
 /**
@@ -54,9 +57,11 @@ import org.gradle.api.tasks.options.Option
  *           Paperweight will attempt to select exactly the provided patch paths.
  *           If any of the provided patches are not available, the task will fail.
  */
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val patchDir: DirectoryProperty
 
     @get:Input

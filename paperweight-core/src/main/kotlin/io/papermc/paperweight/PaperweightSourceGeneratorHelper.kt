@@ -34,9 +34,9 @@ abstract class PaperweightSourceGeneratorHelper : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         val ext = extensions.create(PAPERWEIGHT_EXTENSION, PaperweightSourceGeneratorExt::class)
 
-        val minecraftJar by configurations.registering
+        val minecraftJar = configurations.register("minecraftJar")
 
-        val applyAts by tasks.registering<ApplyAccessTransform> {
+        val applyAts = tasks.register<ApplyAccessTransform>("applyAccessTransform") {
             inputJar.set(layout.file(minecraftJar.flatMap { it.elements }.map { it.single().asFile }))
             atFile.set(ext.atFile)
         }

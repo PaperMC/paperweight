@@ -32,10 +32,15 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class PatchRouletteFinish : AbstractPatchRouletteTask() {
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val patchDir: DirectoryProperty
 
     @get:OutputFile

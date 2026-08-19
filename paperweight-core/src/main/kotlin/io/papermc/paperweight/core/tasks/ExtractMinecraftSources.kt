@@ -30,11 +30,16 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
 // To make the Git repos cacheable they must be zipped, this tasks extracts them again...
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class ExtractMinecraftSources : BaseTask() {
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val zip: RegularFileProperty
 
     @get:OutputDirectory

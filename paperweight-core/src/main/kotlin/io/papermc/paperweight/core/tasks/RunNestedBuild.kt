@@ -35,9 +35,12 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.internal.build.NestedRootBuildRunner
+import org.gradle.internal.classpath.ClassPath
 import org.gradle.internal.service.ServiceRegistry
 
 @UntrackedTask(because = "Nested build does it's own up-to-date checking")
@@ -47,6 +50,7 @@ abstract class RunNestedBuild : BaseTask() {
     abstract val tasks: SetProperty<String>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val projectDir: DirectoryProperty
 
     @get:Internal
@@ -72,7 +76,8 @@ abstract class RunNestedBuild : BaseTask() {
             "runNestedRootBuild",
             String::class.java,
             StartParameterInternal::class.java,
-            ServiceRegistry::class.java
-        ).invoke(null, null, params, services)
+            ServiceRegistry::class.java,
+            ClassPath::class.java
+        ).invoke(null, null, params, services, ClassPath.EMPTY)
     }
 }

@@ -36,11 +36,14 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Task has already been registered internally")
 abstract class ApplyFeaturePatches : ControllableOutputTask() {
 
     @get:InputDirectory
     @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val base: DirectoryProperty
 
     @get:OutputDirectory
