@@ -25,8 +25,10 @@ package io.papermc.paperweight.core.tasks.patchroulette
 import io.papermc.paperweight.core.util.OAuthClient
 import io.papermc.paperweight.tasks.*
 import java.net.http.HttpClient
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 
 abstract class AbstractPatchRouletteTask : BaseTask() {
@@ -36,9 +38,13 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     @get:Input
     abstract val minecraftVersion: Property<String>
 
+    @get:Internal
+    abstract val oauthCacheDirectory: DirectoryProperty
+
     override fun init() {
         super.init()
         host.convention("https://patch-roulette.papermc.io")
+        oauthCacheDirectory.fileValue(project.gradle.gradleUserHomeDir.resolve("caches/paperweight/patch-roulette/oauth"))
         doNotTrackState("Run when requested")
     }
 
@@ -51,7 +57,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
             val accessToken = OAuthClient(
                 client,
                 java.net.URI.create(host.get()),
-                project.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight/patch-roulette/oauth"),
+                oauthCacheDirectory.get().asFile.toPath(),
                 logger,
             ).accessToken()
             run(PatchRouletteApi(client, host.get(), accessToken, minecraftVersion.get()))
