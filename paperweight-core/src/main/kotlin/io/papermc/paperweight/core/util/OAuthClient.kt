@@ -47,7 +47,9 @@ import java.security.SecureRandom
 import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import org.gradle.api.logging.Logger
 
 /**
@@ -175,8 +177,13 @@ internal class OAuthClient(
     private fun waitForAuthorizationCode(code: CompletableFuture<String>): String {
         try {
             return code.get(5, TimeUnit.MINUTES)
-        } catch (ex: Exception) {
+        } catch (ex: TimeoutException) {
             throw PaperweightException("Timed out waiting for OAuth authorization.", ex)
+        } catch (ex: ExecutionException) {
+            throw PaperweightException("OAuth authorization failed.", ex.cause ?: ex)
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw PaperweightException("Interrupted while waiting for OAuth authorization.", ex)
         }
     }
 
