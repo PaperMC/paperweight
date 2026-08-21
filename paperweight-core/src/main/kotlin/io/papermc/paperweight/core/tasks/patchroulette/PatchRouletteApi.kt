@@ -35,7 +35,7 @@ import org.gradle.api.logging.Logging
 
 class PatchRouletteApi(
     private val client: HttpClient,
-    private val endpoint: String,
+    private val host: String,
     private val accessToken: String,
     private val minecraftVersion: String,
 ) {
@@ -125,7 +125,7 @@ class PatchRouletteApi(
         val query = parameters.entries.joinToString("&") { (key, value) ->
             "${URLEncoder.encode(key, StandardCharsets.UTF_8)}=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
         }
-        return URI.create(endpoint.removeSuffix("/") + path + if (query.isEmpty()) "" else "?$query")
+        return URI.create(host.removeSuffix("/") + "/api" + path + if (query.isEmpty()) "" else "?$query")
     }
 
     private data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)

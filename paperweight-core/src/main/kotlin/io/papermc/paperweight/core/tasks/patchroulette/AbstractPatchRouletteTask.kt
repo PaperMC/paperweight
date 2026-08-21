@@ -31,14 +31,14 @@ import org.gradle.api.tasks.TaskAction
 
 abstract class AbstractPatchRouletteTask : BaseTask() {
     @get:Input
-    abstract val endpoint: Property<String>
+    abstract val host: Property<String>
 
     @get:Input
     abstract val minecraftVersion: Property<String>
 
     override fun init() {
         super.init()
-        endpoint.convention("https://patch-roulette.papermc.io/api")
+        host.convention("https://patch-roulette.papermc.io")
         doNotTrackState("Run when requested")
     }
 
@@ -50,11 +50,11 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
         try {
             val accessToken = OAuthClient(
                 client,
-                java.net.URI.create(endpoint.get()),
-                project.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight/oauth"),
+                java.net.URI.create(host.get()),
+                project.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight/patch-roulette/oauth"),
                 logger,
             ).accessToken()
-            run(PatchRouletteApi(client, endpoint.get(), accessToken, minecraftVersion.get()))
+            run(PatchRouletteApi(client, host.get(), accessToken, minecraftVersion.get()))
         } finally {
             client.close()
         }
