@@ -77,7 +77,7 @@ internal class OAuthClient(
     }
 
     private fun discoverConfiguration(): OAuthConfiguration {
-        val discoveryUri = resourceUri.resolve("/.well-known/oauth-authorization-server")
+        val discoveryUri = URI.create(resourceUri.toString().removeSuffix("/") + "/.well-known/oauth-authorization-server")
         val response = httpClient.send(
             HttpRequest.newBuilder(discoveryUri).timeout(Duration.ofSeconds(30)).GET().build(),
             HttpResponse.BodyHandlers.ofString(),

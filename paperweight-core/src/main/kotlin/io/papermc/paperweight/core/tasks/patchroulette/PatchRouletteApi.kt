@@ -31,6 +31,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 import org.gradle.api.logging.Logging
 
 class PatchRouletteApi(
@@ -110,7 +111,9 @@ class PatchRouletteApi(
 
     private fun send(request: HttpRequest.Builder): String {
         val response = client.send(
-            request.header("Authorization", "Bearer $accessToken").build(),
+            request.header("Authorization", "Bearer $accessToken")
+                .timeout(Duration.ofSeconds(30))
+                .build(),
             HttpResponse.BodyHandlers.ofString(),
         )
         if (response.statusCode() !in 200..299) {
