@@ -32,7 +32,7 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
     @get:Input
     @get:Optional
     @get:Option(option = "state", description = "Filter patches by status")
-    abstract val statusFilter: Property<Status>
+    abstract val statusFilter: Property<PatchRouletteApi.Status>
 
     @get:Input
     @get:Optional
@@ -44,11 +44,11 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
     @get:Option(option = "path", description = "Filter patches by path")
     abstract val pathFilter: Property<String>
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         var results = 0
 
         logger.lifecycle("| Status    | User                 | Path ")
-        getAllPatches().forEach { patch ->
+        api.getAllPatches().forEach { patch ->
             if (statusFilter.isPresent && patch.status != statusFilter.get()) {
                 return@forEach
             }

@@ -47,7 +47,7 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
     @get:Option(option = "force", description = "Force canceling a patch even if it's not currently being worked on")
     abstract val force: Property<Boolean>
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         val config = if (config.path.isRegularFile()) {
             gson.fromJson<PatchRouletteApply.Config>(config.path)
         } else {
@@ -68,7 +68,7 @@ abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
             listOf(Path(patch.get()))
         }
 
-        patchesToCancel.forEach { cancelPatch(it.invariantSeparatorsPathString) }
+        patchesToCancel.forEach { api.cancelPatch(it.invariantSeparatorsPathString) }
         this.config.path.writeText(gson.toJson(config.copy(currentPatches = (config.currentPatches - patchesToCancel.toSet()))))
     }
 }

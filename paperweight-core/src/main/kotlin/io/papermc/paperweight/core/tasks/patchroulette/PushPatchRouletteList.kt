@@ -32,9 +32,9 @@ abstract class PushPatchRouletteList : AbstractPatchRouletteTask() {
     @get:InputDirectory
     abstract val patchDir: DirectoryProperty
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         val patches = patchDir.path.filesMatchingRecursive("*.patch")
             .map { it.relativeTo(patchDir.path).invariantSeparatorsPathString }
-        setPatches(patches)
+        api.setPatches(patches)
     }
 }

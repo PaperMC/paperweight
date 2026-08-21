@@ -80,7 +80,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:Option(option = "accept", description = "Automatically accept selected patches")
     abstract val autoAccept: Property<Boolean>
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         config.path.createParentDirectories()
         var config = if (config.path.isRegularFile()) {
             gson.fromJson<Config>(config.path)
@@ -113,7 +113,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             .map { PatchSelectionStrategy.parse(it) }
             .getOrElse(PatchSelectionStrategy.NumericInPackage(5))
         while (tries > 0) {
-            val available = getAvailablePatches().map { Path(it) }.toMutableSet()
+            val available = api.getAvailablePatches().map { Path(it) }.toMutableSet()
 
             if (available.isEmpty()) {
                 throw PaperweightException("No patches available.")
@@ -147,7 +147,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             }
 
             try {
-                val startedPatches = startPatches(patches.map { it.invariantSeparatorsPathString })
+                val startedPatches = api.startPatches(patches.map { it.invariantSeparatorsPathString })
                 this.config.path.writeText(gson.toJson(config.copy(currentPatches = patches)))
                 applyPatches(git, startedPatches.map { Path(it) })
                 break

@@ -24,7 +24,7 @@ package io.papermc.paperweight.core.tasks.patchroulette
 
 abstract class ClearPatchRouletteList : AbstractPatchRouletteTask() {
 
-    override fun run() {
-        clearPatches()
+    override fun run(api: PatchRouletteApi) {
+        api.clearPatches()
     }
 }
