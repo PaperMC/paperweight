@@ -56,7 +56,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
             ).accessToken()
             run(PatchRouletteApi(client, endpoint.get(), accessToken, minecraftVersion.get()))
         } finally {
-            runCatching { client::class.java.getMethod("close").invoke(client) }
+            client.close()
         }
     }
 }
