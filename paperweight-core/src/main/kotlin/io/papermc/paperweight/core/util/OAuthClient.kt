@@ -71,6 +71,9 @@ internal class OAuthClient(
             if (token != null) {
                 return token
             }
+            logger.lifecycle("Cached OAuth credentials for $resourceUri are invalid or expired.")
+        } else {
+            logger.lifecycle("OAuth authorization is required to access $resourceUri.")
         }
 
         return authorize(configuration)
@@ -107,6 +110,7 @@ internal class OAuthClient(
             val authorizationCode = waitForAuthorizationCode(code)
             val token = exchangeCode(configuration.tokenEndpoint, authorizationCode, verifier, redirectUri, clientId)
             saveCredentials(OAuthCredentials(clientId, token.refreshToken.required("refresh_token")))
+            logger.lifecycle("OAuth authorization succeeded for $resourceUri.")
             return token.accessToken.required("access_token")
         } finally {
             server.stop(0)
@@ -161,16 +165,52 @@ internal class OAuthClient(
 
     private fun openBrowser(authorizationUri: URI) {
         logger.lifecycle("Opening $authorizationUri in browser...")
-        if (!Desktop.isDesktopSupported()) {
-            logger.warn("Failed to open a browser. OAuth may not work in a headless environment because it requires a loopback endpoint.")
+        if (openWithDesktop(authorizationUri) || openWithXdgOpen(authorizationUri)) {
+            logger.lifecycle("Opened the authorization page in your browser: $authorizationUri")
             return
         }
-        try {
+        logger.warn("Could not open a browser. To authorize, open this URL: $authorizationUri")
+    }
+
+    private fun openWithDesktop(authorizationUri: URI): Boolean {
+        if (!Desktop.isDesktopSupported()) {
+            return false
+        }
+        return try {
             Desktop.getDesktop().browse(authorizationUri)
+            true
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            logger.debug("Could not open a browser through Desktop", ex)
+            false
         } catch (ex: Exception) {
-            logger.warn(
-                "Failed to open a browser: ${ex.message}. OAuth may not work in a headless environment because it requires a loopback endpoint."
-            )
+            logger.debug("Could not open a browser through Desktop", ex)
+            false
+        }
+    }
+
+    private fun openWithXdgOpen(authorizationUri: URI): Boolean {
+        // Fallback for Linux systems where Desktop.browse fails due to missing GTK/GIO desktop integration.
+        return try {
+            val process = ProcessBuilder("xdg-open", authorizationUri.toString())
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+            // xdg-open should exit promptly with 0 on success, non-zero on failure.
+            // A timeout indicates a hang/broken handler - treat as failure so fallback URL is shown.
+            if (process.waitFor(5, TimeUnit.SECONDS)) {
+                process.exitValue() == 0
+            } else {
+                process.destroyForcibly()
+                false
+            }
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            logger.debug("Could not open a browser using xdg-open", ex)
+            false
+        } catch (ex: Exception) {
+            logger.debug("Could not open a browser using xdg-open", ex)
+            false
         }
     }
 
