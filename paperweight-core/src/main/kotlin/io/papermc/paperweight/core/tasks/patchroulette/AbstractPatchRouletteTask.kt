@@ -24,7 +24,9 @@ package io.papermc.paperweight.core.tasks.patchroulette
 
 import io.papermc.paperweight.core.util.OAuthClient
 import io.papermc.paperweight.tasks.*
+import java.net.URI
 import java.net.http.HttpClient
+import java.time.Duration
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -52,11 +54,13 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     @TaskAction
     fun runInternal() {
-        val client = HttpClient.newHttpClient()
+        val client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build()
         try {
             val accessToken = OAuthClient(
                 client,
-                java.net.URI.create(host.get()),
+                URI.create(host.get()),
                 oauthCacheDirectory.get().asFile.toPath(),
                 logger,
             ).accessToken()
