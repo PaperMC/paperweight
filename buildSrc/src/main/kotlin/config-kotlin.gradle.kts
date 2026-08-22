@@ -14,7 +14,7 @@ java {
 }
 
 tasks.withType(JavaCompile::class).configureEach {
-    options.release = 17
+    options.release = 21
 }
 
 kotlin {
@@ -22,8 +22,8 @@ kotlin {
         languageVersion = JavaLanguageVersion.of(21)
     }
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17")
+        jvmTarget = JvmTarget.JVM_21
+        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=21")
     }
 }
 
