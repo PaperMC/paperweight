@@ -56,7 +56,10 @@ import org.apache.hc.core5.net.URIBuilder
 import org.gradle.api.logging.Logging
 
 /**
- * OAuth client for one protected resource.
+ * OAuth client for one Cloudflare Access-protected resource using [Cloudflare
+ * Managed OAuth](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/managed-oauth/).
+ * See [the announcement](https://blog.cloudflare.com/managed-oauth-for-access/)
+ * for background.
  *
  * This implements protected-resource discovery ([RFC 9728]), authorization-server
  * discovery ([RFC 8414]), resource indicators ([RFC 8707]), dynamic client
@@ -74,13 +77,13 @@ import org.gradle.api.logging.Logging
  * Servers advertising an unsupported profile are rejected rather than partially
  * interpreted.
  */
-internal class OAuthClient(
+internal class CloudflareAccessManagedOAuthClient(
     private val httpClient: CloseableHttpClient,
     private val resourceUri: URI,
     private val cacheDirectory: Path,
 ) {
     private companion object {
-        private val logger = Logging.getLogger(OAuthClient::class.java)
+        private val logger = Logging.getLogger(CloudflareAccessManagedOAuthClient::class.java)
 
         const val CALLBACK_PATH = "/oauth/callback"
         const val EXPIRY_SKEW_SECONDS = 30L

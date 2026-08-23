@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.core.tasks.patchroulette
 
-import io.papermc.paperweight.core.util.OAuthClient
+import io.papermc.paperweight.core.util.CloudflareAccessManagedOAuthClient
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.path
@@ -83,7 +83,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
             )
             .build()
         try {
-            val oauthClient = OAuthClient(
+            val oauthClient = CloudflareAccessManagedOAuthClient(
                 client,
                 URI.create(endpoint.get()),
                 oauthCacheDirectory.path,
