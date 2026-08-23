@@ -30,17 +30,19 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
-import org.apache.http.HttpHost
-import org.apache.http.HttpStatus
-import org.apache.http.client.config.CookieSpecs
-import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.CloseableHttpResponse
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.client.utils.DateUtils
-import org.apache.http.impl.client.CloseableHttpClient
-import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.hc.client5.http.classic.methods.HttpGet
+import org.apache.hc.client5.http.config.ConnectionConfig
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.impl.DefaultHttpRequestRetryStrategy
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder
+import org.apache.hc.client5.http.utils.DateUtils
+import org.apache.hc.core5.http.ClassicHttpResponse
+import org.apache.hc.core5.http.HttpStatus
+import org.apache.hc.core5.util.TimeValue
+import org.apache.hc.core5.util.Timeout
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -57,11 +59,30 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
         val LOGGER: Logger = Logging.getLogger(DownloadService::class.java)
     }
 
-    private val httpClient: CloseableHttpClient = HttpClientBuilder.create().let { builder ->
-        builder.setRetryHandler { _, count, _ -> count < 3 }
-        builder.useSystemProperties()
-        builder.build()
-    }
+    // Allow 24 parallel downloads, up to 8 per route, and wait up to five minutes for a connection or response data.
+    private val httpClient: CloseableHttpClient =
+        HttpClientBuilder.create()
+            .setRetryStrategy(DefaultHttpRequestRetryStrategy(2, TimeValue.ofSeconds(1)))
+            .useSystemProperties()
+            .setDefaultRequestConfig(
+                RequestConfig.custom()
+                    .setConnectionRequestTimeout(Timeout.ofMinutes(5))
+                    .setResponseTimeout(Timeout.ofMinutes(5))
+                    .build()
+            )
+            .setConnectionManager(
+                PoolingHttpClientConnectionManagerBuilder.create()
+                    .useSystemProperties()
+                    .setDefaultConnectionConfig(
+                        ConnectionConfig.custom()
+                            .setConnectTimeout(Timeout.ofSeconds(30))
+                            .build()
+                    )
+                    .setMaxConnTotal(24)
+                    .setMaxConnPerRoute(8)
+                    .build()
+            )
+            .build()
 
     fun download(source: Any, target: Any, hash: Hash? = null) {
         val url = source.convertToUrl()
@@ -111,19 +132,9 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
         val etagFile = etagDir.resolve(target.name + ".etag")
         val etag = if (etagFile.exists()) etagFile.readText() else null
 
-        val host = HttpHost(source.host, source.port, source.protocol)
         val time = if (target.exists()) target.getLastModifiedTime().toInstant() else Instant.EPOCH
 
-        val httpGet = HttpGet(source.file)
-        // high timeout, reduce chances of weird things going wrong
-        val timeouts = TimeUnit.MINUTES.toMillis(5).toInt()
-
-        httpGet.config = RequestConfig.custom()
-            .setConnectTimeout(timeouts)
-            .setConnectionRequestTimeout(timeouts)
-            .setSocketTimeout(timeouts)
-            .setCookieSpec(CookieSpecs.STANDARD)
-            .build()
+        val httpGet = HttpGet(source.toString())
 
         if (target.exists()) {
             if (time != Instant.EPOCH) {
@@ -135,11 +146,10 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
             }
         }
 
-        httpClient.execute(host, httpGet).use { response ->
-            val code = response.statusLine.statusCode
+        httpClient.execute(httpGet) { response ->
+            val code = response.code
             if (code !in 200..299 && code != HttpStatus.SC_NOT_MODIFIED) {
-                val reason = response.statusLine.reasonPhrase
-                throw PaperweightException("Download failed, HTTP code: $code; URL: $source; Reason: $reason")
+                throw PaperweightException("Download failed, HTTP code: $code; URL: $source; Reason: ${response.reasonPhrase}")
             }
 
             val lastModified = handleResponse(response, target)
@@ -147,17 +157,9 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
         }
     }
 
-    private fun handleResponse(response: CloseableHttpResponse, target: Path): Instant {
-        val lastModified = with(response.getLastHeader("Last-Modified")) {
-            if (this == null) {
-                return@with Instant.EPOCH
-            }
-            if (value.isNullOrBlank()) {
-                return@with Instant.EPOCH
-            }
-            return@with DateUtils.parseDate(value).toInstant() ?: Instant.EPOCH
-        }
-        if (response.statusLine.statusCode == HttpStatus.SC_NOT_MODIFIED) {
+    private fun handleResponse(response: ClassicHttpResponse, target: Path): Instant {
+        val lastModified = DateUtils.parseStandardDate(response, "Last-Modified") ?: Instant.EPOCH
+        if (response.code == HttpStatus.SC_NOT_MODIFIED) {
             return lastModified
         }
 
@@ -171,7 +173,7 @@ abstract class DownloadService : BuildService<DownloadService.Params>, AutoClose
         return lastModified
     }
 
-    private fun saveEtag(response: CloseableHttpResponse, lastModified: Instant, target: Path, etagFile: Path) {
+    private fun saveEtag(response: ClassicHttpResponse, lastModified: Instant, target: Path, etagFile: Path) {
         if (lastModified != Instant.EPOCH) {
             target.setLastModifiedTime(FileTime.from(lastModified))
         }
