@@ -38,6 +38,7 @@ class PatchRouletteApi(
     private val client: CloseableHttpClient,
     private val endpoint: String,
     private val minecraftVersion: String,
+    private val accessToken: (forceRefresh: Boolean) -> String,
 ) {
     companion object {
         private val logger = Logging.getLogger(PatchRouletteApi::class.java)
@@ -92,12 +93,23 @@ class PatchRouletteApi(
         logger.lifecycle("$action patch $path")
     }
 
-    private fun send(request: org.apache.hc.core5.http.ClassicHttpRequest): String = client.execute(request) { response ->
-        val body = response.entity?.let(EntityUtils::toString).orEmpty()
-        if (response.code !in 200..299) {
-            throw PaperweightException("Response status code: ${response.code}, body: $body")
+    private fun send(request: org.apache.hc.core5.http.ClassicHttpRequest): String {
+        var response = execute(request, forceRefresh = false)
+        if (response.code == 401) {
+            // The first response is fully closed before refresh or interactive authorization begins.
+            response = execute(request, forceRefresh = true)
         }
-        body
+        if (response.code !in 200..299) {
+            throw PaperweightException("Response status code: ${response.code}, body: ${response.body}")
+        }
+        return response.body
+    }
+
+    private fun execute(request: org.apache.hc.core5.http.ClassicHttpRequest, forceRefresh: Boolean): ApiResponse {
+        request.setHeader("Authorization", "Bearer ${accessToken(forceRefresh)}")
+        return client.execute(request) { response ->
+            ApiResponse(response.code, response.entity?.let(EntityUtils::toString).orEmpty())
+        }
     }
 
     private fun jsonPost(route: String, payload: Any) = ClassicRequestBuilder.post(apiUri(route))
@@ -114,4 +126,6 @@ class PatchRouletteApi(
     private data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)
 
     private data class PatchInfo(val path: String, val minecraftVersion: String)
+
+    private data class ApiResponse(val code: Int, val body: String)
 }

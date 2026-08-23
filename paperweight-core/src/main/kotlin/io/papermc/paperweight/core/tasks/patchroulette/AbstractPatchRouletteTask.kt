@@ -23,10 +23,8 @@
 package io.papermc.paperweight.core.tasks.patchroulette
 
 import io.papermc.paperweight.core.util.OAuthClient
-import io.papermc.paperweight.core.util.OAuthExecHandler
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.cache
-import io.papermc.paperweight.util.constants.PATCH_ROULETTE_OAUTH_CACHE_DIR
+import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.set
 import java.net.URI
@@ -52,22 +50,24 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     override fun init() {
         super.init()
         endpoint.convention("https://patch-roulette.papermc.io/api")
-        oauthCacheDirectory.set(layout.cache.resolve(PATCH_ROULETTE_OAUTH_CACHE_DIR))
+        oauthCacheDirectory.set(
+            project.gradle.gradleUserHomeDir.resolve("$CACHE_PATH/$PATCH_ROULETTE_OAUTH_CACHE_DIR")
+        )
     }
 
     abstract fun run(api: PatchRouletteApi)
 
     @TaskAction
     fun runInternal() {
-        val oauthClient = OAuthClient(
-            URI.create(endpoint.get()),
-            oauthCacheDirectory.path,
-        )
         val client = HttpClientBuilder.create()
-            .addExecInterceptorLast("oauth", OAuthExecHandler(oauthClient))
             .build()
         try {
-            run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get()))
+            val oauthClient = OAuthClient(
+                client,
+                URI.create(endpoint.get()),
+                oauthCacheDirectory.path,
+            )
+            run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
         } finally {
             client.close()
         }

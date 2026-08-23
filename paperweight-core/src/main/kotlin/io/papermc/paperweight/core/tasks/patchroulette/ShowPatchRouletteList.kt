@@ -48,9 +48,10 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
 
     override fun run(api: PatchRouletteApi) {
         var results = 0
+        val patches = api.getAllPatches()
 
         logger.lifecycle("| Status    | User                 | Path ")
-        api.getAllPatches().forEach { patch ->
+        patches.forEach { patch ->
             if (statusFilter.isPresent && patch.status != statusFilter.get()) {
                 return@forEach
             }
