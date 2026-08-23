@@ -60,14 +60,16 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     @TaskAction
     fun runInternal() {
-        val client = HttpClient.newBuilder()
+        HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
             .build()
-        val oauthClient = CloudflareAccessManagedOAuthClient(
-            client,
-            URI.create(endpoint.get()),
-            oauthCacheDirectory.path,
-        )
-        run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
+            .use { client ->
+                val oauthClient = CloudflareAccessManagedOAuthClient(
+                    client,
+                    URI.create(endpoint.get()),
+                    oauthCacheDirectory.path,
+                )
+                run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
+            }
     }
 }
