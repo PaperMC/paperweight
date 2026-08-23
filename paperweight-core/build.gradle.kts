@@ -8,6 +8,7 @@ dependencies {
 
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
+    implementation(libs.httpclient5)
     implementation(variantOf(libs.diffpatch) { classifier("all") }) {
         isTransitive = false
     }

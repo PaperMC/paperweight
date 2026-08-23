@@ -27,17 +27,16 @@ import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.gson
 import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
-import java.time.Duration
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.core5.http.ContentType
+import org.apache.hc.core5.http.io.entity.EntityUtils
+import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
 import org.gradle.api.logging.Logging
 
 class PatchRouletteApi(
-    private val client: HttpClient,
-    private val host: String,
-    private val accessToken: String,
+    private val client: CloseableHttpClient,
+    private val endpoint: String,
     private val minecraftVersion: String,
 ) {
     companion object {
@@ -48,44 +47,31 @@ class PatchRouletteApi(
     data class Patch(val path: String, val status: Status, val responsibleUser: String?)
 
     fun getAvailablePatches(): List<String> {
-        val request = HttpRequest.newBuilder()
-            .GET()
-            .uri(apiUri("/patches/available", mapOf("minecraftVersion" to minecraftVersion)))
+        val request = ClassicRequestBuilder.get(apiUri("/patches/available", mapOf("minecraftVersion" to minecraftVersion))).build()
         val response = send(request)
         return gson.fromJson(response, typeToken<List<String>>())
     }
 
     fun getAllPatches(): List<Patch> {
-        val request = HttpRequest.newBuilder()
-            .GET()
-            .uri(apiUri("/patches", mapOf("minecraftVersion" to minecraftVersion)))
+        val request = ClassicRequestBuilder.get(apiUri("/patches", mapOf("minecraftVersion" to minecraftVersion))).build()
         val response = send(request)
         return gson.fromJson(response, typeToken<List<Patch>>())
     }
 
     fun setPatches(paths: List<String>) {
-        val request = HttpRequest.newBuilder()
-            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths, minecraftVersion))))
-            .uri(apiUri("/patches/init"))
-            .contentTypeApplicationJson()
+        val request = jsonPost("/patches/init", PatchesInfo(paths, minecraftVersion))
         send(request)
         logger.lifecycle("Set patches for $minecraftVersion")
     }
 
     fun clearPatches() {
-        val request = HttpRequest.newBuilder()
-            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(mapOf("minecraftVersion" to minecraftVersion))))
-            .uri(apiUri("/patches/clear"))
-            .contentTypeApplicationJson()
+        val request = jsonPost("/patches/clear", mapOf("minecraftVersion" to minecraftVersion))
         send(request)
         logger.lifecycle("Cleared patches for $minecraftVersion")
     }
 
     fun startPatches(paths: List<String>): List<String> {
-        val request = HttpRequest.newBuilder()
-            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths, minecraftVersion))))
-            .uri(apiUri("/patches/start"))
-            .contentTypeApplicationJson()
+        val request = jsonPost("/patches/start", PatchesInfo(paths, minecraftVersion))
         val response = send(request)
         val startedPatches = gson.fromJson<List<String>>(response, typeToken<List<String>>())
         logger.lifecycle("Started patches $startedPatches")
@@ -101,34 +87,28 @@ class PatchRouletteApi(
     }
 
     private fun patchAction(route: String, path: String, action: String) {
-        val request = HttpRequest.newBuilder()
-            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion))))
-            .uri(apiUri(route))
-            .contentTypeApplicationJson()
+        val request = jsonPost(route, PatchInfo(path, minecraftVersion))
         send(request)
         logger.lifecycle("$action patch $path")
     }
 
-    private fun send(request: HttpRequest.Builder): String {
-        val response = client.send(
-            request.header("Authorization", "Bearer $accessToken")
-                .timeout(Duration.ofSeconds(30))
-                .build(),
-            HttpResponse.BodyHandlers.ofString(),
-        )
-        if (response.statusCode() !in 200..299) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
+    private fun send(request: org.apache.hc.core5.http.ClassicHttpRequest): String = client.execute(request) { response ->
+        val body = response.entity?.let(EntityUtils::toString).orEmpty()
+        if (response.code !in 200..299) {
+            throw PaperweightException("Response status code: ${response.code}, body: $body")
         }
-        return response.body()
+        body
     }
 
-    private fun HttpRequest.Builder.contentTypeApplicationJson() = header("Content-Type", "application/json")
+    private fun jsonPost(route: String, payload: Any) = ClassicRequestBuilder.post(apiUri(route))
+        .setEntity(gson.toJson(payload), ContentType.APPLICATION_JSON)
+        .build()
 
     private fun apiUri(path: String, parameters: Map<String, String> = emptyMap()): URI {
         val query = parameters.entries.joinToString("&") { (key, value) ->
             "${URLEncoder.encode(key, StandardCharsets.UTF_8)}=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
         }
-        return URI.create(host.removeSuffix("/") + "/api" + path + if (query.isEmpty()) "" else "?$query")
+        return URI.create(endpoint.removeSuffix("/") + path + if (query.isEmpty()) "" else "?$query")
     }
 
     private data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)

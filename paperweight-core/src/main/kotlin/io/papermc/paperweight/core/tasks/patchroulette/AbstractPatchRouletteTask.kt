@@ -23,10 +23,11 @@
 package io.papermc.paperweight.core.tasks.patchroulette
 
 import io.papermc.paperweight.core.util.OAuthClient
+import io.papermc.paperweight.core.util.OAuthExecHandler
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.path
 import java.net.URI
-import java.net.http.HttpClient
-import java.time.Duration
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -35,7 +36,7 @@ import org.gradle.api.tasks.TaskAction
 
 abstract class AbstractPatchRouletteTask : BaseTask() {
     @get:Input
-    abstract val host: Property<String>
+    abstract val endpoint: Property<String>
 
     @get:Input
     abstract val minecraftVersion: Property<String>
@@ -45,7 +46,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     override fun init() {
         super.init()
-        host.convention("https://patch-roulette.papermc.io")
+        endpoint.convention("https://patch-roulette.papermc.io/api")
         oauthCacheDirectory.fileValue(project.gradle.gradleUserHomeDir.resolve("caches/paperweight/patch-roulette/oauth"))
         doNotTrackState("Run when requested")
     }
@@ -54,17 +55,15 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     @TaskAction
     fun runInternal() {
-        val client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
+        val oauthClient = OAuthClient(
+            URI.create(endpoint.get()),
+            oauthCacheDirectory.path,
+        )
+        val client = HttpClientBuilder.create()
+            .addExecInterceptorLast("oauth", OAuthExecHandler(oauthClient))
             .build()
         try {
-            val accessToken = OAuthClient(
-                client,
-                URI.create(host.get()),
-                oauthCacheDirectory.get().asFile.toPath(),
-                logger,
-            ).accessToken()
-            run(PatchRouletteApi(client, host.get(), accessToken, minecraftVersion.get()))
+            run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get()))
         } finally {
             client.close()
         }

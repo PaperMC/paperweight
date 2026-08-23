@@ -50,41 +50,86 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 /**
  * An OAuth client for a protected resource. It uses dynamic client registration
  * and Authorization Code with PKCE, then retains its refresh token in Gradle's
- * cache for later invocations.
+ * cache for later invocations. Cached credentials are keyed by the authorization
+ * server that issued them, so resources fronted by several servers coexist.
+ *
+ * Required scopes are not configured up front; they are learned at runtime from
+ * WWW-Authenticate challenges ([RFC 6750]) and accumulate over the lifetime of
+ * this client.
  */
 internal class OAuthClient(
-    private val httpClient: HttpClient,
     private val resourceUri: URI,
     private val cacheDirectory: Path,
-    private val logger: Logger,
+    private val fetch: (OAuthHttpRequest) -> OAuthHttpResponse = ::defaultFetch,
 ) {
-    fun accessToken(): String {
-        val configuration = discoverConfiguration()
-        val credentials = loadCredentials()
-        if (credentials != null) {
-            val token = refreshAccessToken(configuration, credentials)
-            if (token != null) {
-                return token
-            }
-            logger.lifecycle("Cached OAuth credentials for $resourceUri are invalid or expired.")
-        } else {
-            logger.lifecycle("OAuth authorization is required to access $resourceUri.")
+    private val learnedScopes = mutableSetOf<String>()
+    private val resourceKey = sha256UrlSafe(resourceUri.toString().removeSuffix("/"))
+    private var issuerOrigin: String? = null
+
+    fun accessToken(
+        discoveryUri: URI? = null,
+        requireScopes: Set<String> = emptySet(),
+        forceRefresh: Boolean = false,
+    ): String {
+        learnedScopes.addAll(requireScopes)
+
+        // Fast path: a cached token for this resource, before the authorization server is known.
+        if (!forceRefresh) {
+            cachedToken()?.let { return it }
         }
 
-        return authorize(configuration)
+        val configuration = discoverConfiguration(discoveryUri)
+        val issuer = issuerOrigin ?: error("Authorization server origin was not resolved")
+
+        val credentials = loadCredentials(issuer)
+        if (credentials != null) {
+            // Refresh silently first: refreshing re-evaluates our entitlements server-side,
+            // so widened grants are picked up without user interaction.
+            val refreshed = refreshAccessToken(configuration, credentials)
+            if (refreshed == null) {
+                logger.lifecycle("Cached OAuth credentials for $resourceUri are invalid or expired.")
+            } else {
+                val granted = requireNotNull(loadCredentials(issuer)).grantedScopes
+                if (granted.containsAll(learnedScopes)) {
+                    return refreshed
+                }
+                logger.lifecycle("Refreshed OAuth credentials for $resourceUri still lack required scope(s).")
+            }
+        }
+
+        val token = authorize(configuration, issuer)
+        val granted = loadCredentials(issuer)?.grantedScopes.orEmpty()
+        if (!granted.containsAll(learnedScopes)) {
+            throw PaperweightException(
+                "OAuth authorization for $resourceUri did not grant the required scope(s): " +
+                    learnedScopes.subtract(granted).sorted().joinToString(" ") +
+                    ". Your account may not be entitled to this operation."
+            )
+        }
+        return token
     }
 
-    private fun discoverConfiguration(): OAuthConfiguration {
-        val discoveryUri = URI.create(resourceUri.toString().removeSuffix("/") + "/.well-known/oauth-authorization-server")
-        val response = httpClient.send(
-            HttpRequest.newBuilder(discoveryUri).timeout(Duration.ofSeconds(30)).GET().build(),
-            HttpResponse.BodyHandlers.ofString(),
-        )
+    /** Returns null when no credentials exist yet, leaving requests to be driven by auth challenges. */
+    fun tryAccessToken(discoveryUri: URI? = null): String? {
+        loadCredentials() ?: return null
+        return accessToken(discoveryUri)
+    }
+
+    private fun cachedToken(): String? = cachedToken(loadCredentials())
+
+    private fun cachedToken(credentials: OAuthCredentials?): String? {
+        return credentials?.takeIf { it.hasValidAccessToken() && it.grantedScopes.containsAll(learnedScopes) }?.accessToken
+    }
+
+    private fun discoverConfiguration(discoveryUri: URI?): OAuthConfiguration {
+        val endpoint = discoveryUri ?: resourceUri.resolve("/.well-known/oauth-authorization-server")
+        issuerOrigin = originOf(endpoint)
+        val response = fetch(OAuthHttpRequest(endpoint))
         if (response.statusCode() !in 200..299) {
             throw PaperweightException("Could not discover OAuth configuration: ${response.statusCode()} ${response.body()}")
         }
@@ -96,7 +141,25 @@ internal class OAuthClient(
         return OAuthConfiguration(authorizationEndpoint, tokenEndpoint, registrationEndpoint)
     }
 
-    private fun authorize(configuration: OAuthConfiguration): String {
+    private fun authorizationServerMetadataUri(authorizationServer: URI): URI {
+        val normalized = authorizationServer.toString().removeSuffix("/")
+        return URI.create("$normalized/.well-known/oauth-authorization-server")
+    }
+
+    fun discoveryUri(resourceMetadataUri: URI?): URI? {
+        if (resourceMetadataUri == null) {
+            return null
+        }
+        val response = fetch(OAuthHttpRequest(resourceMetadataUri))
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException("Could not discover OAuth protected resource metadata: ${response.statusCode()} ${response.body()}")
+        }
+        val resourceMetadata = gson.fromJson(response.body(), ResourceMetadataResponse::class.java)
+        val authorizationServer = resourceMetadata.authorizationServers?.firstOrNull().required("authorization_servers")
+        return authorizationServerMetadataUri(URI.create(authorizationServer))
+    }
+
+    private fun authorize(configuration: OAuthConfiguration, issuer: String): String {
         val verifier = randomUrlSafeValue()
         val state = randomUrlSafeValue()
         val code = CompletableFuture<String>()
@@ -109,7 +172,7 @@ internal class OAuthClient(
 
             val authorizationCode = waitForAuthorizationCode(code)
             val token = exchangeCode(configuration.tokenEndpoint, authorizationCode, verifier, redirectUri, clientId)
-            saveCredentials(OAuthCredentials(clientId, token.refreshToken.required("refresh_token")))
+            saveCredentials(issuer, newCredentials(issuer, clientId, token.refreshToken.required("refresh_token"), token, learnedScopes))
             logger.lifecycle("OAuth authorization succeeded for $resourceUri.")
             return token.accessToken.required("access_token")
         } finally {
@@ -124,22 +187,30 @@ internal class OAuthClient(
             "refresh_token" to credentials.refreshToken,
             "resource" to resourceUri.toString(),
         )
-        val response = httpClient.send(
-            formRequest(configuration.tokenEndpoint, body),
-            HttpResponse.BodyHandlers.ofString(),
-        )
+        val response = fetch(formRequest(configuration.tokenEndpoint, body))
         if (response.statusCode() in 400..499) {
-            return null
+            val error = runCatching { gson.fromJson(response.body(), ErrorResponse::class.java).error }.getOrNull()
+            if (error == "invalid_grant") {
+                return null
+            }
+            throw PaperweightException("Could not refresh OAuth access token: ${response.statusCode()} ${response.body()}")
         }
         if (response.statusCode() !in 200..299) {
             throw PaperweightException("Could not refresh OAuth access token: ${response.statusCode()} ${response.body()}")
         }
 
         val token = gson.fromJson(response.body(), TokenResponse::class.java)
-        val refreshToken = token.refreshToken
-        if (!refreshToken.isNullOrBlank()) {
-            saveCredentials(OAuthCredentials(credentials.clientId, refreshToken))
-        }
+        saveCredentials(
+            credentials.issuer,
+            newCredentials(
+                credentials.issuer,
+                credentials.clientId,
+                token.refreshToken ?: credentials.refreshToken,
+                token,
+                // A missing scope attribute on a refresh means the previous grants are unchanged.
+                credentials.grantedScopes,
+            )
+        )
         return token.accessToken.required("access_token")
     }
 
@@ -150,7 +221,7 @@ internal class OAuthClient(
         verifier: String,
         state: String,
     ): URI {
-        val parameters = formBody(
+        val parameters = mutableListOf(
             "response_type" to "code",
             "client_id" to clientId,
             "redirect_uri" to redirectUri.toString(),
@@ -159,8 +230,11 @@ internal class OAuthClient(
             "code_challenge" to sha256UrlSafe(verifier),
             "code_challenge_method" to "S256",
         )
+        if (learnedScopes.isNotEmpty()) {
+            parameters += "scope" to learnedScopes.sorted().joinToString(" ")
+        }
         val separator = if (URI.create(authorizationEndpoint).rawQuery == null) "?" else "&"
-        return URI.create(authorizationEndpoint + separator + parameters)
+        return URI.create(authorizationEndpoint + separator + formBody(*parameters.toTypedArray()))
     }
 
     private fun openBrowser(authorizationUri: URI) {
@@ -291,25 +365,23 @@ internal class OAuthClient(
     }
 
     private fun registerClient(registrationEndpoint: String, redirectUri: URI): String {
-        val body = gson.toJson(
-            mapOf(
-                "application_type" to "native",
-                "redirect_uris" to listOf(redirectUri.toString()),
-                "grant_types" to listOf("authorization_code", "refresh_token"),
-                "response_types" to listOf("code"),
-                "token_endpoint_auth_method" to "none",
-            )
+        val registrationRequest = mutableMapOf<String, Any>(
+            "application_type" to "native",
+            "redirect_uris" to listOf(redirectUri.toString()),
+            "grant_types" to listOf("authorization_code", "refresh_token"),
+            "response_types" to listOf("code"),
+            "token_endpoint_auth_method" to "none",
         )
-        val response = httpClient.send(
-            HttpRequest.newBuilder(URI.create(registrationEndpoint))
-                .timeout(Duration.ofSeconds(30))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build(),
-            HttpResponse.BodyHandlers.ofString(),
-        )
+        if (learnedScopes.isNotEmpty()) {
+            registrationRequest["scope"] = learnedScopes.sorted().joinToString(" ")
+        }
+        val body = gson.toJson(registrationRequest)
+        val response = fetch(OAuthHttpRequest(URI.create(registrationEndpoint), "POST", mapOf("Content-Type" to "application/json"), body))
         if (response.statusCode() !in 200..299) {
-            throw PaperweightException("Could not register an OAuth client: ${response.statusCode()} ${response.body()}")
+            throw PaperweightException(
+                "Could not register an OAuth client: ${response.statusCode()} ${response.body()}. " +
+                    "For Cloudflare Access, enable allow loopback clients for this application."
+            )
         }
         val registration = gson.fromJson(response.body(), RegistrationResponse::class.java)
         return registration.clientId.required("client_id")
@@ -330,29 +402,40 @@ internal class OAuthClient(
             "code_verifier" to verifier,
             "resource" to resourceUri.toString(),
         )
-        val response = httpClient.send(
-            formRequest(tokenEndpoint, body),
-            HttpResponse.BodyHandlers.ofString(),
-        )
+        val response = fetch(formRequest(tokenEndpoint, body))
         if (response.statusCode() !in 200..299) {
             throw PaperweightException("Could not exchange OAuth authorization code: ${response.statusCode()} ${response.body()}")
         }
         return gson.fromJson(response.body(), TokenResponse::class.java)
     }
 
-    private fun formRequest(tokenEndpoint: String, body: String): HttpRequest {
-        return HttpRequest.newBuilder(URI.create(tokenEndpoint))
-            .timeout(Duration.ofSeconds(30))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
+    private fun formRequest(tokenEndpoint: String, body: String): OAuthHttpRequest {
+        return OAuthHttpRequest(
+            URI.create(tokenEndpoint),
+            "POST",
+            mapOf("Content-Type" to "application/x-www-form-urlencoded"),
+            body,
+        )
     }
 
+    /** Loads any cached credentials for this resource, preferring a valid token when several servers have issued one. */
     private fun loadCredentials(): OAuthCredentials? {
-        val cacheFile = cacheFile()
-        if (!Files.isRegularFile(cacheFile)) {
+        if (!Files.isDirectory(cacheDirectory)) {
             return null
         }
+        Files.newDirectoryStream(cacheDirectory, "oauth-$resourceKey-*.json").use { entries ->
+            val credentials = entries.mapNotNull { readCredentials(it) }
+            return credentials.firstOrNull { it.hasValidAccessToken() }
+                ?: credentials.maxByOrNull { it.expiresAt }
+        }
+    }
+
+    private fun loadCredentials(issuer: String): OAuthCredentials? {
+        val cacheFile = cacheFile(issuer)
+        return if (Files.isRegularFile(cacheFile)) readCredentials(cacheFile) else null
+    }
+
+    private fun readCredentials(cacheFile: Path): OAuthCredentials? {
         return try {
             gson.fromJson(Files.readString(cacheFile), OAuthCredentials::class.java)
         } catch (ex: Exception) {
@@ -361,9 +444,9 @@ internal class OAuthClient(
         }
     }
 
-    private fun saveCredentials(credentials: OAuthCredentials) {
+    private fun saveCredentials(issuer: String, credentials: OAuthCredentials) {
         Files.createDirectories(cacheDirectory)
-        val cacheFile = cacheFile()
+        val cacheFile = cacheFile(issuer)
         val tmp = Files.createTempFile(cacheDirectory, "oauth-", ".tmp")
         try {
             Files.writeString(tmp, gson.toJson(credentials), StandardOpenOption.TRUNCATE_EXISTING)
@@ -380,10 +463,26 @@ internal class OAuthClient(
         }
     }
 
-    private fun cacheFile(): Path {
-        val normalized = resourceUri.toString().removeSuffix("/")
-        val resourceHash = sha256UrlSafe(normalized)
-        return cacheDirectory.resolve("oauth-$resourceHash.json")
+    private fun cacheFile(issuer: String): Path {
+        return cacheDirectory.resolve("oauth-$resourceKey-${sha256UrlSafe(issuer)}.json")
+    }
+
+    private fun originOf(uri: URI): String {
+        return "${uri.scheme}://${uri.authority}"
+    }
+
+    private fun newCredentials(
+        issuer: String,
+        clientId: String,
+        refreshToken: String,
+        token: TokenResponse,
+        requested: Set<String>,
+    ): OAuthCredentials {
+        val expiresAt = token.expiresIn?.let { expiresIn ->
+            (System.currentTimeMillis() / 1000) + (expiresIn - EXPIRY_SKEW_SECONDS).coerceAtLeast(0)
+        } ?: 0
+        val grantedScopes = token.scope?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.toSet() ?: requested
+        return OAuthCredentials(issuer, clientId, refreshToken, token.accessToken.required("access_token"), expiresAt, grantedScopes)
     }
 
     private fun formBody(vararg parameters: Pair<String, String>): String {
@@ -417,6 +516,8 @@ internal class OAuthClient(
         @SerializedName("registration_endpoint") val registrationEndpoint: String?,
     )
 
+    private class ResourceMetadataResponse(@SerializedName("authorization_servers") val authorizationServers: List<String>?)
+
     private class OAuthConfiguration(
         val authorizationEndpoint: String,
         val tokenEndpoint: String,
@@ -425,14 +526,64 @@ internal class OAuthClient(
 
     private class RegistrationResponse(@SerializedName("client_id") val clientId: String?)
 
+    private class ErrorResponse(@SerializedName("error") val error: String?)
+
     private class TokenResponse(
         @SerializedName("access_token") val accessToken: String?,
         @SerializedName("refresh_token") val refreshToken: String?,
+        @SerializedName("expires_in") val expiresIn: Long?,
+        @SerializedName("scope") val scope: String?,
     )
 
-    private class OAuthCredentials(val clientId: String, val refreshToken: String)
+    private data class OAuthCredentials(
+        val issuer: String,
+        val clientId: String,
+        val refreshToken: String,
+        val accessToken: String,
+        val expiresAt: Long,
+        val grantedScopes: Set<String>,
+    ) {
+        fun hasValidAccessToken(): Boolean = expiresAt > System.currentTimeMillis() / 1000
+    }
 
     private companion object {
+        private val logger = Logging.getLogger(OAuthClient::class.java)
+
         const val CALLBACK_PATH = "/oauth/callback"
+        const val EXPIRY_SKEW_SECONDS = 30L
+
+        private val defaultHttpClient: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build()
+
+        fun defaultFetch(request: OAuthHttpRequest): OAuthHttpResponse {
+            val builder = HttpRequest.newBuilder(request.uri).timeout(Duration.ofSeconds(30))
+            request.headers.forEach { (name, value) -> builder.header(name, value) }
+            if (request.body == null) {
+                builder.method(request.method, HttpRequest.BodyPublishers.noBody())
+            } else {
+                builder.method(request.method, HttpRequest.BodyPublishers.ofString(request.body))
+            }
+            return try {
+                val response = defaultHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+                OAuthHttpResponse(response.statusCode(), response.body())
+            } catch (ex: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw PaperweightException("Interrupted during OAuth HTTP request.", ex)
+            } catch (ex: Exception) {
+                throw PaperweightException("OAuth HTTP request failed.", ex)
+            }
+        }
     }
+}
+
+internal data class OAuthHttpRequest(
+    val uri: URI,
+    val method: String = "GET",
+    val headers: Map<String, String> = emptyMap(),
+    val body: String? = null,
+)
+
+internal data class OAuthHttpResponse(private val status: Int, private val content: String) {
+    fun statusCode(): Int = status
+
+    fun body(): String = content
 }
