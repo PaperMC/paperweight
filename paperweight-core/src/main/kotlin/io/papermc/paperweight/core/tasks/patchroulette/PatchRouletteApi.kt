@@ -25,18 +25,18 @@ package io.papermc.paperweight.core.tasks.patchroulette
 import com.github.salomonbrys.kotson.typeToken
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.gson
+import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
-import org.apache.hc.core5.http.ClassicHttpRequest
-import org.apache.hc.core5.http.ContentType
-import org.apache.hc.core5.http.io.entity.EntityUtils
-import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
+import java.time.Duration
 import org.gradle.api.logging.Logging
 
 class PatchRouletteApi(
-    private val client: CloseableHttpClient,
+    private val client: HttpClient,
     private val endpoint: String,
     private val minecraftVersion: String,
     private val accessToken: (forceRefresh: Boolean) -> String,
@@ -49,13 +49,13 @@ class PatchRouletteApi(
     data class Patch(val path: String, val status: Status, val responsibleUser: String?)
 
     fun getAvailablePatches(): List<String> {
-        val request = ClassicRequestBuilder.get(apiUri("/patches/available", mapOf("minecraftVersion" to minecraftVersion))).build()
+        val request = HttpRequest.newBuilder(apiUri("/patches/available", mapOf("minecraftVersion" to minecraftVersion))).GET()
         val response = send(request)
         return gson.fromJson(response, typeToken<List<String>>())
     }
 
     fun getAllPatches(): List<Patch> {
-        val request = ClassicRequestBuilder.get(apiUri("/patches", mapOf("minecraftVersion" to minecraftVersion))).build()
+        val request = HttpRequest.newBuilder(apiUri("/patches", mapOf("minecraftVersion" to minecraftVersion))).GET()
         val response = send(request)
         return gson.fromJson(response, typeToken<List<Patch>>())
     }
@@ -94,28 +94,35 @@ class PatchRouletteApi(
         logger.lifecycle("$action patch $path")
     }
 
-    private fun send(request: ClassicHttpRequest): String {
+    private fun send(request: HttpRequest.Builder): String {
         var response = execute(request, forceRefresh = false)
-        if (response.code == 401) {
-            // The first response is fully closed before refresh or interactive authorization begins.
+        if (response.statusCode() == 401) {
             response = execute(request, forceRefresh = true)
         }
-        if (response.code !in 200..299) {
-            throw PaperweightException("Response status code: ${response.code}, body: ${response.body}")
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
         }
-        return response.body
+        return response.body()
     }
 
-    private fun execute(request: ClassicHttpRequest, forceRefresh: Boolean): ApiResponse {
-        request.setHeader("Authorization", "Bearer ${accessToken(forceRefresh)}")
-        return client.execute(request) { response ->
-            ApiResponse(response.code, response.entity?.let(EntityUtils::toString).orEmpty())
+    private fun execute(request: HttpRequest.Builder, forceRefresh: Boolean): HttpResponse<String> {
+        val authenticated = request
+            .timeout(Duration.ofSeconds(30))
+            .setHeader("Authorization", "Bearer ${accessToken(forceRefresh)}")
+            .build()
+        return try {
+            client.send(authenticated, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw PaperweightException("Interrupted during Patch Roulette API request.", ex)
+        } catch (ex: IOException) {
+            throw PaperweightException("Patch Roulette API request failed.", ex)
         }
     }
 
-    private fun jsonPost(route: String, payload: Any) = ClassicRequestBuilder.post(apiUri(route))
-        .setEntity(gson.toJson(payload), ContentType.APPLICATION_JSON)
-        .build()
+    private fun jsonPost(route: String, payload: Any): HttpRequest.Builder = HttpRequest.newBuilder(apiUri(route))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload), StandardCharsets.UTF_8))
 
     private fun apiUri(path: String, parameters: Map<String, String> = emptyMap()): URI {
         val query = parameters.entries.joinToString("&") { (key, value) ->
@@ -127,6 +134,4 @@ class PatchRouletteApi(
     private data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)
 
     private data class PatchInfo(val path: String, val minecraftVersion: String)
-
-    private data class ApiResponse(val code: Int, val body: String)
 }

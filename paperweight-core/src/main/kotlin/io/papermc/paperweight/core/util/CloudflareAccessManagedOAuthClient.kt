@@ -28,8 +28,13 @@ import com.sun.net.httpserver.HttpServer
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.gson
 import java.awt.Desktop
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.URI
+import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
@@ -39,18 +44,12 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import org.apache.hc.client5.http.entity.UrlEncodedFormEntity
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
-import org.apache.hc.core5.http.ClassicHttpRequest
-import org.apache.hc.core5.http.ContentType
-import org.apache.hc.core5.http.HttpHeaders
-import org.apache.hc.core5.http.io.entity.EntityUtils
-import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
 import org.apache.hc.core5.http.message.BasicNameValuePair
 import org.apache.hc.core5.net.URIBuilder
 import org.gradle.api.logging.Logging
@@ -78,7 +77,7 @@ import org.gradle.api.logging.Logging
  * interpreted.
  */
 internal class CloudflareAccessManagedOAuthClient(
-    private val httpClient: CloseableHttpClient,
+    private val httpClient: HttpClient,
     private val resourceUri: URI,
     private val cacheDirectory: Path,
 ) {
@@ -89,6 +88,8 @@ internal class CloudflareAccessManagedOAuthClient(
         const val EXPIRY_SKEW_SECONDS = 30L
         const val CLIENT_NAME = "paperweight"
         const val CLIENT_URI = "https://github.com/PaperMC/paperweight"
+
+        val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
     }
 
     private val resourceKey = sha256UrlSafe(resourceUri.toString())
@@ -159,18 +160,17 @@ internal class CloudflareAccessManagedOAuthClient(
         )
     }
 
-    private fun fetchJson(uri: URI, description: String): String =
-        httpClient.execute(ClassicRequestBuilder.get(uri).build()) { response ->
-            val body = response.entity?.let(EntityUtils::toString).orEmpty()
-            if (response.code !in 200..299) {
-                throw PaperweightException("Could not fetch $description: ${response.code} $body")
-            }
-            val contentType = response.getFirstHeader(HttpHeaders.CONTENT_TYPE)?.value
-            if (contentType?.substringBefore(';')?.trim()?.equals("application/json", ignoreCase = true) != true) {
-                throw PaperweightException("$description did not use the application/json content type.")
-            }
-            body
+    private fun fetchJson(uri: URI, description: String): String {
+        val response = send(request(uri).GET().build())
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException("Could not fetch $description: ${response.statusCode()} ${response.body()}")
         }
+        val contentType = response.headers().firstValue("Content-Type").orElse(null)
+        if (contentType?.substringBefore(';')?.trim()?.equals("application/json", ignoreCase = true) != true) {
+            throw PaperweightException("$description did not use the application/json content type.")
+        }
+        return response.body()
+    }
 
     private fun resourceMetadataUri(): URI {
         val path = resourceUri.rawPath.orEmpty().takeUnless { it == "/" }.orEmpty()
@@ -233,19 +233,18 @@ internal class CloudflareAccessManagedOAuthClient(
             "refresh_token" to credentials.refreshToken,
             "resource" to resourceUri.toString(),
         )
-        val token = httpClient.execute(request) { response ->
-            val responseBody = response.entity?.let(EntityUtils::toString).orEmpty()
-            if (response.code in 400..499) {
-                val error = runCatching { gson.fromJson(responseBody, ErrorResponse::class.java).error }.getOrNull()
-                if (error == "invalid_grant" || error == "invalid_client") {
-                    return@execute null
-                }
+        val response = send(request)
+        val responseBody = response.body()
+        if (response.statusCode() in 400..499) {
+            val error = runCatching { gson.fromJson(responseBody, ErrorResponse::class.java).error }.getOrNull()
+            if (error == "invalid_grant" || error == "invalid_client") {
+                return null
             }
-            if (response.code !in 200..299) {
-                throw PaperweightException("Could not refresh OAuth access token: ${response.code} $responseBody")
-            }
-            gson.fromJson(responseBody, TokenResponse::class.java)
-        } ?: return null
+        }
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException("Could not refresh OAuth access token: ${response.statusCode()} $responseBody")
+        }
+        val token = gson.fromJson(responseBody, TokenResponse::class.java)
         val refreshed = newCredentials(credentials.clientId, token.refreshToken ?: credentials.refreshToken, token)
         saveCredentials(configuration.issuer, refreshed)
         return refreshed.accessToken
@@ -391,20 +390,19 @@ internal class CloudflareAccessManagedOAuthClient(
             "token_endpoint_auth_method" to "none",
         )
         val body = gson.toJson(registrationRequest)
-        return httpClient.execute(
-            ClassicRequestBuilder.post(registrationEndpoint)
-                .setEntity(body, ContentType.APPLICATION_JSON)
+        val response = send(
+            request(URI.create(registrationEndpoint))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build()
-        ) { response ->
-            val responseBody = response.entity?.let(EntityUtils::toString).orEmpty()
-            if (response.code !in 200..299) {
-                throw PaperweightException(
-                    "Could not register an OAuth client: ${response.code} $responseBody. " +
-                        "For Cloudflare Access, enable allow loopback clients for this application."
-                )
-            }
-            gson.fromJson(responseBody, RegistrationResponse::class.java).clientId.required("client_id")
+        )
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException(
+                "Could not register an OAuth client: ${response.statusCode()} ${response.body()}. " +
+                    "For Cloudflare Access, enable allow loopback clients for this application."
+            )
         }
+        return gson.fromJson(response.body(), RegistrationResponse::class.java).clientId.required("client_id")
     }
 
     private fun exchangeCode(
@@ -423,19 +421,35 @@ internal class CloudflareAccessManagedOAuthClient(
             "code_verifier" to verifier,
             "resource" to resourceUri.toString(),
         )
-        return httpClient.execute(request) { response ->
-            val responseBody = response.entity?.let(EntityUtils::toString).orEmpty()
-            if (response.code !in 200..299) {
-                throw PaperweightException("Could not exchange OAuth authorization code: ${response.code} $responseBody")
-            }
-            gson.fromJson(responseBody, TokenResponse::class.java)
+        val response = send(request)
+        if (response.statusCode() !in 200..299) {
+            throw PaperweightException(
+                "Could not exchange OAuth authorization code: ${response.statusCode()} ${response.body()}"
+            )
         }
+        return gson.fromJson(response.body(), TokenResponse::class.java)
     }
 
-    private fun formRequest(tokenEndpoint: String, vararg parameters: Pair<String, String>): ClassicHttpRequest =
-        ClassicRequestBuilder.post(tokenEndpoint)
-            .setEntity(UrlEncodedFormEntity(parameters.map { BasicNameValuePair(it.first, it.second) }))
+    private fun formRequest(tokenEndpoint: String, vararg parameters: Pair<String, String>): HttpRequest =
+        request(URI.create(tokenEndpoint))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(formBody(*parameters), StandardCharsets.UTF_8))
             .build()
+
+    private fun request(uri: URI): HttpRequest.Builder = HttpRequest.newBuilder(uri).timeout(REQUEST_TIMEOUT)
+
+    private fun formBody(vararg parameters: Pair<String, String>): String = parameters.joinToString("&") { (key, value) ->
+        "${URLEncoder.encode(key, StandardCharsets.UTF_8)}=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
+    }
+
+    private fun send(request: HttpRequest): HttpResponse<String> = try {
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+    } catch (ex: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw PaperweightException("Interrupted during OAuth HTTP request.", ex)
+    } catch (ex: IOException) {
+        throw PaperweightException("OAuth HTTP request failed.", ex)
+    }
 
     private fun loadCredentials(issuer: String): OAuthCredentials? {
         val cacheFile = cacheFile(issuer)

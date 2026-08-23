@@ -28,11 +28,8 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.path
 import io.papermc.paperweight.util.set
 import java.net.URI
-import org.apache.hc.client5.http.config.ConnectionConfig
-import org.apache.hc.client5.http.config.RequestConfig
-import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder
-import org.apache.hc.core5.util.Timeout
+import java.net.http.HttpClient
+import java.time.Duration
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -63,34 +60,14 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
 
     @TaskAction
     fun runInternal() {
-        val client = HttpClientBuilder.create()
-            .useSystemProperties()
-            .setDefaultRequestConfig(
-                RequestConfig.custom()
-                    .setConnectionRequestTimeout(Timeout.ofSeconds(30))
-                    .setResponseTimeout(Timeout.ofSeconds(30))
-                    .build()
-            )
-            .setConnectionManager(
-                PoolingHttpClientConnectionManagerBuilder.create()
-                    .useSystemProperties()
-                    .setDefaultConnectionConfig(
-                        ConnectionConfig.custom()
-                            .setConnectTimeout(Timeout.ofSeconds(30))
-                            .build()
-                    )
-                    .build()
-            )
+        val client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
             .build()
-        try {
-            val oauthClient = CloudflareAccessManagedOAuthClient(
-                client,
-                URI.create(endpoint.get()),
-                oauthCacheDirectory.path,
-            )
-            run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
-        } finally {
-            client.close()
-        }
+        val oauthClient = CloudflareAccessManagedOAuthClient(
+            client,
+            URI.create(endpoint.get()),
+            oauthCacheDirectory.path,
+        )
+        run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
     }
 }
