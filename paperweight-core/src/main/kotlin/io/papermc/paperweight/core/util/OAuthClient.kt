@@ -79,6 +79,15 @@ internal class OAuthClient(
     private val resourceUri: URI,
     private val cacheDirectory: Path,
 ) {
+    private companion object {
+        private val logger = Logging.getLogger(OAuthClient::class.java)
+
+        const val CALLBACK_PATH = "/oauth/callback"
+        const val EXPIRY_SKEW_SECONDS = 30L
+        const val CLIENT_NAME = "paperweight"
+        const val CLIENT_URI = "https://github.com/PaperMC/paperweight"
+    }
+
     private val resourceKey = sha256UrlSafe(resourceUri.toString())
     private val configuration by lazy(::discoverConfiguration)
     private var credentials: OAuthCredentials? = null
@@ -371,6 +380,8 @@ internal class OAuthClient(
     private fun registerClient(registrationEndpoint: String, redirectUri: URI, supportsRefresh: Boolean): String {
         val grantTypes = listOfNotNull("authorization_code", "refresh_token".takeIf { supportsRefresh })
         val registrationRequest = mapOf(
+            "client_name" to CLIENT_NAME,
+            "client_uri" to CLIENT_URI,
             "redirect_uris" to listOf(redirectUri.toString()),
             "grant_types" to grantTypes,
             "response_types" to listOf("code"),
@@ -534,12 +545,5 @@ internal class OAuthClient(
         val expiresAt: Long?,
     ) {
         fun hasValidAccessToken(): Boolean = expiresAt == null || expiresAt > System.currentTimeMillis() / 1000
-    }
-
-    private companion object {
-        private val logger = Logging.getLogger(OAuthClient::class.java)
-
-        const val CALLBACK_PATH = "/oauth/callback"
-        const val EXPIRY_SKEW_SECONDS = 30L
     }
 }
