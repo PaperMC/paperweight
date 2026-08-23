@@ -29,6 +29,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.core5.http.ClassicHttpRequest
 import org.apache.hc.core5.http.ContentType
 import org.apache.hc.core5.http.io.entity.EntityUtils
 import org.apache.hc.core5.http.io.support.ClassicRequestBuilder
@@ -93,7 +94,7 @@ class PatchRouletteApi(
         logger.lifecycle("$action patch $path")
     }
 
-    private fun send(request: org.apache.hc.core5.http.ClassicHttpRequest): String {
+    private fun send(request: ClassicHttpRequest): String {
         var response = execute(request, forceRefresh = false)
         if (response.code == 401) {
             // The first response is fully closed before refresh or interactive authorization begins.
@@ -105,7 +106,7 @@ class PatchRouletteApi(
         return response.body
     }
 
-    private fun execute(request: org.apache.hc.core5.http.ClassicHttpRequest, forceRefresh: Boolean): ApiResponse {
+    private fun execute(request: ClassicHttpRequest, forceRefresh: Boolean): ApiResponse {
         request.setHeader("Authorization", "Bearer ${accessToken(forceRefresh)}")
         return client.execute(request) { response ->
             ApiResponse(response.code, response.entity?.let(EntityUtils::toString).orEmpty())
