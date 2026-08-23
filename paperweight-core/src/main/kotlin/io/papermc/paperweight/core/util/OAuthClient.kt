@@ -240,10 +240,10 @@ internal class OAuthClient(
     private fun openBrowser(authorizationUri: URI) {
         logger.lifecycle("Opening $authorizationUri in browser...")
         if (openWithDesktop(authorizationUri) || openWithXdgOpen(authorizationUri)) {
-            logger.lifecycle("Opened the authorization page in your browser: $authorizationUri")
+            logger.lifecycle("Go to your browser to complete authorization; waiting for the callback...")
             return
         }
-        logger.warn("Could not open a browser. To authorize, open this URL: $authorizationUri")
+        logger.warn("Could not open a browser. To authorize, open the above URL.")
     }
 
     private fun openWithDesktop(authorizationUri: URI): Boolean {
