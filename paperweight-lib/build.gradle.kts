@@ -18,7 +18,7 @@ sourceSets.main {
 }
 
 dependencies {
-    implementation(libs.httpclient)
+    implementation(libs.httpclient5)
     implementation(libs.bundles.kotson)
     implementation(libs.coroutines)
 
