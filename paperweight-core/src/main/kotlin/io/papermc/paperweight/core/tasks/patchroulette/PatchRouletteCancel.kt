@@ -30,8 +30,10 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class PatchRouletteCancel : AbstractPatchRouletteTask() {
     @get:OutputFile
     abstract val config: RegularFileProperty

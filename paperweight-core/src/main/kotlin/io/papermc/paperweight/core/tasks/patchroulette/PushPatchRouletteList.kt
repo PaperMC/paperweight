@@ -26,7 +26,9 @@ import io.papermc.paperweight.util.*
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class PushPatchRouletteList : AbstractPatchRouletteTask() {
 
     @get:InputDirectory

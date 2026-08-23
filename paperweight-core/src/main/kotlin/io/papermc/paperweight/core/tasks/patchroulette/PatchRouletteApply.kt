@@ -36,6 +36,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
 /**
@@ -54,6 +55,7 @@ import org.gradle.api.tasks.options.Option
  *           Paperweight will attempt to select exactly the provided patch paths.
  *           If any of the provided patches are not available, the task will fail.
  */
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:InputDirectory

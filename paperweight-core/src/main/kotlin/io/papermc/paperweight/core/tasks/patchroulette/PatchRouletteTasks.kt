@@ -56,7 +56,7 @@ class PatchRouletteTasks(
             targetDir = targetDirectory
             config.pathProvider(
                 minecraftVer.map {
-                    layout.cache.resolve(PATCH_ROULETTE_CONFIG_DIR).resolve("$namePrefix-$it.json")
+                    layout.cache.resolve(patchRouletteStateFile(namePrefix, it))
                 }
             )
         }
@@ -64,7 +64,7 @@ class PatchRouletteTasks(
             minecraftVersion = minecraftVer
             config.pathProvider(
                 minecraftVer.map {
-                    layout.cache.resolve(PATCH_ROULETTE_CONFIG_DIR).resolve("$namePrefix-$it.json")
+                    layout.cache.resolve(patchRouletteStateFile(namePrefix, it))
                 }
             )
         }
@@ -73,7 +73,7 @@ class PatchRouletteTasks(
             patchDir = patchDirectory
             config.pathProvider(
                 minecraftVer.map {
-                    layout.cache.resolve(PATCH_ROULETTE_CONFIG_DIR).resolve("$namePrefix-$it.json")
+                    layout.cache.resolve(patchRouletteStateFile(namePrefix, it))
                 }
             )
         }

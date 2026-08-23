@@ -25,7 +25,10 @@ package io.papermc.paperweight.core.tasks.patchroulette
 import io.papermc.paperweight.core.util.OAuthClient
 import io.papermc.paperweight.core.util.OAuthExecHandler
 import io.papermc.paperweight.tasks.*
+import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.constants.PATCH_ROULETTE_OAUTH_CACHE_DIR
 import io.papermc.paperweight.util.path
+import io.papermc.paperweight.util.set
 import java.net.URI
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
 import org.gradle.api.file.DirectoryProperty
@@ -33,7 +36,9 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class AbstractPatchRouletteTask : BaseTask() {
     @get:Input
     abstract val endpoint: Property<String>
@@ -47,8 +52,7 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
     override fun init() {
         super.init()
         endpoint.convention("https://patch-roulette.papermc.io/api")
-        oauthCacheDirectory.fileValue(project.gradle.gradleUserHomeDir.resolve("caches/paperweight/patch-roulette/oauth"))
-        doNotTrackState("Run when requested")
+        oauthCacheDirectory.set(layout.cache.resolve(PATCH_ROULETTE_OAUTH_CACHE_DIR))
     }
 
     abstract fun run(api: PatchRouletteApi)
