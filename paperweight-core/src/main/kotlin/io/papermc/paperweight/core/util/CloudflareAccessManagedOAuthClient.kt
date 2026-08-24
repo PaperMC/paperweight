@@ -88,8 +88,6 @@ internal class CloudflareAccessManagedOAuthClient(
         const val EXPIRY_SKEW_SECONDS = 30L
         const val CLIENT_NAME = "paperweight"
         const val CLIENT_URI = "https://github.com/PaperMC/paperweight"
-
-        val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
     }
 
     private val resourceKey = sha256UrlSafe(resourceUri.toString())
@@ -436,7 +434,8 @@ internal class CloudflareAccessManagedOAuthClient(
             .POST(HttpRequest.BodyPublishers.ofString(formBody(*parameters), StandardCharsets.UTF_8))
             .build()
 
-    private fun request(uri: URI): HttpRequest.Builder = HttpRequest.newBuilder(uri).timeout(REQUEST_TIMEOUT)
+    private fun request(uri: URI): HttpRequest.Builder =
+        HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(30))
 
     private fun formBody(vararg parameters: Pair<String, String>): String = parameters.joinToString("&") { (key, value) ->
         "${URLEncoder.encode(key, StandardCharsets.UTF_8)}=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
