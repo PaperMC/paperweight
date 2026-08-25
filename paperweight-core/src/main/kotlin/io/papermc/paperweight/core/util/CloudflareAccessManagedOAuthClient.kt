@@ -199,7 +199,7 @@ internal class CloudflareAccessManagedOAuthClient(
     private fun origin(uri: URI): String = "${uri.scheme}://${uri.rawAuthority}"
 
     private fun authorize(configuration: OAuthConfiguration): String {
-        val verifier = randomUrlSafeValue()
+        val verifier = randomPkceVerifier()
         val state = randomUrlSafeValue()
         val code = CompletableFuture<String>()
         val server = callbackServer(state, code)
@@ -504,6 +504,15 @@ internal class CloudflareAccessManagedOAuthClient(
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+    }
+
+    private fun randomPkceVerifier(): String {
+        while (true) {
+            val verifier = randomUrlSafeValue()
+            if (sha256UrlSafe(verifier).first().isLetterOrDigit()) {
+                return verifier
+            }
+        }
     }
 
     private fun sha256UrlSafe(value: String): String {

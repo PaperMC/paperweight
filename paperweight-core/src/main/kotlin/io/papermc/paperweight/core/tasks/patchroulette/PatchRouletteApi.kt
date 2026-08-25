@@ -75,7 +75,7 @@ class PatchRouletteApi(
     fun startPatches(paths: List<String>): List<String> {
         val request = jsonPost("/patches/start", PatchesInfo(paths, minecraftVersion))
         val response = send(request)
-        val startedPatches = gson.fromJson<List<String>>(response, typeToken<List<String>>())
+        val startedPatches = gson.fromJson<List<Patch>>(response, typeToken<List<Patch>>()).map(Patch::path)
         logger.lifecycle("Started patches $startedPatches")
         return startedPatches
     }
