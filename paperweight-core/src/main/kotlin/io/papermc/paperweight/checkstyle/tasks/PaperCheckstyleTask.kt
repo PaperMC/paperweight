@@ -34,6 +34,7 @@ import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
@@ -43,8 +44,19 @@ import org.gradle.api.tasks.TaskAction
 @CacheableTask
 abstract class PaperCheckstyleTask : Checkstyle() {
 
-    @get:Input
+    @get:Internal
     abstract val rootPath: Property<String>
+
+    @get:Input
+    val resolvedExclusions: List<String>
+        get() {
+            val excludedDirectories = directoriesToSkip.getOrElse(emptySet())
+            return source.files.mapNotNull { file ->
+                val relativePath = file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
+                val parentPath = relativePath.parent?.invariantSeparatorsPathString + "/"
+                relativePath.invariantSeparatorsPathString.takeIf { parentPath in excludedDirectories }
+            }.sorted()
+        }
 
     @get:Input
     @get:Optional
@@ -73,14 +85,11 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
         existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
         configProperties = existingProperties
+        val resolvedExclusions = resolvedExclusions.toHashSet()
         exclude {
             if (it.isDirectory) return@exclude false
-            val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-            val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
-            if (directoriesToSkip.isPresent) {
-                return@exclude directoriesToSkip.get().any { pkg -> parentPath == pkg }
-            }
-            return@exclude false
+            val relativePath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
+            return@exclude relativePath.invariantSeparatorsPathString in resolvedExclusions
         }
         if (!source.isEmpty) {
             super.run()

@@ -68,6 +68,7 @@ abstract class PaperweightPatcher : Plugin<Project> {
             val applyUpstream = tasks.register<RunNestedBuild>("applyUpstream") {
                 projectDir.set(checkoutTask.flatMap { it.outputDir })
                 tasks.add("applyForDownstream")
+                dependsOn(checkoutTask)
             }
 
             val upstreamConfigTasks = UpstreamConfigTasks(
