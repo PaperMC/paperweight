@@ -65,6 +65,7 @@ fun <R> withLock(
                     "Have been waiting on lock for '$lockFile' for ${waitedMs / 1000 / 60} minute(s).\n" +
                         "If this persists for an unreasonable length of time, kill this process, run './gradlew --stop', and then try again."
                 )
+                continue
             }
         }
         if (openCurrentJvm[normalized] !== lock) {
