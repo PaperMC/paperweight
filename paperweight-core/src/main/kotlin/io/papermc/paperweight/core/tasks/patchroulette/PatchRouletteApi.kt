@@ -39,8 +39,14 @@ class PatchRouletteApi(
     private val client: HttpClient,
     private val endpoint: String,
     private val minecraftVersion: String,
-    private val accessToken: (forceRefresh: Boolean) -> String,
+    private val accessTokenProvider: AccessTokenProvider,
 ) {
+    interface AccessTokenProvider {
+        fun accessToken(): String
+
+        fun tokenForRetry(rejected: String): String
+    }
+
     companion object {
         private val logger = Logging.getLogger(PatchRouletteApi::class.java)
     }
@@ -95,9 +101,11 @@ class PatchRouletteApi(
     }
 
     private fun send(request: HttpRequest.Builder): String {
-        var response = execute(request, forceRefresh = false)
+        var accessToken = accessTokenProvider.accessToken()
+        var response = execute(request, accessToken)
         if (response.statusCode() == 401) {
-            response = execute(request, forceRefresh = true)
+            accessToken = accessTokenProvider.tokenForRetry(accessToken)
+            response = execute(request, accessToken)
         }
         if (response.statusCode() !in 200..299) {
             throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
@@ -105,10 +113,10 @@ class PatchRouletteApi(
         return response.body()
     }
 
-    private fun execute(request: HttpRequest.Builder, forceRefresh: Boolean): HttpResponse<String> {
+    private fun execute(request: HttpRequest.Builder, accessToken: String): HttpResponse<String> {
         val authenticated = request
             .timeout(Duration.ofSeconds(30))
-            .setHeader("Authorization", "Bearer ${accessToken(forceRefresh)}")
+            .setHeader("Authorization", "Bearer $accessToken")
             .build()
         return try {
             client.send(authenticated, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))

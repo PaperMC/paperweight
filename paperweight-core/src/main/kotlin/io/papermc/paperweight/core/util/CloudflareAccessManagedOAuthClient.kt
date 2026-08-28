@@ -27,6 +27,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.gson
+import io.papermc.paperweight.util.withLock
 import java.awt.Desktop
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -76,11 +77,17 @@ import org.gradle.api.logging.Logging
  * Servers advertising an unsupported profile are rejected rather than partially
  * interpreted.
  */
-internal class CloudflareAccessManagedOAuthClient(
+class CloudflareAccessManagedOAuthClient(
     private val httpClient: HttpClient,
     private val resourceUri: URI,
     private val cacheDirectory: Path,
 ) {
+    data class AccessToken(val value: String)
+
+    fun accessToken(): AccessToken = accessToken(null)
+
+    fun tokenForRetry(rejected: AccessToken): AccessToken = accessToken(rejected)
+
     private companion object {
         private val logger = Logging.getLogger(CloudflareAccessManagedOAuthClient::class.java)
 
@@ -92,22 +99,55 @@ internal class CloudflareAccessManagedOAuthClient(
 
     private val resourceKey = sha256UrlSafe(resourceUri.toString())
     private val configuration by lazy(::discoverConfiguration)
-    private var credentials: OAuthCredentials? = null
+    private val credentialCacheFile by lazy {
+        cacheDirectory.resolve("oauth-$resourceKey-${sha256UrlSafe(configuration.issuer.toString())}.json")
+    }
+    private val credentialLockFile by lazy {
+        credentialCacheFile.resolveSibling("${credentialCacheFile.fileName.toString().removeSuffix(".json")}.lock")
+    }
 
-    /**
-     * Returns a usable access token. When [forceRefresh] is true, a cached access
-     * token is discarded after a protected resource has rejected it.
-     */
-    fun accessToken(forceRefresh: Boolean = false): String {
-        val currentCredentials = credentials ?: loadCredentials(configuration.issuer).also { credentials = it }
-        if (!forceRefresh && currentCredentials?.hasValidAccessToken() == true) {
-            return currentCredentials.accessToken
+    private fun accessToken(rejected: AccessToken?): AccessToken {
+        val configuration = configuration
+        var authorizationBaseline: OAuthCredentials? = null
+        val cachedAccessToken = withLock(credentialLockFile) {
+            val currentCredentials = loadCredentials()
+            if (
+                currentCredentials?.hasValidAccessToken() == true &&
+                currentCredentials.accessToken != rejected?.value
+            ) {
+                return@withLock AccessToken(currentCredentials.accessToken)
+            }
+            if (currentCredentials != null) {
+                refreshAccessToken(configuration, currentCredentials)
+                    ?.takeIf { it != rejected }
+                    ?.let { return@withLock it }
+                logger.lifecycle("Cached OAuth credentials for $resourceUri are invalid or expired.")
+            }
+            authorizationBaseline = currentCredentials
+            null
         }
-        if (currentCredentials != null) {
-            refreshAccessToken(configuration, currentCredentials)?.let { return it }
-            logger.lifecycle("Cached OAuth credentials for $resourceUri are invalid or expired.")
+        if (cachedAccessToken != null) {
+            return cachedAccessToken
         }
-        return authorize(configuration)
+
+        val authorizedCredentials = authorize(configuration)
+        return withLock(credentialLockFile) {
+            // Prefer credentials another process saved while this browser flow was running.
+            val currentCredentials = loadCredentials()
+            if (
+                currentCredentials != authorizationBaseline &&
+                currentCredentials?.hasValidAccessToken() == true &&
+                currentCredentials.accessToken != rejected?.value
+            ) {
+                AccessToken(currentCredentials.accessToken)
+            } else {
+                if (authorizedCredentials.accessToken == rejected?.value) {
+                    throw PaperweightException("OAuth authorization returned the rejected access token.")
+                }
+                saveCredentials(authorizedCredentials)
+                AccessToken(authorizedCredentials.accessToken)
+            }
+        }
     }
 
     private fun discoverConfiguration(): OAuthConfiguration {
@@ -150,7 +190,7 @@ internal class CloudflareAccessManagedOAuthClient(
         }
 
         return OAuthConfiguration(
-            issuer.toString(),
+            issuer,
             secureEndpoint(metadata.authorizationEndpoint.required("authorization_endpoint"), "authorization_endpoint"),
             secureEndpoint(metadata.tokenEndpoint.required("token_endpoint"), "token_endpoint"),
             secureEndpoint(metadata.registrationEndpoint.required("registration_endpoint"), "registration_endpoint"),
@@ -191,14 +231,15 @@ internal class CloudflareAccessManagedOAuthClient(
         }
     }
 
-    private fun secureEndpoint(value: String, field: String): String {
-        validateHttps(URI.create(value), "OAuth $field")
-        return value
+    private fun secureEndpoint(value: String, field: String): URI {
+        val uri = URI.create(value)
+        validateHttps(uri, "OAuth $field")
+        return uri
     }
 
     private fun origin(uri: URI): String = "${uri.scheme}://${uri.rawAuthority}"
 
-    private fun authorize(configuration: OAuthConfiguration): String {
+    private fun authorize(configuration: OAuthConfiguration): OAuthCredentials {
         val verifier = randomPkceVerifier()
         val state = randomUrlSafeValue()
         val code = CompletableFuture<String>()
@@ -212,15 +253,14 @@ internal class CloudflareAccessManagedOAuthClient(
             val authorizationCode = waitForAuthorizationCode(code)
             val token = exchangeCode(configuration.tokenEndpoint, authorizationCode, verifier, redirectUri, clientId)
             val credentials = newCredentials(clientId, token.refreshToken, token)
-            saveCredentials(configuration.issuer, credentials)
             logger.lifecycle("OAuth authorization succeeded for $resourceUri.")
-            return credentials.accessToken
+            return credentials
         } finally {
             server.stop(0)
         }
     }
 
-    private fun refreshAccessToken(configuration: OAuthConfiguration, credentials: OAuthCredentials): String? {
+    private fun refreshAccessToken(configuration: OAuthConfiguration, credentials: OAuthCredentials): AccessToken? {
         if (!configuration.supportsRefresh || credentials.refreshToken == null) {
             return null
         }
@@ -244,12 +284,12 @@ internal class CloudflareAccessManagedOAuthClient(
         }
         val token = gson.fromJson(responseBody, TokenResponse::class.java)
         val refreshed = newCredentials(credentials.clientId, token.refreshToken ?: credentials.refreshToken, token)
-        saveCredentials(configuration.issuer, refreshed)
-        return refreshed.accessToken
+        saveCredentials(refreshed)
+        return AccessToken(refreshed.accessToken)
     }
 
     private fun authorizationUri(
-        authorizationEndpoint: String,
+        authorizationEndpoint: URI,
         clientId: String,
         redirectUri: URI,
         verifier: String,
@@ -341,43 +381,38 @@ internal class CloudflareAccessManagedOAuthClient(
     }
 
     private fun handleCallback(exchange: HttpExchange, state: String, code: CompletableFuture<String>) {
-        val query = URIBuilder(exchange.requestURI).queryParams.associate { it.name to it.value }
-        val error = query["error"]
-        val message: String
-        val authorizationCode: String?
-        when {
-            exchange.requestMethod != "GET" -> {
-                message = "OAuth callback must use GET."
-                authorizationCode = null
-            }
-            query["state"] != state -> {
-                message = "OAuth callback state did not match."
-                authorizationCode = null
-            }
-            error != null -> {
-                message = "OAuth authorization failed: $error"
-                authorizationCode = null
-            }
-            query["code"].isNullOrBlank() -> {
-                message = "OAuth callback did not include an authorization code."
-                authorizationCode = null
-            }
-            else -> {
-                message = "Authorization complete. You may close this tab."
-                authorizationCode = query.getValue("code")
-            }
+        if (exchange.requestMethod != "GET") {
+            respondToCallback(exchange, 400, "OAuth callback must use GET.")
+            return
         }
-        val bytes = message.toByteArray(StandardCharsets.UTF_8)
-        exchange.sendResponseHeaders(if (authorizationCode == null) 400 else 200, bytes.size.toLong())
-        exchange.responseBody.use { it.write(bytes) }
-        if (authorizationCode == null) {
+        val query = URIBuilder(exchange.requestURI).queryParams.associate { it.name to it.value }
+        if (query["state"] != state) {
+            respondToCallback(exchange, 400, "OAuth callback state did not match.")
+            return
+        }
+
+        val error = query["error"]
+        val authorizationCode = query["code"]
+        val message = when {
+            error != null -> "OAuth authorization failed: $error"
+            authorizationCode.isNullOrBlank() -> "OAuth callback did not include an authorization code."
+            else -> "Authorization complete. You may close this tab."
+        }
+        respondToCallback(exchange, if (authorizationCode.isNullOrBlank() || error != null) 400 else 200, message)
+        if (authorizationCode.isNullOrBlank() || error != null) {
             code.completeExceptionally(PaperweightException(message))
         } else {
             code.complete(authorizationCode)
         }
     }
 
-    private fun registerClient(registrationEndpoint: String, redirectUri: URI, supportsRefresh: Boolean): String {
+    private fun respondToCallback(exchange: HttpExchange, statusCode: Int, message: String) {
+        val bytes = message.toByteArray(StandardCharsets.UTF_8)
+        exchange.sendResponseHeaders(statusCode, bytes.size.toLong())
+        exchange.responseBody.use { it.write(bytes) }
+    }
+
+    private fun registerClient(registrationEndpoint: URI, redirectUri: URI, supportsRefresh: Boolean): String {
         val grantTypes = listOfNotNull("authorization_code", "refresh_token".takeIf { supportsRefresh })
         val registrationRequest = mapOf(
             "client_name" to CLIENT_NAME,
@@ -389,7 +424,7 @@ internal class CloudflareAccessManagedOAuthClient(
         )
         val body = gson.toJson(registrationRequest)
         val response = send(
-            request(URI.create(registrationEndpoint))
+            request(registrationEndpoint)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build()
@@ -404,7 +439,7 @@ internal class CloudflareAccessManagedOAuthClient(
     }
 
     private fun exchangeCode(
-        tokenEndpoint: String,
+        tokenEndpoint: URI,
         code: String,
         verifier: String,
         redirectUri: URI,
@@ -428,8 +463,8 @@ internal class CloudflareAccessManagedOAuthClient(
         return gson.fromJson(response.body(), TokenResponse::class.java)
     }
 
-    private fun formRequest(tokenEndpoint: String, vararg parameters: Pair<String, String>): HttpRequest =
-        request(URI.create(tokenEndpoint))
+    private fun formRequest(tokenEndpoint: URI, vararg parameters: Pair<String, String>): HttpRequest =
+        request(tokenEndpoint)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(formBody(*parameters), StandardCharsets.UTF_8))
             .build()
@@ -450,22 +485,20 @@ internal class CloudflareAccessManagedOAuthClient(
         throw PaperweightException("OAuth HTTP request failed.", ex)
     }
 
-    private fun loadCredentials(issuer: String): OAuthCredentials? {
-        val cacheFile = cacheFile(issuer)
-        if (!Files.isRegularFile(cacheFile)) {
+    private fun loadCredentials(): OAuthCredentials? {
+        if (!Files.isRegularFile(credentialCacheFile)) {
             return null
         }
         return try {
-            gson.fromJson(Files.readString(cacheFile), OAuthCredentials::class.java)
+            gson.fromJson(Files.readString(credentialCacheFile), OAuthCredentials::class.java)
         } catch (ex: Exception) {
             logger.warn("Could not read cached OAuth credentials: ${ex.message}")
             null
         }
     }
 
-    private fun saveCredentials(issuer: String, credentials: OAuthCredentials) {
+    private fun saveCredentials(credentials: OAuthCredentials) {
         Files.createDirectories(cacheDirectory)
-        val cacheFile = cacheFile(issuer)
         val tmp = Files.createTempFile(cacheDirectory, "oauth-", ".tmp")
         try {
             Files.writeString(tmp, gson.toJson(credentials), StandardOpenOption.TRUNCATE_EXISTING)
@@ -473,18 +506,14 @@ internal class CloudflareAccessManagedOAuthClient(
                 Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rw-------"))
             }
             try {
-                Files.move(tmp, cacheFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                Files.move(tmp, credentialCacheFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } catch (_: AtomicMoveNotSupportedException) {
-                Files.move(tmp, cacheFile, StandardCopyOption.REPLACE_EXISTING)
+                Files.move(tmp, credentialCacheFile, StandardCopyOption.REPLACE_EXISTING)
             }
         } finally {
             runCatching { Files.deleteIfExists(tmp) }
         }
-        this.credentials = credentials
     }
-
-    private fun cacheFile(issuer: String): Path =
-        cacheDirectory.resolve("oauth-$resourceKey-${sha256UrlSafe(issuer)}.json")
 
     private fun newCredentials(clientId: String, refreshToken: String?, token: TokenResponse): OAuthCredentials {
         val expiresAt = token.expiresIn?.let { expiresIn ->
@@ -545,10 +574,10 @@ internal class CloudflareAccessManagedOAuthClient(
     )
 
     private class OAuthConfiguration(
-        val issuer: String,
-        val authorizationEndpoint: String,
-        val tokenEndpoint: String,
-        val registrationEndpoint: String,
+        val issuer: URI,
+        val authorizationEndpoint: URI,
+        val tokenEndpoint: URI,
+        val registrationEndpoint: URI,
         val supportsRefresh: Boolean,
     )
 

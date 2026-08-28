@@ -26,7 +26,6 @@ import io.papermc.paperweight.core.util.CloudflareAccessManagedOAuthClient
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.path
-import io.papermc.paperweight.util.set
 import java.net.URI
 import java.net.http.HttpClient
 import java.time.Duration
@@ -64,12 +63,26 @@ abstract class AbstractPatchRouletteTask : BaseTask() {
             .connectTimeout(Duration.ofSeconds(30))
             .build()
             .use { client ->
-                val oauthClient = CloudflareAccessManagedOAuthClient(
-                    client,
-                    URI.create(endpoint.get()),
-                    oauthCacheDirectory.path,
+                run(
+                    PatchRouletteApi(
+                        client,
+                        endpoint.get(),
+                        minecraftVersion.get(),
+                        object : PatchRouletteApi.AccessTokenProvider {
+                            val oauthClient = CloudflareAccessManagedOAuthClient(
+                                client,
+                                URI.create(endpoint.get()),
+                                oauthCacheDirectory.path,
+                            )
+
+                            override fun accessToken(): String = oauthClient.accessToken().value
+
+                            override fun tokenForRetry(rejected: String): String = oauthClient.tokenForRetry(
+                                CloudflareAccessManagedOAuthClient.AccessToken(rejected)
+                            ).value
+                        }
+                    )
                 )
-                run(PatchRouletteApi(client, endpoint.get(), minecraftVersion.get(), oauthClient::accessToken))
             }
     }
 }
