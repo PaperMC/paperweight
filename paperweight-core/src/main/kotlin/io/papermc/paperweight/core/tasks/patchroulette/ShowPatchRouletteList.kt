@@ -25,14 +25,16 @@ package io.papermc.paperweight.core.tasks.patchroulette
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
 
     @get:Input
     @get:Optional
     @get:Option(option = "state", description = "Filter patches by status")
-    abstract val statusFilter: Property<Status>
+    abstract val statusFilter: Property<PatchRouletteApi.Status>
 
     @get:Input
     @get:Optional
@@ -44,11 +46,12 @@ abstract class ShowPatchRouletteList : AbstractPatchRouletteTask() {
     @get:Option(option = "path", description = "Filter patches by path")
     abstract val pathFilter: Property<String>
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         var results = 0
+        val patches = api.getAllPatches()
 
         logger.lifecycle("| Status    | User                 | Path ")
-        getAllPatches().forEach { patch ->
+        patches.forEach { patch ->
             if (statusFilter.isPresent && patch.status != statusFilter.get()) {
                 return@forEach
             }

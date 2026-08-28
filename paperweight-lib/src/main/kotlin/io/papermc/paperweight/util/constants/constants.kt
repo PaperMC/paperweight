@@ -118,7 +118,10 @@ const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
 private const val MACHE_PATH = "$PAPER_PATH/mache"
 const val BASE_PROJECT = "$MACHE_PATH/base"
 const val OLD_PAPER_PATH = "$PAPER_PATH/oldPaper"
-const val PATCH_ROULETTE_CONFIG_DIR = "$PAPER_PATH/patch-roulette"
+
+const val PATCH_ROULETTE_STATE_DIR = "$PAPER_PATH/patch-roulette"
+const val PATCH_ROULETTE_OAUTH_CACHE_DIR = "$PATCH_ROULETTE_STATE_DIR/oauth"
+fun patchRouletteStateFile(namePrefix: String, minecraftVersion: String) = "$PATCH_ROULETTE_STATE_DIR/$namePrefix-$minecraftVersion.json"
 
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")

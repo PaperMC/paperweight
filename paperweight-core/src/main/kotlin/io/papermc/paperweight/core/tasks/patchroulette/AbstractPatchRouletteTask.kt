@@ -22,191 +22,67 @@
 
 package io.papermc.paperweight.core.tasks.patchroulette
 
-import com.github.salomonbrys.kotson.typeToken
-import io.papermc.paperweight.PaperweightException
+import io.papermc.paperweight.core.util.CloudflareAccessManagedOAuthClient
 import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.util.*
+import io.papermc.paperweight.util.constants.*
+import io.papermc.paperweight.util.path
 import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import javax.inject.Inject
+import java.time.Duration
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class AbstractPatchRouletteTask : BaseTask() {
-    @get:Inject
-    abstract val providers: ProviderFactory
-
     @get:Input
     abstract val endpoint: Property<String>
 
     @get:Input
-    abstract val authToken: Property<String>
-
-    @get:Input
     abstract val minecraftVersion: Property<String>
 
-    private var httpClient: HttpClient? = null
+    @get:Internal
+    abstract val oauthCacheDirectory: DirectoryProperty
 
     override fun init() {
         super.init()
         endpoint.convention("https://patch-roulette.papermc.io/api")
-        authToken.convention(providers.gradleProperty("paperweight.patch-roulette-token"))
-        doNotTrackState("Run when requested")
+        oauthCacheDirectory.set(
+            project.gradle.gradleUserHomeDir.resolve("$CACHE_PATH/$PATCH_ROULETTE_OAUTH_CACHE_DIR")
+        )
     }
 
-    abstract fun run()
+    abstract fun run(api: PatchRouletteApi)
 
     @TaskAction
     fun runInternal() {
-        httpClient = HttpClient.newHttpClient()
-        try {
-            run()
-        } finally {
-            httpClient?.let { client ->
-                runCatching { client::class.java.getMethod("close").invoke(client) }
+        HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build()
+            .use { client ->
+                run(
+                    PatchRouletteApi(
+                        client,
+                        endpoint.get(),
+                        minecraftVersion.get(),
+                        object : PatchRouletteApi.AccessTokenProvider {
+                            val oauthClient = CloudflareAccessManagedOAuthClient(
+                                client,
+                                URI.create(endpoint.get()),
+                                oauthCacheDirectory.path,
+                            )
+
+                            override fun accessToken(): String = oauthClient.accessToken().value
+
+                            override fun tokenForRetry(rejected: String): String = oauthClient.tokenForRetry(
+                                CloudflareAccessManagedOAuthClient.AccessToken(rejected)
+                            ).value
+                        }
+                    )
+                )
             }
-            httpClient = null
-        }
-    }
-
-    private fun httpClient() = requireNotNull(httpClient)
-
-    private fun HttpRequest.Builder.auth() = header("Authorization", "Basic " + authToken.get())
-    private fun HttpRequest.Builder.contentTypeTextPlain() = header("Content-Type", "text/plain")
-    private fun HttpRequest.Builder.contentTypeApplicationJson() = header("Content-Type", "application/json")
-
-    @Internal
-    fun getAvailablePatches(): List<String> {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .GET()
-                .uri(URI.create(endpoint.get() + "/get-available-patches?minecraftVersion=${minecraftVersion.get()}"))
-                .auth()
-                .contentTypeTextPlain()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        return gson.fromJson(response.body(), typeToken<List<String>>())
-    }
-
-    enum class Status {
-        WIP,
-        DONE,
-        AVAILABLE
-    }
-
-    data class Patch(val path: String, val status: Status, val responsibleUser: String?)
-
-    @Internal
-    fun getAllPatches(): List<Patch> {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .GET()
-                .uri(URI.create(endpoint.get() + "/get-all-patches?minecraftVersion=${minecraftVersion.get()}"))
-                .auth()
-                .contentTypeTextPlain()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        return gson.fromJson(response.body(), typeToken<List<Patch>>())
-    }
-
-    data class SetPatches(val paths: List<String>, val minecraftVersion: String)
-
-    fun setPatches(paths: List<String>) {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SetPatches(paths, minecraftVersion.get()))))
-                .uri(URI.create(endpoint.get() + "/set-patches"))
-                .auth()
-                .contentTypeApplicationJson()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        logger.lifecycle("Set patches for ${minecraftVersion.get()}")
-    }
-
-    fun clearPatches() {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(minecraftVersion.get()))
-                .uri(URI.create(endpoint.get() + "/clear-patches"))
-                .auth()
-                .contentTypeTextPlain()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        logger.lifecycle("Cleared patches for ${minecraftVersion.get()}")
-    }
-
-    data class PatchesInfo(val paths: List<String>, val minecraftVersion: String)
-
-    fun startPatches(paths: List<String>): List<String> {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchesInfo(paths, minecraftVersion.get()))))
-                .uri(URI.create(endpoint.get() + "/start-patches"))
-                .auth()
-                .contentTypeApplicationJson()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        val startedPatches = gson.fromJson<List<String>>(response.body(), typeToken<List<String>>())
-        logger.lifecycle("Started patches $startedPatches")
-        return startedPatches
-    }
-
-    data class PatchInfo(val path: String, val minecraftVersion: String)
-
-    fun completePatch(path: String) {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
-                .uri(URI.create(endpoint.get() + "/complete-patch"))
-                .auth()
-                .contentTypeApplicationJson()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        logger.lifecycle("Completed patch $path")
-    }
-
-    fun cancelPatch(path: String) {
-        val response = httpClient().send(
-            HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(PatchInfo(path, minecraftVersion.get()))))
-                .uri(URI.create(endpoint.get() + "/cancel-patch"))
-                .auth()
-                .contentTypeApplicationJson()
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        )
-        if (response.statusCode() != 200) {
-            throw PaperweightException("Response status code: ${response.statusCode()}, body: ${response.body()}")
-        }
-        logger.lifecycle("Cancelled patch $path")
     }
 }

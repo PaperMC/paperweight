@@ -36,6 +36,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
 /**
@@ -54,6 +55,7 @@ import org.gradle.api.tasks.options.Option
  *           Paperweight will attempt to select exactly the provided patch paths.
  *           If any of the provided patches are not available, the task will fail.
  */
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
     @get:InputDirectory
@@ -80,7 +82,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:Option(option = "accept", description = "Automatically accept selected patches")
     abstract val autoAccept: Property<Boolean>
 
-    override fun run() {
+    override fun run(api: PatchRouletteApi) {
         config.path.createParentDirectories()
         var config = if (config.path.isRegularFile()) {
             gson.fromJson<Config>(config.path)
@@ -113,7 +115,7 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             .map { PatchSelectionStrategy.parse(it) }
             .getOrElse(PatchSelectionStrategy.NumericInPackage(5))
         while (tries > 0) {
-            val available = getAvailablePatches().map { Path(it) }.toMutableSet()
+            val available = api.getAvailablePatches().map { Path(it) }.toMutableSet()
 
             if (available.isEmpty()) {
                 throw PaperweightException("No patches available.")
@@ -147,13 +149,17 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
             }
 
             try {
-                val startedPatches = startPatches(patches.map { it.invariantSeparatorsPathString })
+                api.startPatches(patches.map { it.invariantSeparatorsPathString })
                 this.config.path.writeText(gson.toJson(config.copy(currentPatches = patches)))
-                applyPatches(git, startedPatches.map { Path(it) })
+                applyPatches(git, patches)
                 break
             } catch (e: PaperweightException) {
-                logger.lifecycle("Patches could not be started: ${e.message}, retrying...")
                 tries--
+                if (tries == 0) {
+                    logger.error("Patches could not be started after retries.")
+                    throw e
+                }
+                logger.lifecycle("Patches could not be started: ${e.message}, retrying...")
             }
         }
     }

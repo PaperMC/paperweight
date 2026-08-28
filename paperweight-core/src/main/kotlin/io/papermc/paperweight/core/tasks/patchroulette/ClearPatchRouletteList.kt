@@ -22,9 +22,12 @@
 
 package io.papermc.paperweight.core.tasks.patchroulette
 
+import org.gradle.api.tasks.UntrackedTask
+
+@UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class ClearPatchRouletteList : AbstractPatchRouletteTask() {
 
-    override fun run() {
-        clearPatches()
+    override fun run(api: PatchRouletteApi) {
+        api.clearPatches()
     }
 }
