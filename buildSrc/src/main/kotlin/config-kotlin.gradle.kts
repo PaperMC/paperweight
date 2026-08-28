@@ -102,6 +102,8 @@ tasks.jar {
 plugins.apply("com.diffplug.spotless")
 extensions.configure<SpotlessExtension> {
     val overrides = mapOf(
+        "ktlint_standard_blank-line-before-declaration" to "disabled",
+        "ktlint_standard_blank-line-between-when-conditions" to "disabled",
         "ktlint_standard_no-wildcard-imports" to "disabled",
         "ktlint_standard_class-signature" to "disabled",
         "ktlint_standard_filename" to "disabled",
@@ -111,11 +113,12 @@ extensions.configure<SpotlessExtension> {
         "ktlint_standard_multiline-if-else" to "disabled",
         "ktlint_standard_multiline-expression-wrapping" to "disabled",
         "ktlint_standard_property-naming" to "disabled",
+        "ktlint_standard_spacing-between-declarations-with-comments" to "disabled",
         "ktlint_standard_trailing-comma-on-call-site" to "disabled",
         "ktlint_standard_trailing-comma-on-declaration-site" to "disabled",
     )
 
-    val ktlintVer = "1.5.0"
+    val ktlintVer = "1.8.0"
 
     kotlin {
         ktlint(ktlintVer).editorConfigOverride(overrides)
