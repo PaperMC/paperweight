@@ -28,10 +28,15 @@ import io.papermc.paperweight.util.data.*
 import io.sigpipe.jbsdiff.Diff
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.util.StringJoiner
 import javax.inject.Inject
 import kotlin.io.path.*
+import org.gradle.api.Action
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.java.archives.Manifest
+import org.gradle.api.java.archives.internal.DefaultManifest
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
@@ -57,6 +62,9 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
     @get:Input
     abstract val mcVersion: Property<String>
 
+    @get:Internal
+    var manifest: Manifest? = null
+
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
     abstract val libraryChangesJson: RegularFileProperty
@@ -67,10 +75,20 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
 
+    @get:Inject
+    abstract val fileResolver: FileResolver
+
     override fun init() {
         super.init()
 
         jvmargs.convention(listOf("-Xmx1G"))
+    }
+
+    fun manifest(config: Action<Manifest>) {
+        if (manifest == null) {
+            manifest = DefaultManifest(fileResolver)
+        }
+        config.execute(manifest!!)
     }
 
     override fun run(rootDir: Path) {
@@ -99,6 +117,19 @@ abstract class CreatePaperclipJar : JavaLauncherZippedTask() {
 
         val context = DownloadContext(vanillaSha256Hash, vanillaUrl, vanillaFileName)
         rootDir.resolve(DownloadContext.FILE).writeText(context.toString())
+
+        manifest?.let { manifest ->
+            val targetManifest = DefaultManifest(fileResolver)
+            val manifestFile = rootDir.resolve("META-INF/MANIFEST.MF")
+            if (manifestFile.exists()) {
+                targetManifest.from(manifestFile)
+            }
+            targetManifest.from(manifest)
+
+            val targetManifestFile = manifestFile.resolveSibling("NEW_MANIFEST.MF")
+            targetManifest.writeTo(targetManifestFile)
+            targetManifestFile.moveTo(manifestFile, StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun createPatches(rootDir: Path, newBundlerRoot: Path, originalBundlerRoot: Path): List<PatchEntry> {
