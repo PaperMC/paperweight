@@ -45,7 +45,7 @@ abstract class ForkConfig @Inject constructor(
         return configName
     }
 
-    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(project.rootProject.layout.projectDirectory).finalizedOnRead()
+    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(project.rootProject.layout.projectDirectory)
     val serverDirectory: DirectoryProperty = objects.dirFrom(rootDirectory, providers.provider { "$name-server" })
     val serverPatchesDir: DirectoryProperty = objects.dirFrom(serverDirectory, "minecraft-patches")
     val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")

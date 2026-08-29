@@ -54,6 +54,7 @@ class PatchRouletteTasks(
             minecraftVersion = minecraftVer
             patchDir = patchDirectory
             targetDir = targetDirectory
+            usesService(target.gitMutationLockService)
             config.pathProvider(
                 minecraftVer.map {
                     layout.cache.resolve(patchRouletteStateFile(namePrefix, it))
