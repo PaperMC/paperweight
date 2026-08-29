@@ -30,6 +30,7 @@ import io.papermc.paperweight.core.tasks.patching.ApplyFilePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFilePatchesFuzzy
 import io.papermc.paperweight.core.tasks.patching.FixupFilePatches
 import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
+import io.papermc.paperweight.core.util.coreExt
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
@@ -166,6 +167,11 @@ class MinecraftPatchingTasks(
             inputDir.set(baseSources)
             outputDir.set(layout.cache.resolve(paperTaskOutput()))
             identifier.set(configName)
+
+            if (namePart == "Minecraft") {
+                oldCommit.convention(project.coreExt.updatingMinecraft.oldForkCommit)
+                oldOutputDir.set(layout.cache.resolve("$PAPER_PATH/old${configName.capitalized()}"))
+            }
 
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
