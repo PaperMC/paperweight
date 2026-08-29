@@ -79,7 +79,7 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
         val git = Git.open(outputDir.path.toFile())
 
         if (atFile.isPresent && atFile.path.readText().isNotBlank()) {
-            println("Applying access transformers...")
+            logger.lifecycle("Applying access transformers...")
             ats.run(
                 launcher.get(),
                 inputDir.path,
