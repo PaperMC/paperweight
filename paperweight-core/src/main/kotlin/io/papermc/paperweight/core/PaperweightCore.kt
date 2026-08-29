@@ -106,6 +106,16 @@ abstract class PaperweightCore : Plugin<Project> {
             }
         }
 
+        target.configurations.register(JST_CLASSPATH_CONFIG) {
+            attributes {
+                attribute(JST_CLASSPATH_ATTRIBUTE, true)
+            }
+            extendsFrom(
+                target.configurations.getByName(MACHE_MINECRAFT_CONFIG),
+                target.configurations.getByName(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
+            )
+        }
+
         // impl extends minecraft
         target.configurations.named(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME) {
             extendsFrom(macheMinecraftLibrariesConfig.get())
