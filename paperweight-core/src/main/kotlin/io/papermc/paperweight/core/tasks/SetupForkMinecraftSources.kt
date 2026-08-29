@@ -78,18 +78,6 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
 
         val git = Git.open(outputDir.path.toFile())
 
-        if (atFile.isPresent && atFile.path.readText().isNotBlank()) {
-            println("Applying access transformers...")
-            ats.run(
-                launcher.get(),
-                inputDir.path,
-                outputDir.path,
-                atFile.path,
-                atWorkingDir.path,
-            )
-            commitAndTag(git, "ATs", "${identifier.get()} ATs")
-        }
-
         if (libraryImports.isPresent) {
             libraryImports.path.walk().forEach {
                 val outFile = out.resolve(it.relativeTo(libraryImports.path).invariantSeparatorsPathString)
@@ -100,6 +88,18 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
             }
 
             commitAndTag(git, "Imports", "${identifier.get()} Imports")
+        }
+
+        if (atFile.isPresent && atFile.path.readText().isNotBlank()) {
+            println("Applying access transformers...")
+            ats.run(
+                launcher.get(),
+                outputDir.path,
+                outputDir.path,
+                atFile.path,
+                atWorkingDir.path,
+            )
+            commitAndTag(git, "ATs", "${identifier.get()} ATs")
         }
 
         git.close()

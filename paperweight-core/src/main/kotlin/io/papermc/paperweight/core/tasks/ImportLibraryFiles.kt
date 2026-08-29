@@ -109,6 +109,10 @@ abstract class ImportLibraryFiles : BaseTask() {
 
     @get:Optional
     @get:InputFile
+    abstract val atFile: RegularFileProperty
+
+    @get:Optional
+    @get:InputFile
     abstract val devImports: RegularFileProperty
 
     @get:OutputDirectory
@@ -131,6 +135,7 @@ abstract class ImportLibraryFiles : BaseTask() {
             ioDispatcher("ImportLibraryFiles").use { dispatcher ->
                 importLibraryFiles(
                     patchFiles,
+                    atFile.pathOrNull,
                     devImports.pathOrNull,
                     outputDir.path,
                     libraries.sourcesJars(),
@@ -144,6 +149,7 @@ abstract class ImportLibraryFiles : BaseTask() {
 
     private fun importLibraryFiles(
         patches: Iterable<Path>,
+        atFile: Path?,
         importsFile: Path?,
         targetDir: Path,
         libFiles: List<Path>,
@@ -152,7 +158,7 @@ abstract class ImportLibraryFiles : BaseTask() {
         dispatcher: CoroutineDispatcher,
     ) = runBlocking {
         // Import library classes
-        val allImports = findLibraryImports(importsFile, libFiles, index, patches, dispatcher)
+        val allImports = findLibraryImports(importsFile, libFiles, index, patches, atFile, dispatcher)
         val importsByLib = allImports.groupBy { it.libraryFileName }
         logger.log(if (printOutput) LogLevel.LIFECYCLE else LogLevel.DEBUG, "Importing {} classes from library sources...", allImports.size)
 
@@ -191,6 +197,7 @@ abstract class ImportLibraryFiles : BaseTask() {
         libFiles: List<Path>,
         index: Set<LibraryImport>,
         patchFiles: Iterable<Path>,
+        atFile: Path?,
         dispatcher: CoroutineDispatcher,
     ): Set<LibraryImport> {
         val result = hashSetOf<LibraryImport>()
@@ -207,14 +214,15 @@ abstract class ImportLibraryFiles : BaseTask() {
                 }
         }
 
-        // Scan patches for necessary imports
-        result += findNeededLibraryImports(patchFiles, index, dispatcher)
+        // Scan patches and the AT file for necessary imports
+        result += findNeededLibraryImports(patchFiles, atFile, index, dispatcher)
 
         return result
     }
 
     private suspend fun findNeededLibraryImports(
         patchFiles: Iterable<Path>,
+        atFile: Path?,
         index: Set<LibraryImport>,
         dispatcher: CoroutineDispatcher,
     ): Set<LibraryImport> {
@@ -230,6 +238,19 @@ abstract class ImportLibraryFiles : BaseTask() {
             if (value != null) {
                 needed += value
             }
+        }
+        atFile?.useLines { lines ->
+            lines.filterNot { it.startsWith("#") }
+                .forEach { line ->
+                    val parts = line.split(' ')
+                    if (parts.size < 2) return@forEach
+                    val className = parts[1]
+                    val key = className.replace('.', '/').substringBefore('$') + ".java"
+                    val value = knownImportMap[key]
+                    if (value != null) {
+                        needed += value
+                    }
+                }
         }
         return needed
     }

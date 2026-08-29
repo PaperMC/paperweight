@@ -88,6 +88,7 @@ class CoreTasks(
 
     val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
         patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
+        atFile.set(mergePaperATs.flatMap { it.outputFile })
         devImports.set(project.coreExt.paper.devImports.fileExists())
         libraryFileIndex.set(indexLibraryFiles.flatMap { it.outputFile })
         libraries.from(indexLibraryFiles.map { it.libraries })
