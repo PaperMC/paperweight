@@ -114,6 +114,7 @@ const val FINAL_REMAPPED_CODEBOOK_JAR = "$TASK_CACHE/codebook-minecraft.jar"
 const val FINAL_DECOMPILE_JAR = "$TASK_CACHE/decompileJar.jar"
 
 const val DOWNLOAD_SERVICE_NAME = "paperweightDownloadService"
+const val GIT_MUTATION_LOCK_SERVICE_NAME = "paperweightGitMutationLockService"
 
 private const val MACHE_PATH = "$PAPER_PATH/mache"
 const val BASE_PROJECT = "$MACHE_PATH/base"

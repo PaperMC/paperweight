@@ -24,12 +24,15 @@ package io.papermc.paperweight.core.taskcontainers
 
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.core.extension.ForkConfig
+import io.papermc.paperweight.core.tasks.CheckoutRepo
 import io.papermc.paperweight.core.tasks.ExtractMinecraftSources
 import io.papermc.paperweight.core.tasks.ImportLibraryFiles
 import io.papermc.paperweight.core.tasks.IndexLibraryFiles
+import io.papermc.paperweight.core.tasks.RunNestedBuild
 import io.papermc.paperweight.core.tasks.SetupMinecraftSources
 import io.papermc.paperweight.core.tasks.SetupPaperScript
 import io.papermc.paperweight.core.util.coreExt
+import io.papermc.paperweight.patcher.extension.PaperweightPatcherExtension
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.tasks.mache.DecompileJar
 import io.papermc.paperweight.tasks.mache.RunCodebook
@@ -38,7 +41,9 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
 import org.gradle.api.Project
+import org.gradle.api.file.Directory
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
 
@@ -144,18 +149,29 @@ class CoreTasks(
         setupPatchingTasks()
     }
 
+    private fun upstreamRootDirectory(name: String): Provider<Directory> = with(project.rootProject) {
+        val isNestedUpstream = extensions.findByType<PaperweightPatcherExtension>()?.upstreams?.findByName(name)?.applyUpstreamNested?.orNull == true
+        if (isNestedUpstream) {
+            val applyUpstreamTask = tasks.namedOrNull<RunNestedBuild>("applyUpstream")
+            if (applyUpstreamTask != null) return applyUpstreamTask.flatMap { it.outputDir }
+        }
+
+        return tasks.namedOrNull<CheckoutRepo>("checkout${name.capitalized()}Repo")?.flatMap { it.outputDir }
+            ?: project.upstreamsDirectory().map { it.dir(name) }
+    }
+
     private fun setupPatchingTasks() {
         val hasFork = project.coreExt.forks.isNotEmpty()
 
         if (hasFork) {
             project.coreExt.paper.rootDirectory.set(
-                project.upstreamsDirectory().map { it.dir("paper") }
+                upstreamRootDirectory("paper")
             )
             project.coreExt.forks.forEach { fork ->
                 val activeFork = project.coreExt.activeFork.get().name == fork.name
                 if (!activeFork) {
                     fork.rootDirectory.set(
-                        project.upstreamsDirectory().map { it.dir(fork.name) }
+                        upstreamRootDirectory(fork.name)
                     )
                 }
             }
