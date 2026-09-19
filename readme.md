@@ -55,3 +55,5 @@ with `ktlint` style settings and to automatically format this project's code bef
 > as unstable for a bit until the next major version, so you should probably disable the "Unstable API Usages" inspection
 > in IntelliJ as well. The easiest way to do this is just find any place where an "unstable API" is used (tons in
 > `Paperweight.kt`) and disable the inspection from there.
+
+<img src="https://papermc.io/assets/misc/namespace-oss-badge.svg?project=paperweight" alt="CI powered by namespace badge" />

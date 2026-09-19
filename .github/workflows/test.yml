@@ -9,20 +9,30 @@ jobs:
     # Only run on PRs if the source branch is on someone else's repo
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     name: Test
-    runs-on: 'ubuntu-latest'
+    runs-on: namespace-profile-linux-default
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: namespacelabs/nscloud-checkout-action@v9
+      - uses: actions/setup-java@v6
         with:
-          java-version: 21
           distribution: 'temurin'
+          java-version: 21
+          cache: "" # namespace handles this
+      - name: Set up cache
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: gradle
+      - name: Setup gradle build cache
+        run: |
+          nsc cache gradle setup --init-gradle /tmp/init.gradle
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-disabled: true # namespace handles this
       - name: Execute Gradle build
         run: |
           git config --global user.email "no-reply@github.com"
           git config --global user.name "GitHub Actions"
-          ./gradlew build --no-daemon --stacktrace
+          ./gradlew --init-script=/tmp/init.gradle build --no-daemon --stacktrace
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v6
         if:  always()
