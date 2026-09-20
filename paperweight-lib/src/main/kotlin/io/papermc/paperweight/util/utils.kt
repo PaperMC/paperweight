@@ -105,6 +105,7 @@ val IsolatedProject.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
+
 fun IsolatedProject.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
@@ -116,7 +117,7 @@ fun <T : FileSystemLocation> Provider<out T>.fileExists(): Provider<out T> {
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
     get() = gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
-        parameters.projectPath.set(isolated.rootProject.projectDirectory)
+        parameters.projectPath.set(isolated.projectDirectory)
     }
 
 fun commentRegex(): Regex {
