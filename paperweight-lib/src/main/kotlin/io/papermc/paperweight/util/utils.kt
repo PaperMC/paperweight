@@ -101,6 +101,9 @@ inline fun <reified T> Gson.fromJson(any: Any): T = when (any) {
 val ProjectLayout.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
+val IsolatedProject.cache: Path
+    get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
+
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 fun IsolatedProject.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 
