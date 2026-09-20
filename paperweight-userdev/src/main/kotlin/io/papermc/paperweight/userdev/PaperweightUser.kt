@@ -198,7 +198,7 @@ abstract class PaperweightUser : Plugin<Project> {
             userdevSetup.afterEvaluate(createContext(this, setupTask))
 
             userdev.addServerDependencyTo.get().forEach {
-                it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+                it.extendsFrom(configurations.named(MOJANG_MAPPED_SERVER_CONFIG))
             }
 
             // Clean v1 shared caches
