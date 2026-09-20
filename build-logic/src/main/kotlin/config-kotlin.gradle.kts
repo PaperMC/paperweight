@@ -2,6 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -23,7 +24,8 @@ kotlin {
     }
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=21")
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+        freeCompilerArgs = listOf("-Xjdk-release=21")
     }
 }
 
