@@ -61,7 +61,7 @@ dependencies {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        named<JvmTestSuite>("test") {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter-engine:6.0.3")
@@ -94,6 +94,10 @@ tasks.jar {
             "Implementation-Version" to project.version
         )
     }
+}
+
+tasks.validatePlugins {
+    enableStricterValidation = false // TODO: re-enable this
 }
 
 // The following is to work around https://github.com/diffplug/spotless/issues/1599

@@ -22,11 +22,16 @@
 
 package io.papermc.paperweight.util
 
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
+import org.gradle.api.provider.Provider
 
 data class MavenDep(val url: String, val coordinates: List<String>)
+
+fun determineArtifactCoordinates(configuration: NamedDomainObjectProvider<out Configuration>): Provider<List<String>> =
+    configuration.map { config -> determineArtifactCoordinates(config) }
 
 fun determineArtifactCoordinates(configuration: Configuration): List<String> {
     return configuration.dependencies.filterIsInstance<ModuleDependency>().map { dep ->

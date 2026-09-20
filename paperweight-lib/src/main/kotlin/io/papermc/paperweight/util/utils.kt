@@ -57,7 +57,6 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.cadixdev.lorenz.merge.MergeResult
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.Directory
@@ -71,12 +70,12 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.project.IsolatedProject
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -103,6 +102,7 @@ val ProjectLayout.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
+fun IsolatedProject.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
 
@@ -112,7 +112,9 @@ fun <T : FileSystemLocation> Provider<out T>.fileExists(): Provider<out T> {
 
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
-    get() = gradle.sharedServices.registrations.getByName(DOWNLOAD_SERVICE_NAME).service as Provider<DownloadService>
+    get() = gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+        parameters.projectPath.set(isolated.rootProject.projectDirectory)
+    }
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")
@@ -289,9 +291,6 @@ fun <T> emptyMergeResult(): MergeResult<T?> {
     @Suppress("UNCHECKED_CAST")
     return emptyMergeResult as MergeResult<T?>
 }
-
-inline fun <reified T : Task> TaskContainer.registering(noinline configuration: T.() -> Unit) = registering(T::class, configuration)
-inline fun <reified T : Task> TaskContainer.registering() = registering(T::class)
 
 enum class HashingAlgorithm(val algorithmName: String) {
     SHA256("SHA-256"),
@@ -477,7 +476,7 @@ inline fun <reified T : Any> ObjectFactory.providerSet(
 fun Project.upstreamsDirectory(): Provider<Directory> {
     val workDirProp = providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY)
     val workDirFromProp = layout.dir(workDirProp.map { File(it) })
-    return workDirFromProp.orElse(rootProject.layout.cacheDir(UPSTREAMS))
+    return workDirFromProp.orElse(isolated.rootProject.cacheDir(UPSTREAMS))
 }
 
 private val ioDispatcherCount = AtomicInteger(0)

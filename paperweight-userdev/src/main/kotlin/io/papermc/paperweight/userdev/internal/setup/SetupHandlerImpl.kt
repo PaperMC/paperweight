@@ -146,7 +146,7 @@ class SetupHandlerImpl(
 
     override fun populateCompileConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {
         dependencySet.add(context.dependencyFactory.create(context.layout.files(context.setupTask.flatMap { it.mappedServerJar })))
-        dependencySet.add(context.dependencyFactory.create(context.devBundleCoordinates))
+        dependencySet.add(context.dependencyFactory.create(context.devBundleCoordinates.get()))
     }
 
     override fun populateRuntimeConfiguration(context: SetupHandler.ConfigurationContext, dependencySet: DependencySet) {

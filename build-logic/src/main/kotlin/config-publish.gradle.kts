@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.kotlin.dsl.withType
 
 plugins {
-    id("org.jetbrains.kotlin.jvm")
     id("com.gradleup.shadow")
     id("com.gradle.plugin-publish")
 }
@@ -16,17 +16,30 @@ if (noRelocate) {
     }
 }
 
-val shade: Configuration by configurations.creating
+val sourcesJar = configurations.dependencyScope("sourcesJar")
+val sourcesJarResolvable = configurations.resolvable("sourcesJarResolvable") {
+    extendsFrom(sourcesJar)
+}
+
+dependencies {
+    sourcesJar(project(":paperweight-lib", "sourcesJar"))
+}
+
+val shade = configurations.dependencyScope("shade")
+val shadeResolvable = configurations.resolvable("shadeResolvable") {
+    extendsFrom(shade)
+}
+
 configurations.implementation {
     extendsFrom(shade)
 }
 
 configurations.shadowRuntimeElements {
-    compatibilityAttributes(objects)
+    compatibilityAttributes()
 }
 
 fun ShadowJar.configureStandard() {
-    configurations = listOf(shade)
+    configurations.setFrom(listOf(shadeResolvable))
     filesMatching("META-INF/services/**") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
@@ -41,12 +54,13 @@ fun ShadowJar.configureStandard() {
     mergeServiceFiles()
 }
 
-val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
-    from(
-        zipTree(project(":paperweight-lib").tasks
-            .named("sourcesJar", AbstractArchiveTask::class)
-            .flatMap { it.archiveFile })
-    ) {
+private fun SetProperty<Configuration>.setFrom(configurations: List<NamedDomainObjectProvider<out Configuration>>) {
+    empty()
+    configurations.forEach { add(it) }
+}
+
+val libSourcesJar = tasks.named<AbstractArchiveTask>("sourcesJar") {
+    from(zipTree(sourcesJarResolvable.flatMap { it.elements.map { it.single().asFile } })) {
         exclude("META-INF/**")
     }
 }
@@ -56,13 +70,13 @@ gradlePlugin {
     vcsUrl.set("https://github.com/PaperMC/paperweight")
 }
 
-val shadowJar by tasks.existing(ShadowJar::class) {
+val shadowJar = tasks.named<ShadowJar>("shadowJar") {
     archiveClassifier.set(null as String?)
     configureStandard()
 
     inputs.property("noRelocate", noRelocate)
     if (noRelocate) {
-        return@existing
+        return@named
     }
 
     val prefix = "paper.libs"

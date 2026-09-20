@@ -36,6 +36,7 @@ import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -62,6 +63,7 @@ class MinecraftPatchingTasks(
     private val outputSrc: Path = outputRoot.resolve("src/minecraft/java"),
     private val outputResources: Path = outputRoot.resolve("src/minecraft/resources"),
     private val outputSrcFile: Path = outputRoot.resolve("file/src/minecraft/java"),
+    private val configurations: ConfigurationContainer = project.configurations,
     private val tasks: TaskContainer = project.tasks
 ) {
     private val taskGroup = if (readOnly) "upstream minecraft patching" else "minecraft patching"
@@ -169,8 +171,8 @@ class MinecraftPatchingTasks(
 
             libraryImports.set(importLibFiles.flatMap { it.outputDir })
             atFile.set(mergeCollectedAts.flatMap { it.outputFile })
-            ats.jst.from(project.configurations.named(JST_CONFIG))
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+            ats.jst.from(configurations.named(JST_CONFIG))
+            ats.jstClasspath.from(configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
         }
 
         applySourcePatches.configure {
@@ -208,8 +210,8 @@ class MinecraftPatchingTasks(
             patches.set(sourcePatchDir)
             gitFilePatches.set(this@MinecraftPatchingTasks.gitFilePatches)
 
-            ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_CONFIG))
-            ats.jst.from(project.configurations.named(JST_CONFIG))
+            ats.jstClasspath.from(configurations.named(MACHE_MINECRAFT_CONFIG))
+            ats.jst.from(configurations.named(JST_CONFIG))
             atFile.set(additionalAts.fileExists())
             atFileOut.set(additionalAts.fileExists())
         }
