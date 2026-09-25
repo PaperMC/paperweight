@@ -66,9 +66,9 @@ testing {
         val test = getByName<JvmTestSuite>("test") {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter-engine:6.0.3")
-                implementation("org.junit.jupiter:junit-jupiter-params:6.0.3")
-                implementation("org.junit.platform:junit-platform-launcher:6.0.3")
+                implementation("org.junit.jupiter:junit-jupiter-engine:6.1.3")
+                implementation("org.junit.jupiter:junit-jupiter-params:6.1.3")
+                implementation("org.junit.platform:junit-platform-launcher:6.1.3")
             }
 
             targets.configureEach {
