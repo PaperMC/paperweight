@@ -123,7 +123,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
             git.tag().setName("ROOT").setTagger(rootIdent).setSigned(false).call()
         }
 
-        println("Copy initial sources...")
+        logger.lifecycle("Copy initial sources...")
         inputFile.path.openZip().use { inputFileFs ->
             inputFileFs.walkSequence()
                 .filter(predicate.get()::test)
@@ -144,13 +144,13 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
                 }
         }
 
-        println("Setup git repo...")
+        logger.lifecycle("Setup git repo...")
         if (!oldPaperCommit.isPresent) {
             commitAndTag(git, "Vanilla")
         }
 
         if (!mache.isEmpty) {
-            println("Applying mache patches...")
+            logger.lifecycle("Applying mache patches...")
 
             val result = PatchOperation.builder()
                 .logTo(LoggingOutputStream(logger, LogLevel.LIFECYCLE))
@@ -175,7 +175,7 @@ abstract class SetupMinecraftSources : JavaLauncherZippedTask() {
         }
 
         if (atFile.isPresent) {
-            println("Applying access transformers...")
+            logger.lifecycle("Applying access transformers...")
             ats.run(
                 launcher.get(),
                 outputPath,
