@@ -6,7 +6,7 @@ on:
 jobs:
   deploy:
     name: Deploy
-    runs-on: 'ubuntu-latest'
+    runs-on: namespace-profile-linux-default
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v9
       - uses: actions/setup-java@v6
