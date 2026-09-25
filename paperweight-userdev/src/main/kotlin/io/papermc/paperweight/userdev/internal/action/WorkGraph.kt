@@ -168,6 +168,9 @@ class WorkGraph(
                     val took = System.nanoTime() - start
                     logger.info("Up-to-date check for ${node.registration.name} took ${formatNs(took)} (out-of-date)")
                 }
+            } else {
+                val took = System.nanoTime() - start
+                logger.info("Up-to-date check for ${node.registration.name} took ${formatNs(took)} (no metadata at ${metadataFile.invariantSeparatorsPathString})")
             }
 
             if (!earlyUpToDateCheck) {
