@@ -78,8 +78,8 @@ val shadowJar = tasks.named<ShadowJar>("shadowJar") {
 
     val prefix = "paper.libs"
     listOf(
-        "codechicken.diffpatch",
-        /* -> */ "codechicken.repack",
+        "io.codechicken.diffpatch",
+        /* -> */ "io.codechicken.repack",
         "com.github.salomonbrys.kotson",
         "com.google.gson",
         "dev.denwav.hypo",

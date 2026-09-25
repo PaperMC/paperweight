@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.core.tasks.patching
 
-import codechicken.diffpatch.util.PatchMode
+import io.codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.core.util.defaultMinFuzz
 import javax.inject.Inject
 import org.gradle.api.provider.Property

@@ -22,7 +22,7 @@
 
 package io.papermc.paperweight.core.taskcontainers
 
-import codechicken.diffpatch.util.PatchMode
+import io.codechicken.diffpatch.util.PatchMode
 import io.papermc.paperweight.core.extension.UpstreamConfig
 import io.papermc.paperweight.core.tasks.FilterRepo
 import io.papermc.paperweight.core.tasks.RunNestedBuild

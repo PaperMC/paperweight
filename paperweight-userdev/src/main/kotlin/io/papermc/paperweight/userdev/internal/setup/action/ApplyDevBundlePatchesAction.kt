@@ -22,9 +22,11 @@
 
 package io.papermc.paperweight.userdev.internal.setup.action
 
-import codechicken.diffpatch.cli.PatchOperation
-import codechicken.diffpatch.util.LogLevel
-import codechicken.diffpatch.util.archiver.ArchiveFormat
+import io.codechicken.diffpatch.cli.PatchOperation
+import io.codechicken.diffpatch.util.Input as DiffInput
+import io.codechicken.diffpatch.util.LogLevel
+import io.codechicken.diffpatch.util.Output as DiffOutput
+import io.codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.action.FileValue
 import io.papermc.paperweight.userdev.internal.action.Input
@@ -68,9 +70,9 @@ class ApplyDevBundlePatchesAction(
                         .logTo(logOut)
                         .level(LogLevel.ALL)
                         .summary(true)
-                        .basePath(decompiledJar.get(), ArchiveFormat.ZIP)
-                        .patchesPath(tempPatchDir)
-                        .outputPath(outputDir)
+                        .baseInput(DiffInput.MultiInput.archive(ArchiveFormat.ZIP, decompiledJar.get()))
+                        .patchesInput(DiffInput.MultiInput.folder(tempPatchDir))
+                        .patchedOutput(DiffOutput.MultiOutput.folder(outputDir))
                         .build()
                     try {
                         op.operate().throwOnError()
