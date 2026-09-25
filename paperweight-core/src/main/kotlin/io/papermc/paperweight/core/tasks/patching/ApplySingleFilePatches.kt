@@ -40,12 +40,18 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.UntrackedTask
 import org.gradle.kotlin.dsl.*
+import org.gradle.work.DisableCachingByDefault
 
-@UntrackedTask(because = "Always apply patches when requested")
+@DisableCachingByDefault(because = "Applying individual file patches is not expensive enough to justify caching")
 abstract class ApplySingleFilePatches : BaseTask() {
 
     @get:Inject
@@ -54,7 +60,7 @@ abstract class ApplySingleFilePatches : BaseTask() {
     @get:Internal
     abstract val upstream: DirectoryProperty
 
-    @get:Internal
+    @get:Nested
     abstract val patches: ListProperty<Patch>
 
     @get:Input
@@ -82,16 +88,19 @@ abstract class ApplySingleFilePatches : BaseTask() {
         @get:Internal
         abstract val path: Property<String>
 
-        @get:Internal
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
         val upstreamFile: RegularFileProperty = objects.fileProperty().convention(upstream.file(path))
 
-        @get:Internal
+        @get:OutputFile
         abstract val outputFile: RegularFileProperty
 
-        @get:Internal
+        @get:OutputFile
         abstract val rejectsFile: RegularFileProperty
 
-        @get:Internal
+        @get:InputFile
+        @get:Optional
+        @get:PathSensitive(PathSensitivity.NONE)
         abstract val patchFile: RegularFileProperty
     }
 
