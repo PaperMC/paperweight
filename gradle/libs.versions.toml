@@ -3,7 +3,7 @@ asm = "9.10.1"
 lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.11.0"
-jst = "1.0.68+paper.2-SNAPSHOT"
+jst = "1.0.68-SNAPSHOT"
 tinyRemapper = "0.14.1"
 # For paper-checkstyle plugin
 checkstyle = "12.1.2"
