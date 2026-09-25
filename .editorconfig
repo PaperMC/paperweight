@@ -1,5 +1,20 @@
 # noinspection EditorConfigKeyCorrectness
 [*.{kt,kts}]
+ktlint_code_style = intellij_idea
+ktlint_standard_blank-line-before-declaration = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_filename = disabled
+ktlint_standard_function-expression-body = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_if-else-wrapping = disabled
+ktlint_standard_multiline-if-else = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_property-naming = disabled
+ktlint_standard_spacing-between-declarations-with-comments = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
 max_line_length = 150
 ij_kotlin_imports_layout = *
 no-wildcard-imports = no-wildcard-imports

@@ -47,8 +47,8 @@ tinyRemapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tinyRemap
 mockk = "io.mockk:mockk:1.14.9"
 
 # Gradle
-gradle-licenser = "net.kyori:indra-licenser-spotless:4.0.0"
-gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:8.9.0"
+gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:14.2.0"
+gradle-level-headered = "net.octyl.level-headered:net.octyl.level-headered.gradle.plugin:0.1.2"
 gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.3.2"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.7.3"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
