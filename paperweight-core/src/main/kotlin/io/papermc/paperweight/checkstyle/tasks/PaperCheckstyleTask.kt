@@ -24,7 +24,6 @@ package io.papermc.paperweight.checkstyle.tasks
 
 import io.papermc.paperweight.checkstyle.JavadocTag
 import io.papermc.paperweight.util.*
-import java.nio.file.Paths
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.file.FileOperations
@@ -46,17 +45,6 @@ abstract class PaperCheckstyleTask : Checkstyle() {
 
     @get:Internal
     abstract val rootPath: Property<String>
-
-    @get:Input
-    val resolvedExclusions: List<String>
-        get() {
-            val excludedDirectories = directoriesToSkip.getOrElse(emptySet())
-            return source.files.mapNotNull { file ->
-                val relativePath = file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-                val parentPath = relativePath.parent?.invariantSeparatorsPathString + "/"
-                relativePath.invariantSeparatorsPathString.takeIf { parentPath in excludedDirectories }
-            }.sorted()
-        }
 
     @get:Input
     @get:Optional
@@ -85,12 +73,6 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
         existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
         configProperties = existingProperties
-        val resolvedExclusions = resolvedExclusions.toHashSet()
-        exclude {
-            if (it.isDirectory) return@exclude false
-            val relativePath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-            return@exclude relativePath.invariantSeparatorsPathString in resolvedExclusions
-        }
         if (!source.isEmpty) {
             super.run()
         }

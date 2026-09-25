@@ -115,7 +115,7 @@ abstract class ImportLibraryFiles : BaseTask() {
 
     @get:Optional
     @get:InputFiles
-    @get:PathSensitive(PathSensitivity.NONE)
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val patches: ConfigurableFileCollection
 
     @get:Optional
