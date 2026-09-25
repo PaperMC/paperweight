@@ -1,5 +1,5 @@
 plugins {
-    `config-kotlin`
+    id("config-kotlin")
     id("net.kyori.blossom") version "2.2.0"
 }
 
@@ -40,15 +40,24 @@ dependencies {
     testImplementation(libs.mockk)
 }
 
+configurations.consumable("sourcesJar") {
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, named(Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, named(Category.DOCUMENTATION))
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, named(DocsType.SOURCES))
+    }
+    outgoing.artifact(tasks.sourcesJar)
+}
+
 val testClassesJar = tasks.register<Jar>("testClassesJar") {
     archiveClassifier.set("test-classes")
-    from(sourceSets.test.get().output.classesDirs)
+    from(sourceSets.test.map { it.output.classesDirs })
     dependsOn(sourceSets.test.get().classesTaskName)
 }
 configurations.consumable("testClassesJar") {
     attributes {
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+        attribute(Usage.USAGE_ATTRIBUTE, named(Usage.JAVA_RUNTIME))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, named(LibraryElements.JAR))
     }
     outgoing.artifact(testClassesJar)
 }

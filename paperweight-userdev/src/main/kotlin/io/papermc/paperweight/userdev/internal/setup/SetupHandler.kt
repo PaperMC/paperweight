@@ -39,6 +39,7 @@ import org.gradle.api.artifacts.dsl.DependencyFactory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.logging.Logger
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.logging.progress.ProgressLogger
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
@@ -96,7 +97,7 @@ interface SetupHandler {
         val project: Project,
         val dependencyFactory: DependencyFactory,
         val javaToolchainService: JavaToolchainService,
-        val devBundleCoordinates: String,
+        val devBundleCoordinates: Provider<String>,
         val setupTask: TaskProvider<UserdevSetupTask>,
         val layout: ProjectLayout = project.layout,
     ) {
@@ -109,7 +110,7 @@ interface SetupHandler {
             project,
             dependencyFactory,
             javaToolchainService,
-            determineArtifactCoordinates(project.configurations.getByName(DEV_BUNDLE_CONFIG)).single(),
+            determineArtifactCoordinates(project.configurations.named(DEV_BUNDLE_CONFIG)).map { it.single() },
             setupTask,
         )
     }

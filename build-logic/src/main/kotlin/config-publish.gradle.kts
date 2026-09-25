@@ -2,7 +2,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.plugin.compatibility.compatibility
 
 plugins {
-    id("org.jetbrains.kotlin.jvm")
     id("com.gradleup.shadow")
     id("com.gradle.plugin-publish")
 }
@@ -17,20 +16,33 @@ if (noRelocate) {
     }
 }
 
-val shade = configurations.create("shade")
+val sourcesJar = configurations.dependencyScope("sourcesJar")
+val sourcesJarResolvable = configurations.resolvable("sourcesJarResolvable") {
+    extendsFrom(sourcesJar)
+}
+
+dependencies {
+    sourcesJar(project(":paperweight-lib", "sourcesJar"))
+}
+
+val shade = configurations.dependencyScope("shade")
+val shadeResolvable = configurations.resolvable("shadeResolvable") {
+    extendsFrom(shade)
+}
+
 configurations.implementation {
     extendsFrom(shade)
 }
 
 configurations.shadowRuntimeElements {
-    compatibilityAttributes(objects)
+    compatibilityAttributes()
 }
 configurations.runtimeElements {
-    compatibilityAttributes(objects)
+    compatibilityAttributes()
 }
 
 fun ShadowJar.configureStandard() {
-    configurations = listOf(shade)
+    configurations.setFrom(listOf(shadeResolvable))
     filesMatching("META-INF/services/**") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
@@ -48,12 +60,13 @@ fun ShadowJar.configureStandard() {
     mergeServiceFiles()
 }
 
-val sourcesJar = tasks.named<AbstractArchiveTask>("sourcesJar") {
-    from(
-        zipTree(project(":paperweight-lib").tasks
-            .named("sourcesJar", AbstractArchiveTask::class)
-            .flatMap { it.archiveFile })
-    ) {
+private fun SetProperty<Configuration>.setFrom(configurations: List<NamedDomainObjectProvider<out Configuration>>) {
+    empty()
+    configurations.forEach { add(it) }
+}
+
+val libSourcesJar = tasks.named<AbstractArchiveTask>("sourcesJar") {
+    from(zipTree(sourcesJarResolvable.flatMap { it.elements.map { it.single().asFile } })) {
         exclude("META-INF/**")
     }
 }
@@ -65,6 +78,7 @@ gradlePlugin {
         compatibility {
             features {
                 configurationCache = true
+                isolatedProjects = true
             }
         }
     }

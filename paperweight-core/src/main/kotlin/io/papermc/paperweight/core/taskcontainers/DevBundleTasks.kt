@@ -28,6 +28,7 @@ import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
@@ -39,11 +40,12 @@ import org.gradle.kotlin.dsl.*
 class DevBundleTasks(
     project: Project,
     private val coreTasks: CoreTasks,
+    private val configurations: ConfigurationContainer = project.configurations,
     tasks: TaskContainer = project.tasks,
 ) {
     val serverBundlerForDevBundle = tasks.register<CreateBundlerJar>("serverBundlerForDevBundle") {
         mainClass.set(project.coreExt.mainClass)
-        paperclip.from(project.configurations.named(PAPERCLIP_CONFIG))
+        paperclip.from(configurations.named(PAPERCLIP_CONFIG))
         serverLibrariesList.set(coreTasks.extractFromBundler.flatMap { it.serverLibrariesList })
         vanillaBundlerJar.set(coreTasks.downloadServerJar.flatMap { it.outputJar })
     }
@@ -82,7 +84,7 @@ class DevBundleTasks(
         }
         generateDevelopmentBundle {
             macheUrl.set(project.repositories.named<MavenArtifactRepository>(MACHE_REPO_NAME).map { it.url.toString() })
-            macheDep.set(determineArtifactCoordinates(project.configurations.getByName(MACHE_CONFIG)).single())
+            macheDep.set(determineArtifactCoordinates(configurations.named(MACHE_CONFIG)).map { it.single() })
         }
     }
 }

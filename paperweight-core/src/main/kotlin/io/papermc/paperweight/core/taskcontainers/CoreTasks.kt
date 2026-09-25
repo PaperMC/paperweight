@@ -38,6 +38,7 @@ import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
 import java.nio.file.Files
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.kotlin.dsl.*
@@ -45,6 +46,7 @@ import org.gradle.kotlin.dsl.*
 class CoreTasks(
     val project: Project,
     val mache: Property<MacheMeta>,
+    val configurations: ConfigurationContainer = project.configurations,
     tasks: TaskContainer = project.tasks
 ) : AllTasks(project) {
     lateinit var paperPatchingTasks: MinecraftPatchingTasks
@@ -53,9 +55,9 @@ class CoreTasks(
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
 
         codebookArgs.set(mache.map { it.remapperArgs })
-        codebookClasspath.from(project.configurations.named(MACHE_CODEBOOK_CONFIG))
-        minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
-        constants.from(project.configurations.named(MACHE_CONSTANTS_CONFIG))
+        codebookClasspath.from(configurations.named(MACHE_CODEBOOK_CONFIG))
+        minecraftClasspath.from(configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        constants.from(configurations.named(MACHE_CONSTANTS_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))
     }
@@ -64,8 +66,8 @@ class CoreTasks(
         inputJar.set(macheRemapJar.flatMap { it.outputJar })
         decompilerArgs.set(mache.map { it.decompilerArgs })
 
-        minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
-        decompiler.from(project.configurations.named(MACHE_DECOMPILER_CONFIG))
+        minecraftClasspath.from(configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        decompiler.from(configurations.named(MACHE_DECOMPILER_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_DECOMPILE_JAR))
     }
@@ -94,7 +96,7 @@ class CoreTasks(
     }
 
     private fun SetupMinecraftSources.configureSetupMacheSources() {
-        mache.from(project.configurations.named(MACHE_CONFIG))
+        mache.from(configurations.named(MACHE_CONFIG))
         oldPaperCommit.convention(project.coreExt.updatingMinecraft.oldPaperCommit)
         inputFile.set(macheDecompileJar.flatMap { it.outputJar })
         predicate.set { Files.isRegularFile(it) && it.toString().endsWith(".java") }
@@ -107,8 +109,8 @@ class CoreTasks(
         outputZip.set(layout.cache.resolve(BASE_PROJECT).resolve("sources.zip"))
 
         atFile.set(mergePaperATs.flatMap { it.outputFile })
-        ats.jstClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
-        ats.jst.from(project.configurations.named(JST_CONFIG))
+        ats.jstClasspath.from(configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
+        ats.jst.from(configurations.named(JST_CONFIG))
     }
 
     val extractMacheSources = tasks.register<ExtractMinecraftSources>("extractMacheSources") {

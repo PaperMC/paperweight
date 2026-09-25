@@ -50,7 +50,7 @@ abstract class PaperweightSourceGeneratorHelper : Plugin<Project> {
         afterEvaluate {
             if (ext.addVanillaServerToImplementation.get()) {
                 configurations.named("implementation") {
-                    extendsFrom(vanilla.get())
+                    extendsFrom(vanilla)
                 }
             }
         }

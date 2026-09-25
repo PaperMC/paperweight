@@ -1,3 +1,7 @@
+plugins {
+    `kotlin-dsl` apply false
+}
+
 tasks.register("printVersion") {
     val ver = project.version
     doFirst {

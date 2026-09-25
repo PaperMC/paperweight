@@ -31,7 +31,7 @@ import org.gradle.api.model.ObjectFactory
 
 abstract class PaperExtension @Inject constructor(objects: ObjectFactory, project: Project) {
 
-    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(project.rootProject.layout.projectDirectory)
+    val rootDirectory: DirectoryProperty = objects.directoryProperty().convention(project.isolated.rootProject.projectDirectory)
     val paperServerDir: DirectoryProperty = objects.dirFrom(rootDirectory, "paper-server")
     val serverPatchesDir: DirectoryProperty = objects.dirFrom(paperServerDir, "patches")
     val rejectsDir: DirectoryProperty = objects.dirFrom(serverPatchesDir, "rejected")

@@ -88,7 +88,7 @@ abstract class PaperweightUser : Plugin<Project> {
             group = GENERAL_TASK_GROUP
             description = "Delete the project-local paperweight-userdev setup cache."
             delete(target.layout.cache)
-            delete(target.rootProject.layout.cache.resolve("paperweight-userdev"))
+            delete(target.isolated.rootProject.cache.resolve("paperweight-userdev"))
         }
         val cleanAll = target.tasks.register<Delete>("cleanAllPaperweightUserdevCaches") {
             group = GENERAL_TASK_GROUP
@@ -198,7 +198,7 @@ abstract class PaperweightUser : Plugin<Project> {
             userdevSetup.afterEvaluate(createContext(this, setupTask))
 
             userdev.addServerDependencyTo.get().forEach {
-                it.extendsFrom(configurations.getByName(MOJANG_MAPPED_SERVER_CONFIG))
+                it.extendsFrom(configurations.named(MOJANG_MAPPED_SERVER_CONFIG))
             }
 
             // Clean v1 shared caches
@@ -374,7 +374,7 @@ abstract class PaperweightUser : Plugin<Project> {
         val devBundleZip = bundleConfig.map { it.singleFile }.convertToPath()
         val bundleHash = devBundleZip.sha256asHex()
         val cacheDir = if (!target.sharedCaches) {
-            target.rootProject.layout.cache.resolve("paperweight-userdev/v2/work")
+            target.isolated.rootProject.cache.resolve("paperweight-userdev/v2/work")
         } else {
             target.gradle.gradleUserHomeDir.toPath().resolve("caches/paperweight-userdev/v2/work")
         }
