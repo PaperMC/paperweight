@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -16,12 +17,15 @@ if (noRelocate) {
     }
 }
 
-val shade: Configuration by configurations.creating
+val shade = configurations.create("shade")
 configurations.implementation {
     extendsFrom(shade)
 }
 
 configurations.shadowRuntimeElements {
+    compatibilityAttributes(objects)
+}
+configurations.runtimeElements {
     compatibilityAttributes(objects)
 }
 
@@ -41,7 +45,7 @@ fun ShadowJar.configureStandard() {
     mergeServiceFiles()
 }
 
-val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
+val sourcesJar = tasks.named<AbstractArchiveTask>("sourcesJar") {
     from(
         zipTree(project(":paperweight-lib").tasks
             .named("sourcesJar", AbstractArchiveTask::class)
@@ -54,15 +58,22 @@ val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
 gradlePlugin {
     website.set("https://github.com/PaperMC/paperweight")
     vcsUrl.set("https://github.com/PaperMC/paperweight")
+    plugins.configureEach {
+        compatibility {
+            features {
+                configurationCache = true
+            }
+        }
+    }
 }
 
-val shadowJar by tasks.existing(ShadowJar::class) {
+val shadowJar = tasks.named<ShadowJar>("shadowJar") {
     archiveClassifier.set(null as String?)
     configureStandard()
 
     inputs.property("noRelocate", noRelocate)
     if (noRelocate) {
-        return@existing
+        return@named
     }
 
     val prefix = "paper.libs"

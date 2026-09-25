@@ -1,5 +1,5 @@
-import com.diffplug.gradle.spotless.SpotlessExtension
-import net.kyori.indra.licenser.spotless.IndraSpotlessLicenserExtension
+import net.octyl.levelheadered.HeaderApplyTask
+import net.octyl.levelheadered.HeaderVerifyTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -7,6 +7,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     idea
     id("org.gradle.kotlin.kotlin-dsl")
+    id("org.jlleitschuh.gradle.ktlint")
+    id("net.octyl.level-headered")
 }
 
 java {
@@ -61,7 +63,7 @@ dependencies {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        val test = getByName<JvmTestSuite>("test") {
             useKotlinTest(embeddedKotlinVersion)
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter-engine:6.0.3")
@@ -96,45 +98,29 @@ tasks.jar {
     }
 }
 
-// The following is to work around https://github.com/diffplug/spotless/issues/1599
-// Ensure the ktlint step is before the license header step
-
-plugins.apply("com.diffplug.spotless")
-extensions.configure<SpotlessExtension> {
-    val overrides = mapOf(
-        "ktlint_standard_no-wildcard-imports" to "disabled",
-        "ktlint_standard_class-signature" to "disabled",
-        "ktlint_standard_filename" to "disabled",
-        "ktlint_standard_function-expression-body" to "disabled",
-        "ktlint_standard_function-signature" to "disabled",
-        "ktlint_standard_if-else-wrapping" to "disabled",
-        "ktlint_standard_multiline-if-else" to "disabled",
-        "ktlint_standard_multiline-expression-wrapping" to "disabled",
-        "ktlint_standard_property-naming" to "disabled",
-        "ktlint_standard_trailing-comma-on-call-site" to "disabled",
-        "ktlint_standard_trailing-comma-on-declaration-site" to "disabled",
-    )
-
-    val ktlintVer = "1.5.0"
-
-    kotlin {
-        ktlint(ktlintVer).editorConfigOverride(overrides)
-    }
-    kotlinGradle {
-        ktlint(ktlintVer).editorConfigOverride(overrides)
-    }
+ktlint {
+    version.set("1.8.0")
 }
 
-plugins.apply("net.kyori.indra.licenser.spotless")
-extensions.configure<IndraSpotlessLicenserExtension> {
-    licenseHeaderFile(rootProject.file("license/copyright.txt"))
-    newLine(true)
+levelHeadered {
+    headerTemplate(rootProject.file("license/copyright.txt"))
+}
+
+tasks.named<HeaderApplyTask>("applyTestHeader") {
+    source.setFrom(sourceSets.test.get().allSource.minus(sourceSets.test.get().resources))
+}
+tasks.named<HeaderVerifyTask>("verifyTestHeader") {
+    source.setFrom(sourceSets.test.get().allSource.minus(sourceSets.test.get().resources))
+}
+
+tasks.named("applyHeaderToAll") {
+    mustRunAfter(tasks.named("ktlintFormat"))
 }
 
 tasks.register("format") {
     group = "formatting"
     description = "Formats source code according to project style"
-    dependsOn(tasks.named("spotlessApply"))
+    dependsOn(tasks.named("ktlintFormat"), tasks.named("applyHeaderToAll"))
 }
 
 idea {

@@ -9,8 +9,8 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.gradle.licenser)
-    implementation(libs.gradle.spotless)
+    implementation(libs.gradle.ktlint)
+    implementation(libs.gradle.level.headered)
     implementation(libs.gradle.shadow)
     implementation(libs.gradle.kotlin.dsl)
     implementation(libs.gradle.plugin.kotlin.withVersion(embeddedKotlinVersion))

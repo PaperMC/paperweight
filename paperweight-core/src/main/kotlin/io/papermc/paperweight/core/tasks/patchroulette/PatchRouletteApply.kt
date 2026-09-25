@@ -32,10 +32,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
@@ -58,7 +56,7 @@ import org.gradle.api.tasks.options.Option
 @UntrackedTask(because = "Patch Roulette tasks operate on remote resources and should always run when requested.")
 abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
 
-    @get:InputDirectory
+    @get:Internal
     abstract val patchDir: DirectoryProperty
 
     @get:Input
@@ -66,10 +64,10 @@ abstract class PatchRouletteApply : AbstractPatchRouletteTask() {
     @get:Option(option = "select", description = "Selection strategy used for patches")
     abstract val patchSelectionStrategy: Property<String>
 
-    @get:OutputDirectory
+    @get:Internal
     abstract val targetDir: DirectoryProperty
 
-    @get:OutputFile
+    @get:Internal
     abstract val config: RegularFileProperty
 
     @get:Input

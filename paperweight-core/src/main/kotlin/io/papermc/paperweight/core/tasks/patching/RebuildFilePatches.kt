@@ -53,17 +53,17 @@ abstract class RebuildFilePatches : JavaLauncherTask() {
     )
     abstract val verbose: Property<Boolean>
 
-    @get:InputDirectory
+    @get:Internal
     abstract val input: DirectoryProperty
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val base: DirectoryProperty
 
     @get:OutputDirectory
     abstract val patches: DirectoryProperty
 
-    @get:Optional
-    @get:InputFile
+    @get:Internal
     abstract val atFile: RegularFileProperty
 
     @get:Optional

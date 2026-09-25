@@ -27,31 +27,45 @@ import codechicken.diffpatch.util.LogLevel
 import io.papermc.paperweight.tasks.*
 import io.papermc.paperweight.util.*
 import java.io.PrintStream
+import javax.inject.Inject
 import kotlin.io.path.*
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "Rebuilding individual file patches is not expensive enough to justify caching")
 abstract class RebuildSingleFilePatches : BaseTask() {
 
-    @get:InputDirectory
+    @get:Internal
     abstract val upstream: DirectoryProperty
 
     @get:Nested
     abstract val patches: ListProperty<Patch>
 
-    abstract class Patch {
+    abstract class Patch @Inject constructor(
+        objects: ObjectFactory,
+        upstream: DirectoryProperty,
+    ) {
         @get:Input
         abstract val path: Property<String>
 
         @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
+        val upstreamFile: RegularFileProperty = objects.fileProperty().convention(upstream.file(path))
+
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
         abstract val outputFile: RegularFileProperty
 
         @get:OutputFile
@@ -73,7 +87,7 @@ abstract class RebuildSingleFilePatches : BaseTask() {
                 tmpPatch.deleteRecursive()
 
                 val baseFile = tmpA.resolve(patch.path.get()).createParentDirectories()
-                upstream.path.resolve(patch.path.get()).copyTo(baseFile, true)
+                patch.upstreamFile.path.copyTo(baseFile, true)
 
                 val patchedFile = tmpB.resolve(patch.path.get()).createParentDirectories()
                 patch.outputFile.path.copyTo(patchedFile, true)

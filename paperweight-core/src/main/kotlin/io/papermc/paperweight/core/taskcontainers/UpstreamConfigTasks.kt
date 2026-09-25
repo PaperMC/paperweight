@@ -92,7 +92,7 @@ class UpstreamConfigTasks(
             upstream.set(upstreamDir)
             val patches = upstreamCfg.singleFilePatchSets.map {
                 it.map { cfg ->
-                    val p = objects.newInstance<RebuildSingleFilePatches.Patch>()
+                    val p = objects.newInstance<RebuildSingleFilePatches.Patch>(upstream)
                     p.path = cfg.path
                     p.patchFile = cfg.patchFile
                     p.outputFile = cfg.outputFile

@@ -24,22 +24,26 @@ package io.papermc.paperweight.checkstyle.tasks
 
 import io.papermc.paperweight.checkstyle.JavadocTag
 import io.papermc.paperweight.util.*
-import java.nio.file.Paths
 import kotlin.io.path.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.internal.file.FileOperations
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+@CacheableTask
 abstract class PaperCheckstyleTask : Checkstyle() {
 
-    @get:Input
+    @get:Internal
     abstract val rootPath: Property<String>
 
     @get:Input
@@ -55,6 +59,7 @@ abstract class PaperCheckstyleTask : Checkstyle() {
 
     @get:InputFile
     @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val configOverride: RegularFileProperty
 
     @TaskAction
@@ -68,15 +73,6 @@ abstract class PaperCheckstyleTask : Checkstyle() {
         existingProperties["type_use_annotations"] = typeUseAnnotations.get().joinToString("|")
         existingProperties["custom_javadoc_tags"] = customJavadocTags.getOrElse(emptySet()).joinToString("|") { it.toOptionString() }
         configProperties = existingProperties
-        exclude {
-            if (it.isDirectory) return@exclude false
-            val absPath = it.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
-            val parentPath = (absPath.parent?.invariantSeparatorsPathString + "/")
-            if (directoriesToSkip.isPresent) {
-                return@exclude directoriesToSkip.get().any { pkg -> parentPath == pkg }
-            }
-            return@exclude false
-        }
         if (!source.isEmpty) {
             super.run()
         }

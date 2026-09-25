@@ -33,10 +33,15 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "Generated Git repository history is not reused across builds")
 abstract class FilterRepo : BaseTask() {
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputDir: DirectoryProperty
 
     @get:OutputDirectory
@@ -44,6 +49,7 @@ abstract class FilterRepo : BaseTask() {
 
     @get:InputDirectory
     @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val gitDir: DirectoryProperty
 
     @get:Input
