@@ -33,7 +33,6 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
@@ -47,7 +46,7 @@ abstract class RunNestedBuild : BaseTask() {
     @get:Input
     abstract val tasks: SetProperty<String>
 
-    @get:InputDirectory
+    @get:Internal
     abstract val projectDir: DirectoryProperty
 
     @get:Internal
@@ -74,7 +73,7 @@ abstract class RunNestedBuild : BaseTask() {
             String::class.java,
             StartParameterInternal::class.java,
             ServiceRegistry::class.java,
-            ClassPath::class.java
+            ClassPath::class.java,
         ).invoke(null, null, params, services, ClassPath.EMPTY)
     }
 }

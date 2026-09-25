@@ -36,11 +36,14 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "The task mutates a Git repository and retains failure state for manual recovery")
 abstract class ApplyFeaturePatches : ControllableOutputTask() {
 
     @get:InputDirectory
     @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val base: DirectoryProperty
 
     @get:OutputDirectory

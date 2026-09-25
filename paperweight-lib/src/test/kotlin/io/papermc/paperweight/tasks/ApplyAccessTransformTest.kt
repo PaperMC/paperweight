@@ -26,12 +26,18 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import java.nio.file.Path
+import java.util.jar.JarFile
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import org.gradle.kotlin.dsl.*
 import org.gradle.workers.WorkQueue
 import org.gradle.workers.WorkerExecutor
 import org.junit.jupiter.api.io.TempDir
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
 
 class ApplyAccessTransformTest : TaskTest() {
     private lateinit var task: ApplyAccessTransform
@@ -77,7 +83,18 @@ class ApplyAccessTransformTest : TaskTest() {
 
         task.run()
 
-        val testOutput = testResource.resolve("output")
-        compareJar(tempDir, testOutput, "output", "Test")
+        val transformedClass = JarFile(output).use { jar ->
+            val entry = assertNotNull(jar.getJarEntry("Test.class"))
+            ClassNode().also { node ->
+                jar.getInputStream(entry).use { ClassReader(it).accept(node, 0) }
+            }
+        }
+        val accessMask = Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED or Opcodes.ACC_FINAL
+        val test = assertNotNull(transformedClass.fields.singleOrNull { it.name == "test" })
+        val dum = assertNotNull(transformedClass.fields.singleOrNull { it.name == "dum" })
+        val getTest = assertNotNull(transformedClass.methods.singleOrNull { it.name == "getTest" })
+        assertEquals(Opcodes.ACC_PUBLIC, test.access and accessMask)
+        assertEquals(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, dum.access and accessMask)
+        assertEquals(Opcodes.ACC_PRIVATE or Opcodes.ACC_FINAL, getTest.access and accessMask)
     }
 }

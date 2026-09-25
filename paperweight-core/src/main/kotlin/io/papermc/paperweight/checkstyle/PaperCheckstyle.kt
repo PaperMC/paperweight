@@ -26,13 +26,31 @@ import io.papermc.paperweight.checkstyle.tasks.MergeCheckstyleConfigs
 import io.papermc.paperweight.checkstyle.tasks.PaperCheckstyleTask
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.Paths
 import javax.inject.Inject
+import kotlin.io.path.invariantSeparatorsPathString
+import kotlin.io.path.relativeTo
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.FileTreeElement
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.quality.CheckstyleExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.specs.Spec
 import org.gradle.kotlin.dsl.*
+
+private class SkippedCheckstyleFiles(
+    private val rootPath: Provider<String>,
+    private val directoriesToSkip: Provider<Set<String>>,
+) : Spec<FileTreeElement> {
+    override fun isSatisfiedBy(element: FileTreeElement): Boolean {
+        if (element.isDirectory) return false
+        val relativePath = element.file.toPath().toAbsolutePath().relativeTo(Paths.get(rootPath.get()))
+        val parentPath = relativePath.parent?.invariantSeparatorsPathString + "/"
+        return parentPath in directoriesToSkip.getOrElse(emptySet())
+    }
+}
 
 abstract class PaperCheckstyle : Plugin<Project> {
 
@@ -59,6 +77,7 @@ abstract class PaperCheckstyle : Plugin<Project> {
                     it.trim().lines().map { line -> line.trim() }
                 }
             )
+            exclude(SkippedCheckstyleFiles(rootPath, directoriesToSkip))
             typeUseAnnotations.convention(
                 providers.fileContents(ext.typeUseAnnotationsFile).asText.map {
                     it.trim().lines().map { line -> line.trim() }

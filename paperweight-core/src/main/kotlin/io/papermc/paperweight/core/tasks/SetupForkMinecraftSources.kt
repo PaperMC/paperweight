@@ -38,12 +38,17 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault(because = "Generated Git repository history is not reused across builds")
 abstract class SetupForkMinecraftSources : JavaLauncherTask() {
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputDir: DirectoryProperty
 
     @get:OutputDirectory
@@ -57,10 +62,12 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
 
     @get:InputFile
     @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
 
     @get:Optional
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val libraryImports: DirectoryProperty
 
     @get:Input

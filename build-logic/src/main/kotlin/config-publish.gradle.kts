@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     id("com.gradleup.shadow")
@@ -36,10 +37,16 @@ configurations.implementation {
 configurations.shadowRuntimeElements {
     compatibilityAttributes()
 }
+configurations.runtimeElements {
+    compatibilityAttributes()
+}
 
 fun ShadowJar.configureStandard() {
     configurations.setFrom(listOf(shadeResolvable))
     filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    filesMatching("META-INF/*.kotlin_module") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
@@ -67,6 +74,14 @@ val libSourcesJar = tasks.named<AbstractArchiveTask>("sourcesJar") {
 gradlePlugin {
     website.set("https://github.com/PaperMC/paperweight")
     vcsUrl.set("https://github.com/PaperMC/paperweight")
+    plugins.configureEach {
+        compatibility {
+            features {
+                configurationCache = true
+                isolatedProjects = true
+            }
+        }
+    }
 }
 
 val shadowJar = tasks.named<ShadowJar>("shadowJar") {

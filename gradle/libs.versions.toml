@@ -1,10 +1,10 @@
 [versions]
-asm = "9.9.1"
+asm = "9.10.1"
 lorenz = "0.5.8"
 hypo = "1.2.4"
-serialize = "2.3.20"
+serialize = "1.11.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
-tinyRemapper = "0.12.0"
+tinyRemapper = "0.14.1"
 # For paper-checkstyle plugin
 checkstyle = "12.1.2"
 
@@ -14,9 +14,9 @@ asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 
 httpclient5 = "org.apache.httpcomponents.client5:httpclient5:5.6.4"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"
-coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
-jgit = "org.eclipse.jgit:org.eclipse.jgit:7.4.0.202509020913-r"
-gson = "com.google.code.gson:gson:2.13.2"
+coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0"
+jgit = "org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r"
+gson = "com.google.code.gson:gson:2.14.0"
 
 cadix-lorenz-core = { module = "org.cadixdev:lorenz", version.ref = "lorenz" }
 cadix-lorenz-asm = { module = "org.cadixdev:lorenz-asm", version.ref = "lorenz" }
@@ -44,14 +44,14 @@ jst = { module = "io.papermc.jst:jst-cli-bundle", version.ref = "jst" }
 tinyRemapper = { module = "net.fabricmc:tiny-remapper", version.ref = "tinyRemapper" }
 
 # test
-mockk = "io.mockk:mockk:1.14.9"
+mockk = "io.mockk:mockk:1.14.11"
 
 # Gradle
-gradle-licenser = "net.kyori:indra-licenser-spotless:4.0.0"
-gradle-spotless = "com.diffplug.spotless:spotless-plugin-gradle:8.1.0"
-gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.3.2"
-gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.5.7"
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.0.0"
+gradle-ktlint = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin:14.2.0"
+gradle-level-headered = "net.octyl.level-headered:net.octyl.level-headered.gradle.plugin:0.1.2"
+gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.6.1"
+gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.7.6"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.2.1"
 
 # for renovate
 zCheckstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
