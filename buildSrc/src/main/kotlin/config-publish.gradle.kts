@@ -34,6 +34,9 @@ fun ShadowJar.configureStandard() {
     filesMatching("META-INF/services/**") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
