@@ -47,7 +47,34 @@ abstract class PaperweightPatcher : Plugin<Project> {
             delete(target.layout.cache)
         }
 
-        target.afterEvaluate { afterEvaluate(patcher) }
+        target.configurations.register(JST_CONFIG) {
+            defaultDependencies {
+                // add(project.dependencies.create("net.neoforged.jst:jst-cli-bundle:${LibraryVersions.JST}"))
+                add(target.dependencies.create("io.papermc.jst:jst-cli-bundle:${LibraryVersions.JST}"))
+            }
+        }
+
+        target.configurations.register(JST_CLASSPATH_CONFIG) {
+            attributes {
+                attribute(JST_CLASSPATH_ATTRIBUTE, true)
+            }
+        }
+
+        target.afterEvaluate {
+            repositories {
+                maven(patcher.jstRepo) {
+                    name = JST_REPO_NAME
+                    content { onlyForConfigurations(JST_CONFIG) }
+                }
+                maven(PAPER_MAVEN_REPO_URL) {
+                    content { onlyForConfigurations(JST_CLASSPATH_CONFIG) }
+                }
+                mavenCentral {
+                    content { onlyForConfigurations(JST_CLASSPATH_CONFIG) }
+                }
+            }
+            afterEvaluate(patcher)
+        }
     }
 
     private fun Project.afterEvaluate(patcher: PaperweightPatcherExtension) {
