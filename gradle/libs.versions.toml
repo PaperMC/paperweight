@@ -52,7 +52,7 @@ gradle-level-headered = "net.octyl.level-headered:net.octyl.level-headered.gradl
 gradle-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.6.1"
 gradle-kotlin-dsl = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:6.7.6"
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.1.1"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:2.2.1"
 
 # for renovate
 zCheckstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
