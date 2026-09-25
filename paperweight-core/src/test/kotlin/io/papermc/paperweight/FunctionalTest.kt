@@ -23,7 +23,7 @@
 package io.papermc.paperweight
 
 import io.papermc.paperweight.util.*
-import java.net.URL
+import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
@@ -75,7 +75,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(appP.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, appP.task(":test-server:applyPatches")?.outcome)
 
         // clean rebuild rebP -> changes nothing
         println("\nrunning rebuildPatches\n")
@@ -84,7 +84,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, rebP.task(":test-server:rebuildPatches")?.outcome)
         assertEquals(
             testResource.resolve("fake-patches/sources/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -111,7 +111,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(rebP2.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, rebP2.task(":test-server:rebuildPatches")?.outcome)
         assertEquals(
             testResource.resolve("fake-patches/expected/Test.java.patch").readText(),
             tempDir.resolve("fake-patches/sources/Test.java.patch").readText()
@@ -134,7 +134,7 @@ class FunctionalTest {
             .withArguments("rebuildPatches", "--stacktrace", "-Dfake=true")
             .withDebug(debug)
             .build()
-        assertEquals(rebP3.task(":test-server:rebuildPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, rebP3.task(":test-server:rebuildPatches")?.outcome)
         assertEquals(
             testResource.resolve("fake-patches/expected/0001-Feature.patch").readText(),
             tempDir.resolve("fake-patches/features/0001-Feature.patch").readText()
@@ -162,7 +162,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(appP2.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, appP2.task(":test-server:applyPatches")?.outcome)
         assertContains(tempDir.resolve("test-server/src/minecraft/java/oshi/PlatformEnum.java").readText(), "Windows CE")
         assertFalse(tempDir.resolve("test-server/src/minecraft/java/oshi/SystemInfo.java").readText().contains("MACOS"))
         assertContains(tempDir.resolve("test-server/src/minecraft/java/org/alcibiade/asciiart/widget/PictureWidget.java").readText(), "Trollface")
@@ -178,7 +178,7 @@ class FunctionalTest {
             .withDebug(debug)
             .build()
 
-        assertEquals(result.task(":test-server:applyPatches")?.outcome, TaskOutcome.SUCCESS)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":test-server:applyPatches")?.outcome)
     }
 
     fun setupMache(macheName: String, target: Path) {
@@ -213,7 +213,7 @@ class FunctionalTest {
         oshiFolder.createDirectories()
         oshiFolder.resolve(
             "oshi-core-6.6.5.jar"
-        ).writeBytes(URL("https://libraries.minecraft.net/com/github/oshi/oshi-core/6.6.5/oshi-core-6.6.5.jar").readBytes())
+        ).writeBytes(URI.create("https://libraries.minecraft.net/com/github/oshi/oshi-core/6.6.5/oshi-core-6.6.5.jar").toURL().readBytes())
         zip(target.resolve("bundle"), target.resolve("bundle.jar"))
     }
 
