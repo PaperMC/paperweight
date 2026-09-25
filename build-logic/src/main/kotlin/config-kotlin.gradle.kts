@@ -105,7 +105,7 @@ ktlint {
 }
 
 levelHeadered {
-    headerTemplate(rootProject.file("license/copyright.txt"))
+    headerTemplate(isolated.rootProject.projectDirectory.file("license/copyright.txt").asFile)
 }
 
 tasks.named<HeaderApplyTask>("applyTestHeader") {
