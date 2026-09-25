@@ -38,7 +38,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
-@DisableCachingByDefault(because = "The output Git commit and tag contain timestamps")
+@DisableCachingByDefault(because = "Generated Git repository history is not reused across builds")
 abstract class FilterRepo : BaseTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)

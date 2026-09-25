@@ -44,7 +44,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.*
 import org.gradle.work.DisableCachingByDefault
 
-@DisableCachingByDefault(because = "The output Git commits and tags contain timestamps")
+@DisableCachingByDefault(because = "Generated Git repository history is not reused across builds")
 abstract class SetupForkMinecraftSources : JavaLauncherTask() {
 
     @get:InputDirectory
