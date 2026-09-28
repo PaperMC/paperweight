@@ -6,7 +6,7 @@ serialize = "1.11.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
 tinyRemapper = "0.14.1"
 # For paper-checkstyle plugin
-checkstyle = "12.1.2"
+checkstyle = "12.3.1"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
