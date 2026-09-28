@@ -67,7 +67,6 @@ class PaperclipTasks(
 
             paperclip.from(configurations.named(PAPERCLIP_CONFIG))
             mainClass.set(mainClassString)
-            extraManifestMainAttributes.convention(mapOf("Enable-Native-Access" to "ALL-UNNAMED"))
 
             outputZip.set(layout.buildDirectory.file(jarName("bundler", classifier).map { "libs/$it" }))
         }
