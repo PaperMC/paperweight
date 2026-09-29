@@ -30,6 +30,7 @@ import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import java.nio.file.Path
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
@@ -39,6 +40,7 @@ import org.gradle.kotlin.dsl.*
 @Suppress("MemberVisibilityCanBePrivate")
 open class AllTasks(
     project: Project,
+    configurations: ConfigurationContainer = project.configurations,
     tasks: TaskContainer = project.tasks,
     cache: Path = project.layout.cache,
     extension: PaperweightCoreExtension = project.coreExt,
@@ -56,7 +58,7 @@ open class AllTasks(
 
     val downloadRuntimeClasspathSources = tasks.register<DownloadPaperLibraries>("downloadRuntimeClasspathSources") {
         paperDependencies.set(
-            project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).map { configuration ->
+            configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).map { configuration ->
                 val view = configuration.incoming.artifactView {
                     componentFilter { it is ModuleComponentIdentifier }
                 }

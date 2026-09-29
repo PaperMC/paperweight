@@ -1,6 +1,6 @@
 plugins {
-    `config-kotlin`
-    `config-publish`
+    id("config-kotlin")
+    id("config-publish")
 }
 
 dependencies {

@@ -70,6 +70,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.project.IsolatedProject
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
@@ -100,7 +101,12 @@ inline fun <reified T> Gson.fromJson(any: Any): T = when (any) {
 val ProjectLayout.cache: Path
     get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
 
+val IsolatedProject.cache: Path
+    get() = projectDirectory.dir(".gradle/$CACHE_PATH").path
+
 fun ProjectLayout.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
+
+fun IsolatedProject.cacheDir(path: String) = projectDirectory.dir(".gradle/$CACHE_PATH").dir(path)
 
 fun Project.offlineMode(): Boolean = gradle.startParameter.isOffline
 
@@ -110,7 +116,9 @@ fun <T : FileSystemLocation> Provider<out T>.fileExists(): Provider<out T> {
 
 @Suppress("UNCHECKED_CAST")
 val Project.download: Provider<DownloadService>
-    get() = gradle.sharedServices.registrations.getByName(DOWNLOAD_SERVICE_NAME).service as Provider<DownloadService>
+    get() = gradle.sharedServices.registerIfAbsent(DOWNLOAD_SERVICE_NAME, DownloadService::class) {
+        parameters.projectPath.set(isolated.projectDirectory)
+    }
 
 fun commentRegex(): Regex {
     return Regex("\\s*#.*")
@@ -472,7 +480,7 @@ inline fun <reified T : Any> ObjectFactory.providerSet(
 fun Project.upstreamsDirectory(): Provider<Directory> {
     val workDirProp = providers.gradleProperty(UPSTREAM_WORK_DIR_PROPERTY)
     val workDirFromProp = layout.dir(workDirProp.map { File(it) })
-    return workDirFromProp.orElse(rootProject.layout.cacheDir(UPSTREAMS))
+    return workDirFromProp.orElse(isolated.rootProject.cacheDir(UPSTREAMS))
 }
 
 private val ioDispatcherCount = AtomicInteger(0)

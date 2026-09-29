@@ -2,6 +2,7 @@ import net.octyl.levelheadered.HeaderApplyTask
 import net.octyl.levelheadered.HeaderVerifyTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -25,7 +26,8 @@ kotlin {
     }
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
-        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=21")
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+        freeCompilerArgs = listOf("-Xjdk-release=21")
     }
 }
 
@@ -103,7 +105,7 @@ ktlint {
 }
 
 levelHeadered {
-    headerTemplate(rootProject.file("license/copyright.txt"))
+    headerTemplate(isolated.rootProject.projectDirectory.file("license/copyright.txt").asFile)
 }
 
 tasks.named<HeaderApplyTask>("applyTestHeader") {
