@@ -28,6 +28,7 @@ dependencies {
 }
 
 paperweight {
+    validateATs = false
     if (fake) {
         // use fake mojang data for testing
         minecraftVersion = 'fake'

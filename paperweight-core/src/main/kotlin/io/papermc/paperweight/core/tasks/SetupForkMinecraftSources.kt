@@ -65,6 +65,9 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val atFile: RegularFileProperty
 
+    @get:Input
+    abstract val validateATs: Property<Boolean>
+
     @get:Optional
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -93,6 +96,7 @@ abstract class SetupForkMinecraftSources : JavaLauncherTask() {
                 outputDir.path,
                 atFile.path,
                 atWorkingDir.path,
+                validate = validateATs.get(),
             )
             commitAndTag(git, "ATs", "${identifier.get()} ATs")
         }
