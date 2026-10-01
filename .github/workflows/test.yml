@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
           cache: "" # namespace handles this
       - name: Set up cache
         uses: namespacelabs/nscloud-cache-action@v1
